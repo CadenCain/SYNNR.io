@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid email" }, { status: 400 });
   }
 
-  const supabase = getServerSupabase();
+  const supabase = await getServerSupabase();
   if (!supabase) {
     // Not yet wired (no env) — accept silently so the funnel never breaks.
     return NextResponse.json({ ok: true, stored: false });

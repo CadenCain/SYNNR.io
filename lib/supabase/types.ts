@@ -98,7 +98,10 @@ export type Database = {
       };
     };
     Views: Record<never, never>;
-    Functions: { current_workspace_id: { Args: Record<never, never>; Returns: string } };
+    Functions: {
+      current_workspace_id: { Args: Record<never, never>; Returns: string };
+      create_workspace: { Args: { p_name: string; p_industry?: string | null }; Returns: string };
+    };
     Enums: {
       finding_state: "open" | "approved" | "recovered" | "dismissed" | "resolved";
       finding_type: "missed" | "rate" | "doc";

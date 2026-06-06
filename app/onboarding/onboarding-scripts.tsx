@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 
 /**
  * SYNNR onboarding wizard, ported from the prototype's onboarding.js:
@@ -35,6 +36,17 @@ export default function OnboardingScripts() {
     const TOTAL = 4;
     let audited = false;
     let leadSent = false;
+    let wsCreated = false;
+
+    function provisionWorkspace() {
+      if (wsCreated) return;
+      const supabase = getBrowserSupabase();
+      if (!supabase) return;
+      wsCreated = true;
+      void supabase
+        .rpc("create_workspace", { p_name: state.company, p_industry: state.industry || null })
+        .then(({ error }) => { if (error) wsCreated = false; });
+    }
 
     function captureLead() {
       if (leadSent || !/\S+@\S+\.\S+/.test(state.email)) return;
@@ -296,7 +308,7 @@ export default function OnboardingScripts() {
     on(nextBtn, "click", () => {
       if (state.step < 4) {
         if (!valid(state.step)) { flashInvalid(); return; }
-        if (state.step === 1) captureLead();
+        if (state.step === 1) { captureLead(); provisionWorkspace(); }
         go(state.step + 1); return;
       }
       if (audited) { window.location.href = "/checkout?plan=command"; return; }

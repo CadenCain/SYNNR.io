@@ -1,0 +1,36 @@
+/* SYNNR — auth / login. Scoped under .auth. */
+.auth{
+  --bg:#131110;--card:#1a1613;--card-2:#221e1a;
+  --line:rgba(233,221,200,.1);--line-2:rgba(233,221,200,.16);--line-3:rgba(233,221,200,.26);
+  --fg:#ece5d7;--fg-dim:#a59d8c;--fg-faint:#756c5b;--fg-ghost:#4a4338;
+  --bone:#e7ddc7;--bone-soft:#f3ecdb;--clay:#cf7a54;--gold:#c9bd97;
+  --font:var(--font-geist),system-ui,sans-serif;--mono:var(--font-geist-mono),ui-monospace,monospace;
+  background:var(--bg);color:var(--fg);font-family:var(--font);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  font-feature-settings:"ss01","cv01";
+}
+.auth a{color:inherit}
+.auth .card{width:100%;max-width:400px;background:linear-gradient(180deg,var(--card-2),var(--card));border:1px solid var(--line-2);border-radius:18px;padding:36px 32px}
+.auth .brand{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+.auth .brand .mk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(180deg,#221e19,#171411);border:1px solid var(--line-2)}
+.auth .brand .mk svg{width:17px;height:17px;color:var(--bone)}
+.auth .brand b{font-size:17px;font-weight:600;letter-spacing:.02em}
+.auth h1{font-size:23px;font-weight:600;letter-spacing:-.02em}
+.auth .sub{color:var(--fg-dim);font-size:14px;margin-top:8px;margin-bottom:24px}
+.auth label{display:block;font-size:13px;color:var(--fg-dim);margin-bottom:8px}
+.auth input{width:100%;background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:13px 14px;color:var(--fg);font-family:inherit;font-size:15px;transition:border-color .18s}
+.auth input:focus{outline:none;border-color:var(--line-3)}
+.auth input.code{font-family:var(--mono);letter-spacing:.4em;text-align:center;font-size:20px}
+.auth .btn{width:100%;margin-top:18px;background:var(--bone);color:#1a1613;border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:all .18s}
+.auth .btn:hover{background:var(--bone-soft)}
+.auth .btn:disabled{opacity:.5;cursor:not-allowed}
+.auth .spin{width:15px;height:15px;border:2px solid rgba(26,22,19,.3);border-top-color:#1a1613;border-radius:50%;animation:auth-spin .7s linear infinite}
+.auth .msg{font-size:13px;margin-top:14px;min-height:18px}
+.auth .msg.err{color:var(--clay)}
+.auth .msg.ok{color:var(--gold)}
+.auth .alt{margin-top:18px;font-size:13px;color:var(--fg-faint);text-align:center}
+.auth .alt button{background:none;border:none;color:var(--fg-dim);cursor:pointer;font-family:inherit;font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.auth .alt button:hover{color:var(--fg)}
+.auth .foot{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--fg-ghost);text-align:center;line-height:1.6}
+.auth .foot a{color:var(--fg-faint);text-decoration:underline;text-underline-offset:2px}
+@keyframes auth-spin{to{transform:rotate(360deg)}}
