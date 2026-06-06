@@ -1,6 +1,47 @@
-// SYNNR dashboard markup (ported from the design prototype). Rendered via
-// dangerouslySetInnerHTML; behaviour wired up by DashboardScripts.
-export const DASHBOARD_HTML = `
+// SYNNR dashboard markup. The overview (greeting, jobs-audited stat, and the
+// risk-monitoring table) is injected from live workspace data (or demo when
+// signed out). The sidebar tab views + chart remain in DashboardScripts.
+import type { DashboardData, RiskRow } from "@/lib/data/workspace";
+
+const AV: [string, string, string][] = [
+  ["JD", "#8893a6", "John Doe"],
+  ["SL", "#b58aa0", "Sarah Lee"],
+  ["MR", "#9a9082", "Mike Ross"],
+  ["DK", "#c2a36a", "Dana Kohl"],
+  ["TW", "#968ea0", "Tara White"],
+];
+const PLABEL: Record<RiskRow["priority"], string> = { high: "High", med: "Medium", low: "Low" };
+const CHECK = '<svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>';
+
+function statusCell(s: RiskRow["status"]): string {
+  if (s === "review") return '<span class="status review"><span class="sd"></span>In Review</span>';
+  if (s === "delivered") return '<span class="status delivered">' + CHECK + "Delivered</span>";
+  if (s === "resolved") return '<span class="status resolved">' + CHECK + "Resolved</span>";
+  return '<span class="status open"><span class="sd"></span>Open</span>';
+}
+
+function riskRows(rows: RiskRow[]): string {
+  return rows
+    .map((r, i) => {
+      const av = AV[i % AV.length];
+      const checked = i === 0 ? " on" : "";
+      return (
+        "<tr>" +
+        `<td><span class="cbx${checked}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>` +
+        `<td class="tid">${r.number}</td>` +
+        `<td>${r.subject}</td>` +
+        `<td><span class="prio ${r.priority}"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">${PLABEL[r.priority]}</span></span></td>` +
+        `<td><span class="assignee"><span class="av" style="background:${av[1]}">${av[0]}</span>${av[2]}</span></td>` +
+        `<td>${statusCell(r.status)}</td>` +
+        `<td class="datecell">${r.date}</td>` +
+        "</tr>"
+      );
+    })
+    .join("");
+}
+
+export function dashboardHtml(d: DashboardData): string {
+  return `
 <div class="app">
 
   <aside class="sidebar">
@@ -51,8 +92,8 @@ export const DASHBOARD_HTML = `
 
     <div class="sb-foot">
       <div class="sb-user">
-        <span class="av">RM</span>
-        <span class="nm"><b>Ray Mendez</b><span>Operations</span></span>
+        <span class="av">${(d.greeting[0] || "S").toUpperCase()}</span>
+        <span class="nm"><b>${d.greeting}</b><span>Operations</span></span>
         <span class="more"><svg viewBox="0 0 24 24" width="16" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></span>
       </div>
     </div>
@@ -75,14 +116,14 @@ export const DASHBOARD_HTML = `
     <div class="main-body">
       <div class="dview on" data-view="overview">
       <div class="greet">
-        <h1>Hello, Ray</h1>
+        <h1>Hello, ${d.greeting}</h1>
         <p>Here are the latest insights from your field-to-invoice operations.</p>
       </div>
 
       <div class="stats">
         <div class="stat">
           <div class="row1"><span class="label">Jobs Audited</span><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></span></div>
-          <div class="row2"><span class="big">3,484</span>
+          <div class="row2"><span class="big">${d.jobsAudited}</span>
             <svg class="spark" viewBox="0 0 96 38" fill="none" preserveAspectRatio="none"><path d="M1 30 L13 26 L25 28 L37 18 L49 22 L61 12 L73 15 L83 6 L95 9" stroke="var(--up)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 30 L13 26 L25 28 L37 18 L49 22 L61 12 L73 15 L83 6 L95 9 L95 38 L1 38 Z" fill="url(#sg)"/><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--up)" stop-opacity=".22"/><stop offset="1" stop-color="var(--up)" stop-opacity="0"/></linearGradient></defs></svg>
           </div>
           <div class="delta"><b class="up">+9%</b> vs last week</div>
@@ -147,51 +188,7 @@ export const DASHBOARD_HTML = `
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><span class="cbx on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>
-              <td class="tid">#2319</td>
-              <td>Payment failed on invoice</td>
-              <td><span class="prio high"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">High</span></span></td>
-              <td><span class="assignee"><span class="av" style="background:#8893a6">JD</span>John Doe</span></td>
-              <td><span class="status review"><span class="sd"></span>In Review</span></td>
-              <td class="datecell">2025-08-18</td>
-            </tr>
-            <tr>
-              <td><span class="cbx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>
-              <td class="tid">#2320</td>
-              <td>Missing signature on service ticket</td>
-              <td><span class="prio med"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">Medium</span></span></td>
-              <td><span class="assignee"><span class="av" style="background:#b58aa0">SL</span>Sarah Lee</span></td>
-              <td><span class="status delivered"><svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Delivered</span></td>
-              <td class="datecell">2025-08-19</td>
-            </tr>
-            <tr>
-              <td><span class="cbx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>
-              <td class="tid">#2321</td>
-              <td>Standby hours unbilled</td>
-              <td><span class="prio high"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">High</span></span></td>
-              <td><span class="assignee"><span class="av" style="background:#9a9082">MR</span>Mike Ross</span></td>
-              <td><span class="status open"><span class="sd"></span>Open</span></td>
-              <td class="datecell">2025-08-19</td>
-            </tr>
-            <tr>
-              <td><span class="cbx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>
-              <td class="tid">#2322</td>
-              <td>Rate below MSA contract</td>
-              <td><span class="prio med"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">Medium</span></span></td>
-              <td><span class="assignee"><span class="av" style="background:#c2a36a">DK</span>Dana Kohl</span></td>
-              <td><span class="status resolved"><svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Resolved</span></td>
-              <td class="datecell">2025-08-20</td>
-            </tr>
-            <tr>
-              <td><span class="cbx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span></td>
-              <td class="tid">#2323</td>
-              <td>Field photos missing from packet</td>
-              <td><span class="prio high"><span class="pic"><i></i><i></i><i></i></span><span class="ptxt">High</span></span></td>
-              <td><span class="assignee"><span class="av" style="background:#968ea0">TW</span>Tara White</span></td>
-              <td><span class="status review"><span class="sd"></span>In Review</span></td>
-              <td class="datecell">2025-08-20</td>
-            </tr>
+            ${riskRows(d.riskRows)}
           </tbody>
         </table>
       </div>
@@ -242,3 +239,4 @@ export const DASHBOARD_HTML = `
 
 </div>
 `;
+}

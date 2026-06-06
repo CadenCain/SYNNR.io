@@ -1,16 +1,11 @@
-import "./audit.css";
-import { AUDIT_HTML } from "./audit-html";
-import AuditScripts from "./audit-scripts";
+import AuditView from "./audit-view";
+import { getAuditData } from "@/lib/data/workspace";
 
 export const metadata = {
-  title: "SYNNR — Audit · Job #RC-4821",
+  title: "SYNNR — Audit",
 };
 
-export default function AuditPage() {
-  return (
-    <>
-      <div className="audit" dangerouslySetInnerHTML={{ __html: AUDIT_HTML }} />
-      <AuditScripts />
-    </>
-  );
+export default async function AuditPage() {
+  const data = await getAuditData();
+  return <AuditView data={data} />;
 }
