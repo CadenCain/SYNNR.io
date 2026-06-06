@@ -34,6 +34,22 @@ export default function OnboardingScripts() {
 
     const TOTAL = 4;
     let audited = false;
+    let leadSent = false;
+
+    function captureLead() {
+      if (leadSent || !/\S+@\S+\.\S+/.test(state.email)) return;
+      leadSent = true;
+      try {
+        fetch("/api/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: state.email, company: state.company, name: state.name, industry: state.industry, source: "onboarding" }),
+          keepalive: true,
+        }).catch(() => { leadSent = false; });
+      } catch {
+        leadSent = false;
+      }
+    }
 
     const panels = $$(".step-panel");
     const stepLis = $$(".step-li");
@@ -227,10 +243,12 @@ export default function OnboardingScripts() {
     });
 
     function updateToolBtn(t: Element) {
-      const b = t.querySelector(".cbtn"); if (b) b.textContent = t.classList.contains("connected") ? "Connected" : "Connect";
+      const b = t.querySelector(".cbtn");
+      if (b && !b.classList.contains("soon")) b.textContent = t.classList.contains("connected") ? "Connected" : "Connect";
     }
     $$("#toolsJobs .tool").forEach((t) => {
       const b = t.querySelector(".cbtn");
+      if (b && b.classList.contains("soon")) return; // connectors not live yet (upload-only MVP)
       if (b) on(b, "click", () => {
         const name = t.getAttribute("data-name") || "";
         const i = state.tools.indexOf(name);
@@ -278,13 +296,14 @@ export default function OnboardingScripts() {
     on(nextBtn, "click", () => {
       if (state.step < 4) {
         if (!valid(state.step)) { flashInvalid(); return; }
+        if (state.step === 1) captureLead();
         go(state.step + 1); return;
       }
       if (audited) { window.location.href = "/checkout?plan=command"; return; }
       runAudit();
     });
 
-    const skip = $("#skipLink"); if (skip) on(skip, "click", () => { save(); window.location.href = "/dashboard"; });
+    const skip = $("#skipLink"); if (skip) on(skip, "click", () => { save(); captureLead(); window.location.href = "/dashboard"; });
 
     function runAudit() {
       ($("#reviewWrap") as HTMLElement).style.display = "none";

@@ -1,0 +1,24 @@
+/* SYNNR — legal documents. Scoped under .legal. */
+.legal{
+  --bg:#131110;--card:#1a1613;--line:rgba(233,221,200,.1);--line-2:rgba(233,221,200,.16);
+  --fg:#ece5d7;--fg-dim:#a59d8c;--fg-faint:#756c5b;--accent:#e7ddc7;
+  --font:var(--font-geist),system-ui,sans-serif;--mono:var(--font-geist-mono),ui-monospace,monospace;
+  background:var(--bg);color:var(--fg);font-family:var(--font);min-height:100vh;
+  font-feature-settings:"ss01","cv01";line-height:1.65;
+}
+.legal a{color:inherit}
+.legal .lbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;border-bottom:1px solid var(--line);background:rgba(19,17,16,.85);backdrop-filter:blur(10px)}
+.legal .lback{display:inline-flex;align-items:center;gap:9px;font-size:13.5px;color:var(--fg-dim)}
+.legal .lback:hover{color:var(--fg)}
+.legal .lback svg{width:16px;height:16px}
+.legal .lbrand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:.01em}
+.legal .lbrand svg{width:18px;height:18px;color:var(--accent)}
+.legal .ldoc{max-width:760px;margin:0 auto;padding:56px 24px 96px}
+.legal .ldoc .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-faint)}
+.legal .ldoc h1{font-size:clamp(30px,4vw,42px);font-weight:600;letter-spacing:-.025em;margin:14px 0 8px}
+.legal .ldoc .updated{color:var(--fg-faint);font-size:13px;font-family:var(--mono);margin-bottom:36px}
+.legal .ldoc h2{font-size:19px;font-weight:600;letter-spacing:-.01em;margin:34px 0 10px}
+.legal .ldoc p{color:var(--fg-dim);margin:0 0 14px;max-width:68ch}
+.legal .ldoc ul{color:var(--fg-dim);margin:0 0 14px 20px;display:flex;flex-direction:column;gap:8px}
+.legal .ldoc .note{margin-top:40px;padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg-faint);font-size:13px}
+.legal .ldoc .note b{color:var(--fg)}

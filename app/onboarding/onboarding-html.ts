@@ -97,10 +97,10 @@ export const ONBOARDING_HTML = `
             <label class="invtoggle" id="invToggle"><span class="cbx2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>My upload includes draft invoices <i>— what you actually billed</i></label>
             <div class="or">or connect a source</div>
             <div class="tools" id="toolsJobs">
-              <div class="tool" data-name="QuickBooks"><span class="tl" style="background:#8aa0b8">QB</span><span class="tn"><b>QuickBooks</b><span>Invoices &amp; customers</span></span><button class="cbtn">Connect</button></div>
-              <div class="tool" data-name="ServiceTitan"><span class="tl" style="background:#c2a36a">ST</span><span class="tn"><b>ServiceTitan</b><span>Jobs &amp; tickets</span></span><button class="cbtn">Connect</button></div>
-              <div class="tool" data-name="Procore"><span class="tl" style="background:#b58aa0">PC</span><span class="tn"><b>Procore</b><span>Daily logs &amp; T&amp;M</span></span><button class="cbtn">Connect</button></div>
-              <div class="tool" data-name="Google Drive"><span class="tl" style="background:#9a9082">GD</span><span class="tn"><b>Google Drive</b><span>Folders of packets</span></span><button class="cbtn">Connect</button></div>
+              <div class="tool" data-name="QuickBooks"><span class="tl" style="background:#8aa0b8">QB</span><span class="tn"><b>QuickBooks</b><span>Invoices &amp; customers</span></span><span class="cbtn soon">Soon</span></div>
+              <div class="tool" data-name="ServiceTitan"><span class="tl" style="background:#c2a36a">ST</span><span class="tn"><b>ServiceTitan</b><span>Jobs &amp; tickets</span></span><span class="cbtn soon">Soon</span></div>
+              <div class="tool" data-name="Procore"><span class="tl" style="background:#b58aa0">PC</span><span class="tn"><b>Procore</b><span>Daily logs &amp; T&amp;M</span></span><span class="cbtn soon">Soon</span></div>
+              <div class="tool" data-name="Google Drive"><span class="tl" style="background:#9a9082">GD</span><span class="tn"><b>Google Drive</b><span>Folders of packets</span></span><span class="cbtn soon">Soon</span></div>
             </div>
             <p class="tools-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Don't see your system? Drop files above or connect it later — SYNNR reads any format, from any tool.</p>
             <div class="cov" id="cov2">
