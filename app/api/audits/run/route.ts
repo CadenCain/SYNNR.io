@@ -4,6 +4,15 @@ import { runEngine } from "@/lib/engine/run";
 
 export const maxDuration = 120;
 
+// Text-like files we can read today. PDFs/images/xlsx need OCR/vision (next).
+function readable(name: string, mime: string | null): boolean {
+  const m = (mime || "").toLowerCase();
+  const n = (name || "").toLowerCase();
+  if (m.startsWith("text/")) return true;
+  if (["application/json", "application/csv"].includes(m)) return true;
+  return /\.(txt|csv|tsv|md|json|log|text)$/.test(n);
+}
+
 /**
  * Runs the reconciliation engine for the caller's workspace: extract -> detect,
  * then persist a job + its findings + an audit run. Accepts optional raw
@@ -20,11 +29,41 @@ export async function POST(req: Request) {
   const ws = profile?.workspace_id;
   if (!ws) return NextResponse.json({ ok: false, error: "no workspace" }, { status: 400 });
 
-  let parts: { ticket?: string; invoice?: string; pricebook?: string } = {};
+  let parts: { ticket?: string; invoice?: string; pricebook?: string; raw?: string } = {};
   try {
     parts = await req.json();
   } catch {
     parts = {};
+  }
+
+  let usedSample = false;
+  let filesRead = 0;
+  let filesSkipped = 0;
+
+  // No explicit text in the body -> reconcile the workspace's real uploads.
+  if (!parts.ticket && !parts.invoice && !parts.pricebook && !parts.raw) {
+    const { data: arts } = await supabase
+      .from("artifacts")
+      .select("name, kind, mime, storage_path")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    let raw = "";
+    for (const a of arts ?? []) {
+      if (!a.storage_path) continue;
+      if (!readable(a.name, a.mime)) { filesSkipped++; continue; }
+      const { data: blob } = await supabase.storage.from("job-data").download(a.storage_path);
+      if (!blob) { filesSkipped++; continue; }
+      try {
+        const txt = await blob.text();
+        raw += `\n--- ${a.kind.toUpperCase()}: ${a.name} ---\n${txt}\n`;
+        filesRead++;
+      } catch {
+        filesSkipped++;
+      }
+      if (raw.length > 24000) break;
+    }
+    if (filesRead > 0) parts = { raw };
+    else usedSample = true; // nothing readable yet -> sample so it still produces a result
   }
 
   let result;
@@ -82,5 +121,8 @@ export async function POST(req: Request) {
     jobNumber: result.jobNumber,
     recoverableCents: result.recoverableCents,
     findings: result.findings.length,
+    source: usedSample ? "sample" : "uploads",
+    filesRead,
+    filesSkipped,
   });
 }

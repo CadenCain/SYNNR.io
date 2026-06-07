@@ -21,7 +21,14 @@ Customer signature: NOT SIGNED (foreman left early)`,
 - Consumables: billed at cost + 15% per pricebook`,
 };
 
-export function buildInput(parts: { ticket?: string; invoice?: string; pricebook?: string }) {
+export type EngineInput = { ticket?: string; invoice?: string; pricebook?: string; raw?: string };
+
+export function buildInput(parts: EngineInput) {
+  // Real uploaded text (mixed formats) — let the model separate ticket /
+  // invoice / pricebook lines itself.
+  if (parts.raw && parts.raw.trim()) {
+    return `Reconcile this job. The documents below are real, mixed-format uploads (field tickets, invoices, pricebooks/MSAs). Extract typed records — ticket lines (performed), invoice lines (billed, with rates), pricebook/MSA rates, signature presence, and photo counts.\n\n${parts.raw.slice(0, 24000)}`;
+  }
   const t = parts.ticket || SAMPLE_INPUTS.ticket;
   const i = parts.invoice || SAMPLE_INPUTS.invoice;
   const p = parts.pricebook || SAMPLE_INPUTS.pricebook;

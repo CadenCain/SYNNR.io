@@ -157,11 +157,21 @@ safely if env is missing so the static site never crashes.
 
 ## 6. Status
 
-**Done:** schema + RLS + seed in Supabase, generated types, Supabase client
-layer, `POST /api/lead` wired from onboarding, Vercel Analytics, legal pages.
+**Done:**
+- Schema + RLS + seed; generated types; Supabase client layer; `POST /api/lead`.
+- **Supabase Auth** (email OTP) + `@supabase/ssr` + `proxy.ts` session refresh;
+  `create_workspace()` RPC; `/onboarding` gated; new workspaces auto-seeded.
+- **Live, per-workspace** dashboard + audit (demo fallback when signed out);
+  audit approve→recover persists via `PATCH /api/findings/[id]`.
+- **Ingestion capture:** `artifacts` table + private `job-data` Storage bucket;
+  onboarding uploads real files.
+- **Reconciliation engine** (`lib/engine`): AI Gateway extraction + deterministic
+  detectors → `POST /api/audits/run` persists job + findings. Reads the
+  workspace's **real uploaded text files** (falls back to a sample); PDFs/images
+  are skipped pending OCR/vision.
+- Vercel Analytics, legal pages, connectors marked "Soon".
 
-**Next, in order:** (1) Supabase Auth + `@supabase/ssr` + workspace creation,
-(2) file upload → Storage + `artifacts`, (3) extraction + detectors behind
-`POST /api/audits`, (4) convert dashboard/audit to read live data, (5) real
-Stripe. **Before any of it pays off: one design partner, real data, measure
-recovered *and* collected.**
+**Next:** (1) OCR/vision so PDFs + photos feed the engine (the remaining moat
+depth), (2) real **Stripe** subscriptions + webhook entitlement, (3) dashboard
+tab-views → live data. **And the thing that actually matters: one design
+partner, real data, measure recovered *and* collected.**

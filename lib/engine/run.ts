@@ -1,6 +1,6 @@
 import { extractRecords } from "./extract";
 import { detect } from "./detect";
-import { buildInput, SAMPLE_INPUTS } from "./sample";
+import { buildInput, SAMPLE_INPUTS, type EngineInput } from "./sample";
 import type { EngineFinding, Extraction } from "./schemas";
 
 export type EngineResult = {
@@ -14,7 +14,7 @@ export type EngineResult = {
  * The reconciliation engine: LLM extraction -> deterministic detectors.
  * Falls back to the sample inputs when none are provided.
  */
-export async function runEngine(parts: { ticket?: string; invoice?: string; pricebook?: string } = {}): Promise<EngineResult> {
+export async function runEngine(parts: EngineInput = {}): Promise<EngineResult> {
   const extraction = await extractRecords(buildInput(parts));
   const findings = detect(extraction);
   const recoverableCents = findings.reduce((s, f) => s + f.amount_cents, 0);
