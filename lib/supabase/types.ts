@@ -96,6 +96,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
+      artifacts: {
+        Row: { id: string; workspace_id: string; name: string; size_bytes: number | null; mime: string | null; kind: string; storage_path: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; name: string; size_bytes?: number | null; mime?: string | null; kind?: string; storage_path?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["artifacts"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
