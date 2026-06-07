@@ -356,6 +356,17 @@ export default function OnboardingScripts() {
     const skip = $("#skipLink"); if (skip) on(skip, "click", () => { save(); captureLead(); window.location.href = "/dashboard"; });
 
     function runAudit() {
+      // Kick the real reconciliation engine for this workspace (best-effort;
+      // writes a job + findings the dashboard/audit will show). The animation
+      // below covers the latency.
+      if (getBrowserSupabase()) {
+        void fetch("/api/audits/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+          keepalive: true,
+        }).catch(() => {});
+      }
       ($("#reviewWrap") as HTMLElement).style.display = "none";
       ($("#runbox") as HTMLElement).style.display = "block";
       setText("#step4Title", "Auditing your jobs…");
