@@ -1,0 +1,62 @@
+/* SYNNR — invoice-ready job packet. Scoped under .pkt. Print-ready. */
+.pkt{
+  --bg:#131110;--card:#1a1613;--card-2:#211d19;
+  --line:rgba(233,221,200,.1);--line-2:rgba(233,221,200,.16);
+  --fg:#ece5d7;--fg-dim:#a59d8c;--fg-faint:#756c5b;
+  --bone:#e7ddc7;--gold:#c9bd97;--ochre:#cba85f;--clay:#cf7a54;
+  --font:var(--font-geist),system-ui,sans-serif;--mono:var(--font-geist-mono),ui-monospace,monospace;
+  background:var(--bg);color:var(--fg);font-family:var(--font);min-height:100vh;
+  font-feature-settings:"ss01","cv01";line-height:1.5;
+}
+.pkt a{color:inherit}
+.pkt .doc{max-width:840px;margin:0 auto;padding:40px 28px 90px}
+
+.pkt .phead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:24px}
+.pkt .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;letter-spacing:.02em}
+.pkt .brand svg{width:20px;height:20px;color:var(--bone)}
+.pkt .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-faint);margin-top:16px}
+.pkt h1{font-size:clamp(22px,3vw,30px);font-weight:600;letter-spacing:-.02em;margin-top:8px}
+.pkt .jmeta{display:flex;gap:6px 18px;flex-wrap:wrap;margin-top:10px;color:var(--fg-dim);font-size:13px}
+.pkt .actions{display:flex;gap:10px;flex-wrap:wrap}
+.pkt .btn{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;padding:10px 16px;border-radius:10px;border:1px solid var(--line-2);background:transparent;color:var(--fg);cursor:pointer;text-decoration:none}
+.pkt .btn:hover{background:var(--card-2)}
+.pkt .btn.solid{background:var(--bone);color:#1a1613;border-color:var(--bone)}
+.pkt .btn svg{width:15px;height:15px}
+
+.pkt .totalbar{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:26px 0 8px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:20px 22px}
+.pkt .totalbar .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)}
+.pkt .totalbar .v{font-size:32px;font-weight:600;letter-spacing:-.03em;color:var(--bone)}
+.pkt .totalbar .s{font-size:12.5px;color:var(--fg-faint)}
+
+.pkt h2{font-size:13px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint);margin:30px 0 12px}
+.pkt .li{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:16px 18px;margin-bottom:10px}
+.pkt .li .l1{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.pkt .li .lt{font-size:15px;font-weight:500}
+.pkt .li .ls{font-size:12.5px;color:var(--fg-faint);font-family:var(--mono);margin-top:3px}
+.pkt .li .la{font-size:18px;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
+.pkt .li.rate .la{color:var(--gold)}
+.pkt .ev{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+.pkt .ev .e{border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:10px 12px}
+.pkt .ev .e .el{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-faint)}
+.pkt .ev .e .ed{font-size:13px;margin-top:4px}
+.pkt .ev .e.bad .ed{color:var(--clay)}.pkt .ev .e.good .ed{color:var(--gold)}
+
+.pkt .chk{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden}
+.pkt .crow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:13.5px}
+.pkt .crow:last-child{border-bottom:0}
+.pkt .crow .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--clay);flex:none}
+.pkt .crow .lbl{flex:1}
+.pkt .crow .st{font-family:var(--mono);font-size:11px;color:var(--clay);text-transform:uppercase;letter-spacing:.06em}
+
+.pkt .foot{margin-top:34px;font-family:var(--mono);font-size:11px;color:var(--fg-faint);letter-spacing:.04em;border-top:1px solid var(--line);padding-top:18px}
+
+@media print{
+  .pkt{background:#fff;color:#1a1613}
+  .pkt .doc{padding:0}
+  .pkt .no-print{display:none !important}
+  .pkt .totalbar,.pkt .li,.pkt .ev .e,.pkt .chk{background:#faf8f3;border-color:#d8d0bf}
+  .pkt h1,.pkt .totalbar .v,.pkt .li .lt,.pkt .li .la{color:#1a1613}
+  .pkt .li.rate .la{color:#6f6433}
+  .pkt .jmeta,.pkt .totalbar .k,.pkt .totalbar .s,.pkt h2,.pkt .li .ls,.pkt .ev .e .el,.pkt .foot{color:#5b5345}
+  .pkt .brand svg{color:#1a1613}
+}

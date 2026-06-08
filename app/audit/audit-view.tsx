@@ -173,7 +173,13 @@ export default function AuditView({ data }: { data: AuditData }) {
             <b>{barTitle}</b>
             <span>{money(totals.recovered)} of {money(totals.found)} recovered · {totals.open} to review</span>
           </div>
-          <a href="/dashboard" className="btn btn-primary"><Check w={2} />Done — back to dashboard</a>
+          <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+            <a href="/packet" className="bmini">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+              Export packet
+            </a>
+            <a href="/dashboard" className="btn btn-primary"><Check w={2} />Done — back to dashboard</a>
+          </div>
         </div>
       </div>
     </div>
