@@ -102,6 +102,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["artifacts"]["Insert"]>;
         Relationships: [];
       };
+      subscriptions: {
+        Row: { id: string; workspace_id: string | null; email: string | null; plan: string | null; status: string | null; stripe_customer_id: string | null; stripe_subscription_id: string | null; current_period_end: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; workspace_id?: string | null; email?: string | null; plan?: string | null; status?: string | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; current_period_end?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

@@ -35,6 +35,7 @@ export type DashboardData = {
   jobsAudited: string;
   recovered: string;
   riskRows: RiskRow[];
+  plan: string; // e.g. "Command · active" — empty when none
 };
 
 /* ----------------------------- demo fallback ----------------------------- */
@@ -70,6 +71,7 @@ const DEMO_DASHBOARD: DashboardData = {
     { id: "d4", number: "#2322", subject: "Rate below MSA contract", priority: "med", status: "resolved", date: "2025-08-20" },
     { id: "d5", number: "#2323", subject: "Field photos missing from packet", priority: "high", status: "review", date: "2025-08-20" },
   ],
+  plan: "",
 };
 
 const usd = (cents: number) => "$" + Math.round(cents / 100).toLocaleString("en-US");
@@ -217,14 +219,18 @@ export async function getDashboardData(): Promise<DashboardData> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return DEMO_DASHBOARD;
 
-  const [{ data: profile }, { count }, { data: runs }, { data: jobs }] = await Promise.all([
+  const [{ data: profile }, { count }, { data: runs }, { data: jobs }, { data: sub }] = await Promise.all([
     supabase.from("profiles").select("name, email").eq("id", auth.user.id).maybeSingle(),
     supabase.from("jobs").select("id", { count: "exact", head: true }),
     supabase.from("audit_runs").select("recovered_cents"),
     supabase.from("jobs").select("id, number, title, status, priority, closed_at").order("closed_at", { ascending: false }).limit(5),
+    supabase.from("subscriptions").select("plan, status").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   if (!jobs) return DEMO_DASHBOARD;
+
+  const planNames: Record<string, string> = { recover: "Recover", command: "Command" };
+  const plan = sub?.plan ? `${planNames[sub.plan] || sub.plan}${sub.status ? " · " + sub.status : ""}` : "";
 
   const name =
     profile?.name?.split(" ")[0] ||
@@ -246,5 +252,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       status: statusOf(j.status),
       date: j.closed_at ?? "—",
     })),
+    plan,
   };
 }

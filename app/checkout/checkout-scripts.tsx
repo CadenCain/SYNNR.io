@@ -74,8 +74,10 @@ export default function CheckoutScripts() {
 
     const btn = q("payBtn") as HTMLButtonElement | null;
     const err = q("err");
-    if (btn)
-      btn.addEventListener("click", () => {
+    if (btn) {
+      const planForCheckout = planKey === "recover" ? "recover" : "command";
+
+      const runDemo = () => {
         if (err) err.textContent = "";
         const email = (q("email") as HTMLInputElement)?.value.trim() || "";
         const digits = num?.value.replace(/\s/g, "") || "";
@@ -92,7 +94,33 @@ export default function CheckoutScripts() {
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>Confirmed';
           window.setTimeout(() => q("doneOverlay")?.classList.add("on"), 450);
         }, 1700);
+      };
+
+      btn.addEventListener("click", async () => {
+        if (err) err.textContent = "";
+        const prev = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin"></span>Processing…';
+        // Real Stripe hosted checkout when configured; otherwise demo flow.
+        try {
+          const res = await fetch("/api/checkout/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan: planForCheckout }),
+          });
+          const data = await res.json();
+          if (data?.configured && data?.url) {
+            window.location.href = data.url;
+            return;
+          }
+        } catch {
+          /* fall through to demo */
+        }
+        btn.disabled = false;
+        btn.innerHTML = prev;
+        runDemo();
       });
+    }
   }, []);
 
   return null;

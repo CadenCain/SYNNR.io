@@ -93,7 +93,7 @@ export function dashboardHtml(d: DashboardData): string {
     <div class="sb-foot">
       <div class="sb-user">
         <span class="av">${(d.greeting[0] || "S").toUpperCase()}</span>
-        <span class="nm"><b>${d.greeting}</b><span>Operations</span></span>
+        <span class="nm"><b>${d.greeting}</b><span>${d.plan || "Operations"}</span></span>
         <span class="more"><svg viewBox="0 0 24 24" width="16" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></span>
       </div>
     </div>
