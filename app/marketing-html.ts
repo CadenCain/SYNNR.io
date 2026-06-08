@@ -186,8 +186,8 @@ export const MARKETING_HTML = `
 <section class="section" id="features">
   <div class="container">
     <div class="head reveal">
-      <span class="eyebrow">Designed for the field</span>
-      <h2 class="h2">Everything SYNNR catches</h2>
+      <span class="eyebrow">Revenue found before it disappears</span>
+      <h2 class="h2">Find missed charges, wrong rates, missing proof, and dispute risk</h2>
       <p class="lede">A self-serve AI billing and job-packet intelligence system. Upload the mess; get back every charge, backed by proof.</p>
     </div>
 

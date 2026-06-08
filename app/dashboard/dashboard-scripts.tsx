@@ -169,12 +169,12 @@ export default function DashboardScripts() {
           row(I.alert, "warn", "#4738 · Standby unbilled", "6.5 hrs not on invoice", val("$1,430") + pill("open", "Medium")),
         ]) },
       disputes: { section: "Jobs", title: "Disputes", body: () =>
-        head("Open disputes", "5 active") + list([
-          row(I.msg, "", "#4612 · Rate dispute — crane svc", "Apex Midstream · opened Aug 8", pill("review", "Awaiting client")),
-          row(I.msg, "", "#4588 · Standby hours contested", "Permian Co · opened Aug 6", pill("open", "In review")),
-          row(I.msg, "", "#4570 · Mobilization fee", "Lone Star Energy · opened Aug 4", pill("review", "Awaiting client")),
-          row(I.msg, "", "#4521 · Consumables markup", "Apex Midstream · opened Aug 1", pill("resolved", "Resolved")),
-          row(I.msg, "", "#4498 · Duplicate line item", "Permian Co · opened Jul 29", pill("resolved", "Resolved")),
+        head("Open disputes", "$12,330 at stake") + list([
+          row(I.msg, "down", "#4612 · Rate dispute — crane svc", "Apex Midstream · opened Aug 8", val("$6,200") + pill("review", "Awaiting client")),
+          row(I.msg, "down", "#4588 · Standby hours contested", "Permian Co · opened Aug 6", val("$3,100") + pill("open", "In review")),
+          row(I.msg, "down", "#4570 · Mobilization fee omitted", "Lone Star Energy · opened Aug 4", val("$850") + pill("review", "Awaiting client")),
+          row(I.msg, "up", "#4521 · Consumables markup", "Apex Midstream · resolved Aug 5", val("+$2,180", "pos") + pill("resolved", "Won")),
+          row(I.msg, "up", "#4498 · Duplicate line item", "Permian Co · resolved Jul 30", val("—") + pill("resolved", "Resolved")),
         ]) },
       clients: { section: "Clients", title: "All clients", body: () =>
         head("Clients", "14 active") + list([
@@ -230,12 +230,12 @@ export default function DashboardScripts() {
           row(I.check, "up", "Environmental surcharge", "Compliant on all jobs", pill("delivered", "Pass")),
         ]) },
       backup: { section: "Analytics", title: "Backup Coverage", body: () =>
-        head("Packet completeness", "Avg 78%") + list([
-          row(I.shield, "up", "#4833 · Hydro test — Pad 7", "7 of 7 documents", bar(100) + pill("delivered", "Ready")),
-          row(I.shield, "", "#4821 · Crane lift — Site B", "6 of 7 · missing signature", bar(86) + val("86%")),
-          row(I.shield, "warn", "#4805 · Tank cleanout", "4 of 7 · missing photos", bar(57) + val("57%")),
-          row(I.shield, "", "#4799 · Pipeline inspection", "5 of 7 documents", bar(71) + val("71%")),
-          row(I.shield, "up", "#4760 · Vacuum truck", "7 of 7 documents", bar(100) + pill("delivered", "Ready")),
+        head("Backup coverage", "$8,690 blocked by gaps") + list([
+          row(I.shield, "up", "#4833 · Hydro test — Pad 7", "7 of 7 documents · complete", bar(100) + pill("delivered", "Ready")),
+          row(I.shield, "down", "#4821 · Crane lift — Site B", "6 of 7 · missing signature", bar(86) + val("$4,570 blocked")),
+          row(I.shield, "down", "#4805 · Tank cleanout", "4 of 7 · missing photos", bar(57) + val("$2,180 blocked")),
+          row(I.shield, "warn", "#4799 · Pipeline inspection", "5 of 7 · missing time log", bar(71) + val("$1,940 blocked")),
+          row(I.shield, "up", "#4760 · Vacuum truck", "7 of 7 documents · complete", bar(100) + pill("delivered", "Ready")),
         ]) },
       reports: { section: "Analytics", title: "Reports", body: () => {
         const badge = (t: string) => '<span class="ftype">' + t + "</span>";

@@ -155,8 +155,8 @@ function emptyRail(): string {
 
 export function dashboardHtml(d: DashboardData): string {
   const sub = d.empty
-    ? "Let's run your first audit."
-    : "Here are the latest insights from your field-to-invoice operations.";
+    ? "Upload your job data and run your first audit — we'll surface the revenue at risk."
+    : "Here's the revenue at risk between the field and your invoices.";
   return `
 <div class="app">
 
