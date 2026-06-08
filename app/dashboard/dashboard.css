@@ -323,3 +323,11 @@
 .dash .fitem .ft .fmoney{color:var(--up);font-family:var(--mono)}
 .dash .fitem .ft .fact{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:11.5px;font-weight:500;color:var(--accent-ink);cursor:pointer}
 .dash .fitem .ft .fact svg{width:12px;height:12px}
+
+.dash #dynView[data-view-key="jobs"] .drow,
+.dash #dynView[data-view-key="atrisk"] .drow,
+.dash #dynView[data-view-key="disputes"] .drow,
+.dash #dynView[data-view-key="backup"] .drow,
+.dash #dynView[data-view-key="pricebook"] .drow,
+.dash #dynView[data-view-key="compliance"] .drow,
+.dash #dynView[data-view-key="recovery"] .drow{cursor:pointer}

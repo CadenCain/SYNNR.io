@@ -241,10 +241,10 @@ export default function DashboardScripts() {
         const badge = (t: string) => '<span class="ftype">' + t + "</span>";
         const dlbtn = () => '<a class="cbtn icon" href="/report" aria-label="Open report">' + I.dl + "</a>";
         return head("Reports", "4 generated") + list([
-          row(I.chart, "up", "August recovery report", "Generated Sep 1 · 12 pages", badge("PDF") + dlbtn()),
-          row(I.shield, "warn", "Q3 rate compliance summary", "Generated Aug 28 · 8 pages", badge("PDF") + dlbtn()),
-          row(I.file, "", "Backup coverage audit", "Generated Aug 20 · 1,204 rows", badge("CSV") + dlbtn()),
-          row(I.users, "", "Client recovery breakdown", "Generated Aug 15 · 14 clients", badge("PDF") + dlbtn()),
+          row(I.chart, "up", "August recovery report", "$284,750 recovered · 240 findings · Sep 1", badge("PDF") + dlbtn()),
+          row(I.shield, "warn", "Q3 rate compliance summary", "94% compliant · $94,300 corrected · Aug 28", badge("PDF") + dlbtn()),
+          row(I.file, "", "Backup coverage audit", "78% coverage · $8,690 blocked · Aug 20", badge("CSV") + dlbtn()),
+          row(I.users, "", "Client recovery breakdown", "14 clients · top Apex $132,400 · Aug 15", badge("PDF") + dlbtn()),
         ]);
       } },
       feedback: { section: "Support", title: "Feedback", body: () =>
@@ -291,6 +291,7 @@ export default function DashboardScripts() {
         const v = VIEWS[key];
         dynEl.innerHTML = '<div class="vsec">' + v.body() + "</div>";
         dynEl.hidden = false;
+        dynEl.setAttribute("data-view-key", key);
         dynEl.classList.remove("dview"); void dynEl.offsetWidth; dynEl.classList.add("dview");
         setCrumb(v.section, v.title);
         void hydrate(key); // swap demo rows for live workspace data when signed in
@@ -357,8 +358,15 @@ export default function DashboardScripts() {
     });
 
     /* delegated interactions inside rendered views */
+    // Job/finding rows open the Audit Detail (operator workflow, not static rows).
+    const JOB_VIEWS = ["jobs", "atrisk", "disputes", "backup", "pricebook", "compliance", "recovery"];
     on(root, "click", (e) => {
       const target = e.target as HTMLElement;
+      const rowEl = target.closest<HTMLElement>(".drow");
+      if (rowEl && !target.closest("a, button, [data-connect], .cbtn")) {
+        const key = dynEl?.getAttribute("data-view-key") || "";
+        if (JOB_VIEWS.includes(key)) { window.location.href = "/audit"; return; }
+      }
       const b = target.closest<HTMLElement>("[data-connect]");
       if (b && !b.classList.contains("done")) {
         b.classList.add("done");

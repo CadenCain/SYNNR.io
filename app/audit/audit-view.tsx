@@ -14,6 +14,21 @@ const ArrowR = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const BillIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v12H4zM4 9h16" /></svg>;
 const Bulb = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.7.6-1 1-1 2H9c0-1-.3-1.4-1-2A6 6 0 0 1 12 3Z" /></svg>;
 
+function stageLabel(st: string, blocker: string | null) {
+  if (st === "dismissed") return "Dismissed";
+  if (st === "recovered") return "Recovered";
+  if (st === "approved") return "Approved · in billing";
+  if (st === "resolved") return "Resolved";
+  return blocker ? "Blocking billing" : "Detected";
+}
+function stageClass(st: string) {
+  if (st === "recovered") return "recovered";
+  if (st === "approved") return "approved";
+  if (st === "dismissed") return "dismissed";
+  if (st === "resolved") return "approved";
+  return "detected";
+}
+
 function findingIcon(f: AuditFinding) {
   if (f.type === "rate")
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>;
@@ -152,6 +167,7 @@ export default function AuditView({ data }: { data: AuditData }) {
                     <div className="fhl">
                       <span className={`fcat ${f.type}`}>{f.category}</span>
                       <span className="fconf">{f.confidence}% confidence</span>
+                      <span className={`fstg ${stageClass(st)}`}>{stageLabel(st, f.blocker)}</span>
                     </div>
                     <div className="ftitle" style={{ marginTop: 6 }}>{f.title}</div>
                     <div className="fsub">{f.subtitle}</div>

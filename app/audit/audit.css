@@ -157,3 +157,10 @@
   .audit .cmp .ar{display:none}
   .audit .fix{padding-left:0}
 }
+
+/* finding lifecycle stage chip */
+.audit .fstg{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;border:1px solid var(--line-2);color:var(--fg-faint)}
+.audit .fstg.detected{color:var(--fg-dim)}
+.audit .fstg.approved{color:var(--ochre);border-color:rgba(203,168,95,.32);background:rgba(203,168,95,.07)}
+.audit .fstg.recovered{color:var(--up);border-color:rgba(201,189,151,.32);background:rgba(201,189,151,.07)}
+.audit .fstg.dismissed{color:var(--fg-faint);opacity:.7}

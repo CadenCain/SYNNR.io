@@ -38,6 +38,7 @@ export default function OnboardingScripts() {
     let leadSent = false;
     let wsCreated = false;
     let workspaceId: string | null = null;
+    let lastRunSample = false;
 
     // returning users already have a workspace — pick it up so uploads attach
     (function initWorkspace() {
@@ -369,22 +370,36 @@ export default function OnboardingScripts() {
           keepalive: true,
         }).catch(() => {});
       }
+      // Sample run when the user gave us nothing real to ingest.
+      lastRunSample = state.jobs.length === 0 && state.tools.length === 0;
       ($("#reviewWrap") as HTMLElement).style.display = "none";
       ($("#runbox") as HTMLElement).style.display = "block";
-      setText("#step4Title", "Auditing your jobs…");
-      setText("#step4Desc", "SYNNR is reading every artifact and reconciling it against your pricing.");
+      setText("#step4Title", lastRunSample ? "Auditing a sample job packet…" : "Auditing your jobs…");
+      setText("#step4Desc", lastRunSample
+        ? "Running a demo audit on a sample packet so you can see real findings instantly — upload your own to audit your books."
+        : "SYNNR is reading every artifact and reconciling it against your pricing.");
       nextBtn.disabled = true; nextBtn.innerHTML = '<span class="spin"></span>Auditing…';
       backBtn.style.visibility = "hidden";
       const n = Math.max(1, state.jobs.length * 138 || 1204);
-      const lines: [string, string, string][] = [
-        ["acc", "› ingesting " + n.toLocaleString() + " job records …", "ok"],
-        ["acc", "› matching field photos + tickets …", "ok"],
-        ["acc", "› validating rates vs pricebook …", "ok"],
-        ["flag", "! 142 missed billables found", ""],
-        ["flag", "! 37 rate mismatches flagged", ""],
-        ["flag", "! 61 packets missing backup", ""],
-        ["acc", "▣ recoverable revenue: $284,750", ""],
-      ];
+      const lines: [string, string, string][] = lastRunSample
+        ? [
+            ["acc", "› loading sample job packet …", "ok"],
+            ["acc", "› extracting ticket + invoice …", "ok"],
+            ["acc", "› reconciling against MSA rates …", "ok"],
+            ["flag", "! 3 missed billables found", ""],
+            ["flag", "! 1 rate mismatch flagged", ""],
+            ["flag", "! 1 packet missing backup", ""],
+            ["acc", "▣ recoverable on sample: $4,570", ""],
+          ]
+        : [
+            ["acc", "› ingesting " + n.toLocaleString() + " job records …", "ok"],
+            ["acc", "› matching field photos + tickets …", "ok"],
+            ["acc", "› validating rates vs pricebook …", "ok"],
+            ["flag", "! 142 missed billables found", ""],
+            ["flag", "! 37 rate mismatches flagged", ""],
+            ["flag", "! 61 packets missing backup", ""],
+            ["acc", "▣ recoverable revenue: $284,750", ""],
+          ];
       const box = $("#runlines") as HTMLElement; box.innerHTML = "";
       let i = 0;
       const step = () => {
@@ -415,16 +430,18 @@ export default function OnboardingScripts() {
       audited = true; save();
       ($("#runbox") as HTMLElement).style.display = "none";
       ($("#successWrap") as HTMLElement).style.display = "block";
-      setText("#step4Title", "You're leaving money on the table — here's where");
-      setText("#step4Desc", "Your workspace is ready. Open the dashboard to review every finding and export invoice-ready packets.");
+      setText("#step4Title", lastRunSample ? "Here's what a real audit finds" : "You're leaving money on the table — here's where");
+      setText("#step4Desc", lastRunSample
+        ? "This is one finding on a sample job. Upload your own job data and SYNNR runs this across every job you bill."
+        : "Your workspace is ready. Open the dashboard to review every finding and export invoice-ready packets.");
       stepLis.forEach((li) => { if (+(li.getAttribute("data-i") || 0) === 4) li.classList.add("done"); });
       const fill = $("#progressFill"); if (fill) fill.style.width = "100%";
       backBtn.style.visibility = "visible";
       setNextLabel();
-      countUp($("#recAmount") as HTMLElement, 284750, "$");
-      countUp($("#s_missed") as HTMLElement, 142, "");
-      countUp($("#s_rate") as HTMLElement, 37, "");
-      countUp($("#s_backup") as HTMLElement, 61, "");
+      countUp($("#recAmount") as HTMLElement, lastRunSample ? 4570 : 284750, "$");
+      countUp($("#s_missed") as HTMLElement, lastRunSample ? 3 : 142, "");
+      countUp($("#s_rate") as HTMLElement, lastRunSample ? 1 : 37, "");
+      countUp($("#s_backup") as HTMLElement, lastRunSample ? 1 : 61, "");
     }
 
     render();
