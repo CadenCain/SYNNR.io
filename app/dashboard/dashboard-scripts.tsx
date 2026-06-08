@@ -134,10 +134,17 @@ export default function DashboardScripts() {
     const head = (title: string, meta?: string) =>
       '<div class="vsec-h"><h2>' + title + "</h2>" + (meta ? '<span class="meta">' + meta + "</span>" : "") + "</div>";
     const list = (rows: string[]) => '<div class="dlist">' + rows.join("") + "</div>";
-    const row = (icon: string, iconCls: string, title: string, sub: string, trail: string) =>
-      '<div class="drow"><div class="dic ' + (iconCls || "") + '">' + icon + "</div>" +
+    const row = (icon: string, iconCls: string, title: string, sub: string, trail: string, tags?: string) =>
+      '<div class="drow"' + (tags ? ' data-tags="' + tags + '"' : "") + '><div class="dic ' + (iconCls || "") + '">' + icon + "</div>" +
       '<div class="dmain"><b>' + title + "</b><span>" + sub + "</span></div>" +
       '<div class="dtrail">' + trail + "</div></div>";
+    const queueBar = () =>
+      '<div class="qfilter">' +
+      '<span class="qchip on" data-f="all">All</span>' +
+      '<span class="qchip" data-f="big">High $ impact</span>' +
+      '<span class="qchip" data-f="risk">High risk</span>' +
+      '<span class="qchip" data-f="backup">Missing backup</span>' +
+      '<span class="qsort">Sorted by $ impact</span></div>';
     const val = (v: string, cls?: string) => '<span class="dval ' + (cls || "") + '">' + v + "</span>";
     const pill = (cls: string, txt: string) => '<span class="status ' + cls + '"><span class="sd"></span>' + txt + "</span>";
     const bar = (pct: number) => '<span class="dbar"><i style="width:' + pct + '%"></i></span>';
@@ -152,26 +159,26 @@ export default function DashboardScripts() {
     type View = { section: string; title: string; body: () => string };
     const VIEWS: Record<string, View> = {
       jobs: { section: "Jobs", title: "All / My Queue", body: () =>
-        head("Job queue", "1,204 jobs") + list([
-          row(I.file, "", "#4821 · Standby &amp; rigging — Pad 14", "Apex Midstream · closed Aug 14", val("+$4,570", "pos") + pill("review", "In review")),
-          row(I.file, "", "#4805 · Tank cleanout — Yard 3", "Permian Co · closed Aug 13", val("+$2,180", "pos") + pill("open", "Open")),
+        head("Job queue", "1,204 jobs") + queueBar() + list([
+          row(I.file, "", "#4821 · Standby &amp; rigging — Pad 14", "Apex Midstream · closed Aug 14", val("+$4,570", "pos") + pill("review", "In review"), "big risk"),
+          row(I.file, "", "#4805 · Tank cleanout — Yard 3", "Permian Co · closed Aug 13", val("+$2,180", "pos") + pill("open", "Open"), "big backup"),
           row(I.file, "", "#4799 · Pipeline inspection", "Apex Midstream · closed Aug 12", val("+$1,940", "pos") + pill("delivered", "Delivered")),
           row(I.file, "", "#4772 · Crane lift — Site B", "Lone Star Energy · closed Aug 11", val("+$1,430", "pos") + pill("resolved", "Resolved")),
           row(I.file, "", "#4760 · Hydro test — Pad 7", "Permian Co · closed Aug 10", val("+$890", "pos") + pill("delivered", "Delivered")),
           row(I.file, "", "#4741 · Vacuum truck — Route 4", "Apex Midstream · closed Aug 9", val("—", "") + pill("open", "Clean")),
         ]) },
       atrisk: { section: "Jobs", title: "At-Risk Billables", body: () =>
-        head("At-risk billables", "$28,400 held") + list([
-          row(I.alert, "down", "#4821 · Unsigned ticket", "Holds billing on completed job", val("$4,570") + pill("review", "High")),
-          row(I.alert, "down", "#4790 · SLA breach risk", "Invoice due in 6 hours", val("$3,120") + pill("review", "High")),
-          row(I.alert, "warn", "#4805 · Missing field photos", "Packet incomplete · 4 of 7 docs", val("$2,180") + pill("open", "Medium")),
+        head("At-risk billables", "$28,400 held") + queueBar() + list([
+          row(I.alert, "down", "#4821 · Unsigned ticket", "Holds billing on completed job", val("$4,570") + pill("review", "High"), "big risk backup"),
+          row(I.alert, "down", "#4790 · SLA breach risk", "Invoice due in 6 hours", val("$3,120") + pill("review", "High"), "big risk"),
+          row(I.alert, "warn", "#4805 · Missing field photos", "Packet incomplete · 4 of 7 docs", val("$2,180") + pill("open", "Medium"), "big backup"),
           row(I.alert, "warn", "#4772 · Rate below MSA", "Billed under contract rate", val("$1,430") + pill("open", "Medium")),
           row(I.alert, "warn", "#4738 · Standby unbilled", "6.5 hrs not on invoice", val("$1,430") + pill("open", "Medium")),
         ]) },
       disputes: { section: "Jobs", title: "Disputes", body: () =>
-        head("Open disputes", "$12,330 at stake") + list([
-          row(I.msg, "down", "#4612 · Rate dispute — crane svc", "Apex Midstream · opened Aug 8", val("$6,200") + pill("review", "Awaiting client")),
-          row(I.msg, "down", "#4588 · Standby hours contested", "Permian Co · opened Aug 6", val("$3,100") + pill("open", "In review")),
+        head("Open disputes", "$12,330 at stake") + queueBar() + list([
+          row(I.msg, "down", "#4612 · Rate dispute — crane svc", "Apex Midstream · opened Aug 8", val("$6,200") + pill("review", "Awaiting client"), "big risk"),
+          row(I.msg, "down", "#4588 · Standby hours contested", "Permian Co · opened Aug 6", val("$3,100") + pill("open", "In review"), "big"),
           row(I.msg, "down", "#4570 · Mobilization fee omitted", "Lone Star Energy · opened Aug 4", val("$850") + pill("review", "Awaiting client")),
           row(I.msg, "up", "#4521 · Consumables markup", "Apex Midstream · resolved Aug 5", val("+$2,180", "pos") + pill("resolved", "Won")),
           row(I.msg, "up", "#4498 · Duplicate line item", "Permian Co · resolved Jul 30", val("—") + pill("resolved", "Resolved")),
@@ -362,6 +369,20 @@ export default function DashboardScripts() {
     const JOB_VIEWS = ["jobs", "atrisk", "disputes", "backup", "pricebook", "compliance", "recovery"];
     on(root, "click", (e) => {
       const target = e.target as HTMLElement;
+
+      // queue filter chips
+      const chip = target.closest<HTMLElement>(".qchip");
+      if (chip && chip.parentElement) {
+        chip.parentElement.querySelectorAll(".qchip").forEach((c) => c.classList.remove("on"));
+        chip.classList.add("on");
+        const f = chip.getAttribute("data-f") || "all";
+        dynEl?.querySelectorAll<HTMLElement>(".drow").forEach((r) => {
+          const tags = r.getAttribute("data-tags") || "";
+          r.style.display = f === "all" || tags.split(" ").includes(f) ? "" : "none";
+        });
+        return;
+      }
+
       const rowEl = target.closest<HTMLElement>(".drow");
       if (rowEl && !target.closest("a, button, [data-connect], .cbtn")) {
         const key = dynEl?.getAttribute("data-view-key") || "";

@@ -331,3 +331,10 @@
 .dash #dynView[data-view-key="pricebook"] .drow,
 .dash #dynView[data-view-key="compliance"] .drow,
 .dash #dynView[data-view-key="recovery"] .drow{cursor:pointer}
+
+/* queue filter chips */
+.dash .qfilter{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.dash .qchip{font-size:12.5px;padding:6px 12px;border-radius:8px;border:1px solid var(--line-2);color:var(--fg-dim);cursor:pointer;transition:all .15s}
+.dash .qchip:hover{background:var(--hover);color:var(--fg)}
+.dash .qchip.on{background:var(--card-2);color:var(--fg)}
+.dash .qsort{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-ghost)}
