@@ -25,6 +25,11 @@ export default function LoginPage() {
 
   const supabase = getBrowserSupabase();
 
+  const friendly = (m: string) =>
+    /failed to fetch|network|load failed/i.test(m)
+      ? "Couldn't reach SYNNR — check your connection and try again."
+      : m;
+
   async function sendCode() {
     setMsg(null);
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -32,21 +37,26 @@ export default function LoginPage() {
       return;
     }
     if (!supabase) {
-      setMsg({ t: "Auth isn't configured yet (missing Supabase env).", kind: "err" });
+      setMsg({ t: "Sign-in isn't enabled yet — try again shortly.", kind: "err" });
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { shouldCreateUser: true },
-    });
-    setBusy(false);
-    if (error) {
-      setMsg({ t: error.message, kind: "err" });
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: true },
+      });
+      setBusy(false);
+      if (error) {
+        setMsg({ t: friendly(error.message), kind: "err" });
+        return;
+      }
+      setStage("code");
+      setMsg({ t: "We emailed you a 6-digit code. Enter it below.", kind: "ok" });
+    } catch (e) {
+      setBusy(false);
+      setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
     }
-    setStage("code");
-    setMsg({ t: "We emailed you a 6-digit code. Enter it below.", kind: "ok" });
   }
 
   async function verify() {
@@ -57,17 +67,22 @@ export default function LoginPage() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: code.replace(/\D/g, ""),
-      type: "email",
-    });
-    setBusy(false);
-    if (error) {
-      setMsg({ t: error.message, kind: "err" });
-      return;
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code.replace(/\D/g, ""),
+        type: "email",
+      });
+      setBusy(false);
+      if (error) {
+        setMsg({ t: friendly(error.message), kind: "err" });
+        return;
+      }
+      window.location.href = nextTarget();
+    } catch (e) {
+      setBusy(false);
+      setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
     }
-    window.location.href = nextTarget();
   }
 
   return (
