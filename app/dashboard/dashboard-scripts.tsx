@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 
 /**
  * Dashboard interactions, ported from the prototype's dashboard.js +
@@ -292,10 +293,44 @@ export default function DashboardScripts() {
         dynEl.hidden = false;
         dynEl.classList.remove("dview"); void dynEl.offsetWidth; dynEl.classList.add("dview");
         setCrumb(v.section, v.title);
+        void hydrate(key); // swap demo rows for live workspace data when signed in
       }
       const main = root.querySelector<HTMLElement>(".main");
       if (main) main.scrollTop = 0;
     };
+
+    // Demo renders instantly; if signed in with live data, replace the rows.
+    async function hydrate(key: string) {
+      if (!dynEl) return;
+      const sb = getBrowserSupabase();
+      if (!sb) return;
+      const { data: auth } = await sb.auth.getUser();
+      if (!auth.user) return;
+      const money = (c: number | null) => (c == null ? "—" : "$" + Math.round(c / 100).toLocaleString());
+      let rows: string | null = null;
+
+      if (key === "clients") {
+        const { data } = await sb.from("clients").select("name, msa_number").order("name");
+        if (data?.length) rows = data.map((c) => row(I.user, "", c.name, c.msa_number || "—", "")).join("");
+      } else if (key === "crews") {
+        const { data } = await sb.from("crews").select("name, lead").order("name");
+        if (data?.length) rows = data.map((c) => row(I.users, "", c.name, c.lead ? "Lead · " + c.lead : "—", "")).join("");
+      } else if (key === "pricebook") {
+        const { data } = await sb.from("pricebook_rules").select("label, billed_cents, contract_cents, note").order("label");
+        if (data?.length) rows = data.map((r) => row(I.dollar, "warn", r.label, `Billed ${money(r.billed_cents)} → MSA ${money(r.contract_cents)}`, val(r.note || ""))).join("");
+      } else if (key === "integrations") {
+        const { data } = await sb.from("integrations").select("name, status").order("name");
+        if (data?.length) rows = data.map((i) =>
+          row(I.link, i.status === "connected" ? "up" : "", i.name, i.status === "connected" ? "Connected" : "Available",
+            i.status === "connected" ? pill("delivered", "Connected") : '<button class="cbtn" data-connect>Connect</button>')
+        ).join("");
+      } else {
+        return;
+      }
+
+      const target = dynEl.querySelector(".dlist");
+      if (rows && target) target.innerHTML = rows;
+    }
 
     root.querySelectorAll<HTMLElement>(".sb-nav .nav-item").forEach((it) => {
       if (it.hasAttribute("data-toggle")) return;
