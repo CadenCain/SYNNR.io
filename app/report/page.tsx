@@ -20,6 +20,29 @@ export default async function ReportPage() {
   const generated = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const collectRate = d.foundCents > 0 ? Math.round((d.recoveredCents / d.foundCents) * 100) : 0;
 
+  if (d.empty) {
+    return (
+      <div className="rpt">
+        <div className="doc">
+          <div className="rhead">
+            <div>
+              <div className="brand">{MARK} SYNNR</div>
+              <div className="eyebrow">Recoverable Revenue Report</div>
+              <h1>No findings yet</h1>
+              <div className="meta"><b>{d.workspace}</b> · generated {generated}</div>
+            </div>
+            <div className="actions"><a className="btn no-print" href="/dashboard">Back to dashboard</a></div>
+          </div>
+          <div className="guarantee" style={{ marginTop: 30 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg>
+            <p>Run your first audit and this report will fill in with recoverable revenue, recovery-by-type, and your top jobs — ready to print or share. <a href="/onboarding">Run an audit →</a></p>
+          </div>
+          <div className="foot">SYNNR · revenue intelligence for field operations · synnr.io</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rpt">
       <div className="doc">

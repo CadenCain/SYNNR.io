@@ -40,6 +40,17 @@ export async function POST(req: Request) {
   const ws = profile?.workspace_id;
   if (!ws) return NextResponse.json({ ok: false, error: "no workspace" }, { status: 400 });
 
+  // Per-workspace quota — the engine calls a paid model, so cap runs/hour.
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+  const { count: recentRuns } = await supabase
+    .from("audit_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", ws)
+    .gte("created_at", hourAgo);
+  if ((recentRuns ?? 0) >= 20) {
+    return NextResponse.json({ ok: false, error: "rate limit — too many audits this hour" }, { status: 429 });
+  }
+
   type EngineFile = { bytes: Uint8Array; mediaType: string; name: string };
   let parts: { ticket?: string; invoice?: string; pricebook?: string; raw?: string; files?: EngineFile[] } = {};
   try {

@@ -22,7 +22,7 @@ export const ONBOARDING_HTML = `
     </div>
 
     <div class="rail-foot">
-      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>SOC 2 Type II</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>Encrypted in transit &amp; at rest</span>
       <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Your data stays yours</span>
       <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>No credit card</span>
     </div>
@@ -71,7 +71,7 @@ export const ONBOARDING_HTML = `
             <div class="dropzone" id="dzJobs">
               <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
               <b>Drag &amp; drop job files, or click to browse</b>
-              <p>Up to 2GB per batch · we'll de-dupe and organize automatically</p>
+              <p>Up to 25 MB per file · we'll de-dupe and organize automatically</p>
               <div class="types"><span>PDF</span><span>JPG / HEIC</span><span>XLSX / CSV</span><span>DOCX</span><span>ZIP</span></div>
               <input type="file" id="fileJobs" multiple hidden />
             </div>

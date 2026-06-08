@@ -64,6 +64,33 @@ export default function AuditView({ data }: { data: AuditData }) {
       ? "Recovering — keep going"
       : "Review each finding to recover this job";
 
+  if (data.empty) {
+    return (
+      <div className="audit">
+        <div className="topbar2">
+          <a className="back" href="/dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
+            Back to dashboard
+          </a>
+          <div className="brandmini">
+            <span className="mk"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.4 14.6 9.4 22.6 12 14.6 14.6 12 22.6 9.4 14.6 1.4 12 9.4 9.4Z" /></svg></span>
+            <b>SYNNR</b>
+          </div>
+        </div>
+        <div className="wrap" style={{ textAlign: "center", paddingTop: 70 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600 }}>No audited jobs yet</h1>
+          <p style={{ color: "var(--fg-dim)", margin: "12px auto 22px", maxWidth: "44ch" }}>
+            Run an audit on your uploaded job data and approved findings will appear here, ready to review and recover.
+          </p>
+          <a href="/onboarding" className="btn btn-primary" style={{ display: "inline-flex" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+            Run an audit
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="audit">
       <div className="topbar2">

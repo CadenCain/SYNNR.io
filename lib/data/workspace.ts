@@ -13,6 +13,7 @@ export type AuditFinding = {
 };
 export type AuditData = {
   persist: boolean; // true when backed by a real workspace (changes are saved)
+  empty?: boolean; // authed workspace with no audited job yet
   jobNumber: string;
   jobTitle: string;
   client: string;
@@ -31,6 +32,7 @@ export type RiskRow = {
 };
 export type DashboardData = {
   live: boolean;
+  empty: boolean; // authed workspace with no data yet
   greeting: string;
   jobsAudited: string;
   recovered: string;
@@ -72,6 +74,7 @@ const DEMO_DASHBOARD: DashboardData = {
     { id: "d5", number: "#2323", subject: "Field photos missing from packet", priority: "high", status: "review", date: "2025-08-20" },
   ],
   plan: "",
+  empty: false,
 };
 
 const usd = (cents: number) => "$" + Math.round(cents / 100).toLocaleString("en-US");
@@ -88,11 +91,15 @@ function prioOf(p: string): RiskRow["priority"] {
 
 /* ----------------------------- live readers ----------------------------- */
 
+const EMPTY_AUDIT: AuditData = {
+  persist: true, empty: true, jobNumber: "", jobTitle: "", client: "", closed: "", crew: "", findings: [],
+};
+
 export async function getAuditData(): Promise<AuditData> {
   const supabase = await getServerSupabase();
-  if (!supabase) return DEMO_AUDIT;
+  if (!supabase) return DEMO_AUDIT; // unconfigured -> demo
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return DEMO_AUDIT;
+  if (!auth.user) return DEMO_AUDIT; // signed out -> demo
 
   const { data: job } = await supabase
     .from("jobs")
@@ -100,14 +107,14 @@ export async function getAuditData(): Promise<AuditData> {
     .order("recoverable_cents", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!job) return DEMO_AUDIT;
+  if (!job) return EMPTY_AUDIT; // authed, nothing audited yet
 
   const { data: findings } = await supabase
     .from("findings")
     .select("id, type, title, subtitle, amount_cents, state, blocker, evidence")
     .eq("job_id", job.id)
     .order("created_at", { ascending: true });
-  if (!findings || findings.length === 0) return DEMO_AUDIT;
+  if (!findings || findings.length === 0) return EMPTY_AUDIT;
 
   const [{ data: client }, { data: crew }] = await Promise.all([
     job.client_id
@@ -143,6 +150,7 @@ export async function getAuditData(): Promise<AuditData> {
 
 export type ReportData = {
   live: boolean;
+  empty?: boolean;
   workspace: string;
   foundCents: number;
   inBillingCents: number;
@@ -184,7 +192,13 @@ export async function getReportData(): Promise<ReportData> {
     supabase.from("jobs").select("number, title, recoverable_cents").order("recoverable_cents", { ascending: false }).limit(8),
   ]);
 
-  if (!findings || findings.length === 0) return DEMO_REPORT;
+  if (!findings || findings.length === 0) {
+    return {
+      live: true, empty: true, workspace: ws?.name || "Your workspace",
+      foundCents: 0, inBillingCents: 0, recoveredCents: 0, jobsCount: jobsCount ?? 0,
+      findingsCount: 0, byType: { missedCents: 0, missedCount: 0, rateCents: 0, rateCount: 0, docCount: 0 }, topJobs: [],
+    };
+  }
 
   let found = 0, inBilling = 0, recovered = 0;
   const t = { missedCents: 0, missedCount: 0, rateCents: 0, rateCount: 0, docCount: 0 };
@@ -227,21 +241,27 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase.from("subscriptions").select("plan, status").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  if (!jobs) return DEMO_DASHBOARD;
-
   const planNames: Record<string, string> = { recover: "Recover", command: "Command" };
   const plan = sub?.plan ? `${planNames[sub.plan] || sub.plan}${sub.status ? " · " + sub.status : ""}` : "";
 
-  const name =
+  const nameRaw =
     profile?.name?.split(" ")[0] ||
     profile?.email?.split("@")[0] ||
     auth.user.email?.split("@")[0] ||
     "there";
+  const name = nameRaw.charAt(0).toUpperCase() + nameRaw.slice(1);
+
+  // Authed but no jobs yet -> real empty state (NOT the fake demo).
+  if (!jobs || (count ?? 0) === 0) {
+    return { live: true, empty: true, greeting: name, jobsAudited: "0", recovered: "$0", riskRows: [], plan };
+  }
+
   const recovered = (runs ?? []).reduce((s, r) => s + (r.recovered_cents ?? 0), 0);
 
   return {
     live: true,
-    greeting: name.charAt(0).toUpperCase() + name.slice(1),
+    empty: false,
+    greeting: name,
     jobsAudited: (count ?? 0).toLocaleString("en-US"),
     recovered: recovered > 0 ? usd(recovered) : "$0",
     riskRows: jobs.map((j) => ({

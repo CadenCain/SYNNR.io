@@ -68,7 +68,9 @@ export default function OnboardingScripts() {
       const sb = getBrowserSupabase();
       const ws = workspaceId;
       if (!sb || !ws) return;
+      const MAX = 25 * 1024 * 1024; // 25 MB/file cap
       Array.prototype.forEach.call(fileList, (f: File) => {
+        if (f.size > MAX) return; // skip oversized; chip still shows locally
         const safe = f.name.replace(/[^\w.\-]/g, "_");
         const path = `${ws}/${which}/${safe}`;
         void sb.storage.from("job-data").upload(path, f, { upsert: true }).then(({ error }) => {
@@ -408,17 +410,9 @@ export default function OnboardingScripts() {
       setTimeout(() => { clearInterval(iv); el.textContent = fmt(target); }, 1300);
     }
     function showSuccess() {
+      // The real audit_run + findings are persisted by /api/audits/run (fired
+      // in runAudit). No fake totals written here.
       audited = true; save();
-      const sb = getBrowserSupabase();
-      if (sb && workspaceId) {
-        void sb.from("audit_runs").insert({
-          workspace_id: workspaceId,
-          label: "First self-serve audit",
-          jobs_count: state.jobs.length || 1204,
-          recovered_cents: 28475000,
-          status: "complete",
-        });
-      }
       ($("#runbox") as HTMLElement).style.display = "none";
       ($("#successWrap") as HTMLElement).style.display = "block";
       setText("#step4Title", "You're leaving money on the table — here's where");
