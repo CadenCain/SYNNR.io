@@ -1,24 +1,38 @@
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export type EvidenceItem = { label: string; ok: boolean; detail: string };
+export type FindingCategory =
+  | "Rate Mismatch" | "Missing Billable" | "Missing Backup"
+  | "Duplicate Charge" | "Discount Error" | "SLA Risk" | "Dispute Risk";
 export type AuditFinding = {
   id: string;
   type: "missed" | "rate" | "doc";
+  category: FindingCategory;
   title: string;
   subtitle: string;
   amount_cents: number;
+  confidence: number; // 0-100
   state: string;
   blocker: string | null;
   evidence: EvidenceItem[];
+  original?: string; // original invoice line
+  corrected?: string; // corrected line
+  fix?: string; // recommended correction
 };
+export type EvidenceType = { label: string; present: boolean };
 export type AuditData = {
   persist: boolean; // true when backed by a real workspace (changes are saved)
   empty?: boolean; // authed workspace with no audited job yet
   jobNumber: string;
   jobTitle: string;
   client: string;
+  location: string;
   closed: string;
   crew: string;
+  invoiceStatus: string;
+  risk: "High" | "Medium" | "Low";
+  readiness: number; // invoice readiness 0-100
+  evidenceTypes: EvidenceType[];
   findings: AuditFinding[];
 };
 
@@ -34,6 +48,8 @@ export type DashboardData = {
   live: boolean;
   empty: boolean; // authed workspace with no data yet
   greeting: string;
+  recoverableMonth: string; // hero metric — money found this month
+  atRisk: string; // unapproved findings + missing backup
   jobsAudited: string;
   recovered: string;
   riskRows: RiskRow[];
@@ -45,25 +61,101 @@ export type DashboardData = {
 const DEMO_AUDIT: AuditData = {
   persist: false,
   jobNumber: "RC-4821",
-  jobTitle: "Standby & rigging — Pad 14 turnaround",
+  jobTitle: "Crane & rigging — Pad 14 turnaround",
   client: "Apex Midstream · MSA #882",
+  location: "Pad 14 · Permian Basin, TX",
   closed: "Closed Aug 14, 2025",
   crew: "Crew B-7 · Mike Ross",
+  invoiceStatus: "Draft — not yet sent",
+  risk: "High",
+  readiness: 64,
+  evidenceTypes: [
+    { label: "Signed field ticket", present: true },
+    { label: "Field photos", present: false },
+    { label: "Rate sheet", present: true },
+    { label: "Customer MSA", present: true },
+    { label: "Time log", present: true },
+    { label: "Equipment usage", present: true },
+    { label: "Draft invoice", present: true },
+  ],
   findings: [
-    { id: "f1", type: "missed", title: "Unbilled standby hours", subtitle: "Ticket vs invoice delta · 6.5 hrs", amount_cents: 143000, state: "open", blocker: null,
-      evidence: [{ label: "Field ticket", ok: true, detail: "6.5 standby hrs logged + signed" }, { label: "Invoice as drafted", ok: false, detail: "0 standby hrs billed" }] },
-    { id: "f2", type: "rate", title: "Rate billed below MSA", subtitle: "Crane & rigging · MSA #882", amount_cents: 218000, state: "open", blocker: null,
-      evidence: [{ label: "Billed rate", ok: false, detail: "$1,250 / day × 4 days = $5,000" }, { label: "Contract rate (MSA)", ok: true, detail: "$1,795 / day × 4 days = $7,180" }] },
-    { id: "f3", type: "missed", title: "Consumables not reconciled", subtitle: "42 line items vs pricebook", amount_cents: 96000, state: "open", blocker: null,
-      evidence: [{ label: "Pricebook match", ok: true, detail: "42 items priced & backed" }, { label: "Invoice as drafted", ok: false, detail: "Consumables omitted" }] },
-    { id: "f4", type: "doc", title: "Missing field photos", subtitle: "3 of 5 backup images absent", amount_cents: 0, state: "open", blocker: "backup", evidence: [] },
-    { id: "f5", type: "doc", title: "Unsigned service ticket", subtitle: "Customer sign-off pending", amount_cents: 0, state: "open", blocker: "sign", evidence: [] },
+    {
+      id: "f1", type: "rate", category: "Rate Mismatch",
+      title: "Crane support billed below MSA rate", subtitle: "6 hrs · crane & rigging",
+      amount_cents: 75000, confidence: 98, state: "open", blocker: null,
+      original: "6 hrs × $250/hr = $1,500", corrected: "6 hrs × $375/hr = $2,250 (MSA #882)",
+      fix: "Re-rate crane support to the contracted $375/hr — adds $750.",
+      evidence: [
+        { label: "Draft invoice", ok: false, detail: "Crane @ $250/hr" },
+        { label: "Customer MSA #882", ok: true, detail: "Crane support = $375/hr" },
+      ],
+    },
+    {
+      id: "f2", type: "missed", category: "Missing Billable",
+      title: "Rigging support never invoiced", subtitle: "Crew on ticket, absent from invoice",
+      amount_cents: 120000, confidence: 95, state: "open", blocker: null,
+      original: "Not on invoice", corrected: "Rigging crew · 8 hrs = $1,200",
+      fix: "Add rigging support line ($1,200) — on the signed ticket, missing from the draft.",
+      evidence: [
+        { label: "Signed field ticket", ok: true, detail: "Rigging crew · 8 hrs logged" },
+        { label: "Draft invoice", ok: false, detail: "No rigging line" },
+      ],
+    },
+    {
+      id: "f3", type: "missed", category: "Missing Billable",
+      title: "Standby time not captured", subtitle: "Waiting on company man · 4.5 hrs",
+      amount_cents: 81000, confidence: 92, state: "open", blocker: null,
+      original: "0 hrs billed", corrected: "4.5 hrs × $180/hr = $810",
+      fix: "Bill 4.5 standby hrs at the MSA standby rate — adds $810.",
+      evidence: [
+        { label: "Time log", ok: true, detail: "Standby 11:20–15:50 (4.5 hrs)" },
+        { label: "Draft invoice", ok: false, detail: "No standby line" },
+      ],
+    },
+    {
+      id: "f4", type: "missed", category: "Missing Billable",
+      title: "Fuel surcharge omitted", subtitle: "Applies per MSA on equipment-haul jobs",
+      amount_cents: 64000, confidence: 88, state: "open", blocker: null,
+      original: "Omitted", corrected: "Fuel surcharge = $640",
+      fix: "Apply the contracted fuel surcharge — adds $640.",
+      evidence: [
+        { label: "Customer MSA #882", ok: true, detail: "Fuel surcharge clause 4.2" },
+        { label: "Equipment usage", ok: true, detail: "Haul + crane mobilization logged" },
+      ],
+    },
+    {
+      id: "f5", type: "missed", category: "Missing Billable",
+      title: "Equipment support not added", subtitle: "Crane pads & matting",
+      amount_cents: 117000, confidence: 90, state: "open", blocker: null,
+      original: "Not on invoice", corrected: "Crane pads / matting = $1,170",
+      fix: "Add equipment-support line ($1,170) shown in equipment usage.",
+      evidence: [
+        { label: "Equipment usage", ok: true, detail: "Matting + crane pads deployed" },
+        { label: "Draft invoice", ok: false, detail: "No equipment-support line" },
+      ],
+    },
+    {
+      id: "f6", type: "doc", category: "Missing Backup",
+      title: "Field photos incomplete", subtitle: "2 of 5 required backup images",
+      amount_cents: 0, confidence: 99, state: "open", blocker: "backup",
+      fix: "Request the 3 missing site photos from the crew before sending.",
+      evidence: [{ label: "Photo set", ok: false, detail: "2 of 5 attached" }],
+    },
+    {
+      id: "f7", type: "doc", category: "SLA Risk",
+      title: "Invoice approaching SLA window", subtitle: "Bill-by date in 6 days",
+      amount_cents: 0, confidence: 100, state: "open", blocker: "sign",
+      fix: "Finalize and send within the MSA billing window to avoid short-pay risk.",
+      evidence: [{ label: "MSA #882", ok: true, detail: "Net-15 bill-by clause" }],
+    },
   ],
 };
 
 const DEMO_DASHBOARD: DashboardData = {
   live: false,
   greeting: "Ray",
+  recoverableMonth: "$48,200",
+  atRisk: "$31,900",
   jobsAudited: "3,484",
   recovered: "$284,750",
   riskRows: [
@@ -92,8 +184,16 @@ function prioOf(p: string): RiskRow["priority"] {
 /* ----------------------------- live readers ----------------------------- */
 
 const EMPTY_AUDIT: AuditData = {
-  persist: true, empty: true, jobNumber: "", jobTitle: "", client: "", closed: "", crew: "", findings: [],
+  persist: true, empty: true, jobNumber: "", jobTitle: "", client: "", location: "", closed: "", crew: "",
+  invoiceStatus: "", risk: "Low", readiness: 0, evidenceTypes: [], findings: [],
 };
+
+function categoryOf(type: string, blocker: string | null): FindingCategory {
+  if (type === "rate") return "Rate Mismatch";
+  if (type === "missed") return "Missing Billable";
+  if (blocker === "sign") return "Dispute Risk";
+  return "Missing Backup";
+}
 
 export async function getAuditData(): Promise<AuditData> {
   const supabase = await getServerSupabase();
@@ -128,23 +228,49 @@ export async function getAuditData(): Promise<AuditData> {
     ? new Date(job.closed_at + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
     : "—";
 
+  const mapped: AuditFinding[] = findings.map((f) => {
+    const ev = Array.isArray(f.evidence) ? (f.evidence as unknown as EvidenceItem[]) : [];
+    return {
+      id: f.id,
+      type: f.type,
+      category: categoryOf(f.type, f.blocker),
+      title: f.title,
+      subtitle: f.subtitle ?? "",
+      amount_cents: f.amount_cents,
+      confidence: 90,
+      state: f.state,
+      blocker: f.blocker,
+      evidence: ev,
+      original: ev.find((e) => !e.ok)?.detail,
+      corrected: ev.find((e) => e.ok)?.detail,
+    };
+  });
+
+  const openMoney = mapped.filter((m) => m.amount_cents > 0 && m.state !== "dismissed").length;
+  const blockers = mapped.filter((m) => m.blocker && m.state !== "resolved").length;
+  const readiness = Math.max(0, Math.min(100, 100 - blockers * 20 - openMoney * 8));
+  const risk: AuditData["risk"] = openMoney > 0 ? "High" : blockers > 0 ? "Medium" : "Low";
+
   return {
     persist: true,
     jobNumber: job.number,
     jobTitle: job.title,
     client: client ? `${client.name}${client.msa_number ? " · " + client.msa_number : ""}` : "—",
+    location: "—",
     closed: `Closed ${closedAt}`,
     crew: crew ? `${crew.name}${crew.lead ? " · " + crew.lead : ""}` : "—",
-    findings: findings.map((f) => ({
-      id: f.id,
-      type: f.type,
-      title: f.title,
-      subtitle: f.subtitle ?? "",
-      amount_cents: f.amount_cents,
-      state: f.state,
-      blocker: f.blocker,
-      evidence: Array.isArray(f.evidence) ? (f.evidence as unknown as EvidenceItem[]) : [],
-    })),
+    invoiceStatus: "Draft — not yet sent",
+    risk,
+    readiness,
+    evidenceTypes: [
+      { label: "Signed field ticket", present: !mapped.some((m) => m.blocker === "sign") },
+      { label: "Field photos", present: !mapped.some((m) => m.blocker === "backup") },
+      { label: "Rate sheet", present: true },
+      { label: "Customer MSA", present: true },
+      { label: "Time log", present: true },
+      { label: "Draft invoice", present: true },
+    ],
+    findings: mapped,
   };
 }
 
@@ -233,12 +359,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return DEMO_DASHBOARD;
 
-  const [{ data: profile }, { count }, { data: runs }, { data: jobs }, { data: sub }] = await Promise.all([
+  const [{ data: profile }, { count }, { data: runs }, { data: jobs }, { data: sub }, { data: allFindings }] = await Promise.all([
     supabase.from("profiles").select("name, email").eq("id", auth.user.id).maybeSingle(),
     supabase.from("jobs").select("id", { count: "exact", head: true }),
     supabase.from("audit_runs").select("recovered_cents"),
     supabase.from("jobs").select("id, number, title, status, priority, closed_at").order("closed_at", { ascending: false }).limit(5),
     supabase.from("subscriptions").select("plan, status").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("findings").select("amount_cents, state, blocker"),
   ]);
 
   const planNames: Record<string, string> = { recover: "Recover", command: "Command" };
@@ -253,15 +380,20 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   // Authed but no jobs yet -> real empty state (NOT the fake demo).
   if (!jobs || (count ?? 0) === 0) {
-    return { live: true, empty: true, greeting: name, jobsAudited: "0", recovered: "$0", riskRows: [], plan };
+    return { live: true, empty: true, greeting: name, recoverableMonth: "$0", atRisk: "$0", jobsAudited: "0", recovered: "$0", riskRows: [], plan };
   }
 
   const recovered = (runs ?? []).reduce((s, r) => s + (r.recovered_cents ?? 0), 0);
+  const findingsAll = allFindings ?? [];
+  const recoverableMonthCents = findingsAll.reduce((s, f) => s + (f.state !== "dismissed" ? f.amount_cents ?? 0 : 0), 0);
+  const atRiskCents = findingsAll.reduce((s, f) => s + (f.state === "open" ? f.amount_cents ?? 0 : 0), 0);
 
   return {
     live: true,
     empty: false,
     greeting: name,
+    recoverableMonth: usd(recoverableMonthCents),
+    atRisk: usd(atRiskCents),
     jobsAudited: (count ?? 0).toLocaleString("en-US"),
     recovered: recovered > 0 ? usd(recovered) : "$0",
     riskRows: jobs.map((j) => ({

@@ -50,7 +50,20 @@ function emptyOverview(): string {
 }
 
 function fullStats(d: DashboardData): string {
-  return `<div class="stats">
+  return `<div class="heromx">
+        <div class="hm-main">
+          <div class="hm-k">Recoverable Revenue · This Month</div>
+          <div class="hm-v">${d.recoverableMonth}</div>
+          <div class="hm-d"><b class="up">+18%</b> vs last month · found before the invoice goes out</div>
+        </div>
+        <div class="hm-side">
+          <div class="hm-sk">At-Risk Revenue</div>
+          <div class="hm-sv">${d.atRisk}</div>
+          <div class="hm-ss">unapproved findings &amp; missing backup</div>
+        </div>
+      </div>
+
+      <div class="stats">
         <div class="stat">
           <div class="row1"><span class="label">Jobs Audited</span><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></span></div>
           <div class="row2"><span class="big">${d.jobsAudited}</span>
@@ -122,13 +135,14 @@ function fullStats(d: DashboardData): string {
 }
 
 function fullRail(): string {
-  return `<div class="rail-note"><b>6</b> recent activities</div>
+  const act = (label: string) => `<a class="fact" href="/audit">${label} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>`;
+  return `<div class="rail-note"><b>5</b> items need attention</div>
     <div class="feed">
-      <div class="fitem green"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span><span class="ft"><b>Audit completed</b><span>Job #4821 · recovered $4,570</span><span class="when">2 min ago</span></span></div>
-      <div class="fitem neutral"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span><span class="ft"><b>New job batch ingested</b><span>1,204 jobs queued</span><span class="when">14 min ago</span></span></div>
-      <div class="fitem amber"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span><span class="ft"><b>Rate flagged below MSA</b><span>Ticket #2322 · crane &amp; rigging</span><span class="when">1 hr ago</span></span></div>
-      <div class="fitem red"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span><span class="ft"><b>SLA breach risk</b><span>Invoice #2320 due in 6 hrs</span><span class="when">2 hr ago</span></span></div>
-      <div class="fitem neutral"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/></svg></span><span class="ft"><b>Pricebook updated</b><span>New customer rates synced</span><span class="when">3 hr ago</span></span></div>
+      <div class="fitem amber"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="ft"><b>Rate flagged below MSA</b><span>Job #4821 · crane @ $250 vs $375 — <span class="fmoney">+$750 underbill</span></span>${act("Review finding")}</span></div>
+      <div class="fitem green"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></span><span class="ft"><b>Missing billable found</b><span>Rigging support never invoiced — <span class="fmoney">+$1,200 recoverable</span></span>${act("Approve recovery")}</span></div>
+      <div class="fitem red"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15l-5-5L5 21M3 3l18 18"/></svg></span><span class="ft"><b>Missing field photos</b><span>Job #4821 · 2 of 5 — blocks <span class="fmoney">$4,570</span> from billing</span>${act("Request backup")}</span></div>
+      <div class="fitem red"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span><span class="ft"><b>SLA breach risk</b><span>Invoice #2320 due in 6 hrs · short-pay risk</span>${act("Generate packet")}</span></div>
+      <div class="fitem green"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span><span class="ft"><b>Audit completed</b><span>Job #4799 · <span class="fmoney">$1,940 recoverable</span> across 6 findings</span>${act("Review job")}</span></div>
     </div>`;
 }
 
