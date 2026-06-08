@@ -4,6 +4,16 @@ The app ships **fully working in demo mode** with zero config (public pages +
 seeded demo data). To turn on the real, authed, AI-powered product, set the
 following. Until then every authed/AI path safely falls back to the demo.
 
+> **Which repo / project:** Revenue Command lives in **`github.com/CadenCain/SYNNR.io`**
+> and the live Supabase is **`SYNNR.io`** (`zbtxnvzxnpwdrpaxmliz`, ACTIVE).
+> The separate `synnr-appv10` Vercel project (repo `synnr-app`, the "Darkstar"
+> compliance pivot) is **not** this product — leave it parked or delete it later.
+
+## 0. Create the Vercel project (one time)
+Vercel → **Add New… → Project → Import** `CadenCain/SYNNR.io` → Framework: Next.js
+(auto). Don't deploy yet — add the env vars in step 1 first, then deploy. After
+this, every `git push` to `main` auto-deploys.
+
 ## 1. Vercel → Project → Settings → Environment Variables
 Add to **Production + Preview**, then redeploy.
 
@@ -45,3 +55,8 @@ Messy files in → recoverable dollars out, reviewed, billed, and tracked.
 - New-workspace provisioning seeds 6 jobs / 5 findings / $4,570 found / $2,180 rate.
 - Detector math: standby $1,430, rate $2,180, + doc blockers.
 - Storage bucket `job-data` + engine functions present.
+- **Security hardening (2026-06-08):** `seed_workspace_sample` is now guarded to the
+  caller's own workspace and `anon` execute was revoked on it + `create_workspace`
+  (closed a cross-tenant seed hole). `current_workspace_id` stays anon-callable by
+  design (RLS policies reference it; returns null for anon). Remaining advisor WARNs
+  (public `leads` insert; signed-in users calling the provisioning RPCs) are intentional.
