@@ -238,7 +238,7 @@ export default function DashboardScripts() {
         ]) },
       reports: { section: "Analytics", title: "Reports", body: () => {
         const badge = (t: string) => '<span class="ftype">' + t + "</span>";
-        const dlbtn = () => '<button class="cbtn icon" data-connect aria-label="Download">' + I.dl + "</button>";
+        const dlbtn = () => '<a class="cbtn icon" href="/report" aria-label="Open report">' + I.dl + "</a>";
         return head("Reports", "4 generated") + list([
           row(I.chart, "up", "August recovery report", "Generated Sep 1 · 12 pages", badge("PDF") + dlbtn()),
           row(I.shield, "warn", "Q3 rate compliance summary", "Generated Aug 28 · 8 pages", badge("PDF") + dlbtn()),

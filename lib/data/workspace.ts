@@ -139,6 +139,78 @@ export async function getAuditData(): Promise<AuditData> {
   };
 }
 
+export type ReportData = {
+  live: boolean;
+  workspace: string;
+  foundCents: number;
+  inBillingCents: number;
+  recoveredCents: number;
+  jobsCount: number;
+  findingsCount: number;
+  byType: { missedCents: number; missedCount: number; rateCents: number; rateCount: number; docCount: number };
+  topJobs: { number: string; title: string; cents: number }[];
+};
+
+const DEMO_REPORT: ReportData = {
+  live: false,
+  workspace: "Permian Field Services",
+  foundCents: 28475000,
+  inBillingCents: 9120000,
+  recoveredCents: 4830000,
+  jobsCount: 1204,
+  findingsCount: 240,
+  byType: { missedCents: 14820000, missedCount: 142, rateCents: 9430000, rateCount: 37, docCount: 61 },
+  topJobs: [
+    { number: "RC-4821", title: "Standby & rigging — Pad 14 turnaround", cents: 457000 },
+    { number: "RC-4805", title: "Tank cleanout — Yard 3", cents: 318000 },
+    { number: "RC-4799", title: "Pipeline inspection", cents: 264000 },
+    { number: "RC-4772", title: "Crane lift — Site B", cents: 143000 },
+    { number: "RC-4760", title: "Hydro test — Pad 7", cents: 89000 },
+  ],
+};
+
+export async function getReportData(): Promise<ReportData> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return DEMO_REPORT;
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return DEMO_REPORT;
+
+  const [{ data: ws }, { data: findings }, { count: jobsCount }, { data: jobs }] = await Promise.all([
+    supabase.from("workspaces").select("name").limit(1).maybeSingle(),
+    supabase.from("findings").select("type, amount_cents, state"),
+    supabase.from("jobs").select("id", { count: "exact", head: true }),
+    supabase.from("jobs").select("number, title, recoverable_cents").order("recoverable_cents", { ascending: false }).limit(8),
+  ]);
+
+  if (!findings || findings.length === 0) return DEMO_REPORT;
+
+  let found = 0, inBilling = 0, recovered = 0;
+  const t = { missedCents: 0, missedCount: 0, rateCents: 0, rateCount: 0, docCount: 0 };
+  for (const f of findings) {
+    const amt = f.amount_cents || 0;
+    if (f.state !== "dismissed") found += amt;
+    if (f.state === "approved" || f.state === "recovered") inBilling += amt;
+    if (f.state === "recovered") recovered += amt;
+    if (f.type === "missed") { t.missedCents += amt; t.missedCount++; }
+    else if (f.type === "rate") { t.rateCents += amt; t.rateCount++; }
+    else t.docCount++;
+  }
+
+  return {
+    live: true,
+    workspace: ws?.name || "Your workspace",
+    foundCents: found,
+    inBillingCents: inBilling,
+    recoveredCents: recovered,
+    jobsCount: jobsCount ?? 0,
+    findingsCount: findings.length,
+    byType: t,
+    topJobs: (jobs ?? []).filter((j) => (j.recoverable_cents ?? 0) > 0).map((j) => ({
+      number: j.number, title: j.title, cents: j.recoverable_cents ?? 0,
+    })),
+  };
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await getServerSupabase();
   if (!supabase) return DEMO_DASHBOARD;
