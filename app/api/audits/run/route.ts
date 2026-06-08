@@ -4,13 +4,24 @@ import { runEngine } from "@/lib/engine/run";
 
 export const maxDuration = 120;
 
-// Text-like files we can read today. PDFs/images/xlsx need OCR/vision (next).
-function readable(name: string, mime: string | null): boolean {
+function mediaTypeOf(name: string, mime: string | null): string {
   const m = (mime || "").toLowerCase();
+  if (m && m !== "application/octet-stream") return m;
   const n = (name || "").toLowerCase();
-  if (m.startsWith("text/")) return true;
-  if (["application/json", "application/csv"].includes(m)) return true;
-  return /\.(txt|csv|tsv|md|json|log|text)$/.test(n);
+  if (n.endsWith(".pdf")) return "application/pdf";
+  if (/\.(jpg|jpeg)$/.test(n)) return "image/jpeg";
+  if (n.endsWith(".png")) return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".gif")) return "image/gif";
+  if (/\.(txt|csv|tsv|md|json|log|text)$/.test(n)) return "text/plain";
+  return m || "application/octet-stream";
+}
+function isText(mt: string, name: string): boolean {
+  return mt.startsWith("text/") || mt === "application/json" || /\.(txt|csv|tsv|md|json|log|text)$/.test((name || "").toLowerCase());
+}
+// PDFs + images go to the vision model. xlsx/docx/zip still need conversion.
+function isVision(mt: string): boolean {
+  return mt === "application/pdf" || ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mt);
 }
 
 /**
@@ -29,7 +40,8 @@ export async function POST(req: Request) {
   const ws = profile?.workspace_id;
   if (!ws) return NextResponse.json({ ok: false, error: "no workspace" }, { status: 400 });
 
-  let parts: { ticket?: string; invoice?: string; pricebook?: string; raw?: string } = {};
+  type EngineFile = { bytes: Uint8Array; mediaType: string; name: string };
+  let parts: { ticket?: string; invoice?: string; pricebook?: string; raw?: string; files?: EngineFile[] } = {};
   try {
     parts = await req.json();
   } catch {
@@ -40,30 +52,46 @@ export async function POST(req: Request) {
   let filesRead = 0;
   let filesSkipped = 0;
 
-  // No explicit text in the body -> reconcile the workspace's real uploads.
-  if (!parts.ticket && !parts.invoice && !parts.pricebook && !parts.raw) {
+  // No explicit input -> reconcile the workspace's real uploads (text + PDFs/images).
+  if (!parts.ticket && !parts.invoice && !parts.pricebook && !parts.raw && !parts.files) {
     const { data: arts } = await supabase
       .from("artifacts")
       .select("name, kind, mime, storage_path")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(24);
     let raw = "";
+    const files: EngineFile[] = [];
+    let bytesBudget = 16 * 1024 * 1024; // cap multimodal payload
+
     for (const a of arts ?? []) {
       if (!a.storage_path) continue;
-      if (!readable(a.name, a.mime)) { filesSkipped++; continue; }
-      const { data: blob } = await supabase.storage.from("job-data").download(a.storage_path);
-      if (!blob) { filesSkipped++; continue; }
-      try {
-        const txt = await blob.text();
-        raw += `\n--- ${a.kind.toUpperCase()}: ${a.name} ---\n${txt}\n`;
+      const mt = mediaTypeOf(a.name, a.mime);
+
+      if (isText(mt, a.name)) {
+        const { data: blob } = await supabase.storage.from("job-data").download(a.storage_path);
+        if (!blob) { filesSkipped++; continue; }
+        try {
+          raw += `\n--- ${a.kind.toUpperCase()}: ${a.name} ---\n${await blob.text()}\n`;
+          filesRead++;
+        } catch {
+          filesSkipped++;
+        }
+      } else if (isVision(mt) && files.length < 8) {
+        const { data: blob } = await supabase.storage.from("job-data").download(a.storage_path);
+        if (!blob) { filesSkipped++; continue; }
+        const ab = await blob.arrayBuffer();
+        if (ab.byteLength > bytesBudget) { filesSkipped++; continue; }
+        bytesBudget -= ab.byteLength;
+        files.push({ bytes: new Uint8Array(ab), mediaType: mt, name: a.name });
         filesRead++;
-      } catch {
-        filesSkipped++;
+      } else {
+        filesSkipped++; // xlsx/docx/zip/heic — conversion not wired yet
       }
       if (raw.length > 24000) break;
     }
-    if (filesRead > 0) parts = { raw };
-    else usedSample = true; // nothing readable yet -> sample so it still produces a result
+
+    if (raw.trim() || files.length) parts = { raw: raw || undefined, files: files.length ? files : undefined };
+    else usedSample = true; // nothing usable yet -> sample so it still produces a result
   }
 
   let result;
