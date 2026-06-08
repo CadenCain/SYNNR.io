@@ -164,6 +164,7 @@ export const ONBOARDING_HTML = `
                 <div class="scell"><div class="n" id="s_rate">0</div><div class="k">Rate mismatches</div></div>
                 <div class="scell"><div class="n" id="s_backup">0</div><div class="k">Packets at risk</div></div>
               </div>
+              <div class="fpv" id="findPreview"></div>
             </div>
           </div>
         </section>

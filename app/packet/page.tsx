@@ -95,6 +95,23 @@ export default async function PacketPage() {
           </>
         )}
 
+        <h2>Billing handoff</h2>
+        <div className="handoff">
+          <div className="hf"><span className="hk">Total invoice adjustment</span><span className="hv pos">+{usd(total)}</span></div>
+          <div className="hf"><span className="hk">Corrected lines</span><span className="hv">{billable.length} ready</span></div>
+          <div className="hf"><span className="hk">Backup required</span><span className="hv">{blockers.length ? `${blockers.length} outstanding` : "complete"}</span></div>
+          <div className="hf"><span className="hk">Owner</span><span className="hv">Billing team</span></div>
+          <div className="hf"><span className="hk">Bill-by</span><span className="hv">Per MSA window</span></div>
+          <div className="hf"><span className="hk">Export to</span><span className="hv">QuickBooks draft + PDF</span></div>
+          <div className={`hf-status ${blockers.length ? "blocked" : "ready"}`}>
+            {blockers.length ? (
+              <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></svg>Blocked — {blockers.length} backup item{blockers.length === 1 ? "" : "s"} needed before this can be sent</>
+            ) : (
+              <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6 9 17l-5-5" /></svg>Ready to send to billing</>
+            )}
+          </div>
+        </div>
+
         <div className="foot">
           Prepared by SYNNR · every line item above is backed by source evidence (field ticket vs. invoice vs. contract).
           Attach this packet to your re-bill. {d.persist ? "" : "Sample data — sign in to generate from your jobs."}

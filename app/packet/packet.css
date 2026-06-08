@@ -60,3 +60,15 @@
   .pkt .jmeta,.pkt .totalbar .k,.pkt .totalbar .s,.pkt h2,.pkt .li .ls,.pkt .ev .e .el,.pkt .foot{color:#5b5345}
   .pkt .brand svg{color:#1a1613}
 }
+
+/* billing handoff section */
+.pkt .handoff{border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden;margin-top:4px}
+.pkt .hf{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13.5px}
+.pkt .hf .hk{color:var(--fg-dim)}
+.pkt .hf .hv{font-family:var(--mono)}
+.pkt .hf .hv.pos{color:var(--gold)}
+.pkt .hf-status{padding:13px 16px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px}
+.pkt .hf-status svg{width:15px;height:15px;flex:none}
+.pkt .hf-status.ready{color:var(--gold)}
+.pkt .hf-status.blocked{color:var(--clay)}
+@media print{ .pkt .handoff{background:#faf8f3;border-color:#d8d0bf} .pkt .hf .hk{color:#5b5345} .pkt .hf .hv.pos,.pkt .hf-status.ready{color:#6f6433} }

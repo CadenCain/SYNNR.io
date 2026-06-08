@@ -442,6 +442,23 @@ export default function OnboardingScripts() {
       countUp($("#s_missed") as HTMLElement, lastRunSample ? 3 : 142, "");
       countUp($("#s_rate") as HTMLElement, lastRunSample ? 1 : 37, "");
       countUp($("#s_backup") as HTMLElement, lastRunSample ? 1 : 61, "");
+
+      // Proof before checkout: reveal a few evidenced findings up front.
+      const fp = $("#findPreview");
+      if (fp) {
+        const items = [
+          { cat: "Rate Mismatch", amt: "+$750", t: "Crane support billed below MSA rate", e: ["Invoice: $250/hr", "MSA #882: $375/hr"] },
+          { cat: "Missing Billable", amt: "+$1,200", t: "Rigging support never invoiced", e: ["Ticket: 8 hrs logged", "Invoice: no rigging line"] },
+          { cat: "Missing Backup", amt: "blocks billing", t: "Field photos incomplete", e: ["2 of 5 photos attached"] },
+        ];
+        fp.innerHTML =
+          '<div class="fpv-h">Proof · a sample of what we found</div>' +
+          items.map((x) =>
+            `<div class="fp"><div class="fp1"><span class="fpcat">${x.cat}</span><span class="fpa">${x.amt}</span></div>` +
+            `<div class="fpt">${x.t}</div>` +
+            `<div class="fpe">${x.e.map((s) => `<span>${s}</span>`).join("")}</div></div>`
+          ).join("");
+      }
     }
 
     render();
