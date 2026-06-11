@@ -261,7 +261,7 @@ export default function DashboardScripts() {
         '<div class="fbfoot"><button class="cbtn" id="fbSend" style="background:var(--accent);color:#1a1613;border-color:var(--accent);font-weight:600">Send feedback</button></div></div>' },
       help: { section: "Support", title: "Help &amp; Support", body: () =>
         head("Help &amp; support") + list([
-          row(I.book, "", "Getting started with SYNNR", "Connect data &amp; run your first audit", pill("open", "Guide")),
+          row(I.book, "", "Getting started with SYNNR", "Connect data &amp; run your first readiness check", pill("open", "Guide")),
           row(I.book, "", "How recovery is detected", "Reconciliation &amp; evidence explained", pill("open", "Guide")),
           row(I.book, "", "Approving &amp; re-billing findings", "From flag to collected", pill("open", "Guide")),
           row(I.msg, "up", "Contact your recovery analyst", "ray@synnr.com · replies in &lt; 4 hrs", pill("delivered", "Live")),
@@ -270,7 +270,7 @@ export default function DashboardScripts() {
 
     const LABELMAP: Record<string, string> = {
       Overview: "overview", Clients: "clients", "Crews & Teams": "crews", Pricebook: "pricebook",
-      Integrations: "integrations", "Revenue Recovery": "recovery", "Rate Compliance": "compliance",
+      Integrations: "integrations", "Job Readiness": "recovery", "Rate Compliance": "compliance",
       "Backup Coverage": "backup", Reports: "reports", Feedback: "feedback", "Help & Support": "help",
     };
     const SUBMAP: Record<string, string> = {
@@ -332,6 +332,62 @@ export default function DashboardScripts() {
           row(I.link, i.status === "connected" ? "up" : "", i.name, i.status === "connected" ? "Connected" : "Available",
             i.status === "connected" ? pill("delivered", "Connected") : '<button class="cbtn" data-connect>Connect</button>')
         ).join("");
+      } else if (key === "jobs" || key === "atrisk" || key === "disputes") {
+        const metaEl = dynEl.querySelector<HTMLElement>(".vsec-h .meta");
+        const setMeta = (t: string) => { if (metaEl) metaEl.textContent = t; };
+        const emptyRow = (title: string, sub: string) =>
+          '<div class="drow"><div class="dic">' + I.file + '</div><div class="dmain"><b>' + title + "</b><span>" + sub + "</span></div>" +
+          '<div class="dtrail"><a class="cbtn" href="/onboarding">Run readiness check</a></div></div>';
+
+        if (key === "jobs") {
+          const [{ data: jobsData }, { data: f }] = await Promise.all([
+            sb.from("jobs").select("id, number, title, status, closed_at").order("closed_at", { ascending: false }).limit(25),
+            sb.from("findings").select("job_id, amount_cents, state, blocker"),
+          ]);
+          const sums = new Map<string, number>();
+          const blocked = new Set<string>();
+          (f ?? []).forEach((x) => {
+            if (x.state === "dismissed") return;
+            sums.set(x.job_id, (sums.get(x.job_id) ?? 0) + (x.amount_cents ?? 0));
+            if (x.blocker) blocked.add(x.job_id);
+          });
+          const st: Record<string, [string, string]> = {
+            open: ["open", "Open"], in_review: ["review", "In review"],
+            delivered: ["delivered", "Delivered"], resolved: ["resolved", "Resolved"],
+          };
+          if (jobsData?.length) {
+            rows = jobsData.map((j) => {
+              const cents = sums.get(j.id) ?? 0;
+              const [cls, txt] = st[j.status ?? "open"] ?? ["open", "Open"];
+              const tags = [cents >= 150000 ? "big" : "", j.status === "in_review" ? "risk" : "", blocked.has(j.id) ? "backup" : ""].filter(Boolean).join(" ");
+              const num = j.number.startsWith("#") ? j.number : "#" + j.number;
+              return row(I.file, "", num + " · " + j.title, "closed " + (j.closed_at ?? "—"),
+                val(cents ? "+" + money(cents) : "—", cents ? "pos" : "") + pill(cls, txt), tags || undefined);
+            }).join("");
+            setMeta(jobsData.length.toLocaleString() + " job" + (jobsData.length === 1 ? "" : "s"));
+          } else {
+            rows = emptyRow("No jobs yet", "Upload a job workflow and your queue fills in here.");
+            setMeta("0 jobs");
+          }
+        } else if (key === "atrisk") {
+          const { data: f } = await sb.from("findings").select("title, subtitle, amount_cents, blocker").eq("state", "open");
+          const items = f ?? [];
+          if (items.length) {
+            rows = items.map((x) =>
+              row(I.alert, x.blocker ? "down" : "warn", x.title, x.subtitle ?? "—",
+                val(x.amount_cents ? money(x.amount_cents) : "—") + pill(x.blocker ? "review" : "open", x.blocker ? "Blocked" : "At risk"),
+                [(x.amount_cents ?? 0) >= 150000 ? "big" : "", "risk", x.blocker ? "backup" : ""].filter(Boolean).join(" "))
+            ).join("");
+            const total = items.reduce((s, x) => s + (x.amount_cents ?? 0), 0);
+            setMeta(money(total) + " at stake");
+          } else {
+            rows = emptyRow("Nothing at risk", "Open readiness gaps will show up here.");
+            setMeta("$0 at stake");
+          }
+        } else {
+          rows = emptyRow("No open disputes", "Disputed invoices land here when a client pushes back.");
+          setMeta("$0 at stake");
+        }
       } else {
         return;
       }

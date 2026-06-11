@@ -368,7 +368,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase.from("findings").select("amount_cents, state, blocker"),
   ]);
 
-  const planNames: Record<string, string> = { recover: "Recover", command: "Command" };
+  const planNames: Record<string, string> = { pro: "Pro", growth: "Growth", recover: "Pro", command: "Growth" };
   const plan = sub?.plan ? `${planNames[sub.plan] || sub.plan}${sub.status ? " · " + sub.status : ""}` : "";
 
   const nameRaw =
