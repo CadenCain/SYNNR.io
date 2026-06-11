@@ -105,8 +105,7 @@ export default async function ReportPage() {
           <p>
             <b>How to read this report.</b> &ldquo;Recoverable found&rdquo; is detected and backed by side-by-side
             evidence — not yet money in the bank. &ldquo;Recovered&rdquo; counts only re-billed, confirmed-collected
-            dollars. SYNNR&rsquo;s 30-day ROI guarantee is measured against recoverable found; every finding is
-            reviewable with its source evidence before it touches a customer invoice.
+            dollars. Every finding is reviewable with its source evidence before it touches a customer invoice.
           </p>
         </div>
 

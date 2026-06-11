@@ -456,7 +456,7 @@ export const MARKETING_HTML = `
           <a href="/checkout?plan=command" id="roiCta" class="btn btn-primary">Start recovering — choose your plan
             <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <p class="mono" style="margin-top:14px;font-size:11.5px;color:var(--fg-faint);text-align:center">Estimate only · backed by SYNNR's 30-day ROI guarantee</p>
+          <p class="mono" style="margin-top:14px;font-size:11.5px;color:var(--fg-faint);text-align:center">Estimate only · flat monthly pricing, cancel anytime</p>
         </div>
       </div>
     </div>
@@ -468,21 +468,16 @@ export const MARKETING_HTML = `
     <div class="head reveal">
       <span class="eyebrow">Pricing</span>
       <h2 class="h2">Pricing that scales with what you recover.</h2>
-      <p class="lede">Most operations recover 20–40× their plan in the first quarter. If SYNNR doesn't find more than it costs, you don't pay — guaranteed.</p>
-      <div class="model-toggle" role="tablist" style="margin-top:26px">
-        <button class="on" data-model="selfserve">Self-serve</button>
-        <button data-model="performance">Performance</button>
-      </div>
-      <div class="toggle" id="cycleToggle" role="tablist">
+      <p class="lede">Flat monthly pricing. No contracts, no percentage of what you recover — month to month, cancel anytime.</p>
+      <div class="toggle" id="cycleToggle" role="tablist" style="margin-top:26px">
         <button class="on" data-cycle="monthly">Monthly</button>
         <button data-cycle="yearly">Yearly <span class="save">20% OFF</span></button>
       </div>
     </div>
-    <div id="planSelfserve">
     <div class="prices">
       <div class="price reveal" data-d="1">
         <div class="tier">Recover</div>
-        <div class="amt"><span class="n" data-m="$2,500" data-y="$2,000">$2,500</span><span class="per">/ month</span></div>
+        <div class="amt"><span class="n" data-m="$1,500" data-y="$1,200">$1,500</span><span class="per">/ month</span></div>
         <p class="desc">For single-crew operations putting a stop to leakage.</p>
         <a href="/checkout?plan=recover" class="btn btn-ghost">Request access</a>
         <div class="feats">
@@ -496,7 +491,7 @@ export const MARKETING_HTML = `
       <div class="price popular reveal" data-d="2">
         <div class="pop-tag">Popular</div>
         <div class="tier">Command</div>
-        <div class="amt"><span class="n" data-m="$7,500" data-y="$6,000">$7,500</span><span class="per">/ month</span></div>
+        <div class="amt"><span class="n" data-m="$4,500" data-y="$3,600">$4,500</span><span class="per">/ month</span></div>
         <p class="desc">For multi-crew operations recovering at full scale.</p>
         <a href="/checkout?plan=command" class="btn btn-primary">Request access</a>
         <div class="feats">
@@ -518,49 +513,7 @@ export const MARKETING_HTML = `
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>SYNNR data unification</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Dedicated success manager</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Custom integrations &amp; SSO</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Performance-based pricing option</li>
-        </div>
-      </div>
-    </div>
-    </div>
-
-    <div id="planPerformance" hidden>
-      <div class="perf-panel">
-        <div class="perf-left">
-          <span class="pp-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Performance pricing</span>
-          <h3>You keep 85%. We earn 15% &mdash; only on what&rsquo;s collected.</h3>
-          <p class="pp-lede">For mid-market and multi-site operators. A small platform fee for the system and your recovery analyst, plus a share of the revenue SYNNR recovers and you actually bank.</p>
-          <div class="pp-terms">
-            <div class="pp-term"><div class="k">Platform fee</div><div class="v">$1,500<small>/mo</small></div><div class="x">System, analyst &amp; support</div></div>
-            <div class="pp-term"><div class="k">Performance fee</div><div class="v">15%<small> collected</small></div><div class="x">Only on dollars you recover</div></div>
-          </div>
-          <ul class="pp-list">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg><span><b>Pay only on collected dollars</b> &mdash; not flagged, not billed. Banked.</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg><span><b>Aligned by design</b> &mdash; we earn when you do, nothing when we don&rsquo;t.</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg><span><b>Scales with you</b> &mdash; no per-seat math, no job caps.</span></li>
-          </ul>
-        </div>
-        <div class="perf-right">
-          <div class="pr-label">Your annual recovered revenue</div>
-          <div class="perf-slider">
-            <div class="pv" id="perfRecovered">$378,000</div>
-            <input type="range" id="perfRange" min="100000" max="3000000" step="1000" value="378000" />
-            <div class="pr-hint">Drag to model your split</div>
-          </div>
-          <div class="split-bar">
-            <div class="seg you"><span class="pct">You keep 85%</span><span class="amt2" id="perfYou">$321,300</span></div>
-            <div class="seg syn"><span class="pct">15%</span><span class="amt2" id="perfSyn">$56,700</span></div>
-          </div>
-          <div class="split-legend">
-            <div class="sl-row"><span class="k"><span class="sw" style="background:var(--accent)"></span>You keep</span><span class="v" id="perfYou2">$321,300</span></div>
-            <div class="sl-row"><span class="k"><span class="sw" style="background:var(--ochre)"></span>SYNNR fee (15%)</span><span class="v" id="perfSyn2">$56,700</span></div>
-            <div class="sl-row"><span class="k"><span class="sw" style="background:var(--fg-faint)"></span>Platform ($1,500/mo)</span><span class="v">$18,000</span></div>
-            <div class="sl-row net"><span class="k">Net gain to you</span><span class="v" id="perfNet">$303,300</span></div>
-          </div>
-          <div class="perf-cta">
-            <a href="#roi" class="btn btn-ghost btn-sm">Open ROI calculator</a>
-            <a href="/onboarding" class="btn btn-primary btn-sm">Start with a pilot<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-          </div>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Volume pricing &amp; custom terms</li>
         </div>
       </div>
     </div>

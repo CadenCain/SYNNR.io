@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * Marketing-page interactions, ported from the prototype's main-cryptix.js:
  * sticky nav, scroll reveals, count-up, testimonial carousel, pricing toggle,
  * FAQ accordion, smooth anchors, ROI calculator, hero dashboard period toggle
- * + view switching, and the pricing model switch / performance split.
+ * + view switching, and the monthly/yearly pricing cycle toggle.
  */
 export default function MarketingScripts() {
   useEffect(() => {
@@ -195,8 +195,8 @@ export default function MarketingScripts() {
         const recYr = leakMo * 0.6 * 12;
         const leakYr = leakMo * 12;
         const plan = j <= 500
-          ? { name: "Recover", mo: 2500, key: "recover" }
-          : { name: "Command", mo: 7500, key: "command" };
+          ? { name: "Recover", mo: 1500, key: "recover" }
+          : { name: "Command", mo: 4500, key: "command" };
         const planYr = plan.mo * 12;
         const net = recYr - planYr;
         const mult = recYr / planYr;
@@ -282,40 +282,6 @@ export default function MarketingScripts() {
         if (titleEl && TITLES[v]) titleEl.textContent = TITLES[v];
       })
     );
-
-    /* pricing model switch + performance split */
-    const modelBtns = Array.from(root.querySelectorAll<HTMLElement>(".model-toggle button"));
-    if (modelBtns.length) {
-      const selfserve = document.getElementById("planSelfserve");
-      const performance = document.getElementById("planPerformance");
-      const cycle = document.getElementById("cycleToggle");
-      modelBtns.forEach((b) =>
-        on(b, "click", () => {
-          modelBtns.forEach((x) => x.classList.remove("on"));
-          b.classList.add("on");
-          const perf = b.getAttribute("data-model") === "performance";
-          if (performance) (performance as HTMLElement).hidden = !perf;
-          if (selfserve) (selfserve as HTMLElement).hidden = perf;
-          if (cycle) cycle.classList.toggle("hide", perf);
-        })
-      );
-      const range = document.getElementById("perfRange") as HTMLInputElement | null;
-      const f = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
-      const upd = () => {
-        if (!range) return;
-        const R = +range.value;
-        const you = R * 0.85, syn = R * 0.15, net = you - 18000;
-        const set = (id: string, v: string) => {
-          const el = document.getElementById(id);
-          if (el) el.textContent = v;
-        };
-        set("perfRecovered", f(R));
-        set("perfYou", f(you)); set("perfYou2", f(you));
-        set("perfSyn", f(syn)); set("perfSyn2", f(syn));
-        set("perfNet", f(net));
-      };
-      if (range) { on(range, "input", upd); upd(); }
-    }
 
     return () => cleanups.forEach((c) => c());
   }, []);

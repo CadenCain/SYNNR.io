@@ -14,8 +14,8 @@ export default function CheckoutScripts() {
     const q = (id: string) => root.querySelector<HTMLElement>("#" + id);
 
     const PLANS: Record<string, { name: string; desc: string; price: number }> = {
-      recover: { name: "SYNNR Recover", desc: "Up to 500 jobs/mo · core recovery", price: 2500 },
-      command: { name: "SYNNR Command", desc: "Unlimited jobs · full recovery suite", price: 7500 },
+      recover: { name: "SYNNR Recover", desc: "Up to 500 jobs/mo · core recovery", price: 1500 },
+      command: { name: "SYNNR Command", desc: "Unlimited jobs · full recovery suite", price: 4500 },
     };
     const planKey = new URLSearchParams(window.location.search).get("plan") || "";
     const plan = PLANS[planKey] || PLANS.command;

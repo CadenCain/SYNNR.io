@@ -31,14 +31,13 @@ export default function TermsPage() {
         <li>You are responsible for having the rights to share the data you provide.</li>
       </ul>
 
-      <h2>4. Plans, billing &amp; the ROI guarantee</h2>
+      <h2>4. Plans &amp; billing</h2>
       <p>
-        Paid plans are billed in advance on the cycle shown at checkout and may
-        be cancelled at any time, effective at the end of the current period.
-        Where offered, the 30-day ROI guarantee means that if SYNNR does not
-        identify recoverable revenue exceeding your plan cost within the first 30
-        days, that period is refundable — recoverable means detected and
-        evidenced, not collected.
+        Paid plans are flat monthly subscriptions billed in advance on the cycle
+        shown at checkout. There is no free trial and no performance or
+        percentage-of-recovery fee. You may cancel at any time, effective at the
+        end of the current billing period; amounts already billed are
+        non-refundable except where required by law.
       </p>
 
       <h2>5. Acceptable use</h2>
