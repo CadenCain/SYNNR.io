@@ -13,7 +13,7 @@ components.
 |---|---|---|
 | **Auth** | **Supabase Auth** (email magic link / OTP) + **RLS** | DB is already Supabase; one less vendor; RLS gives per-tenant isolation for free. Wire with `@supabase/ssr` (cookie sessions) so `current_workspace_id()` resolves per request. |
 | **Tenancy** | One `workspace` per company; every domain row carries `workspace_id`; users join via `profiles.workspace_id` | Matches the onboarding "create workspace" step. |
-| **Billing MVP** | **Flat Stripe subscriptions** (Recover $1,500 / Command $4,500). No trial, no percentage-of-recovery model (dropped by founder decision — collected-dollar attribution is unverifiable from our side). | Flat monthly keeps billing honest and simple; cancel anytime. |
+| **Billing MVP** | **Flat Stripe subscriptions** (Pro $499 / Growth $999). No trial, no percentage-of-recovery model (dropped by founder decision — collected-dollar attribution is unverifiable from our side). | Flat monthly keeps billing honest and simple; cancel anytime. |
 | **Ingestion MVP** | **Upload-only** (files → Storage → parse). Connectors (QuickBooks/ServiceTitan/Procore/Drive) are **"Soon"** in the UI. | Connector OAuth + sync is the second hardest thing after extraction. Ship upload first. |
 | **"Request Early Access"** | Captures a **lead** (already wired: `POST /api/lead` → `leads` table) *and* opens the self-serve wizard | Lets you collect demand now without pretending full self-serve is production-ready. |
 

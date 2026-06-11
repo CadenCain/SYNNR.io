@@ -14,11 +14,14 @@ export default function CheckoutScripts() {
     const q = (id: string) => root.querySelector<HTMLElement>("#" + id);
 
     const PLANS: Record<string, { name: string; desc: string; price: number }> = {
-      recover: { name: "SYNNR Recover", desc: "Up to 500 jobs/mo · core recovery", price: 1500 },
-      command: { name: "SYNNR Command", desc: "Unlimited jobs · full recovery suite", price: 4500 },
+      pro: { name: "SYNNR Pro", desc: "Recurring field jobs · readiness core", price: 499 },
+      growth: { name: "SYNNR Growth", desc: "Multi-crew · full readiness suite", price: 999 },
     };
-    const planKey = new URLSearchParams(window.location.search).get("plan") || "";
-    const plan = PLANS[planKey] || PLANS.command;
+    // legacy keys from old links map onto the current tiers
+    const ALIASES: Record<string, string> = { recover: "pro", command: "growth" };
+    const rawKey = new URLSearchParams(window.location.search).get("plan") || "";
+    const planKey = ALIASES[rawKey] ?? rawKey;
+    const plan = PLANS[planKey] || PLANS.growth;
     const money = (n: number) =>
       "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -75,7 +78,7 @@ export default function CheckoutScripts() {
     const btn = q("payBtn") as HTMLButtonElement | null;
     const err = q("err");
     if (btn) {
-      const planForCheckout = planKey === "recover" ? "recover" : "command";
+      const planForCheckout = planKey === "pro" ? "pro" : "growth";
 
       const runDemo = () => {
         if (err) err.textContent = "";

@@ -16,28 +16,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — Revenue Intelligence for Field Operations",
+    default: "SYNNR — Loadout + Job Readiness for Field Operations",
     template: "%s",
   },
   description:
-    "SYNNR is the self-serve intelligence system that finds lost revenue, cleans job packets, validates pricing, and helps field service companies get paid faster.",
+    "SYNNR verifies the crew, truck, tools, certs, inventory, paperwork, and billing backup are ready before a job moves forward — field-operations readiness for service companies.",
   keywords: [
-    "revenue intelligence", "field service", "billing assurance", "revenue recovery",
-    "oilfield", "industrial contractor", "invoice audit", "MSA compliance",
+    "job readiness", "field operations", "loadout checklist", "certification tracking",
+    "oilfield", "industrial contractor", "job packet", "dispatch readiness",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — Revenue Intelligence for Field Operations",
+    title: "SYNNR — Loadout + Job Readiness for Field Operations",
     description:
-      "Find missed charges before the invoice goes out. SYNNR turns scattered tickets, photos, pricing, and field notes into invoice-ready proof.",
+      "Stop job failures before they happen. SYNNR checks crew, truck, tools, certs, paperwork, and billing backup before the job moves forward.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — Revenue Intelligence for Field Operations",
+    title: "SYNNR — Loadout + Job Readiness for Field Operations",
     description:
-      "The self-serve intelligence system that finds lost revenue between the field and the invoice.",
+      "Field-operations readiness software — every job verified Ready, At Risk, or Blocked before it rolls.",
   },
 };
 

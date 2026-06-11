@@ -8,13 +8,13 @@ export function getStripe(): Stripe | null {
 }
 
 export const PLAN_NAMES: Record<string, string> = {
-  recover: "SYNNR Recover",
-  command: "SYNNR Command",
+  pro: "SYNNR Pro",
+  growth: "SYNNR Growth",
 };
 
 /** Stripe Price ID for a plan (created in your Stripe dashboard, set via env). */
 export function priceFor(plan: string): string | undefined {
-  if (plan === "recover") return process.env.STRIPE_PRICE_RECOVER;
-  if (plan === "command") return process.env.STRIPE_PRICE_COMMAND;
+  if (plan === "pro") return process.env.STRIPE_PRICE_PRO;
+  if (plan === "growth") return process.env.STRIPE_PRICE_GROWTH;
   return undefined;
 }

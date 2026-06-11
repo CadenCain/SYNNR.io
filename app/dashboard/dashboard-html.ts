@@ -52,12 +52,12 @@ function emptyOverview(): string {
 function fullStats(d: DashboardData): string {
   return `<div class="heromx">
         <div class="hm-main">
-          <div class="hm-k">Recoverable Revenue · This Month</div>
+          <div class="hm-k">Caught Before Invoicing · This Month</div>
           <div class="hm-v">${d.recoverableMonth}</div>
           <div class="hm-d"><b class="up">+18%</b> vs last month · found before the invoice goes out</div>
         </div>
         <div class="hm-side">
-          <div class="hm-sk">At-Risk Revenue</div>
+          <div class="hm-sk">At-Risk Job Value</div>
           <div class="hm-sv">${d.atRisk}</div>
           <div class="hm-ss">unapproved findings &amp; missing backup</div>
         </div>
@@ -72,7 +72,7 @@ function fullStats(d: DashboardData): string {
           <div class="delta"><b class="up">+9%</b> vs last week</div>
         </div>
         <div class="stat">
-          <div class="row1"><span class="label">Avg. Recovery / Job</span><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span></div>
+          <div class="row1"><span class="label">Avg. Caught / Job</span><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span></div>
           <div class="row2"><span class="big">$486</span>
             <svg class="spark" viewBox="0 0 96 38" fill="none" preserveAspectRatio="none"><path d="M1 26 L13 28 L25 20 L37 24 L49 16 L61 19 L73 11 L83 14 L95 7" stroke="var(--up)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 26 L13 28 L25 20 L37 24 L49 16 L61 19 L73 11 L83 14 L95 7 L95 38 L1 38 Z" fill="url(#sg2)"/><defs><linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--up)" stop-opacity=".22"/><stop offset="1" stop-color="var(--up)" stop-opacity="0"/></linearGradient></defs></svg>
           </div>
@@ -149,7 +149,7 @@ function fullRail(): string {
 function emptyRail(): string {
   return `<div class="rail-note">No activity yet</div>
     <div class="feed">
-      <div class="fitem neutral"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span><span class="ft"><b>Run an audit to get started</b><span>Findings and recovery activity show up here.</span></span></div>
+      <div class="fitem neutral"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg></span><span class="ft"><b>Run a readiness check to get started</b><span>Readiness gaps and fixes show up here.</span></span></div>
     </div>`;
 }
 
@@ -191,7 +191,7 @@ export function dashboardHtml(d: DashboardData): string {
     <div class="sb-section">
       <div class="sb-label">Analytics &amp; Insights</div>
       <nav class="sb-nav">
-        <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Revenue Recovery</div>
+        <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Job Readiness</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v9l6 3"/><circle cx="12" cy="12" r="9"/></svg>Rate Compliance</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Backup Coverage</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4Z"/><path d="M8 12h8M8 16h5"/></svg>Reports</div>

@@ -8,19 +8,19 @@ export default function TermsPage() {
       <h2>1. Agreement</h2>
       <p>
         These Terms govern your access to and use of SYNNR (&ldquo;SYNNR,&rdquo;
-        &ldquo;we,&rdquo; &ldquo;us&rdquo;), the revenue-intelligence platform
-        for field operations. By creating a workspace or using the service, you
+        &ldquo;we,&rdquo; &ldquo;us&rdquo;), the field-operations readiness platform
+        for service companies. By creating a workspace or using the service, you
         agree to these Terms on behalf of your organization.
       </p>
 
       <h2>2. The service</h2>
       <p>
-        SYNNR ingests job data you provide — tickets, invoices, photos, field
-        notes, price books, rate sheets, and agreements — and reconciles them to
-        surface recoverable revenue, pricing discrepancies, and documentation
-        gaps. SYNNR provides analysis and recommendations; you remain
-        responsible for reviewing and approving any finding before it is billed
-        to a customer.
+        SYNNR ingests operational data you provide — loadout lists, crew
+        certifications, job packets, tickets, photos, customer requirements,
+        and billing rules — and checks them to surface readiness gaps,
+        documentation gaps, and billable work at risk. SYNNR provides analysis
+        and recommendations; you remain responsible for reviewing and approving
+        any finding before acting on it or billing a customer.
       </p>
 
       <h2>3. Your data</h2>

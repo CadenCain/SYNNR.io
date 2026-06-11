@@ -8,10 +8,13 @@ import { getServerSupabase } from "@/lib/supabase/server";
  * so the checkout page falls back to the demo flow.
  */
 export async function POST(req: Request) {
-  let plan = "command";
+  let plan = "growth";
   try {
     const body = await req.json();
-    if (body?.plan === "recover" || body?.plan === "command") plan = body.plan;
+    // legacy plan keys from old links map onto the current tiers
+    const aliases: Record<string, string> = { recover: "pro", command: "growth" };
+    const requested = typeof body?.plan === "string" ? (aliases[body.plan] ?? body.plan) : "";
+    if (requested === "pro" || requested === "growth") plan = requested;
   } catch {
     /* default */
   }

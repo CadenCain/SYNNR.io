@@ -195,8 +195,8 @@ export default function MarketingScripts() {
         const recYr = leakMo * 0.6 * 12;
         const leakYr = leakMo * 12;
         const plan = j <= 500
-          ? { name: "Recover", mo: 1500, key: "recover" }
-          : { name: "Command", mo: 4500, key: "command" };
+          ? { name: "Pro", mo: 499, key: "pro" }
+          : { name: "Growth", mo: 999, key: "growth" };
         const planYr = plan.mo * 12;
         const net = recYr - planYr;
         const mult = recYr / planYr;
@@ -267,7 +267,7 @@ export default function MarketingScripts() {
       });
     }
     const TITLES: Record<string, string> = {
-      dashboard: "Dashboard", audits: "Audits", pricebook: "Pricebook", risk: "Risk flags", packets: "Packets",
+      dashboard: "Dashboard", audits: "Jobs", pricebook: "Certs & inspections", risk: "Risk flags", packets: "Packets",
     };
     const titleEl = document.getElementById("appViewTitle");
     root.querySelectorAll<HTMLElement>(".app-nav a").forEach((a) =>

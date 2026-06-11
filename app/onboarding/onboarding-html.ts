@@ -11,14 +11,14 @@ export const ONBOARDING_HTML = `
 
     <div class="rail-lede">
       <h2>Find the revenue hiding between the field and the invoice.</h2>
-      <p>Four quick steps. No integration project. Your first audit runs the moment your data lands.</p>
+      <p>Four quick steps. No integration project. Your first readiness check runs the moment your data lands.</p>
     </div>
 
     <div class="stepper" id="stepper">
       <div class="step-li active" data-i="1"><span class="dot"><span class="num">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Create workspace</b><span>Company &amp; team</span></span></div>
       <div class="step-li" data-i="2"><span class="dot"><span class="num">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Connect job data</b><span>Tickets, photos, packets</span></span></div>
       <div class="step-li" data-i="3"><span class="dot"><span class="num">3</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Add your pricing</b><span>Pricebook, rates, MSAs</span></span></div>
-      <div class="step-li" data-i="4"><span class="dot"><span class="num">4</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Run first audit</b><span>See what you're owed</span></span></div>
+      <div class="step-li" data-i="4"><span class="dot"><span class="num">4</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Run readiness check</b><span>See what would have gone wrong</span></span></div>
     </div>
 
     <div class="rail-foot">
@@ -134,9 +134,9 @@ export const ONBOARDING_HTML = `
         </section>
 
         <section class="step-panel" data-step="4">
-          <span class="eyebrow">Run first audit</span>
-          <h1 id="step4Title">Review &amp; run your audit</h1>
-          <p class="desc" id="step4Desc">Here's what SYNNR will analyze. Kick off your first audit — most operations see results in a few minutes.</p>
+          <span class="eyebrow">Run readiness check</span>
+          <h1 id="step4Title">Review &amp; run your readiness check</h1>
+          <p class="desc" id="step4Desc">Here's what SYNNR will analyze. Kick off your first readiness check — most operations see results in a few minutes.</p>
 
           <div id="reviewWrap">
             <div class="review">
@@ -145,7 +145,7 @@ export const ONBOARDING_HTML = `
               <div class="rev-row"><span class="ri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/></svg></span><span class="rl"><b>Pricing</b><span id="rv_price">No files yet</span></span><span class="edit" data-goto="3">Edit</span></div>
             </div>
             <div class="cov" style="margin-top:16px">
-              <div class="cov-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>What this audit can detect</div>
+              <div class="cov-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>What this check can detect</div>
               <div class="caps" id="cov4caps"></div>
             </div>
           </div>

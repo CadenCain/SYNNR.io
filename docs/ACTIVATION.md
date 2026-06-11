@@ -4,7 +4,7 @@ The app ships **fully working in demo mode** with zero config (public pages +
 seeded demo data). To turn on the real, authed, AI-powered product, set the
 following. Until then every authed/AI path safely falls back to the demo.
 
-> **Which repo / project:** Revenue Command lives in **`github.com/CadenCain/SYNNR.io`**
+> **Which repo / project:** SYNNR (Loadout + Job Readiness) lives in **`github.com/CadenCain/SYNNR.io`**
 > and the live Supabase is **`SYNNR.io`** (`zbtxnvzxnpwdrpaxmliz`, ACTIVE).
 > The separate `synnr-appv10` Vercel project (repo `synnr-app`, the "Darkstar"
 > compliance pivot) is **not** this product — leave it parked or delete it later.
@@ -24,8 +24,8 @@ Add to **Production + Preview**, then redeploy.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → **service_role** (secret; webhook only) |
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API keys |
 | `STRIPE_WEBHOOK_SECRET` | from the webhook you create in step 3 (`whsec_…`) |
-| `STRIPE_PRICE_RECOVER` | Stripe price id for Recover ($1,500/mo) |
-| `STRIPE_PRICE_COMMAND` | Stripe price id for Command ($4,500/mo) |
+| `STRIPE_PRICE_PRO` | Stripe price id for Pro ($499/mo) |
+| `STRIPE_PRICE_GROWTH` | Stripe price id for Growth ($999/mo) |
 | `AI_MODEL` *(optional)* | default `anthropic/claude-3.5-haiku` (text extraction) |
 | `AI_MODEL_VISION` *(optional)* | default `anthropic/claude-sonnet-4.5` (PDF/photo extraction) |
 
@@ -35,7 +35,7 @@ Add to **Production + Preview**, then redeploy.
 - *(Default mailer is rate-limited; add custom SMTP before real volume.)*
 
 ## 3. Stripe dashboard
-- Create two recurring **Products/Prices**: Recover **$1,500/mo**, Command **$4,500/mo** → copy the `price_…` ids into the env above.
+- Create two recurring **Products/Prices**: Pro **$499/mo**, Growth **$999/mo** → copy the `price_…` ids into the env above.
 - Developers → **Webhooks** → add endpoint `https://<your-domain>/api/stripe/webhook`, events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` → copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
 ## 4. Vercel AI Gateway

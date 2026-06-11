@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "SYNNR — Revenue Intelligence for Field Operations";
+export const alt = "SYNNR — Loadout + Job Readiness for Field Operations";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -42,16 +42,16 @@ export default function OgImage() {
               letterSpacing: 6,
             }}
           >
-            Revenue intelligence
+            Loadout + Job readiness
           </div>
           <div style={{ fontSize: 78, fontWeight: 700, lineHeight: 1.05, maxWidth: 980 }}>
-            Stop leaking revenue between the field and the invoice.
+            Stop job failures before they happen.
           </div>
         </div>
 
         <div style={{ fontSize: 26, color: "#a59d8c", maxWidth: 900 }}>
-          Self-serve AI that finds missed billables, validates pricing, and turns the mess
-          into invoice-ready proof.
+          Crew, truck, tools, certs, paperwork, and billing backup — verified Ready,
+          At Risk, or Blocked before the job moves forward.
         </div>
       </div>
     ),
