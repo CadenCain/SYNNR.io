@@ -100,6 +100,13 @@ question an operator can answer from their truck.
   then $299–499/mo if the recurring checks earn it."
 - Reply to EVERY relevant comment within the day. One question per reply.
 
+## Content assets you can link instead of the homepage
+- **Field-ops glossary:** https://synnr.io/glossary — 30+ terms (standby time,
+  invoice backup, H2S certs, MSAs), each with a "why it matters" readiness
+  angle. Linking a *specific term page* that answers someone's comment counts
+  as helpful, not promotional — it does not count against the 2×/week limit
+  when it directly answers a question someone asked.
+
 ## Daily routine (~20 min)
 1. Draft today's themed post → give Caden 2 variants, recommend one.
 2. Draft replies to all new comments/DMs on prior posts.

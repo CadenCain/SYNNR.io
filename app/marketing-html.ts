@@ -565,7 +565,7 @@ export const MARKETING_HTML = `
         </a>
         <p class="blurb">Field-operations readiness for companies that run on trucks, crews, equipment, tickets, documents, and field execution.</p>
       </div>
-      <div><h5>Product</h5><ul><li><a href="#features">SYNNR</a></li><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#faq">FAQ</a></li></ul></div>
+      <div><h5>Product</h5><ul><li><a href="#features">SYNNR</a></li><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#faq">FAQ</a></li><li><a href="/glossary">Field-ops glossary</a></li></ul></div>
 
       <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/onboarding">Early Access</a></li><li><a href="mailto:hello@synnr.io">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
     </div>

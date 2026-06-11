@@ -1,0 +1,51 @@
+/* SYNNR — field-ops glossary. Scoped under .gls. Charcoal + bone. */
+.gls{
+  --bg:#121110;--card:#1a1613;--hover:#211d19;
+  --line:rgba(233,221,200,.1);--line-2:rgba(233,221,200,.18);
+  --fg:#ece5d7;--fg-dim:#a59d8c;--fg-faint:#756c5b;
+  --bone:#e7ddc7;--gold:#c9bd97;--ochre:#cba85f;
+  --font:var(--font-geist),system-ui,sans-serif;--mono:var(--font-geist-mono),ui-monospace,monospace;
+  background:var(--bg);color:var(--fg);font-family:var(--font);min-height:100vh;
+  font-feature-settings:"ss01","cv01";line-height:1.55;
+}
+.gls a{color:inherit;text-decoration:none}
+.gls .wrap{max-width:880px;margin:0 auto;padding:28px 24px 90px}
+
+.gls .topnav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.gls .brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:.02em}
+.gls .brand svg{width:20px;height:20px;color:var(--bone)}
+.gls .crumb{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint)}
+.gls .cta-sm{font-size:13px;font-weight:500;padding:8px 14px;border-radius:9px;background:var(--bone);color:#1a1613}
+.gls .cta-sm:hover{filter:brightness(1.05)}
+
+.gls .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-faint);margin-top:40px}
+.gls h1{font-size:clamp(26px,4vw,38px);font-weight:600;letter-spacing:-.02em;margin-top:10px}
+.gls .lede{color:var(--fg-dim);font-size:15.5px;max-width:60ch;margin-top:12px}
+
+.gls h2.cat{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint);margin:42px 0 14px;display:flex;align-items:center;gap:10px}
+.gls h2.cat::after{content:"";flex:1;height:1px;background:var(--line)}
+.gls .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:640px){.gls .grid{grid-template-columns:1fr}}
+.gls .tcard{display:block;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:15px 17px;transition:border-color .15s,background .15s}
+.gls .tcard:hover{border-color:var(--line-2);background:var(--hover)}
+.gls .tcard b{font-size:15px;font-weight:600;display:block}
+.gls .tcard p{font-size:13px;color:var(--fg-dim);margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gls .tcard .rd{font-family:var(--mono);font-size:11px;color:var(--gold);margin-top:9px;display:inline-block}
+
+.gls .chip{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ochre);border:1px solid rgba(203,168,95,.3);background:rgba(203,168,95,.07);border-radius:20px;padding:4px 11px;margin-top:18px}
+.gls .def{font-size:16.5px;color:var(--fg);max-width:64ch;margin-top:18px}
+.gls .why{border:1px solid var(--line-2);border-left:3px solid var(--gold);border-radius:12px;background:var(--card);padding:16px 18px;margin-top:24px;max-width:64ch}
+.gls .why .wl{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.gls .why p{font-size:14.5px;color:var(--fg-dim);margin-top:7px}
+.gls .rel{margin-top:30px}
+.gls .rel .rl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)}
+.gls .rel .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.gls .rel a{font-size:13px;border:1px solid var(--line-2);border-radius:20px;padding:6px 13px;color:var(--fg-dim)}
+.gls .rel a:hover{color:var(--fg);border-color:var(--line-2);background:var(--hover)}
+
+.gls .cta{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:14px;background:var(--card);padding:20px 22px;margin-top:48px}
+.gls .cta b{font-size:16px;font-weight:600;display:block}
+.gls .cta span{font-size:13.5px;color:var(--fg-dim)}
+.gls .cta .go{font-size:13.5px;font-weight:500;padding:10px 16px;border-radius:10px;background:var(--bone);color:#1a1613;white-space:nowrap}
+.gls .back{font-family:var(--mono);font-size:12px;color:var(--fg-faint);display:inline-block;margin-top:34px}
+.gls .back:hover{color:var(--fg)}
