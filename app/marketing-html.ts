@@ -27,7 +27,7 @@ export const MARKETING_HTML = `
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a href="#features" class="btn btn-ghost btn-sm">Explore SYNNR</a>
+      <a href="/login" class="btn btn-ghost btn-sm">Sign in</a>
       <a href="/onboarding" class="btn btn-primary btn-sm">Request Early Access</a>
     </div>
   </div>
@@ -567,7 +567,7 @@ export const MARKETING_HTML = `
       </div>
       <div><h5>Product</h5><ul><li><a href="#features">SYNNR</a></li><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#faq">FAQ</a></li></ul></div>
 
-      <div><h5>Company</h5><ul><li><a href="/onboarding">Early Access</a></li><li><a href="mailto:hello@synnr.io">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+      <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/onboarding">Early Access</a></li><li><a href="mailto:hello@synnr.io">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 SYNNR</span>

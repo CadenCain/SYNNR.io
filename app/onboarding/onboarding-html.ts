@@ -10,14 +10,14 @@ export const ONBOARDING_HTML = `
     </div>
 
     <div class="rail-lede">
-      <h2>Find the revenue hiding between the field and the invoice.</h2>
+      <h2>Stop job failures before they happen.</h2>
       <p>Four quick steps. No integration project. Your first readiness check runs the moment your data lands.</p>
     </div>
 
     <div class="stepper" id="stepper">
       <div class="step-li active" data-i="1"><span class="dot"><span class="num">1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Create workspace</b><span>Company &amp; team</span></span></div>
       <div class="step-li" data-i="2"><span class="dot"><span class="num">2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Connect job data</b><span>Tickets, photos, packets</span></span></div>
-      <div class="step-li" data-i="3"><span class="dot"><span class="num">3</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Add your pricing</b><span>Pricebook, rates, MSAs</span></span></div>
+      <div class="step-li" data-i="3"><span class="dot"><span class="num">3</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Add pricing &amp; rules</b><span>Pricebook, rates, MSAs, customer rules</span></span></div>
       <div class="step-li" data-i="4"><span class="dot"><span class="num">4</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="stxt"><b>Run readiness check</b><span>See what would have gone wrong</span></span></div>
     </div>
 
@@ -90,7 +90,7 @@ export const ONBOARDING_HTML = `
                   <span class="ie bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>Invoice: 0 hrs billed</span>
                   <span class="ie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>MSA rate: $220/hr</span>
                 </div>
-                <p class="ins-foot"><b>That's one finding on one job.</b> Your real audit runs this across every job you upload — most operations surface 100+ in the first pass.</p>
+                <p class="ins-foot"><b>That's one catch on one job.</b> Your real readiness check runs this across every job you upload — most operations surface 100+ in the first pass.</p>
               </div>
             </div>
             <div class="filelist" id="jobsList"></div>
@@ -113,7 +113,7 @@ export const ONBOARDING_HTML = `
         </section>
 
         <section class="step-panel" data-step="3">
-          <span class="eyebrow">Add your pricing</span>
+          <span class="eyebrow">Add pricing &amp; rules</span>
           <h1>Teach SYNNR your rates</h1>
           <p class="desc">Upload your pricebook, rate sheets, and customer agreements. This is how SYNNR catches under-billed lines and MSA mismatches.</p>
           <div class="form">
@@ -156,9 +156,9 @@ export const ONBOARDING_HTML = `
 
           <div id="successWrap" style="display:none">
             <div class="success">
-              <span class="eyebrow" style="justify-content:center">Audit complete</span>
+              <span class="eyebrow" style="justify-content:center">Readiness check complete</span>
               <div class="big-amt" id="recAmount">$0</div>
-              <p class="desc" style="margin:0 auto">recoverable revenue found across your uploaded jobs</p>
+              <p class="desc" style="margin:0 auto">in billable work protected across your uploaded jobs</p>
               <div class="sgrid">
                 <div class="scell"><div class="n" id="s_missed">0</div><div class="k">Missed billables</div></div>
                 <div class="scell"><div class="n" id="s_rate">0</div><div class="k">Rate mismatches</div></div>
