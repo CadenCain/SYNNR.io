@@ -44,6 +44,29 @@ The nouns dispatch will gate on. All RLS-scoped per workspace, CSV-importable
 - The existing audit-detail page becomes the **Job Readiness Report** — same
   layout, evidence panel, and action buttons; categories swap in.
 
+## Phase 2.5 — Field capture, mobile-first (~week 3–5, overlaps Phase 3)
+The input artery. Crews photograph reality all day — tickets, job reports,
+pressure tests, gauges, signatures, site photos. SYNNR is the smart friend
+that takes ANY data the company throws at it and figures out what it is.
+- **PWA, not an app-store build:** installable from synnr.io on the crew's
+  phone, full-screen, camera capture. Zero IT, zero downloads to approve.
+- **Snap flow:** big capture button → photo → SYNNR auto-suggests the job
+  (the crew's dispatched job today — dispatch data makes capture smart) →
+  upload to the workspace bucket.
+- **The smart-friend layer:** vision extraction (already wired —
+  lib/engine/extract.ts) classifies the artifact (ticket / invoice / test
+  sheet / photo evidence / signature), attaches it to the job, and updates
+  packet completeness + readiness flags in real time. The office watches
+  packets fill themselves in.
+- **Offline reality:** field sites have no signal. Capture queues locally
+  (service worker) and syncs when coverage returns. v1.5 if needed, but
+  design for it from day one.
+- **Later (v2): text-it-in.** A workspace MMS number (Twilio) + email-in
+  address — crews who won't open any app can text photos. Zero training.
+- Why it matters commercially: this gives all three roles a daily habit —
+  dispatcher (board), crew (capture), office (packets/billing). Three hooks
+  beats one.
+
 ## Phase 3 — Dispatch board (~week 4–6) — the Growth-tier product
 - Week board: crews × days. Jobs are cards wearing their readiness chip.
 - Assign crew + truck on the card; **assignment re-scores readiness live**.
@@ -59,7 +82,8 @@ The nouns dispatch will gate on. All RLS-scoped per workspace, CSV-importable
 
 ## Deliberately NOT building
 GPS/telematics, customer-facing booking, payments/payroll, route optimization,
-native mobile apps (responsive web is fine), deep two-way ERP sync (CSV first).
+app-store native apps (field capture is an installable PWA with camera —
+mobile-first, but no Swift/Kotlin codebases), deep two-way ERP sync (CSV first).
 Every one of these is a quarter-long swamp owned by incumbents. The wedge wins
 on verification, not feature count.
 
