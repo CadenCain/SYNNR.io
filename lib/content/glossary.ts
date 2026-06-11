@@ -77,7 +77,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     why: "An out-of-inspection truck assigned to tomorrow's job is a dispatch error waiting to happen. Vehicle status belongs in the same system as the schedule.",
     related: ["calibration-certificate", "pre-job-checklist"] },
   { slug: "calibration-certificate", term: "Calibration Certificate", category: "Certs & Compliance",
-    def: "Documentation that a measuring or testing instrument (gauges, torque wrenches, detectors) was calibrated to standard within its required interval.",
+    def: "Documentation that a measuring or testing instrument (pressure gauges, chart recorders, gas detectors) was calibrated to standard within its required interval.",
     why: "Readings from an out-of-cal tool can be rejected wholesale — taking the job's test results, and the billing they support, down with them.",
     related: ["pull-test", "dot-inspection"] },
   { slug: "safeland", term: "SafeLand / SafeGulf", category: "Certs & Compliance",
