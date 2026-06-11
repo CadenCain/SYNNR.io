@@ -43,9 +43,9 @@ function riskRows(rows: RiskRow[]): string {
 function emptyOverview(): string {
   return `<div class="card" style="padding:56px 28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:13px">
     <div style="width:54px;height:54px;border-radius:14px;border:1px solid var(--line-2);display:grid;place-items:center;color:var(--accent)"><svg viewBox="0 0 24 24" width="24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div>
-    <h2 style="font-size:20px;font-weight:600;letter-spacing:-.01em">No audits yet</h2>
-    <p style="color:var(--fg-dim);max-width:44ch;font-size:14px">Upload your job data — tickets, invoices, photos, rate sheets — and run your first audit. Recoverable revenue and findings will show up here.</p>
-    <a href="/onboarding" class="btn btn-primary" style="margin-top:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Run your first audit</a>
+    <h2 style="font-size:20px;font-weight:600;letter-spacing:-.01em">No readiness checks yet</h2>
+    <p style="color:var(--fg-dim);max-width:44ch;font-size:14px">Upload your job data — tickets, invoices, photos, rate sheets — and run your first readiness check. Findings and at-risk dollars will show up here.</p>
+    <a href="/onboarding" class="btn btn-primary" style="margin-top:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Run your first readiness check</a>
   </div>`;
 }
 
@@ -155,7 +155,7 @@ function emptyRail(): string {
 
 export function dashboardHtml(d: DashboardData): string {
   const sub = d.empty
-    ? "Upload your job data and run your first audit — we'll surface the revenue at risk."
+    ? "Upload your job data and run your first readiness check — we'll catch what would have gone wrong."
     : "Here's the revenue at risk between the field and your invoices.";
   return `
 <div class="app">

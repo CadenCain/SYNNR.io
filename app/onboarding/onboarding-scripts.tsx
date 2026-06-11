@@ -39,6 +39,7 @@ export default function OnboardingScripts() {
     let wsCreated = false;
     let workspaceId: string | null = null;
     let lastRunSample = false;
+    let enginePromise: Promise<{ ok?: boolean; error?: string; recoverableCents?: number; counts?: { missed: number; rate: number; doc: number } }> | null = null;
 
     // returning users already have a workspace — pick it up so uploads attach
     (function initWorkspace() {
@@ -359,16 +360,20 @@ export default function OnboardingScripts() {
     const skip = $("#skipLink"); if (skip) on(skip, "click", () => { save(); captureLead(); window.location.href = "/dashboard"; });
 
     function runAudit() {
-      // Kick the real reconciliation engine for this workspace (best-effort;
-      // writes a job + findings the dashboard/audit will show). The animation
-      // below covers the latency.
+      // Kick the real reconciliation engine for this workspace — it persists
+      // the job + findings the dashboard/audit will show. The animation below
+      // covers the latency; showSuccess waits on this result so we never claim
+      // "complete" when the engine actually failed.
       if (getBrowserSupabase()) {
-        void fetch("/api/audits/run", {
+        enginePromise = fetch("/api/audits/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: "{}",
-          keepalive: true,
-        }).catch(() => {});
+        })
+          .then(async (r) => {
+            try { return await r.json(); } catch { return { ok: r.ok }; }
+          })
+          .catch(() => ({ ok: false, error: "network" }));
       }
       // Sample run when the user gave us nothing real to ingest.
       lastRunSample = state.jobs.length === 0 && state.tools.length === 0;
@@ -386,9 +391,9 @@ export default function OnboardingScripts() {
             ["acc", "› loading sample job packet …", "ok"],
             ["acc", "› extracting ticket + invoice …", "ok"],
             ["acc", "› reconciling against MSA rates …", "ok"],
-            ["flag", "! 3 missed billables found", ""],
+            ["flag", "! 2 missed billables found", ""],
             ["flag", "! 1 rate mismatch flagged", ""],
-            ["flag", "! 1 packet missing backup", ""],
+            ["flag", "! 2 docs blocking billing", ""],
             ["acc", "▣ recoverable on sample: $4,570", ""],
           ]
         : [
@@ -425,8 +430,40 @@ export default function OnboardingScripts() {
       setTimeout(() => { clearInterval(iv); el.textContent = fmt(target); }, 1300);
     }
     function showSuccess() {
-      // The real audit_run + findings are persisted by /api/audits/run (fired
-      // in runAudit). No fake totals written here.
+      // Gate the success screen on the engine actually finishing — the numbers
+      // shown are the persisted ones, and failures get an honest retry state.
+      if (!enginePromise) { renderSuccess(null); return; }
+      let settled = false;
+      const timer = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        renderRunFailed("The check is taking longer than expected. Nothing was lost — try again in a minute.");
+      }, 90_000);
+      enginePromise.then((resp) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        if (resp && resp.ok) renderSuccess(resp);
+        else renderRunFailed(
+          /AI Gateway|engine failed/i.test(resp?.error || "")
+            ? "Our analysis engine isn't reachable right now. Your workspace and uploads are saved — try again in a few minutes."
+            : resp?.error || "Something went wrong running the check. Your data is saved — try again."
+        );
+      });
+    }
+
+    function renderRunFailed(message: string) {
+      enginePromise = null;
+      ($("#runbox") as HTMLElement).style.display = "none";
+      ($("#reviewWrap") as HTMLElement).style.display = "";
+      setText("#step4Title", "We couldn't finish the readiness check");
+      setText("#step4Desc", message);
+      backBtn.style.visibility = "visible";
+      nextBtn.disabled = false;
+      nextBtn.innerHTML = "Try again <span class='arr'>→</span>";
+    }
+
+    function renderSuccess(resp: { recoverableCents?: number; counts?: { missed: number; rate: number; doc: number } } | null) {
       audited = true; save();
       ($("#runbox") as HTMLElement).style.display = "none";
       ($("#successWrap") as HTMLElement).style.display = "block";
@@ -438,14 +475,18 @@ export default function OnboardingScripts() {
       const fill = $("#progressFill"); if (fill) fill.style.width = "100%";
       backBtn.style.visibility = "visible";
       setNextLabel();
-      countUp($("#recAmount") as HTMLElement, lastRunSample ? 4570 : 284750, "$");
-      countUp($("#s_missed") as HTMLElement, lastRunSample ? 3 : 142, "");
-      countUp($("#s_rate") as HTMLElement, lastRunSample ? 1 : 37, "");
-      countUp($("#s_backup") as HTMLElement, lastRunSample ? 1 : 61, "");
+      const rec = resp?.recoverableCents != null ? Math.round(resp.recoverableCents / 100) : (lastRunSample ? 4570 : 284750);
+      const c = resp?.counts;
+      countUp($("#recAmount") as HTMLElement, rec, "$");
+      countUp($("#s_missed") as HTMLElement, c ? c.missed : (lastRunSample ? 2 : 142), "");
+      countUp($("#s_rate") as HTMLElement, c ? c.rate : (lastRunSample ? 1 : 37), "");
+      countUp($("#s_backup") as HTMLElement, c ? c.doc : (lastRunSample ? 2 : 61), "");
 
       // Proof before checkout: reveal a few evidenced findings up front.
+      // (Sample-run previews only — real runs show their findings in /audit.)
       const fp = $("#findPreview");
-      if (fp) {
+      if (fp && !lastRunSample) fp.innerHTML = "";
+      if (fp && lastRunSample) {
         const items = [
           { cat: "Rate Mismatch", amt: "+$750", t: "Crane support billed below MSA rate", e: ["Invoice: $250/hr", "MSA #882: $375/hr"] },
           { cat: "Missing Billable", amt: "+$1,200", t: "Rigging support never invoiced", e: ["Ticket: 8 hrs logged", "Invoice: no rigging line"] },

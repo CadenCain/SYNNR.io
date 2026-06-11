@@ -1,6 +1,6 @@
 import { extractRecords, type EnginePart } from "./extract";
 import { detect } from "./detect";
-import { buildInput, SAMPLE_INPUTS, type EngineInput } from "./sample";
+import { buildInput, SAMPLE_INPUTS, SAMPLE_EXTRACTION, type EngineInput } from "./sample";
 import type { EngineFinding, Extraction } from "./schemas";
 
 export type EngineFile = { bytes: Uint8Array; mediaType: string; name: string };
@@ -28,6 +28,26 @@ export async function runEngine(
 ): Promise<EngineResult> {
   const files = input.files ?? [];
   const parts: EnginePart[] = [];
+
+  // Pure sample run (no uploads, no text): the records are known, so skip the
+  // model entirely — detectors run deterministically with no AI Gateway dependency.
+  const hasRealInput =
+    files.length > 0 || !!input.raw?.trim() || !!input.ticket || !!input.invoice || !!input.pricebook;
+  if (!hasRealInput) {
+    const extraction: Extraction = {
+      ...SAMPLE_EXTRACTION,
+      ticket_lines: [...SAMPLE_EXTRACTION.ticket_lines],
+      invoice_lines: [...SAMPLE_EXTRACTION.invoice_lines],
+      pricebook: [...SAMPLE_EXTRACTION.pricebook],
+    };
+    const findings = detect(extraction);
+    return {
+      jobNumber: extraction.job_number || "RC-4821",
+      findings,
+      recoverableCents: findings.reduce((s, f) => s + f.amount_cents, 0),
+      extraction,
+    };
+  }
 
   if (files.length) {
     parts.push({

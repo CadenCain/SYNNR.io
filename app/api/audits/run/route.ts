@@ -120,7 +120,7 @@ export async function POST(req: Request) {
     .insert({
       workspace_id: ws,
       number: result.jobNumber,
-      title: `Reconciled job — ${result.jobNumber}`,
+      title: usedSample ? `Sample job — ${result.jobNumber}` : `Reconciled job — ${result.jobNumber}`,
       status: "in_review",
       priority: "high",
       recoverable_cents: result.recoverableCents,
@@ -148,11 +148,14 @@ export async function POST(req: Request) {
 
   await supabase.from("audit_runs").insert({
     workspace_id: ws,
-    label: `Engine run — ${result.jobNumber}`,
+    label: usedSample ? `Sample run — ${result.jobNumber}` : `Engine run — ${result.jobNumber}`,
     jobs_count: 1,
     recovered_cents: 0,
     status: "complete",
   });
+
+  const counts = { missed: 0, rate: 0, doc: 0 };
+  for (const f of result.findings) counts[f.type] += 1;
 
   return NextResponse.json({
     ok: true,
@@ -160,6 +163,7 @@ export async function POST(req: Request) {
     jobNumber: result.jobNumber,
     recoverableCents: result.recoverableCents,
     findings: result.findings.length,
+    counts,
     source: usedSample ? "sample" : "uploads",
     filesRead,
     filesSkipped,

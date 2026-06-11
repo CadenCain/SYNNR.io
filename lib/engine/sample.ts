@@ -34,3 +34,30 @@ export function buildInput(parts: EngineInput) {
   const p = parts.pricebook || SAMPLE_INPUTS.pricebook;
   return `Reconcile this job. Extract typed records from the three documents below.\n\n=== FIELD TICKET ===\n${t}\n\n=== DRAFT INVOICE ===\n${i}\n\n=== PRICEBOOK / MSA ===\n${p}`;
 }
+
+/**
+ * Pre-extracted records for the sample job above — lets sample runs execute
+ * the deterministic detectors with NO model call (no AI Gateway required).
+ * Math: standby 6.5 hr × $220 = $1,430 missed; consumables 6 lots × $160 =
+ * $960 missed; crane ($1,795 − $1,250) × 4 days = $2,180 rate. Total $4,570,
+ * plus 2 doc blockers (2/5 photos, unsigned ticket).
+ */
+export const SAMPLE_EXTRACTION = {
+  job_number: "RC-4821",
+  signature_present: false,
+  photos_attached: 2,
+  photos_required: 5,
+  ticket_lines: [
+    { code: "crane", label: "Crane & rigging", qty: 4, unit: "day" },
+    { code: "standby", label: "Standby labor", qty: 6.5, unit: "hr" },
+    { code: "consumables", label: "Consumables", qty: 6, unit: "lot" },
+  ],
+  invoice_lines: [
+    { code: "crane", label: "Crane & rigging", qty: 4, rate_cents: 125000, unit: "day" },
+  ],
+  pricebook: [
+    { code: "crane", label: "Crane & rigging", contract_rate_cents: 179500, unit: "day" },
+    { code: "standby", label: "Standby labor", contract_rate_cents: 22000, unit: "hr" },
+    { code: "consumables", label: "Consumables", contract_rate_cents: 16000, unit: "lot" },
+  ],
+} as const;
