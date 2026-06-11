@@ -1,7 +1,7 @@
 "use client";
 
 import "./login.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 const MARK = (
@@ -25,6 +25,12 @@ export default function LoginPage() {
 
   const supabase = getBrowserSupabase();
 
+  // Surface failures handed back by /auth/callback (expired/invalid links).
+  useEffect(() => {
+    const err = new URLSearchParams(window.location.search).get("error");
+    if (err) setMsg({ t: err, kind: "err" });
+  }, []);
+
   const friendly = (m: string) =>
     /failed to fetch|network|load failed/i.test(m)
       ? "Couldn't reach SYNNR — check your connection and try again."
@@ -44,7 +50,10 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { shouldCreateUser: true },
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget())}`,
+        },
       });
       setBusy(false);
       if (error) {
@@ -52,7 +61,7 @@ export default function LoginPage() {
         return;
       }
       setStage("code");
-      setMsg({ t: "We emailed you a 6-digit code. Enter it below.", kind: "ok" });
+      setMsg({ t: "Email sent — click the sign-in link in it, or enter the 6-digit code if your email includes one.", kind: "ok" });
     } catch (e) {
       setBusy(false);
       setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
@@ -112,7 +121,7 @@ export default function LoginPage() {
         ) : (
           <>
             <h1>Check your email</h1>
-            <p className="sub">Enter the 6-digit code we sent to <b>{email}</b>.</p>
+            <p className="sub">We emailed <b>{email}</b> — click the sign-in link in it, or enter the 6-digit code below if your email includes one.</p>
             <label htmlFor="auth-code">Verification code</label>
             <input
               id="auth-code"
