@@ -164,3 +164,7 @@
 .audit .fstg.approved{color:var(--ochre);border-color:rgba(203,168,95,.32);background:rgba(203,168,95,.07)}
 .audit .fstg.recovered{color:var(--up);border-color:rgba(201,189,151,.32);background:rgba(201,189,151,.07)}
 .audit .fstg.dismissed{color:var(--fg-faint);opacity:.7}
+
+/* finding category chip that links into the field-ops glossary */
+.audit .fcat-link{cursor:pointer}
+.audit .fcat-link:hover{text-decoration:underline;text-underline-offset:2px;filter:brightness(1.08)}

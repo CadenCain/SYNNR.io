@@ -3,6 +3,7 @@
 import "./audit.css";
 import { useMemo, useState } from "react";
 import type { AuditData, AuditFinding } from "@/lib/data/workspace";
+import { glossarySlugForCategory } from "@/lib/content/glossary";
 
 const money = (cents: number) => "$" + Math.round(cents / 100).toLocaleString("en-US");
 
@@ -165,7 +166,22 @@ export default function AuditView({ data }: { data: AuditData }) {
                   <span className="fic">{findingIcon(f)}</span>
                   <div>
                     <div className="fhl">
-                      <span className={`fcat ${f.type}`}>{f.category}</span>
+                      {(() => {
+                        const gslug = glossarySlugForCategory(f.category);
+                        return gslug ? (
+                          <a
+                            className={`fcat ${f.type} fcat-link`}
+                            href={`/glossary/${gslug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`What is ${f.category}? — field-ops glossary`}
+                          >
+                            {f.category}
+                          </a>
+                        ) : (
+                          <span className={`fcat ${f.type}`}>{f.category}</span>
+                        );
+                      })()}
                       <span className="fconf">{f.confidence}% confidence</span>
                       <span className={`fstg ${stageClass(st)}`}>{stageLabel(st, f.blocker)}</span>
                     </div>

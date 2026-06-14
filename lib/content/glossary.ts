@@ -159,3 +159,19 @@ export const GLOSSARY_CATEGORIES = ["Field Execution", "Certs & Compliance", "Bi
 export function termBySlug(slug: string) {
   return GLOSSARY.find((t) => t.slug === slug);
 }
+
+/**
+ * Maps an in-app finding category to its glossary term, so a finding chip in
+ * the audit detail can link straight to "what this means + why it matters."
+ * Returns null when there's no clean 1:1 term (chip stays a plain label).
+ */
+const CATEGORY_TO_SLUG: Record<string, string> = {
+  "Missing Billable": "missed-billable",
+  "Rate Mismatch": "rate-sheet",
+  "Missing Backup": "invoice-backup",
+  "Dispute Risk": "short-pay",
+};
+
+export function glossarySlugForCategory(category: string): string | null {
+  return CATEGORY_TO_SLUG[category] ?? null;
+}

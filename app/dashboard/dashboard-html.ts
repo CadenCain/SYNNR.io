@@ -201,6 +201,7 @@ export function dashboardHtml(d: DashboardData): string {
     <div class="sb-section">
       <div class="sb-label">Support</div>
       <nav class="sb-nav">
+        <a class="nav-item" href="/glossary"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M19 3v18M8 7.5h7M8 11h7"/></svg>Field-ops glossary</a>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Feedback</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7M12 17h.01"/></svg>Help &amp; Support</div>
       </nav>

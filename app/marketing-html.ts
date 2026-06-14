@@ -25,6 +25,7 @@ export const MARKETING_HTML = `
       <a href="#roi">ROI</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
+      <a href="/glossary">Glossary</a>
     </nav>
     <div class="nav-cta">
       <a href="/login" class="btn btn-ghost btn-sm">Sign in</a>
