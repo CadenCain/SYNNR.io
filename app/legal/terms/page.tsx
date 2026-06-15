@@ -8,19 +8,20 @@ export default function TermsPage() {
       <h2>1. Agreement</h2>
       <p>
         These Terms govern your access to and use of SYNNR (&ldquo;SYNNR,&rdquo;
-        &ldquo;we,&rdquo; &ldquo;us&rdquo;), the field-operations readiness platform
-        for service companies. By creating a workspace or using the service, you
-        agree to these Terms on behalf of your organization.
+        &ldquo;we,&rdquo; &ldquo;us&rdquo;), a platform of purpose-built software
+        apps for oilfield service companies. By creating an account or using any
+        SYNNR app, you agree to these Terms on behalf of your organization.
       </p>
 
       <h2>2. The service</h2>
       <p>
-        SYNNR ingests operational data you provide — loadout lists, crew
-        certifications, job packets, tickets, photos, customer requirements,
-        and billing rules — and checks them to surface readiness gaps,
-        documentation gaps, and billable work at risk. SYNNR provides analysis
-        and recommendations; you remain responsible for reviewing and approving
-        any finding before acting on it or billing a customer.
+        SYNNR offers a growing suite of apps for oilfield service operations. The
+        first is <strong>TallyShot</strong>, which reads a photo of a handwritten
+        casing/tubing tally sheet and produces a clean spreadsheet — applying the
+        implied decimal, totaling the joints, and flagging any reading it is not
+        confident about for your review. SYNNR provides analysis and outputs; you
+        remain responsible for reviewing and confirming flagged values before
+        relying on a result or billing a customer.
       </p>
 
       <h2>3. Your data</h2>
@@ -33,11 +34,17 @@ export default function TermsPage() {
 
       <h2>4. Plans &amp; billing</h2>
       <p>
-        Paid plans are flat monthly subscriptions billed in advance on the cycle
-        shown at checkout. There is no free trial and no performance or
-        percentage-of-recovery fee. You may cancel at any time, effective at the
-        end of the current billing period; amounts already billed are
-        non-refundable except where required by law.
+        SYNNR apps are sold as <strong>per-seat monthly subscriptions</strong> —
+        you pay for the number of seats your organization assigns, with volume
+        pricing that applies automatically. Each app includes a usage allowance
+        (for TallyShot, a pooled monthly scan quota across your seats); usage
+        beyond the allowance is billed at the per-unit overage rate shown at
+        checkout (TallyShot: $0.05 per additional sheet). New subscriptions start
+        with a <strong>14-day free trial</strong> — you are not charged until the
+        trial ends, and you may cancel anytime before then at no cost. After the
+        trial, plans bill in advance each cycle. You may cancel at any time,
+        effective at the end of the current billing period; amounts already
+        billed are non-refundable except where required by law.
       </p>
 
       <h2>5. Acceptable use</h2>
@@ -49,8 +56,9 @@ export default function TermsPage() {
 
       <h2>6. Disclaimers &amp; liability</h2>
       <p>
-        SYNNR is provided &ldquo;as is.&rdquo; Findings are estimates that
-        require human review; we are not liable for billing decisions you make.
+        SYNNR is provided &ldquo;as is.&rdquo; App outputs, including flagged
+        readings, require human review; we are not liable for billing decisions
+        you make.
         To the maximum extent permitted by law, our aggregate liability is
         limited to the fees you paid in the prior twelve months.
       </p>

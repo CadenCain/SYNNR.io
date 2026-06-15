@@ -1,16 +1,27 @@
-import "./checkout.css";
-import { CHECKOUT_HTML } from "./checkout-html";
-import CheckoutScripts from "./checkout-scripts";
+import "../marketing.css";
+import "../apps/apps.css";
+import "./checkout-ui.css";
+import { SiteNav } from "../site-chrome";
+import CheckoutClient from "./checkout-client";
 
-export const metadata = {
-  title: "SYNNR — Checkout",
-};
+export const metadata = { title: "Start your free trial — SYNNR" };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ product?: string; seats?: string; plan?: string }>;
+}) {
+  const sp = await searchParams;
+  // legacy ?plan= links → TallyShot per-seat
+  const slug = sp.product || "tallyshot";
+  const seats = Math.max(1, Math.floor(Number(sp.seats) || 1));
+
   return (
-    <>
-      <div className="co" dangerouslySetInnerHTML={{ __html: CHECKOUT_HTML }} />
-      <CheckoutScripts />
-    </>
+    <div className="mkt">
+      <SiteNav />
+      <main className="container co-wrap">
+        <CheckoutClient slug={slug} initialSeats={seats} />
+      </main>
+    </div>
   );
 }

@@ -37,7 +37,7 @@ export default function TallyShotPage() {
             <a className="btn btn-primary" href="/checkout?product=tallyshot&seats=1">Start free trial
               <svg className="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </a>
-            <a className="btn btn-ghost" href="/ingest">Try the live demo</a>
+            <a className="btn btn-ghost" href="/demo">Try the live demo</a>
           </div>
           <p className="mono micro">14-day free trial · per seat · cancel anytime</p>
         </section>
@@ -121,7 +121,7 @@ export default function TallyShotPage() {
               <h2 className="display">See it on your own sheet.</h2>
               <p className="lede">Try the live reader free — no account — or start your 14-day trial and put it to work this week.</p>
               <div className="final-cta">
-                <a className="btn btn-primary" href="/ingest">Try the live demo
+                <a className="btn btn-primary" href="/demo">Try the live demo
                   <svg className="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                 </a>
                 <a className="btn btn-ghost" href="/checkout?product=tallyshot&seats=1">Start free trial</a>

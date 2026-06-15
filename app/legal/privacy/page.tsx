@@ -7,16 +7,17 @@ export default function PrivacyPage() {
     <LegalShell eyebrow="Legal" title="Privacy Policy" updated="June 6, 2026">
       <h2>1. What we collect</h2>
       <ul>
-        <li><b>Account data</b> — name, work email, company, and industry you provide during onboarding.</li>
-        <li><b>Job data</b> — the files and connected records you upload for analysis.</li>
+        <li><b>Account data</b> — name, work email, company, and team/seat details you provide when you sign up.</li>
+        <li><b>App data</b> — the photos, sheets, and records you upload to a SYNNR app for processing (e.g. tally-sheet images).</li>
         <li><b>Usage data</b> — basic, privacy-friendly product analytics to improve the service.</li>
       </ul>
 
       <h2>2. How we use it</h2>
       <p>
-        We use your data to operate SYNNR: to run audits, surface findings, and
-        support your account. We do not sell your data, and we do not use your
-        job data to train shared or third-party models.
+        We use your data to operate the SYNNR apps you use — to process your
+        uploads, return results, and support your account and billing. We do not
+        sell your data, and we do not use your app data to train shared or
+        third-party models.
       </p>
 
       <h2>3. Storage &amp; security</h2>

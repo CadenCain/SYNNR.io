@@ -43,7 +43,7 @@ export const MARKETING_HTML = `
       <a href="/apps" class="btn btn-primary">Browse apps
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a href="/ingest" class="btn btn-ghost">Try the live demo</a>
+      <a href="/demo" class="btn btn-ghost">Try the live demo</a>
     </div>
     <div class="rating reveal" data-d="4">
       <span class="stars" aria-hidden="true">
@@ -112,7 +112,7 @@ export const MARKETING_HTML = `
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/></svg></div><div class="qn">Sheets digitized<small>142 this week</small></div><div class="qv pos">142</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z"/></svg></div><div class="qn">Digits flagged for review<small>caught before export</small></div><div class="qv pos">38</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8"/><circle cx="12" cy="12" r="9"/></svg></div><div class="qn">Hours saved keying<small>vs. manual entry</small></div><div class="qv pos">~46 hrs</div></div>
-              <a href="/ingest" class="btn btn-primary btn-sm">Scan a sheet
+              <a href="/demo" class="btn btn-primary btn-sm">Scan a sheet
                 <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </a>
             </div>
@@ -127,7 +127,7 @@ export const MARKETING_HTML = `
               <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Site B · consumables tally</b><small>48 line items · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
               <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 9 · standby log</b><small>read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
             </div>
-            <div class="view-cta"><p><b>Every sheet</b> read, low-confidence digits flagged, exported to your Excel template.</p><a href="/ingest" class="btn btn-primary btn-sm">Scan a sheet<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+            <div class="view-cta"><p><b>Every sheet</b> read, low-confidence digits flagged, exported to your Excel template.</p><a href="/demo" class="btn btn-primary btn-sm">Scan a sheet<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
           </div>
 
           <div class="app-view" data-view="pricebook">
@@ -243,7 +243,7 @@ export const MARKETING_HTML = `
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Exports into your Excel template, not a raw CSV</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Same flow every time — trustworthy at 50 sheets a day</li>
         </ul>
-        <a href="/ingest" class="btn btn-ghost">Scan a sheet free
+        <a href="/demo" class="btn btn-ghost">Scan a sheet free
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
       </div>
@@ -424,7 +424,7 @@ export const MARKETING_HTML = `
       <h2 class="display">Stop keying tally sheets<br/>by hand.</h2>
       <p class="lede">Photograph a sheet, check the digits it flags, export clean Excel. Scan one free — no card — and see it on your own sheet.</p>
       <div class="final-cta">
-        <a href="/ingest" class="btn btn-primary">Try the live demo
+        <a href="/demo" class="btn btn-primary">Try the live demo
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
         <a href="/apps/tallyshot" class="btn btn-ghost">See TallyShot</a>
@@ -447,7 +447,7 @@ export const MARKETING_HTML = `
       </div>
       <div><h5>Apps</h5><ul><li><a href="/apps/tallyshot">TallyShot</a></li><li><a href="/apps">All apps</a></li><li><a href="/apps/tallyshot#pricing">Pricing</a></li><li><a href="/glossary">Glossary</a></li></ul></div>
 
-      <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/ingest">Live demo</a></li><li><a href="mailto:cadencain@darkstarops.com">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+      <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/demo">Live demo</a></li><li><a href="mailto:cadencain@darkstarops.com">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 SYNNR</span>
