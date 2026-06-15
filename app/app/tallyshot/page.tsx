@@ -1,7 +1,9 @@
 import "../../marketing.css";
 import "../../apps/apps.css";
+import "./tallyshot.css";
 import { requireProduct } from "@/lib/marketplace/access";
 import { SiteNav } from "../../site-chrome";
+import TallyShotClient from "./tallyshot-client";
 
 export const metadata = { title: "TallyShot — SYNNR" };
 
@@ -23,17 +25,13 @@ export default async function TallyShotApp() {
         {check.allowed ? (
           <>
             <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-              <span className="eyebrow">TallyShot</span>
+              <span className="eyebrow">TallyShot{check.via === "flat" ? " · org license" : " · your seat"}</span>
               <h1 className="h2">Scan a tally sheet</h1>
               <p className="lede" style={{ marginInline: 0 }}>
-                Access confirmed{check.via === "flat" ? " (org license)" : " (your seat)"}. Open the reader to photograph a
-                sheet, confirm the flagged digits, and export clean Excel.
+                Photograph a handwritten tally sheet, confirm the digits it flags, and export clean Excel.
               </p>
             </div>
-            <div className="appcard-foot">
-              <a className="btn btn-primary" href="/ingest">Open the reader</a>
-              <a className="btn btn-ghost" href="/billing">Billing &amp; seats</a>
-            </div>
+            <TallyShotClient />
           </>
         ) : (
           <div className="appcard" style={{ maxWidth: 520 }}>

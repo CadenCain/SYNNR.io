@@ -79,3 +79,16 @@ export async function requireProduct(slug: string): Promise<{ org: SignedInOrg; 
   if (!org) redirect(`/login?next=/app/${slug}`);
   return { org, check };
 }
+
+/**
+ * Gate for API routes — same rule, but returns a status/reason instead of
+ * redirecting (so handlers can respond with JSON). 401 signed out, 403 no seat.
+ */
+export async function requireProductApi(
+  slug: string
+): Promise<{ ok: true; org: SignedInOrg } | { ok: false; status: number; reason: string }> {
+  const { org, check } = await checkProductAccess(slug);
+  if (!org) return { ok: false, status: 401, reason: "Sign in to use this app." };
+  if (!check.allowed) return { ok: false, status: 403, reason: check.reason };
+  return { ok: true, org };
+}
