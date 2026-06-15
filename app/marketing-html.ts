@@ -184,7 +184,7 @@ export const MARKETING_HTML = `
     <div class="head reveal">
       <span class="eyebrow">What we build</span>
       <h2 class="h2">Custom operating systems, owned by you</h2>
-      <p class="lede">One integrated system where everything talks to everything — built around your exact workflow, deployed on your own cloud, no monthly seat licenses.</p>
+      <p class="lede">One integrated system where everything talks to everything — AI ingestion, your tools connected, agents and dashboards over the stack you already run. We start in oilfield service; the same box fits any operation drowning in disconnected tools.</p>
     </div>
 
     <div class="bento">
@@ -226,8 +226,8 @@ export const MARKETING_HTML = `
       <div class="cell span2 reveal" data-d="2">
         <div class="corner"></div>
         <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16M9 4v16"/></svg></div>
-        <h3>Your tools, connected</h3>
-        <p class="ct">QuickBooks, your fuel cards, telematics, dispatch — integrated into one system that talks to itself, instead of five apps that don't.</p>
+        <h3>Agents &amp; dashboards over your stack</h3>
+        <p class="ct">QuickBooks, fuel cards, telematics, dispatch — even your Slack — connected into one system that talks to itself, with AI agents and live dashboards on top instead of five apps that don't.</p>
       </div>
       <div class="cell span2 reveal" data-d="3">
         <div class="corner"></div>
@@ -487,6 +487,7 @@ export const MARKETING_HTML = `
       <div class="qa"><button>How does the Operations Audit work?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>It's a one-week paid discovery phase. We analyze your dispatch, loadout, and ticketing workflow and deliver a Gap Map — exactly where you're losing money (untracked hotshot trips, delayed billing) and a concrete blueprint to fix it. No obligation to build afterward.</p></div></div>
       <div class="qa"><button>How long does a build take, and where does it run?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Typically 4–8 weeks depending on scope. We deploy on your own cloud accounts (AWS / Vercel / Supabase) so the system — and your data — belong to you from day one.</p></div></div>
       <div class="qa"><button>What does it cost?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>It depends on your operation and scope, which is exactly what the audit determines. Request an Operations Audit and we'll scope it precisely — most companies are replacing several apps that already cost them more every month than owning one system that actually fits.</p></div></div>
+      <div class="qa"><button>I'm not in oilfield — can you still help?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Yes. Oilfield service is our home base, but the box is universal — if your operation runs on field crews, assets, tickets, and a stack of tools that don&rsquo;t talk to each other, the same system fits. Tell us about your operation in the audit and we&rsquo;ll map it.</p></div></div>
     </div>
   </div>
 </section>
