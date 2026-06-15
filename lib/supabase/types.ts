@@ -73,9 +73,39 @@ export type Database = {
         Relationships: [];
       };
       pricebook_rules: {
-        Row: { id: string; workspace_id: string; label: string; billed_cents: number | null; contract_cents: number | null; unit: string | null; note: string | null; created_at: string };
-        Insert: { id?: string; workspace_id: string; label: string; billed_cents?: number | null; contract_cents?: number | null; unit?: string | null; note?: string | null; created_at?: string };
+        Row: { id: string; workspace_id: string; label: string; billed_cents: number | null; contract_cents: number | null; unit: string | null; note: string | null; service_code: string | null; effective_date: string | null; discount_pct: number | null; source_document_id: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; label: string; billed_cents?: number | null; contract_cents?: number | null; unit?: string | null; note?: string | null; service_code?: string | null; effective_date?: string | null; discount_pct?: number | null; source_document_id?: string | null; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["pricebook_rules"]["Insert"]>;
+        Relationships: [];
+      };
+      documents: {
+        Row: { id: string; workspace_id: string; job_id: string | null; source_file: string; mime: string | null; storage_path: string | null; channel: string; document_type: string | null; classification_confidence: number | null; status: string; fields_auto_accepted: number; fields_review: number; fields_manual: number; structured_data: Json | null; created_at: string; processed_at: string | null };
+        Insert: { id?: string; workspace_id: string; job_id?: string | null; source_file: string; mime?: string | null; storage_path?: string | null; channel?: string; document_type?: string | null; classification_confidence?: number | null; status?: string; fields_auto_accepted?: number; fields_review?: number; fields_manual?: number; structured_data?: Json | null; created_at?: string; processed_at?: string | null };
+        Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
+        Relationships: [];
+      };
+      extracted_fields: {
+        Row: { id: string; workspace_id: string; document_id: string; field_path: string; label: string | null; value: Json | null; confidence: number; flag: string; business_rule_override: boolean; source_region: Json | null; corrected_value: Json | null; corrected_by: string | null; corrected_at: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; document_id: string; field_path: string; label?: string | null; value?: Json | null; confidence?: number; flag: string; business_rule_override?: boolean; source_region?: Json | null; corrected_value?: Json | null; corrected_by?: string | null; corrected_at?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["extracted_fields"]["Insert"]>;
+        Relationships: [];
+      };
+      certifications: {
+        Row: { id: string; workspace_id: string; crew_id: string | null; employee_name: string; cert_type: string; issuing_body: string | null; issued_date: string | null; expiration_date: string | null; source_document_id: string | null; status: string; created_at: string };
+        Insert: { id?: string; workspace_id: string; crew_id?: string | null; employee_name: string; cert_type: string; issuing_body?: string | null; issued_date?: string | null; expiration_date?: string | null; source_document_id?: string | null; status?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["certifications"]["Insert"]>;
+        Relationships: [];
+      };
+      assets: {
+        Row: { id: string; workspace_id: string; parent_asset_id: string | null; name: string; category: string | null; asset_kind: string; identifier: string | null; state: string; calibration_date: string | null; inspection_date: string | null; expected_lifespan_cycles: number | null; cycle_count: number; crew_id: string | null; current_job_id: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; parent_asset_id?: string | null; name: string; category?: string | null; asset_kind?: string; identifier?: string | null; state?: string; calibration_date?: string | null; inspection_date?: string | null; expected_lifespan_cycles?: number | null; cycle_count?: number; crew_id?: string | null; current_job_id?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["assets"]["Insert"]>;
+        Relationships: [];
+      };
+      asset_state_events: {
+        Row: { id: string; workspace_id: string; asset_id: string; from_state: string | null; to_state: string; trigger_source: string; confidence: number | null; job_reference: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; asset_id: string; from_state?: string | null; to_state: string; trigger_source: string; confidence?: number | null; job_reference?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["asset_state_events"]["Insert"]>;
         Relationships: [];
       };
       audit_runs: {
