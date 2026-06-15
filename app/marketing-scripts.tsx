@@ -176,42 +176,83 @@ export default function MarketingScripts() {
       });
     });
 
-    /* ROI calculator */
-    const jobs = document.getElementById("roiJobs") as HTMLInputElement | null;
-    const avg = document.getElementById("roiAvg") as HTMLInputElement | null;
-    const leak = document.getElementById("roiLeak") as HTMLInputElement | null;
-    if (jobs && avg && leak) {
-      const f = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
-      const setText = (id: string, v: string) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = v;
+    /* operations-audit questionnaire (multi-step lead funnel) */
+    const af = root.querySelector<HTMLElement>(".auditform");
+    if (af) {
+      const answers: Record<string, string> = {};
+      const stepsEls = Array.from(af.querySelectorAll<HTMLElement>(".afstep"));
+      const dotsEls = Array.from(af.querySelectorAll<HTMLElement>("#afSteps .afdot"));
+      const backBtn = af.querySelector<HTMLButtonElement>("#afBack");
+      const nextBtn = af.querySelector<HTMLButtonElement>("#afNext");
+      const submitBtn = af.querySelector<HTMLButtonElement>("#afSubmit");
+      const msg = af.querySelector<HTMLElement>("#afMsg");
+      const total = stepsEls.length;
+      let step = 1;
+
+      const setMsg = (t: string) => { if (msg) msg.textContent = t; };
+      const render = () => {
+        stepsEls.forEach((s) => s.classList.toggle("on", +(s.getAttribute("data-step") || 0) === step));
+        dotsEls.forEach((d, i) => d.classList.toggle("on", i < step));
+        if (backBtn) backBtn.style.visibility = step === 1 ? "hidden" : "visible";
+        const last = step === total;
+        if (nextBtn) nextBtn.hidden = last;
+        if (submitBtn) submitBtn.hidden = !last;
+        setMsg("");
       };
-      const calc = () => {
-        const j = +jobs.value, a = +avg.value, l = +leak.value;
-        setText("roiJobsV", j.toLocaleString());
-        setText("roiAvgV", f(a));
-        setText("roiLeakV", l.toFixed(1) + "%");
-        const leakMo = j * a * (l / 100);
-        const recYr = leakMo * 0.6 * 12;
-        const leakYr = leakMo * 12;
-        const plan = j <= 500
-          ? { name: "Pro", mo: 499, key: "pro" }
-          : { name: "Growth", mo: 999, key: "growth" };
-        const planYr = plan.mo * 12;
-        const net = recYr - planYr;
-        const mult = recYr / planYr;
-        const weeks = (52 * planYr) / recYr;
-        setText("roiRecovered", f(recYr));
-        setText("roiLeakAnnual", f(leakYr));
-        setText("roiPlan", plan.name + " · " + f(planYr) + "/yr");
-        setText("roiNet", (net < 0 ? "-" : "") + f(Math.abs(net)));
-        setText("roiMultiple", (mult >= 10 ? Math.round(mult) : mult.toFixed(1)) + "×");
-        setText("roiPayback", weeks < 1 ? "< 1 week" : "~" + Math.round(weeks) + " weeks");
-        const cta = document.getElementById("roiCta") as HTMLAnchorElement | null;
-        if (cta) cta.href = "/checkout?plan=" + plan.key;
+      const valid = (): boolean => {
+        if (step === 1 && !answers.serviceType) { setMsg("Pick the closest match."); return false; }
+        if (step === 2 && !answers.fleetSize) { setMsg("How many trucks or crews?"); return false; }
+        if (step === 3) {
+          const v = (af.querySelector<HTMLTextAreaElement>("#afBottleneck")?.value || "").trim();
+          if (v.length < 3) { setMsg("A line or two helps us prep your audit."); return false; }
+          answers.bottleneck = v;
+        }
+        return true;
       };
-      [jobs, avg, leak].forEach((s) => on(s, "input", calc));
-      calc();
+
+      // single-select option groups (auto-advance on steps 1 & 2)
+      af.querySelectorAll<HTMLElement>(".afopts").forEach((group) => {
+        const field = group.getAttribute("data-field") || "";
+        group.querySelectorAll<HTMLElement>(".afopt").forEach((opt) =>
+          on(opt, "click", () => {
+            group.querySelectorAll<HTMLElement>(".afopt").forEach((o) => o.classList.remove("on"));
+            opt.classList.add("on");
+            answers[field] = opt.getAttribute("data-v") || "";
+            setMsg("");
+            window.setTimeout(() => { if (step < 3) { step++; render(); } }, 180);
+          })
+        );
+      });
+
+      if (nextBtn) on(nextBtn, "click", () => { if (valid() && step < total) { step++; render(); } });
+      if (backBtn) on(backBtn, "click", () => { if (step > 1) { step--; render(); } });
+
+      if (submitBtn) on(submitBtn, "click", async () => {
+        if (!valid()) return;
+        const get = (id: string) => (af.querySelector<HTMLInputElement>(id)?.value || "").trim();
+        const email = get("#afEmail");
+        if (!/\S+@\S+\.\S+/.test(email)) { setMsg("Enter a valid work email."); return; }
+        const payload = {
+          serviceType: answers.serviceType, fleetSize: answers.fleetSize, bottleneck: answers.bottleneck,
+          name: get("#afName"), company: get("#afCompany"), email, phone: get("#afPhone"),
+        };
+        submitBtn.disabled = true; submitBtn.textContent = "Sending…";
+        try {
+          const r = await fetch("/api/audit-request", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+          const data = await r.json();
+          if (!r.ok || !data.ok) { setMsg(data.error || "Something went wrong — email cadencain@darkstarops.com."); submitBtn.disabled = false; submitBtn.textContent = "Request my audit"; return; }
+          stepsEls.forEach((s) => (s.style.display = "none"));
+          const nav2 = af.querySelector<HTMLElement>(".afnav"); if (nav2) nav2.style.display = "none";
+          const dotsWrap = af.querySelector<HTMLElement>("#afSteps"); if (dotsWrap) dotsWrap.style.display = "none";
+          setMsg("");
+          const done = af.querySelector<HTMLElement>("#afDone"); if (done) done.hidden = false;
+        } catch {
+          setMsg("Couldn't reach SYNNR — try again, or email cadencain@darkstarops.com.");
+          submitBtn.disabled = false; submitBtn.textContent = "Request my audit";
+        }
+      });
+
+      render();
     }
 
     /* hero dashboard — period toggle + view switching */
@@ -267,7 +308,7 @@ export default function MarketingScripts() {
       });
     }
     const TITLES: Record<string, string> = {
-      dashboard: "Dashboard", audits: "Jobs", pricebook: "Certs & inspections", risk: "Risk flags", packets: "Packets",
+      dashboard: "Command", audits: "Jobs", pricebook: "Certs & inspections", risk: "Risk flags", packets: "Packets",
     };
     const titleEl = document.getElementById("appViewTitle");
     root.querySelectorAll<HTMLElement>(".app-nav a").forEach((a) =>

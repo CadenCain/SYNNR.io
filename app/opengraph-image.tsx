@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "SYNNR — Loadout + Job Readiness for Field Operations";
+export const alt = "SYNNR — Custom Operating Systems for Oilfield Service Companies";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -42,16 +42,16 @@ export default function OgImage() {
               letterSpacing: 6,
             }}
           >
-            Loadout + Job readiness
+            AI automation &amp; ops agency
           </div>
-          <div style={{ fontSize: 78, fontWeight: 700, lineHeight: 1.05, maxWidth: 980 }}>
-            Stop job failures before they happen.
+          <div style={{ fontSize: 74, fontWeight: 700, lineHeight: 1.06, maxWidth: 1000 }}>
+            Stop paying monthly for software that doesn&apos;t talk to each other.
           </div>
         </div>
 
-        <div style={{ fontSize: 26, color: "#a59d8c", maxWidth: 900 }}>
-          Crew, truck, tools, certs, paperwork, and billing backup — verified Ready,
-          At Risk, or Blocked before the job moves forward.
+        <div style={{ fontSize: 26, color: "#a59d8c", maxWidth: 920 }}>
+          Custom operating systems for oilfield service companies — built on your
+          cloud, owned by you. Build &amp; Transfer.
         </div>
       </div>
     ),

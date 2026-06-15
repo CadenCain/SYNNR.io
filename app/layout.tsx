@@ -16,28 +16,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — Loadout + Job Readiness for Field Operations",
+    default: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
     template: "%s",
   },
   description:
-    "SYNNR verifies the crew, truck, tools, certs, inventory, paperwork, and billing backup are ready before a job moves forward — field-operations readiness for service companies.",
+    "SYNNR is an AI automation & operations agency for oilfield service companies. We build custom operating systems — AI ingestion, digital yard twins, intelligent ticketing — deployed on your cloud and owned by you. No monthly seat licenses.",
   keywords: [
-    "job readiness", "field operations", "loadout checklist", "certification tracking",
-    "oilfield", "industrial contractor", "job packet", "dispatch readiness",
+    "oilfield software", "AI automation agency", "custom field operations software", "wireline",
+    "coil tubing", "digital yard twin", "intelligent ticketing", "operations audit",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — Loadout + Job Readiness for Field Operations",
+    title: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
     description:
-      "Stop job failures before they happen. SYNNR checks crew, truck, tools, certs, paperwork, and billing backup before the job moves forward.",
+      "Stop paying monthly for software that doesn't talk to each other. We build custom operating systems, deploy them on your cloud, and hand you the keys.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — Loadout + Job Readiness for Field Operations",
+    title: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
     description:
-      "Field-operations readiness software — every job verified Ready, At Risk, or Blocked before it rolls.",
+      "AI automation & ops agency for oilfield service. Build & Transfer — own your software, no monthly seat licenses.",
   },
 };
 

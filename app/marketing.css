@@ -537,3 +537,30 @@
 @keyframes mkt-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 @keyframes mkt-fade { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
 @keyframes mkt-appViewIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+/* ── Operations Audit questionnaire ───────────────────────────── */
+.mkt .auditform{max-width:680px;margin:34px auto 0;border:1px solid var(--line-2);border-radius:20px;background:var(--card);padding:30px 28px;position:relative}
+.mkt .afsteps{display:flex;gap:8px;justify-content:center;margin-bottom:26px}
+.mkt .afdot{width:34px;height:4px;border-radius:3px;background:var(--line-2);transition:background .25s}
+.mkt .afdot.on{background:var(--accent)}
+.mkt .afstep{display:none;animation:afin .3s ease}
+.mkt .afstep.on{display:block}
+@keyframes afin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.mkt .afq{font-size:19px;font-weight:600;letter-spacing:-.01em;text-align:center;margin-bottom:20px;color:var(--fg)}
+.mkt .afopts{display:flex;flex-direction:column;gap:10px;max-width:420px;margin:0 auto}
+.mkt .afopt{font-family:var(--font);font-size:15px;font-weight:500;text-align:left;padding:15px 18px;border-radius:12px;border:1px solid var(--line-2);background:var(--bg);color:var(--fg);cursor:pointer;transition:border-color .15s,background .15s}
+.mkt .afopt:hover{border-color:var(--accent);background:var(--hover,rgba(233,221,200,.04))}
+.mkt .afopt.on{border-color:var(--accent);background:rgba(var(--accent-rgb,231,221,199),.1)}
+.mkt .afinput{width:100%;font-family:var(--font);font-size:15px;padding:13px 15px;border-radius:11px;border:1px solid var(--line-2);background:var(--bg);color:var(--fg)}
+.mkt .afinput:focus{outline:none;border-color:var(--accent)}
+.mkt .afarea{min-height:130px;resize:vertical;line-height:1.5;display:block;max-width:520px;margin:0 auto}
+.mkt .afgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin:0 auto}
+@media (max-width:520px){.mkt .afgrid{grid-template-columns:1fr}}
+.mkt .afnav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:26px}
+.mkt .afnav #afNext,.mkt .afnav #afSubmit{margin-left:auto}
+.mkt .afmsg{min-height:20px;text-align:center;margin-top:12px;font-size:13.5px;color:var(--down,#cf7a54)}
+.mkt .afdone{text-align:center;padding:18px 10px}
+.mkt .afdone-ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;margin:0 auto 16px;background:rgba(var(--accent-rgb,231,221,199),.12);border:1px solid var(--line-2)}
+.mkt .afdone-ic svg{width:26px;height:26px;color:var(--accent)}
+.mkt .afdone h3{font-size:21px;font-weight:600;letter-spacing:-.01em}
+.mkt .afdone p{color:var(--fg-dim);font-size:14.5px;margin-top:8px;max-width:42ch;margin-left:auto;margin-right:auto}

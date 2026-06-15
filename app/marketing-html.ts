@@ -1,5 +1,5 @@
-// SYNNR marketing page markup (ported verbatim from the design prototype,
-// with funnel links rewritten to app routes). Rendered via dangerouslySetInnerHTML
+// SYNNR marketing page markup — AI automation & operations agency for oilfield
+// service companies ("Build & Transfer"). Rendered via dangerouslySetInnerHTML
 // and driven by MarketingScripts.
 export const MARKETING_HTML = `
 <div class="page-atmosphere" aria-hidden="true">
@@ -19,17 +19,14 @@ export const MARKETING_HTML = `
       <span class="wordmark">SYNNR</span>
     </a>
     <nav class="nav-links">
-      <a href="#features">Features</a>
+      <a href="#build">What we build</a>
       <a href="#how">How it works</a>
-      <a href="#testimonials">Testimonials</a>
-      <a href="#roi">ROI</a>
-      <a href="#pricing">Pricing</a>
+      <a href="#testimonials">Results</a>
       <a href="#faq">FAQ</a>
       <a href="/glossary">Glossary</a>
     </nav>
     <div class="nav-cta">
-      <a href="/login" class="btn btn-ghost btn-sm">Sign in</a>
-      <a href="/onboarding" class="btn btn-primary btn-sm">Request Early Access</a>
+      <a href="#audit" class="btn btn-primary btn-sm">Request an Operations Audit</a>
     </div>
   </div>
 </header>
@@ -38,14 +35,14 @@ export const MARKETING_HTML = `
 
 <section class="hero section">
   <div class="container">
-    <span class="pill-badge reveal"><span class="d"></span>Now in early access</span>
-    <h1 class="display reveal" data-d="1">Job readiness<br/>for <span class="grad">field operations</span></h1>
-    <p class="lede reveal" data-d="2">SYNNR verifies the crew, truck, tools, certs, inventory, paperwork, and billing backup are ready — before the truck leaves the yard and before the invoice goes out.</p>
+    <span class="pill-badge reveal"><span class="d"></span>AI automation &amp; ops · built for oilfield service</span>
+    <h1 class="display reveal" data-d="1">Stop paying monthly for software<br/>that <span class="grad">doesn't talk to each other</span></h1>
+    <p class="lede reveal" data-d="2">SYNNR builds custom, owned operating systems for oilfield service companies — dispatch, ticketing, asset tracking, and AI ingestion, built for your operation and owned entirely by you. No monthly seat licenses.</p>
     <div class="hero-cta reveal" data-d="3">
-      <a href="/onboarding" class="btn btn-primary">Request Early Access
+      <a href="#audit" class="btn btn-primary">Request an Operations Audit
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a href="#features" class="btn btn-ghost">Explore SYNNR</a>
+      <a href="#build" class="btn btn-ghost">What we build</a>
     </div>
     <div class="rating reveal" data-d="4">
       <span class="stars" aria-hidden="true">
@@ -55,7 +52,7 @@ export const MARKETING_HTML = `
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
       </span>
-      <b>4.9</b><span>from field service operators</span>
+      <b>Built by operators</b><span>for oilfield service companies</span>
     </div>
 
     <div class="hero-stage reveal" data-d="3">
@@ -67,7 +64,7 @@ export const MARKETING_HTML = `
             <b>SYNNR</b>
           </div>
           <nav class="app-nav">
-            <a class="on" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+            <a class="on" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Command</a>
             <a data-view="audits"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg>Jobs</a>
             <a data-view="pricebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Certs</a>
             <a data-view="risk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/></svg>Risk flags</a>
@@ -75,12 +72,12 @@ export const MARKETING_HTML = `
           </nav>
           <div class="app-foot">
             <div class="t"><span class="dot"></span>SYNNR</div>
-            <p>Readiness brain connected</p>
+            <p>Your OS · your cloud</p>
           </div>
         </aside>
         <div class="app-main">
           <div class="app-top">
-            <h3 id="appViewTitle">Dashboard</h3>
+            <h3 id="appViewTitle">Command</h3>
             <div class="app-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>Search jobs</div>
           </div>
 
@@ -114,9 +111,7 @@ export const MARKETING_HTML = `
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="qn">Blocked jobs caught<small>38 before dispatch</small></div><div class="qv pos">+$148,200</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div><div class="qn">Loadout gaps fixed<small>57 tools &amp; consumables</small></div><div class="qv pos">+$94,300</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/></svg></div><div class="qn">Packets made billable<small>61 completed pre-invoice</small></div><div class="qv pos">+$42,250</div></div>
-              <a href="/onboarding" class="btn btn-primary btn-sm">Run a readiness check
-                <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </a>
+              <span class="btn btn-primary btn-sm">Your custom build</span>
             </div>
           </div>
           </div>
@@ -129,7 +124,7 @@ export const MARKETING_HTML = `
               <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Crane &amp; rigging cert sweep</b><small>312 jobs · expirations checked</small></div><div class="vtrail"><span class="vval">9 blocked</span><span class="vpill ok"><span class="sd"></span>Complete</span></div></div>
               <div class="vrow"><div class="vic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="vmain"><b>Q3 loadout review</b><small>890 jobs · awaiting your review</small></div><div class="vtrail"><span class="vval">31 at risk</span><span class="vpill warn"><span class="sd"></span>In review</span></div></div>
             </div>
-            <div class="view-cta"><p><b>Each check</b> verifies crew, certs, tools, paperwork &amp; billing backup.</p><a href="/onboarding" class="btn btn-primary btn-sm">Run a readiness check<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+            <div class="view-cta"><p><b>Each check</b> verifies crew, certs, tools, paperwork &amp; billing backup.</p></div>
           </div>
 
           <div class="app-view" data-view="pricebook">
@@ -172,24 +167,24 @@ export const MARKETING_HTML = `
 </section>
 
 <section class="section tight container reveal">
-  <div class="divider-label">Built for companies that make money with trucks, crews, tools &amp; field execution</div>
+  <div class="divider-label">We build for oilfield service companies</div>
   <div style="display:flex;flex-wrap:wrap;gap:18px 40px;justify-content:space-between;align-items:center;margin-top:28px;opacity:.6;font-family:var(--font-mono);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim)">
-    <span>Oilfield Service</span><span>Industrial</span><span>Construction</span><span>Equipment Rental</span><span>Field Maintenance</span><span>Logistics</span>
+    <span>Wireline</span><span>Coil Tubing</span><span>Cementing</span><span>Frac</span><span>Equipment Rental</span><span>Field Service</span>
   </div>
 </section>
 
 <section class="section statement">
   <div class="container reveal">
-    <p>A job can fail before it starts. <b>SYNNR</b> checks the crew, truck, tools, certs, paperwork, and billing backup <span class="hl">before the job moves forward</span> — and tells you exactly <b>what to fix.</b></p>
+    <p>The oilfield hates SaaS — paying per-seat, every month, forever, for tools that solve 20% of the problem and <span class="hl">don't talk to each other.</span> We build the system that does, <b>deploy it on your cloud, and hand you the keys.</b></p>
   </div>
 </section>
 
-<section class="section" id="features">
+<section class="section" id="build">
   <div class="container">
     <div class="head reveal">
-      <span class="eyebrow">Failures stopped before they happen</span>
-      <h2 class="h2">Catch missing tools, expired certs, incomplete packets, and unbillable work</h2>
-      <p class="lede">Field-operations readiness for service companies. Upload one job workflow; get back a readiness report that catches what would have gone wrong.</p>
+      <span class="eyebrow">What we build</span>
+      <h2 class="h2">Custom operating systems, owned by you</h2>
+      <p class="lede">One integrated system where everything talks to everything — built around your exact workflow, deployed on your own cloud, no monthly seat licenses.</p>
     </div>
 
     <div class="bento">
@@ -197,7 +192,7 @@ export const MARKETING_HTML = `
         <div class="corner"></div>
         <div class="visual">
           <div class="console" style="box-shadow:none">
-            <div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><div class="console-title"><span class="live"></span>Job Readiness Score</div></div>
+            <div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><div class="console-title"><span class="live"></span>AI Document Ingestion</div></div>
             <div class="console-body" style="padding:16px">
               <div class="viz" style="margin:0;border:0;padding:0;background:none">
                 <div class="bars" style="height:88px">
@@ -207,38 +202,38 @@ export const MARKETING_HTML = `
             </div>
           </div>
         </div>
-        <h3>Job Readiness Score</h3>
-        <p class="ct">Every job scored Ready, At Risk, or Blocked — across crew, truck, tools, inventory, paperwork, and billing backup.</p>
+        <h3>AI Document Ingestion</h3>
+        <p class="ct">Pipelines that read your messy rate sheets, paper certs, and field tickets and turn them into structured data automatically — every field confidence-scored, the unsure ones routed to a human.</p>
       </div>
 
       <div class="cell span2 reveal" data-d="2">
         <div class="corner"></div>
         <div class="assetlist">
-          <div class="asset"><div class="tk">OK</div><div class="nm">Crew certs<small>Crew B-7 · all current</small></div><div class="vv"><span class="pos">Ready</span></div></div>
+          <div class="asset"><div class="tk">OK</div><div class="nm">TRK-04 · loaded<small>3 perf guns · 1 CCL verified</small></div><div class="vv"><span class="pos">Ready</span></div></div>
           <div class="asset"><div class="tk">!</div><div class="nm">Rigging gear<small>Sling inspection due in 6 days</small></div><div class="vv"><span>At risk</span></div></div>
-          <div class="asset"><div class="tk">✕</div><div class="nm">Customer form<small>Required by MSA #882</small></div><div class="vv"><span>Blocked</span></div></div>
+          <div class="asset"><div class="tk">✕</div><div class="nm">TRK-09 · blocked<small>Missing tool for Job #442</small></div><div class="vv"><span>Blocked</span></div></div>
         </div>
-        <h3>Loadout Checklists</h3>
-        <p class="ct">Tools, consumables, truck items, and paperwork generated from job type and customer — checked before the truck leaves.</p>
+        <h3>Digital Yard Twins</h3>
+        <p class="ct">A live virtual mirror of your yard — every tool, truck, and cert as a tracked state. Know exactly what's on what truck, and block a dispatch before it rolls without the right gear.</p>
       </div>
 
       <div class="cell span2 reveal" data-d="1">
         <div class="corner"></div>
         <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6M8 14h8M8 17h5"/></svg></div>
-        <h3>Field Packet Completeness</h3>
-        <p class="ct">Tickets, photos, forms, and signatures tracked to 100% complete — so billing never chases the crew.</p>
+        <h3>Intelligent Ticketing</h3>
+        <p class="ct">Replace paper tickets with digital workflows that auto-calculate pricing from your rate sheet and capture e-signatures in the field — so billing is clean the day the job closes.</p>
       </div>
       <div class="cell span2 reveal" data-d="2">
         <div class="corner"></div>
-        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
-        <h3>Cert &amp; Asset Tracker</h3>
-        <p class="ct">Employee certs, truck inspections, and tool calibrations — with expirations tied to upcoming jobs.</p>
+        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16M9 4v16"/></svg></div>
+        <h3>Your tools, connected</h3>
+        <p class="ct">QuickBooks, your fuel cards, telematics, dispatch — integrated into one system that talks to itself, instead of five apps that don't.</p>
       </div>
       <div class="cell span2 reveal" data-d="3">
         <div class="corner"></div>
-        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m6 17 3-2 2 1.5L16 13l4 4"/></svg></div>
-        <h3>Customer Rule Library</h3>
-        <p class="ct">Every customer's required forms, photos, codes, and billing rules — matched to each job automatically.</p>
+        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Deployed &amp; owned by you</h3>
+        <p class="ct">We build it on your AWS / Vercel / Supabase accounts and hand you the keys. You own the software outright — no vendor lock-in, no monthly ransom.</p>
       </div>
     </div>
   </div>
@@ -248,15 +243,15 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="split">
       <div class="split-copy reveal">
-        <span class="eyebrow">Total control</span>
-        <h2 class="h2">Your operation. One readiness brain.</h2>
-        <p class="lede">Drag in loadout lists, crew certs, truck inventory, job packets, tickets, photos, customer requirements, and billing rules. SYNNR turns them into readiness checks for every job.</p>
+        <span class="eyebrow">Owned, not rented</span>
+        <h2 class="h2">Built on your stack. Owned by you.</h2>
+        <p class="lede">We deploy your operating system on your own cloud accounts and transfer it to you completely. It runs your operation, not ours — and you never pay a per-seat license again.</p>
         <ul class="checks">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Ingests messy, mixed-format job data</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Completeness checks on every job packet</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Customer rules matched to every job</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Deployed on your own AWS / Vercel / Supabase</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>You own the code &amp; the data — outright</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Built for your exact workflow, not a template</li>
         </ul>
-        <a href="/onboarding" class="btn btn-ghost">See it on your data
+        <a href="#audit" class="btn btn-ghost">Request an Operations Audit
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
       </div>
@@ -285,13 +280,13 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="split flip">
       <div class="split-copy reveal">
-        <span class="eyebrow">Built for speed</span>
-        <h2 class="h2">Check every job. Before it rolls.</h2>
-        <p class="lede">Self-serve. No integration project. Point SYNNR at tomorrow's jobs and it verifies crews, certs, tools, inventory, paperwork, and billing backup in minutes.</p>
+        <span class="eyebrow">The audit comes first</span>
+        <h2 class="h2">We map the gaps before we build a thing.</h2>
+        <p class="lede">Every engagement starts with a paid Operations Audit. We analyze your dispatch, loadout, and ticketing workflow and hand you a Gap Map — exactly where you're bleeding money and the blueprint to fix it. Then you decide.</p>
         <ul class="checks">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Checks at the scale of your whole operation</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Connects certs &amp; inspections to scheduled jobs</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Live Ready / At Risk / Blocked status per job</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Untracked hotshot trips &amp; downtime, quantified</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Delayed billing &amp; kicked-back invoices, mapped</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>A concrete build blueprint — no obligation</li>
         </ul>
         <a href="#how" class="btn btn-ghost">How it works
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -299,17 +294,15 @@ export const MARKETING_HTML = `
       </div>
       <div class="reveal" data-d="2">
         <div class="terminal">
-          <div class="terminal-head"><div class="console-dots"><i></i><i></i><i></i></div><span class="mono" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim)">job-readiness — check</span></div>
+          <div class="terminal-head"><div class="console-dots"><i></i><i></i><i></i></div><span class="mono" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim)">operations-audit — gap-map</span></div>
           <div class="terminal-body">
-            <div class="ln"><span class="dim">$</span> <span class="cmd">synnr check ./jobs/tomorrow</span></div>
-            <div class="ln"><span class="acc">›</span> loading 38 scheduled jobs … <span class="ok">done</span></div>
-            <div class="ln"><span class="acc">›</span> verifying crew certs … <span class="ok">done</span></div>
-            <div class="ln"><span class="acc">›</span> checking loadouts vs job type … <span class="ok">done</span></div>
-            <div class="ln"><span class="flag">!</span> 3 jobs blocked — expired certs</div>
-            <div class="ln"><span class="flag">!</span> 5 loadouts missing required tools</div>
-            <div class="ln"><span class="flag">!</span> 7 packets incomplete from last week</div>
-            <div class="ln" style="margin-top:8px"><span class="acc">▣</span> ready to dispatch: <span class="acc">30 of 38</span></div>
-            <div class="ln"><span class="dim">$</span> <span class="cmd">synnr report --readiness</span><span style="display:inline-block;width:8px;height:15px;background:var(--accent);margin-left:4px;vertical-align:-2px;animation:mkt-pulse 1.1s steps(1) infinite"></span></div>
+            <div class="ln"><span class="dim">$</span> <span class="cmd">synnr audit ./apex-midstream</span></div>
+            <div class="ln"><span class="acc">›</span> reviewing dispatch + loadout + ticketing … <span class="ok">done</span></div>
+            <div class="ln"><span class="flag">!</span> 14 hotshot trips/mo — untracked gear misses</div>
+            <div class="ln"><span class="flag">!</span> avg 21 days ticket → invoice</div>
+            <div class="ln"><span class="flag">!</span> 6 apps, none integrated</div>
+            <div class="ln" style="margin-top:8px"><span class="acc">▣</span> est. recoverable: <span class="acc">$220k / yr</span></div>
+            <div class="ln"><span class="dim">$</span> <span class="cmd">synnr blueprint --build</span><span style="display:inline-block;width:8px;height:15px;background:var(--accent);margin-left:4px;vertical-align:-2px;animation:mkt-pulse 1.1s steps(1) infinite"></span></div>
           </div>
         </div>
       </div>
@@ -321,45 +314,45 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="head reveal">
       <span class="eyebrow">How it works</span>
-      <h2 class="h2">Three steps to job-ready</h2>
-      <p class="lede">From one messy job workflow to a readiness report — self-serve, in an afternoon.</p>
+      <h2 class="h2">Audit → Build → Own</h2>
+      <p class="lede">A paid discovery phase that proves the value, a fixed-scope build, and software you own at the end. No subscriptions, no lock-in.</p>
     </div>
     <div class="steps3">
       <div class="step3 reveal" data-d="1">
         <span class="bn">1</span>
         <div class="visual">
-          <div style="display:flex;flex-direction:column;gap:8px;width:100%;align-self:center">
-            <div class="asset"><div class="tk">↑</div><div class="nm">field_ticket.pdf<small>uploading</small></div><div class="vv"><span style="color:var(--good)">100%</span></div></div>
-            <div class="asset"><div class="tk">↑</div><div class="nm">IMG_3391.heic<small>uploading</small></div><div class="vv"><span style="color:var(--good)">100%</span></div></div>
-            <div class="asset"><div class="tk">↑</div><div class="nm">rate_sheet.xlsx<small>uploading</small></div><div class="vv"><span class="acc" style="color:var(--accent-ink)">62%</span></div></div>
+          <div style="align-self:center;width:100%;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--fg-dim);line-height:2">
+            <div><span style="color:var(--accent-ink)">›</span> dispatch · loadout · billing</div>
+            <div><span style="color:var(--accent-ink)">›</span> where money leaks</div>
+            <div><span style="color:var(--good)">✓</span> Gap Map delivered</div>
           </div>
         </div>
-        <h4>Upload one job workflow</h4>
-        <p>Drag in loadout lists, crew certs, job packets, tickets, photos, and customer requirements.</p>
+        <h4>1 · Operations Audit</h4>
+        <p>One week. We map your workflow and deliver a Gap Map showing exactly where you're losing money — and the blueprint to fix it.</p>
       </div>
       <div class="step3 reveal" data-d="2">
         <span class="bn">2</span>
         <div class="visual">
           <div style="align-self:center;width:100%;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--fg-dim);line-height:2">
-            <div><span style="color:var(--accent-ink)">›</span> reading 38 jobs</div>
-            <div><span style="color:var(--accent-ink)">›</span> checking certs &amp; loadouts</div>
-            <div><span style="color:var(--good)">✓</span> 14 gaps found</div>
+            <div><span style="color:var(--accent-ink)">›</span> ingestion · twin · ticketing</div>
+            <div><span style="color:var(--accent-ink)">›</span> your integrations</div>
+            <div><span style="color:var(--good)">✓</span> deployed to your cloud</div>
           </div>
         </div>
-        <h4>SYNNR checks readiness</h4>
-        <p>Every job is checked against your rules — crew, truck, tools, inventory, paperwork, and billing backup.</p>
+        <h4>2 · Core Build</h4>
+        <p>4–8 weeks. We build and deploy your custom OS on your own cloud accounts — ingestion, ticketing, asset tracking, and the integrations you need.</p>
       </div>
       <div class="step3 reveal" data-d="3">
         <span class="bn">3</span>
         <div class="visual">
           <div style="align-self:center;width:100%;text-align:center">
-            <div class="mono" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)">Ready to dispatch</div>
-            <div style="font-family:var(--font-display);font-size:38px;font-weight:600;color:var(--accent-ink);letter-spacing:-.03em;margin-top:6px">30 / 38</div>
-            <div style="margin-top:10px"><span class="pill good">Cleared</span></div>
+            <div class="mono" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)">Software you own</div>
+            <div style="font-family:var(--font-display);font-size:38px;font-weight:600;color:var(--accent-ink);letter-spacing:-.03em;margin-top:6px">$0/seat</div>
+            <div style="margin-top:10px"><span class="pill good">Keys handed over</span></div>
           </div>
         </div>
-        <h4>Get the readiness report</h4>
-        <p>Ready, At Risk, or Blocked — with reasons and the fix for each. Run it before every dispatch.</p>
+        <h4>3 · You Own It</h4>
+        <p>We hand you the keys — you own the code and the data. Optional maintenance retainer covers monitoring and updates, far cheaper than an in-house dev.</p>
       </div>
     </div>
   </div>
@@ -368,15 +361,15 @@ export const MARKETING_HTML = `
 <section class="section">
   <div class="container">
     <div class="head reveal">
-      <span class="eyebrow">Benefits</span>
-      <h2 class="h2">Why field teams run on SYNNR</h2>
-      <p class="lede">Serious, self-serve readiness for the messy reality of field operations.</p>
+      <span class="eyebrow">Why Build &amp; Transfer</span>
+      <h2 class="h2">Why operators choose owning over renting</h2>
+      <p class="lede">Built by operators, for the messy reality of oilfield field operations.</p>
     </div>
     <div class="benefits">
-      <div class="benefit reveal" data-d="1"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><h4>Stop avoidable failures</h4><p>Catch missing tools, expired certs, and incomplete paperwork before they become downtime.</p></div>
-      <div class="benefit reveal" data-d="2"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m15 15 2.5 2.5L22 13"/></svg></div><h4>Dispatch with confidence</h4><p>Every crew and truck verified against the job's requirements before it rolls.</p></div>
-      <div class="benefit reveal" data-d="3"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></div><h4>Bill without disputes</h4><p>Packets and billing backup verified complete before the invoice goes out.</p></div>
-      <div class="benefit reveal" data-d="4"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h4>Get paid faster</h4><p>Clean documentation means fewer rejected invoices and a shorter cash cycle.</p></div>
+      <div class="benefit reveal" data-d="1"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg></div><h4>Own it outright</h4><p>Pay once, own the software forever. No per-seat fees draining margin every month.</p></div>
+      <div class="benefit reveal" data-d="2"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16M9 4v16"/></svg></div><h4>One system, integrated</h4><p>Dispatch, tickets, assets, and billing in one OS that talks to itself — not five apps that don't.</p></div>
+      <div class="benefit reveal" data-d="3"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></div><h4>Built for your workflow</h4><p>Not a generic template — your job types, your rate sheets, your customers' rules.</p></div>
+      <div class="benefit reveal" data-d="4"><div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h4>Fast, fixed-scope</h4><p>Live in weeks, not quarters — with a paid audit up front so you know exactly what you're getting.</p></div>
     </div>
   </div>
 </section>
@@ -384,29 +377,29 @@ export const MARKETING_HTML = `
 <section class="section" id="testimonials">
   <div class="container">
     <div class="head reveal">
-      <span class="eyebrow">Testimonials</span>
-      <h2 class="h2">Trusted by operators who run on the field</h2>
+      <span class="eyebrow">Results</span>
+      <h2 class="h2">Built for operators who run on the field</h2>
     </div>
     <div class="tcard reveal" data-d="1" id="tcard">
       <div class="tslide on">
         <div class="stars" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
         </div>
-        <blockquote>“SYNNR caught an expired rigging cert the night before a crane job. That one catch paid for the year — the job would have been shut down on location.”</blockquote>
-        <div class="who"><div class="av">RM</div><div class="nm"><b>Ray Mendez</b><span>VP Operations · oilfield services</span></div></div>
+        <blockquote>“We were paying for three apps that didn't talk. SYNNR built us one system that does — and we own it. The hotshot trips back to the yard basically stopped.”</blockquote>
+        <div class="who"><div class="av">RM</div><div class="nm"><b>Ray Mendez</b><span>VP Operations · wireline services</span></div></div>
       </div>
       <div class="tslide">
         <div class="stars" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
         </div>
-        <blockquote>“Billing used to chase crews for photos and signatures for weeks. Packets show up complete now — our rejected-invoice rate basically went to zero.”</blockquote>
-        <div class="who"><div class="av">DK</div><div class="nm"><b>Dana Kohl</b><span>Controller · industrial contractor</span></div></div>
+        <blockquote>“The audit alone paid for itself — they showed us 21 days of lag between ticket and invoice we couldn't see. The build cut it to three.”</blockquote>
+        <div class="who"><div class="av">DK</div><div class="nm"><b>Dana Kohl</b><span>Controller · oilfield service contractor</span></div></div>
       </div>
       <div class="tslide">
         <div class="stars" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
         </div>
-        <blockquote>“Self-serve was the selling point. We uploaded one job workflow and had a readiness report the same afternoon — it flagged gaps we'd been living with for years.”</blockquote>
+        <blockquote>“It runs on our own cloud and it's ours. No vendor holding our operation hostage, no monthly bill that climbs every time we add a hand.”</blockquote>
         <div class="who"><div class="av">TW</div><div class="nm"><b>Tara Whitlock</b><span>Owner · equipment rental &amp; service</span></div></div>
       </div>
       <div class="tnav">
@@ -418,104 +411,65 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section" id="roi">
+<section class="section" id="audit">
   <div class="container">
     <div class="head reveal">
-      <span class="eyebrow">ROI calculator</span>
-      <h2 class="h2">See what unready jobs cost you.</h2>
-      <p class="lede">Estimate what missed tools, expired certs, and incomplete packets cost your operation — and what SYNNR protects.</p>
+      <span class="eyebrow">Request an operations audit</span>
+      <h2 class="h2">Find where your operation is bleeding money.</h2>
+      <p class="lede">One week. We map your dispatch, loadout, and ticketing workflow and hand you a Gap Map — exactly where money leaks and how automation fixes it. Tell us a bit about your operation:</p>
     </div>
-    <div class="roi-card reveal" data-d="1">
-      <div class="roi-inputs">
-        <div class="roi-control">
-          <label>Jobs per month <b id="roiJobsV">750</b></label>
-          <input type="range" id="roiJobs" min="50" max="5000" step="25" value="750" />
-          <div class="hint">Tickets, work orders &amp; service calls</div>
-        </div>
-        <div class="roi-control">
-          <label>Average job value <b id="roiAvgV">$2,800</b></label>
-          <input type="range" id="roiAvg" min="250" max="25000" step="50" value="2800" />
-          <div class="hint">Typical billed amount per job</div>
-        </div>
-        <div class="roi-control">
-          <label>Jobs hit by readiness failures <b id="roiLeakV">2.5%</b></label>
-          <input type="range" id="roiLeak" min="1" max="6" step="0.5" value="2.5" />
-          <div class="hint">Missed tools, certs, paperwork &amp; backup</div>
-        </div>
+    <div class="auditform reveal" data-d="1">
+      <div class="afsteps" id="afSteps">
+        <span class="afdot on"></span><span class="afdot"></span><span class="afdot"></span><span class="afdot"></span>
       </div>
-      <div class="roi-output">
-        <div class="roi-out-label">SYNNR protects ≈</div>
-        <div class="roi-big" id="roiRecovered">$378,000</div>
-        <div class="roi-sub">per year, from jobs that would have failed or gone unbilled</div>
-        <div class="roi-rows">
-          <div class="roi-row"><span class="k">Annual cost of unready jobs</span><span class="v" id="roiLeakAnnual">$630,000</span></div>
-          <div class="roi-row"><span class="k">Recommended plan</span><span class="v" id="roiPlan">Growth · $11,988/yr</span></div>
-          <div class="roi-row hl"><span class="k">Net annual gain</span><span class="v" id="roiNet">$288,000</span></div>
-          <div class="roi-row"><span class="k">Return on subscription</span><span class="v"><span id="roiMultiple">4.2×</span> · pays back in <span id="roiPayback">~12 weeks</span></span></div>
-        </div>
-        <div class="roi-cta">
-          <a href="/checkout?plan=growth" id="roiCta" class="btn btn-primary">Get job-ready — choose your plan
-            <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          </a>
-          <p class="mono" style="margin-top:14px;font-size:11.5px;color:var(--fg-faint);text-align:center">Estimate only · flat monthly pricing, cancel anytime</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
-<section class="section" id="pricing">
-  <div class="container">
-    <div class="head reveal">
-      <span class="eyebrow">Pricing</span>
-      <h2 class="h2">Pricing that scales with your operation.</h2>
-      <p class="lede">Flat monthly pricing. No contracts, no per-seat math — month to month, cancel anytime.</p>
-      <div class="toggle" id="cycleToggle" role="tablist" style="margin-top:26px">
-        <button class="on" data-cycle="monthly">Monthly</button>
-        <button data-cycle="yearly">Yearly <span class="save">20% OFF</span></button>
-      </div>
-    </div>
-    <div class="prices">
-      <div class="price reveal" data-d="1">
-        <div class="tier">Pro</div>
-        <div class="amt"><span class="n" data-m="$499" data-y="$399">$499</span><span class="per">/ month</span></div>
-        <p class="desc">For service companies with recurring field jobs.</p>
-        <a href="/checkout?plan=pro" class="btn btn-ghost">Request access</a>
-        <div class="feats">
-          <div class="fh">Included</div>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Job readiness dashboard</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Loadout checklists by job type</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Cert &amp; asset tracking</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Email support</li>
+      <div class="afstep on" data-step="1">
+        <div class="afq">What type of service company are you?</div>
+        <div class="afopts" data-field="serviceType">
+          <button type="button" class="afopt" data-v="Wireline">Wireline</button>
+          <button type="button" class="afopt" data-v="Coil Tubing">Coil Tubing</button>
+          <button type="button" class="afopt" data-v="Cementing">Cementing</button>
+          <button type="button" class="afopt" data-v="Frac">Frac</button>
+          <button type="button" class="afopt" data-v="Other">Other</button>
         </div>
       </div>
-      <div class="price popular reveal" data-d="2">
-        <div class="pop-tag">Popular</div>
-        <div class="tier">Growth</div>
-        <div class="amt"><span class="n" data-m="$999" data-y="$799">$999</span><span class="per">/ month</span></div>
-        <p class="desc">For multi-crew, multi-truck operations.</p>
-        <a href="/checkout?plan=growth" class="btn btn-primary">Request access</a>
-        <div class="feats">
-          <div class="fh">Everything in Pro, plus</div>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Unlimited jobs &amp; crews</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Customer-rule library</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Billing-readiness checks</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Team access</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Priority support</li>
+
+      <div class="afstep" data-step="2">
+        <div class="afq">How many trucks / crews do you run?</div>
+        <div class="afopts" data-field="fleetSize">
+          <button type="button" class="afopt" data-v="1-5">1–5</button>
+          <button type="button" class="afopt" data-v="6-15">6–15</button>
+          <button type="button" class="afopt" data-v="16-40">16–40</button>
+          <button type="button" class="afopt" data-v="40+">40+</button>
         </div>
       </div>
-      <div class="price reveal" data-d="3">
-        <div class="tier">Enterprise</div>
-        <div class="amt"><span class="n">Custom</span></div>
-        <p class="desc">For multi-site fleets and complex operations.</p>
-        <a href="/onboarding" class="btn btn-ghost">Talk to us</a>
-        <div class="feats">
-          <div class="fh">Everything in Growth, plus</div>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>SYNNR data unification</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Dedicated success manager</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Custom integrations &amp; SSO</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>Volume pricing &amp; custom terms</li>
+
+      <div class="afstep" data-step="3">
+        <div class="afq">What's your biggest operational bottleneck right now?</div>
+        <textarea id="afBottleneck" class="afinput afarea" placeholder="e.g. missing tools on location, delayed field tickets, paper certs, invoices kicked back…"></textarea>
+      </div>
+
+      <div class="afstep" data-step="4">
+        <div class="afq">Where do we send your Gap Map?</div>
+        <div class="afgrid">
+          <input id="afName" class="afinput" type="text" placeholder="Your name" autocomplete="name" />
+          <input id="afCompany" class="afinput" type="text" placeholder="Company" autocomplete="organization" />
+          <input id="afEmail" class="afinput" type="email" placeholder="Work email" autocomplete="email" />
+          <input id="afPhone" class="afinput" type="tel" placeholder="Phone" autocomplete="tel" />
         </div>
+      </div>
+
+      <div class="afnav">
+        <button type="button" class="btn btn-ghost btn-sm" id="afBack" style="visibility:hidden">Back</button>
+        <button type="button" class="btn btn-primary" id="afNext">Continue<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button type="button" class="btn btn-primary" id="afSubmit" hidden>Request my audit</button>
+      </div>
+      <div class="afmsg" id="afMsg"></div>
+
+      <div class="afdone" id="afDone" hidden>
+        <div class="afdone-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <h3>Request received.</h3>
+        <p>We'll review your operation and reach out within one business day to schedule your audit. Talk soon.</p>
       </div>
     </div>
   </div>
@@ -528,11 +482,11 @@ export const MARKETING_HTML = `
       <h2 class="h2">All you need to know</h2>
     </div>
     <div class="faq reveal" data-d="1">
-      <div class="qa"><button>What is SYNNR?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>SYNNR is field-operations readiness software. It verifies the crew, truck, tools, certifications, inventory, paperwork, customer rules, and billing backup are ready before a job moves forward — and tells you exactly what to fix when they're not.</p></div></div>
-      <div class="qa"><button>What kind of data can I upload?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Loadout lists, crew certs, truck inventory, job packets, field tickets, photos, forms, customer requirements, and billing rules — in mixed formats. SYNNR turns them into reusable readiness checks.</p></div></div>
-      <div class="qa"><button>How fast can I get started?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>It's self-serve by design. There's no integration project — create a workspace, upload one job workflow, and get your first readiness report the same afternoon.</p></div></div>
-      <div class="qa"><button>Is my data secure?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Your job data is encrypted in transit and at rest, never used to train shared models, and processed under a non-custodial architecture. You stay in full control of your data and pricing — always.</p></div></div>
-      <div class="qa"><button>Who is it built for?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Asset-heavy operations that run on field execution — oilfield service, industrial contractors, construction service, equipment rental &amp; service, and field maintenance companies. If money is made in the field and billed in the office, it's built for you.</p></div></div>
+      <div class="qa"><button>What exactly is SYNNR?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>SYNNR is an AI automation &amp; operations agency for oilfield service companies. We build custom operating systems — AI document ingestion, digital yard twins, intelligent ticketing — deploy them on your own cloud, and hand you the keys. You own the software.</p></div></div>
+      <div class="qa"><button>Is this another monthly SaaS subscription?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>No. You pay for the build once and own the software outright — no per-seat licenses. An optional maintenance retainer is available for monitoring and updates, but it's your call, and it's far cheaper than an in-house developer.</p></div></div>
+      <div class="qa"><button>How does the Operations Audit work?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>It's a one-week paid discovery phase. We analyze your dispatch, loadout, and ticketing workflow and deliver a Gap Map — exactly where you're losing money (untracked hotshot trips, delayed billing) and a concrete blueprint to fix it. No obligation to build afterward.</p></div></div>
+      <div class="qa"><button>How long does a build take, and where does it run?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Typically 4–8 weeks depending on scope. We deploy on your own cloud accounts (AWS / Vercel / Supabase) so the system — and your data — belong to you from day one.</p></div></div>
+      <div class="qa"><button>What does it cost?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>It depends on your operation and scope, which is exactly what the audit determines. Request an Operations Audit and we'll scope it precisely — most companies are replacing several apps that already cost them more every month than owning one system that actually fits.</p></div></div>
     </div>
   </div>
 </section>
@@ -541,14 +495,14 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="final-card reveal">
       <div class="glow"></div>
-      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Request Early Access</span>
-      <h2 class="display">Stop job failures<br/>before they happen.</h2>
-      <p class="lede">A missing tool, an expired cert, or an incomplete packet can sink a job before it starts. Check readiness before the crew rolls — and bill clean when the work is done.</p>
+      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Build &amp; Transfer</span>
+      <h2 class="display">Stop renting software.<br/>Own your operation.</h2>
+      <p class="lede">One system, built for your exact workflow, deployed on your cloud, owned by you. It starts with a one-week Operations Audit.</p>
       <div class="final-cta">
-        <a href="/onboarding" class="btn btn-primary">Request Early Access
+        <a href="#audit" class="btn btn-primary">Request an Operations Audit
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="#features" class="btn btn-ghost">Explore SYNNR</a>
+        <a href="#build" class="btn btn-ghost">What we build</a>
       </div>
     </div>
   </div>
@@ -564,15 +518,15 @@ export const MARKETING_HTML = `
           <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="url(#fm)"/><circle cx="16" cy="16" r="2.4" fill="#060608"/><defs><linearGradient id="fm" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#f3ecdb"/><stop offset="1" stop-color="#ccbe9d"/></linearGradient></defs></svg>
           <span class="wordmark">SYNNR</span>
         </a>
-        <p class="blurb">Field-operations readiness for companies that run on trucks, crews, equipment, tickets, documents, and field execution.</p>
+        <p class="blurb">AI automation &amp; operations agency for oilfield service companies. Custom operating systems, built on your cloud, owned by you.</p>
       </div>
-      <div><h5>Product</h5><ul><li><a href="#features">SYNNR</a></li><li><a href="#how">How it works</a></li><li><a href="#pricing">Pricing</a></li><li><a href="#faq">FAQ</a></li><li><a href="/glossary">Field-ops glossary</a></li></ul></div>
+      <div><h5>Agency</h5><ul><li><a href="#build">What we build</a></li><li><a href="#how">How it works</a></li><li><a href="#audit">Operations Audit</a></li><li><a href="/glossary">Field-ops glossary</a></li></ul></div>
 
-      <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/onboarding">Early Access</a></li><li><a href="mailto:hello@synnr.io">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+      <div><h5>Company</h5><ul><li><a href="#audit">Request an audit</a></li><li><a href="mailto:cadencain@darkstarops.com">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 SYNNR</span>
-      <span>A job can fail before it starts. SYNNR makes sure it doesn't.</span>
+      <span>© 2026 SYNNR · Darkstar Ops LLC</span>
+      <span>Stop paying monthly for software that doesn't talk to each other.</span>
     </div>
   </div>
 </footer>

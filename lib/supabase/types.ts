@@ -126,6 +126,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
+      audit_requests: {
+        Row: { id: string; company: string | null; name: string | null; email: string; phone: string | null; service_type: string | null; fleet_size: string | null; bottleneck: string | null; source: string; emailed: boolean; created_at: string };
+        Insert: { id?: string; company?: string | null; name?: string | null; email: string; phone?: string | null; service_type?: string | null; fleet_size?: string | null; bottleneck?: string | null; source?: string; emailed?: boolean; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["audit_requests"]["Insert"]>;
+        Relationships: [];
+      };
       artifacts: {
         Row: { id: string; workspace_id: string; name: string; size_bytes: number | null; mime: string | null; kind: string; storage_path: string | null; created_at: string };
         Insert: { id?: string; workspace_id: string; name: string; size_bytes?: number | null; mime?: string | null; kind?: string; storage_path?: string | null; created_at?: string };
