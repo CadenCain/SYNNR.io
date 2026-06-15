@@ -1,0 +1,97 @@
+/* Marketplace + product-page specifics. Inherits the .mkt design system from
+   marketing.css; this file only adds the grid, status pills, demo card, and
+   pricing band table. */
+
+.mkt .nav-static { position: sticky; top: 0; }
+.mkt .apps-wrap { padding-top: 120px; padding-bottom: 80px; }
+.mkt .apps-wrap .head { margin-bottom: 40px; }
+
+/* Marketplace grid */
+.mkt .appgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+@media (max-width: 720px) { .mkt .appgrid { grid-template-columns: 1fr; } }
+
+.mkt .appcard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 200px;
+}
+.mkt .appcard.coming_soon { opacity: 0.92; }
+.mkt .appcard-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mkt .appname { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+.mkt .apptag { color: var(--fg-dim); line-height: 1.5; flex: 1; }
+
+.mkt .status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.mkt .status.live { color: #0b0b0b; background: var(--accent); border-color: transparent; }
+.mkt .status.coming_soon { color: var(--fg-faint); }
+
+.mkt .appcard-foot { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Waitlist mini-form */
+.mkt .wl { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mkt .wl input {
+  flex: 1; min-width: 160px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 11px);
+  color: var(--fg); padding: 10px 12px; font-size: 14px;
+}
+.mkt .wl input:focus { outline: none; border-color: var(--accent-soft); }
+.mkt .wl-done { color: var(--accent-ink); font-size: 14px; line-height: 1.5; }
+.mkt .wl-err { color: #e6a17a; font-size: 12px; width: 100%; }
+
+.mkt .apps-note { text-align: center; margin-top: 36px; color: var(--fg-faint); font-size: 13px; }
+.mkt .apps-note a, .mkt .pricing-incl a { color: var(--accent-ink); }
+
+/* Product page */
+.mkt .product-hero { padding-top: 130px; text-align: center; max-width: 820px; }
+.mkt .product-hero .pill-badge, .mkt .product-hero .hero-cta { margin-inline: auto; }
+.mkt .product-hero .hero-cta { justify-content: center; margin-top: 26px; }
+.mkt .micro { margin-top: 16px; font-size: 12px; color: var(--fg-faint); }
+
+/* Flagged-digit demo */
+.mkt .demo-card {
+  max-width: 640px; margin: 0 auto;
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--card);
+}
+.mkt .demo-row {
+  display: grid; grid-template-columns: 0.6fr 0.8fr 1fr 1.2fr; gap: 12px;
+  padding: 13px 18px; align-items: center; border-top: 1px solid var(--line); font-size: 14px;
+}
+.mkt .demo-row.demo-head { border-top: 0; color: var(--fg-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+.mkt .demo-row.flag { background: rgba(214, 120, 90, 0.10); }
+.mkt .demo-row.warn { background: rgba(220, 170, 90, 0.09); }
+.mkt .tag { font-size: 11px; font-family: var(--font-mono); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); width: fit-content; }
+.mkt .tag.ok { color: var(--fg-faint); }
+.mkt .tag.flag { color: #e08a63; border-color: rgba(214,120,90,0.4); }
+.mkt .tag.warn { color: #d6a85a; border-color: rgba(220,170,90,0.4); }
+.mkt .demo-foot { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); color: var(--fg-dim); font-size: 13px; flex-wrap: wrap; }
+
+/* Pricing band table */
+.mkt .bandtable { max-width: 640px; margin: 0 auto; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.mkt .bandrow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: center; padding: 18px 22px; border-top: 1px solid var(--line); }
+.mkt .bandrow:first-child { border-top: 0; }
+.mkt .bandrow.enterprise { background: var(--card); }
+.mkt .bandlabel { font-weight: 600; }
+.mkt .bandprice b { font-size: 22px; letter-spacing: -0.02em; }
+.mkt .bandprice .per { color: var(--fg-faint); font-size: 13px; }
+@media (max-width: 560px) { .mkt .bandrow { grid-template-columns: 1fr 1fr; } .mkt .bandcta { grid-column: 1 / -1; } }
+
+.mkt .pricing-incl { max-width: 640px; margin: 24px auto 0; display: grid; gap: 10px; }
+.mkt .pricing-incl li { display: flex; align-items: center; gap: 10px; color: var(--fg-dim); font-size: 14px; }
+.mkt .pricing-incl li svg { width: 17px; height: 17px; color: var(--accent-ink); flex-shrink: 0; }

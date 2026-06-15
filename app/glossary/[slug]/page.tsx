@@ -44,7 +44,7 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
         <nav className="topnav">
           <Link className="brand" href="/">{MARK}<b>SYNNR</b></Link>
           <Link className="crumb" href="/glossary">Field-Ops Glossary</Link>
-          <Link className="cta-sm" href="/#audit">Request an Operations Audit</Link>
+          <Link className="cta-sm" href="/ingest">Scan a sheet free</Link>
         </nav>
 
         <span className="chip">{t.category}</span>
@@ -69,10 +69,10 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
 
         <div className="cta">
           <div>
-            <b>Stop renting software. Own your operation.</b>
-            <span>We build custom operating systems for oilfield service companies — deployed on your cloud, owned by you. It starts with an Operations Audit.</span>
+            <b>Software for the boring operational stuff.</b>
+            <span>SYNNR builds purpose-built software for oilfield service companies. Start with TallyShot — photograph a handwritten tally sheet, get clean Excel back.</span>
           </div>
-          <Link className="go" href="/#audit">Request an Operations Audit →</Link>
+          <Link className="go" href="/ingest">Scan a sheet free →</Link>
         </div>
 
         <Link className="back" href="/glossary">← All terms</Link>

@@ -353,7 +353,7 @@ export default function OnboardingScripts() {
         if (state.step === 1) { captureLead(); provisionWorkspace(); }
         go(state.step + 1); return;
       }
-      if (audited) { window.location.href = "/checkout?plan=growth"; return; }
+      if (audited) { window.location.href = "/checkout?plan=pro"; return; }
       runAudit();
     });
 

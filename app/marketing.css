@@ -89,6 +89,12 @@
 .mkt .lede { font-size: clamp(16.5px, 1.6vw, 20px); line-height:1.55; color: var(--fg-dim); text-wrap:pretty; }
 .mkt .muted { color: var(--fg-dim); } .mkt .faint { color: var(--fg-faint); } .mkt .mono { font-family: var(--font-mono); }
 .mkt .grad { background: linear-gradient(100deg, var(--fg) 35%, var(--accent-soft) 75%, var(--accent-2)); -webkit-background-clip:text; background-clip:text; color: transparent; }
+.mkt .soon { font-family: var(--font-mono); font-size: .62em; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-faint); vertical-align: middle; }
+.mkt .trust-strip { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; max-width: 880px; margin: 40px auto 0; }
+@media (max-width: 680px) { .mkt .trust-strip { grid-template-columns: 1fr; } }
+.mkt .trust-item { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 24px; }
+.mkt .trust-item .ti-k { font-weight: 600; font-size: 16px; letter-spacing: -.01em; margin-bottom: 8px; }
+.mkt .trust-item p { color: var(--fg-dim); line-height: 1.55; font-size: 14.5px; }
 
 .mkt .head { max-width: 720px; margin-inline: auto; text-align: center; }
 .mkt .head .eyebrow { margin-bottom: 18px; }

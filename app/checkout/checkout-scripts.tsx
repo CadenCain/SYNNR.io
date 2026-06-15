@@ -14,14 +14,15 @@ export default function CheckoutScripts() {
     const q = (id: string) => root.querySelector<HTMLElement>("#" + id);
 
     const PLANS: Record<string, { name: string; desc: string; price: number }> = {
-      pro: { name: "SYNNR Pro", desc: "Recurring field jobs · readiness core", price: 499 },
-      growth: { name: "SYNNR Growth", desc: "Multi-crew · full readiness suite", price: 999 },
+      starter: { name: "TallyShot — Starter", desc: "Single truck or small shop", price: 79 },
+      pro: { name: "TallyShot — Pro", desc: "Multi-crew · unlimited sheets", price: 199 },
+      fleet: { name: "TallyShot — Fleet", desc: "40+ trucks · full suite early access", price: 399 },
     };
     // legacy keys from old links map onto the current tiers
-    const ALIASES: Record<string, string> = { recover: "pro", command: "growth" };
+    const ALIASES: Record<string, string> = { recover: "starter", command: "fleet", growth: "fleet" };
     const rawKey = new URLSearchParams(window.location.search).get("plan") || "";
     const planKey = ALIASES[rawKey] ?? rawKey;
-    const plan = PLANS[planKey] || PLANS.growth;
+    const plan = PLANS[planKey] || PLANS.pro;
     const money = (n: number) =>
       "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -78,7 +79,7 @@ export default function CheckoutScripts() {
     const btn = q("payBtn") as HTMLButtonElement | null;
     const err = q("err");
     if (btn) {
-      const planForCheckout = planKey === "pro" ? "pro" : "growth";
+      const planForCheckout = planKey in PLANS ? planKey : "pro";
 
       const runDemo = () => {
         if (err) err.textContent = "";

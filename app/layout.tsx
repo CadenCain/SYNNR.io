@@ -16,28 +16,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
+    default: "SYNNR — Purpose-built software for oilfield service companies",
     template: "%s",
   },
   description:
-    "SYNNR is an AI automation & operations agency for oilfield service companies. We build custom operating systems — AI ingestion, digital yard twins, intelligent ticketing — deployed on your cloud and owned by you. No monthly seat licenses.",
+    "SYNNR builds software for oilfield service companies — the boring operational stuff, finally done right. Start with TallyShot: photograph a handwritten tally sheet and get clean Excel back, every shaky digit flagged for review.",
   keywords: [
-    "oilfield software", "AI automation agency", "custom field operations software", "wireline",
-    "coil tubing", "digital yard twin", "intelligent ticketing", "operations audit",
+    "oilfield software", "tally sheet to excel", "TallyShot", "field operations software", "wireline",
+    "coil tubing", "handwriting to spreadsheet", "oilfield service software", "digitize tally sheets",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
+    title: "SYNNR — Purpose-built software for oilfield service companies",
     description:
-      "Stop paying monthly for software that doesn't talk to each other. We build custom operating systems, deploy them on your cloud, and hand you the keys.",
+      "TallyShot: photograph a handwritten tally sheet, get clean Excel back with every shaky digit flagged. The boring operational stuff, finally done right.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — Custom Operating Systems for Oilfield Service Companies",
+    title: "SYNNR — Purpose-built software for oilfield service companies",
     description:
-      "AI automation & ops agency for oilfield service. Build & Transfer — own your software, no monthly seat licenses.",
+      "TallyShot turns a photo of a handwritten tally sheet into clean Excel — shaky digits flagged for review. Priced for a service shop.",
   },
 };
 

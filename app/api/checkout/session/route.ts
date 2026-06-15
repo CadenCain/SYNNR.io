@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getStripe, priceFor } from "@/lib/stripe";
+import { getStripe, priceFor, priceForProduct, normalizePlan } from "@/lib/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { getProduct, isSelfServe } from "@/lib/catalog";
 
 /**
  * Creates a Stripe hosted Checkout Session for the chosen plan and returns its
@@ -8,20 +9,41 @@ import { getServerSupabase } from "@/lib/supabase/server";
  * so the checkout page falls back to the demo flow.
  */
 export async function POST(req: Request) {
-  let plan = "growth";
-  try {
-    const body = await req.json();
-    // legacy plan keys from old links map onto the current tiers
-    const aliases: Record<string, string> = { recover: "pro", command: "growth" };
-    const requested = typeof body?.plan === "string" ? (aliases[body.plan] ?? body.plan) : "";
-    if (requested === "pro" || requested === "growth") plan = requested;
-  } catch {
-    /* default */
-  }
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch { /* defaults */ }
+
+  // Marketplace per-seat path: { product, seats }. Legacy per-company: { plan }.
+  const productSlug = typeof body.product === "string" ? body.product : "";
+  const product = productSlug ? getProduct(productSlug) : undefined;
 
   const stripe = getStripe();
-  const price = priceFor(plan);
+
+  let price: string | undefined;
+  let quantity = 1;
+  let plan = "pro";
+  let trialDays = 0;
+  let cancelUrl: string;
+
+  if (product) {
+    // clamp seats to a sane self-serve range; 50+ routes to sales, not checkout
+    const requestedSeats = Math.max(1, Math.floor(Number(body.seats) || 1));
+    if (!isSelfServe(product, requestedSeats)) {
+      return NextResponse.json({ ok: false, error: "seat count requires sales — contact us", contactSales: true }, { status: 422 });
+    }
+    quantity = requestedSeats;
+    price = priceForProduct(product.slug);
+    plan = product.slug;
+    trialDays = product.pricing.trialDays ?? 0;
+    cancelUrl = `/apps/${product.slug}#pricing`;
+  } else {
+    const requested = typeof body.plan === "string" ? normalizePlan(body.plan) : "";
+    if (requested === "starter" || requested === "pro" || requested === "fleet") plan = requested;
+    price = priceFor(plan);
+    cancelUrl = `/checkout?plan=${plan}`;
+  }
+
   if (!stripe || !price) {
+    // Not wired yet (no key / no price env) → checkout page falls back to demo.
     return NextResponse.json({ ok: true, configured: false });
   }
 
@@ -39,17 +61,21 @@ export async function POST(req: Request) {
   }
 
   const origin = new URL(req.url).origin;
+  const meta = { plan, product_slug: product?.slug ?? "", seats: String(quantity), workspace_id: workspaceId ?? "" };
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price, quantity: 1 }],
+      line_items: [{ price, quantity }],
       success_url: `${origin}/dashboard?subscribed=1`,
-      cancel_url: `${origin}/checkout?plan=${plan}`,
+      cancel_url: `${origin}${cancelUrl}`,
       customer_email: email,
       client_reference_id: workspaceId ?? undefined,
       allow_promotion_codes: true,
-      metadata: { plan, workspace_id: workspaceId ?? "" },
-      subscription_data: { metadata: { plan, workspace_id: workspaceId ?? "" } },
+      metadata: meta,
+      subscription_data: {
+        metadata: meta,
+        ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
+      },
     });
     return NextResponse.json({ ok: true, configured: true, url: session.url });
   } catch (e) {

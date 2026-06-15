@@ -21,7 +21,7 @@ export default function GlossaryIndex() {
         <nav className="topnav">
           <Link className="brand" href="/">{MARK}<b>SYNNR</b></Link>
           <span className="crumb">Field-Ops Glossary</span>
-          <Link className="cta-sm" href="/#audit">Request an Operations Audit</Link>
+          <Link className="cta-sm" href="/ingest">Scan a sheet free</Link>
         </nav>
 
         <div className="eyebrow">The language of job readiness</div>
@@ -49,10 +49,10 @@ export default function GlossaryIndex() {
 
         <div className="cta">
           <div>
-            <b>We build the system that checks all of this.</b>
-            <span>Custom operating systems for oilfield service companies — built on your cloud, owned by you. It starts with an Operations Audit.</span>
+            <b>Software for the boring operational stuff.</b>
+            <span>SYNNR builds purpose-built software for oilfield service companies. Start with TallyShot — photograph a handwritten tally sheet, get clean Excel back.</span>
           </div>
-          <Link className="go" href="/#audit">Request an Operations Audit →</Link>
+          <Link className="go" href="/ingest">Scan a sheet free →</Link>
         </div>
       </div>
     </div>

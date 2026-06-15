@@ -13,9 +13,45 @@ export type Database = {
   public: {
     Tables: {
       workspaces: {
-        Row: { id: string; name: string; industry: string | null; created_at: string };
-        Insert: { id?: string; name: string; industry?: string | null; created_at?: string };
-        Update: { id?: string; name?: string; industry?: string | null; created_at?: string };
+        Row: { id: string; name: string; industry: string | null; type: string; stripe_customer_id: string | null; created_at: string };
+        Insert: { id?: string; name: string; industry?: string | null; type?: string; stripe_customer_id?: string | null; created_at?: string };
+        Update: { id?: string; name?: string; industry?: string | null; type?: string; stripe_customer_id?: string | null; created_at?: string };
+        Relationships: [];
+      };
+      memberships: {
+        Row: { id: string; user_id: string; workspace_id: string; role: string; created_at: string };
+        Insert: { id?: string; user_id: string; workspace_id: string; role?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["memberships"]["Insert"]>;
+        Relationships: [];
+      };
+      products: {
+        Row: { id: string; slug: string; name: string; status: string; pricing_model: string; created_at: string };
+        Insert: { id?: string; slug: string; name: string; status?: string; pricing_model: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
+        Relationships: [];
+      };
+      prices: {
+        Row: { id: string; product_id: string; stripe_price_id: string; tier_meta: Json; interval: string; created_at: string };
+        Insert: { id?: string; product_id: string; stripe_price_id: string; tier_meta?: Json; interval?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["prices"]["Insert"]>;
+        Relationships: [];
+      };
+      seat_assignments: {
+        Row: { id: string; workspace_id: string; product_slug: string; user_id: string; created_at: string };
+        Insert: { id?: string; workspace_id: string; product_slug: string; user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["seat_assignments"]["Insert"]>;
+        Relationships: [];
+      };
+      usage_events: {
+        Row: { id: string; workspace_id: string; product_slug: string; user_id: string | null; qty: number; ts: string };
+        Insert: { id?: string; workspace_id: string; product_slug: string; user_id?: string | null; qty?: number; ts?: string };
+        Update: Partial<Database["public"]["Tables"]["usage_events"]["Insert"]>;
+        Relationships: [];
+      };
+      invites: {
+        Row: { id: string; workspace_id: string; email: string; role: string; token: string; status: string; created_at: string };
+        Insert: { id?: string; workspace_id: string; email: string; role?: string; token?: string; status?: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["invites"]["Insert"]>;
         Relationships: [];
       };
       profiles: {
@@ -139,8 +175,8 @@ export type Database = {
         Relationships: [];
       };
       subscriptions: {
-        Row: { id: string; workspace_id: string | null; email: string | null; plan: string | null; status: string | null; stripe_customer_id: string | null; stripe_subscription_id: string | null; current_period_end: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; workspace_id?: string | null; email?: string | null; plan?: string | null; status?: string | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; current_period_end?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; workspace_id: string | null; email: string | null; plan: string | null; product_slug: string | null; seats: number; status: string | null; stripe_customer_id: string | null; stripe_subscription_id: string | null; current_period_end: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; workspace_id?: string | null; email?: string | null; plan?: string | null; product_slug?: string | null; seats?: number; status?: string | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; current_period_end?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]>;
         Relationships: [];
       };

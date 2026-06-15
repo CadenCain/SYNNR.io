@@ -8,18 +8,18 @@ export const CHECKOUT_HTML = `
       <a class="back" href="/#pricing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Back to pricing</a>
       <div class="brand"><span class="mk"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.4 14.6 9.4 22.6 12 14.6 14.6 12 22.6 9.4 14.6 1.4 12 9.4 9.4Z"/></svg></span><b>SYNNR</b></div>
 
-      <div class="sub-label">Subscribe to <span id="planName">SYNNR Growth</span></div>
-      <div class="price-big"><span class="amt" id="priceBig">$999.00</span><span class="per">per month</span></div>
+      <div class="sub-label">Subscribe to <span id="planName">TallyShot — Pro</span></div>
+      <div class="price-big"><span class="amt" id="priceBig">$199.00</span><span class="per">per month</span></div>
       <div class="billed" id="billed">Billed monthly · cancel anytime</div>
 
       <div class="lines">
         <div class="lrow">
-          <div class="ln"><b id="liName">SYNNR Growth</b><span id="liDesc">Multi-crew · full readiness suite</span></div>
-          <div class="lv" id="liPrice">$999.00</div>
+          <div class="ln"><b id="liName">TallyShot — Pro</b><span id="liDesc">Multi-crew · unlimited sheets</span></div>
+          <div class="lv" id="liPrice">$199.00</div>
         </div>
-        <div class="lrow sub"><div class="ln"><b>Onboarding &amp; rule setup</b></div><div class="lv">Included</div></div>
-        <div class="lrow sub"><div class="ln"><b>Subtotal</b></div><div class="lv" id="subtotal">$999.00</div></div>
-        <div class="lrow total"><div class="ln"><b>Total due today</b></div><div class="lv" id="total">$999.00</div></div>
+        <div class="lrow sub"><div class="ln"><b>Tally sheet → clean Excel</b></div><div class="lv">Included</div></div>
+        <div class="lrow sub"><div class="ln"><b>Subtotal</b></div><div class="lv" id="subtotal">$199.00</div></div>
+        <div class="lrow total"><div class="ln"><b>Total due today</b></div><div class="lv" id="total">$199.00</div></div>
       </div>
 
       <div class="guarantee">
@@ -65,7 +65,7 @@ export const CHECKOUT_HTML = `
         </select>
       </div>
 
-      <button class="paybtn" id="payBtn">Subscribe · <span id="btnAmt">$999.00</span>/mo</button>
+      <button class="paybtn" id="payBtn">Subscribe · <span id="btnAmt">$199.00</span>/mo</button>
       <div class="err" id="err"></div>
 
       <div class="secline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Payments are encrypted &amp; secure</div>
@@ -79,8 +79,8 @@ export const CHECKOUT_HTML = `
   <div class="done-card">
     <div class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div>
     <h2>You're subscribed to SYNNR</h2>
-    <p>Your workspace is active. Let's get every job ready before it rolls.</p>
-    <div class="meta"><span id="doneName">SYNNR Growth</span><span id="doneAmt">$999.00 / mo</span></div>
+    <p>Your workspace is active. Start scanning tally sheets — clean Excel out the other side.</p>
+    <div class="meta"><span id="doneName">TallyShot — Pro</span><span id="doneAmt">$199.00 / mo</span></div>
     <a class="gobtn" href="/dashboard">Go to dashboard<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
 </div>

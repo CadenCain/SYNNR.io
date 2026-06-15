@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "SYNNR — Custom Operating Systems for Oilfield Service Companies";
+export const alt = "SYNNR — Purpose-built software for oilfield service companies";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -42,16 +42,16 @@ export default function OgImage() {
               letterSpacing: 6,
             }}
           >
-            AI automation &amp; ops agency
+            Software for oilfield service
           </div>
           <div style={{ fontSize: 74, fontWeight: 700, lineHeight: 1.06, maxWidth: 1000 }}>
-            Stop paying monthly for software that doesn&apos;t talk to each other.
+            The boring operational stuff, finally done right.
           </div>
         </div>
 
         <div style={{ fontSize: 26, color: "#a59d8c", maxWidth: 920 }}>
-          Custom operating systems for oilfield service companies — built on your
-          cloud, owned by you. Build &amp; Transfer.
+          TallyShot — photograph a handwritten tally sheet, get clean Excel back,
+          every shaky digit flagged for review.
         </div>
       </div>
     ),

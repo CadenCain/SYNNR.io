@@ -7,14 +7,41 @@ export function getStripe(): Stripe | null {
   return new Stripe(key);
 }
 
+/** TallyShot subscription tiers. */
 export const PLAN_NAMES: Record<string, string> = {
-  pro: "SYNNR Pro",
-  growth: "SYNNR Growth",
+  starter: "SYNNR TallyShot — Starter",
+  pro: "SYNNR TallyShot — Pro",
+  fleet: "SYNNR TallyShot — Fleet",
 };
 
-/** Stripe Price ID for a plan (created in your Stripe dashboard, set via env). */
+/** Legacy plan keys → current tiers (keeps old links/checkout sessions working). */
+const PLAN_ALIASES: Record<string, string> = {
+  growth: "fleet",
+  recover: "starter",
+  command: "fleet",
+};
+
+export function normalizePlan(plan: string): string {
+  return PLAN_ALIASES[plan] ?? plan;
+}
+
+/** Stripe Price ID for a legacy per-company plan (kept for old checkout links). */
 export function priceFor(plan: string): string | undefined {
-  if (plan === "pro") return process.env.STRIPE_PRICE_PRO;
-  if (plan === "growth") return process.env.STRIPE_PRICE_GROWTH;
-  return undefined;
+  switch (normalizePlan(plan)) {
+    case "starter": return process.env.STRIPE_PRICE_STARTER;
+    case "pro": return process.env.STRIPE_PRICE_PRO;
+    case "fleet": return process.env.STRIPE_PRICE_FLEET;
+    default: return undefined;
+  }
+}
+
+/**
+ * Per-seat Stripe Price ID for a marketplace product (quantity = seats).
+ * One price object per product, with volume tiers configured in Stripe so the
+ * band discounts apply automatically. Env name: STRIPE_PRICE_<SLUG_UPPER>_SEAT,
+ * e.g. STRIPE_PRICE_TALLYSHOT_SEAT.
+ */
+export function priceForProduct(slug: string): string | undefined {
+  const key = `STRIPE_PRICE_${slug.replace(/[^a-z0-9]/gi, "_").toUpperCase()}_SEAT`;
+  return process.env[key];
 }
