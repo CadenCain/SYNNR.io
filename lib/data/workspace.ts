@@ -407,3 +407,92 @@ export async function getDashboardData(): Promise<DashboardData> {
     plan,
   };
 }
+
+// ── Module 2: Digital Yard Twin ──────────────────────────────────────────
+import { STATE_TONE, loadoutStatus, daysUntil, type AssetState, type Readiness } from "@/lib/twin/fsm";
+
+export type YardItem = {
+  id: string;
+  name: string;
+  category: string | null;
+  identifier: string | null;
+  state: AssetState;
+  calibrationDays: number | null;
+  inspectionDays: number | null;
+};
+export type YardNode = {
+  id: string;
+  name: string;
+  identifier: string | null;
+  state: AssetState;
+  tone: "green" | "amber" | "active" | "red";
+  inspectionDays: number | null;
+  crew: string | null;
+  jobNumber: string | null;
+  readiness: Readiness;
+  readinessReason: string;
+  items: YardItem[];
+};
+export type YardData = { live: boolean; empty: boolean; nodes: YardNode[]; loose: YardItem[]; counts: { ready: number; atRisk: number; blocked: number; maintenance: number } };
+
+const EMPTY_YARD: YardData = { live: false, empty: true, nodes: [], loose: [], counts: { ready: 0, atRisk: 0, blocked: 0, maintenance: 0 } };
+
+export async function getYardData(): Promise<YardData> {
+  const supabase = await getServerSupabase();
+  if (!supabase) return EMPTY_YARD;
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return EMPTY_YARD;
+
+  const [{ data: assets }, { data: crews }, { data: jobs }] = await Promise.all([
+    supabase.from("assets").select("id, parent_asset_id, name, category, asset_kind, identifier, state, calibration_date, inspection_date, crew_id, current_job_id").order("created_at", { ascending: true }),
+    supabase.from("crews").select("id, name"),
+    supabase.from("jobs").select("id, number"),
+  ]);
+  if (!assets || assets.length === 0) return { ...EMPTY_YARD, live: true, empty: true };
+
+  const crewName = new Map((crews ?? []).map((c) => [c.id, c.name]));
+  const jobNum = new Map((jobs ?? []).map((j) => [j.id, j.number]));
+  const childrenOf = new Map<string, typeof assets>();
+  for (const a of assets) {
+    if (a.parent_asset_id) {
+      const arr = childrenOf.get(a.parent_asset_id) ?? [];
+      arr.push(a);
+      childrenOf.set(a.parent_asset_id, arr);
+    }
+  }
+
+  const toItem = (a: (typeof assets)[number]): YardItem => ({
+    id: a.id, name: a.name, category: a.category, identifier: a.identifier,
+    state: a.state as AssetState, calibrationDays: daysUntil(a.calibration_date), inspectionDays: daysUntil(a.inspection_date),
+  });
+
+  const nodes: YardNode[] = [];
+  const counts = { ready: 0, atRisk: 0, blocked: 0, maintenance: 0 };
+  for (const a of assets) {
+    if (a.asset_kind !== "node") continue;
+    const kids = (childrenOf.get(a.id) ?? []).map(toItem);
+    const inspDays = daysUntil(a.inspection_date);
+    // "missing" = a required child marked maintenance_required (proxy for not-loadable)
+    const childMissing = kids.filter((k) => k.state === "maintenance_required").length;
+    const childDays = kids.map((k) => k.calibrationDays).filter((d): d is number => d != null);
+    const childSoonest = childDays.length ? Math.min(...childDays) : null;
+    const { status, reason } =
+      a.state === "maintenance_required"
+        ? { status: "blocked" as Readiness, reason: "Truck in maintenance" }
+        : loadoutStatus({ childMissing, inspectionDays: inspDays, childSoonest });
+    if (a.state === "maintenance_required") counts.maintenance++;
+    else if (status === "ready") counts.ready++;
+    else if (status === "at_risk") counts.atRisk++;
+    else counts.blocked++;
+    nodes.push({
+      id: a.id, name: a.name, identifier: a.identifier, state: a.state as AssetState,
+      tone: STATE_TONE[a.state as AssetState], inspectionDays: inspDays,
+      crew: a.crew_id ? crewName.get(a.crew_id) ?? null : null,
+      jobNumber: a.current_job_id ? jobNum.get(a.current_job_id) ?? null : null,
+      readiness: status, readinessReason: reason, items: kids,
+    });
+  }
+  const loose = assets.filter((a) => a.asset_kind !== "node" && !a.parent_asset_id).map(toItem);
+
+  return { live: true, empty: false, nodes, loose, counts };
+}

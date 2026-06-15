@@ -191,9 +191,10 @@ export function dashboardHtml(d: DashboardData): string {
     <div class="sb-section">
       <div class="sb-label">Analytics &amp; Insights</div>
       <nav class="sb-nav">
+        <a class="nav-item" href="/yard"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg>Digital Yard Twin</a>
+        <a class="nav-item" href="/ingest"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Ingest documents</a>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Job Readiness</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v9l6 3"/><circle cx="12" cy="12" r="9"/></svg>Rate Compliance</div>
-        <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Backup Coverage</div>
         <div class="nav-item"><svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4Z"/><path d="M8 12h8M8 16h5"/></svg>Reports</div>
       </nav>
     </div>
