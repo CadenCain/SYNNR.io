@@ -55,6 +55,7 @@
 .mkt .wl-done { color: var(--accent-ink); font-size: 14px; line-height: 1.5; }
 .mkt .wl-err { color: #e6a17a; font-size: 12px; width: 100%; }
 
+.mkt .learn-more { font-size: 13px; color: var(--accent-ink); font-family: var(--font-mono); }
 .mkt .apps-note { text-align: center; margin-top: 36px; color: var(--fg-faint); font-size: 13px; }
 .mkt .apps-note a, .mkt .pricing-incl a { color: var(--accent-ink); }
 

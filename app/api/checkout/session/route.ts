@@ -49,11 +49,13 @@ export async function POST(req: Request) {
 
   // Attach the session to the workspace/user when signed in.
   let workspaceId: string | null = null;
+  let userId: string | null = null;
   let email: string | undefined;
   const supabase = await getServerSupabase();
   if (supabase) {
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
+      userId = auth.user.id;
       email = auth.user.email ?? undefined;
       const { data: profile } = await supabase.from("profiles").select("workspace_id").eq("id", auth.user.id).maybeSingle();
       workspaceId = profile?.workspace_id ?? null;
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   const origin = new URL(req.url).origin;
-  const meta = { plan, product_slug: product?.slug ?? "", seats: String(quantity), workspace_id: workspaceId ?? "" };
+  const meta = { plan, product_slug: product?.slug ?? "", seats: String(quantity), workspace_id: workspaceId ?? "", user_id: userId ?? "" };
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

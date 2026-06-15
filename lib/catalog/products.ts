@@ -35,6 +35,13 @@ export const PRODUCTS: Product[] = [
     status: "coming_soon",
     seatUnlocks: "Per-seat, coming soon.",
     pricing: { model: "per_seat", trialDays: 14 },
+    problem:
+      "A crew rolls out, gets to location, and the one tool they need is sitting in the yard. The trip's blown, the customer's waiting, and nobody can prove what was loaded.",
+    bullets: [
+      "Snap the loadout against the job's required-tools list",
+      "Flags anything missing or wrong before the truck leaves",
+      "A timestamped photo record of what actually went out",
+    ],
   },
   {
     slug: "ticketflow",
@@ -43,6 +50,13 @@ export const PRODUCTS: Product[] = [
     status: "coming_soon",
     seatUnlocks: "Per-seat, coming soon.",
     pricing: { model: "per_seat", trialDays: 14 },
+    problem:
+      "Paper tickets sit in a truck for a week, get keyed in wrong, and come back from the operator kicked back for weak backup. Cash that should've billed Friday bills next month.",
+    bullets: [
+      "Build the ticket in the field, priced from your rate sheet",
+      "Customer signs on the device — no lost paper",
+      "Billable backup attached, same day, every time",
+    ],
   },
   {
     slug: "certwatch",
@@ -51,6 +65,13 @@ export const PRODUCTS: Product[] = [
     status: "coming_soon",
     seatUnlocks: "Per-seat, coming soon.",
     pricing: { model: "per_seat", trialDays: 14 },
+    problem:
+      "A hand's H2S card expired last week and nobody caught it until the operator's man on location did. Now the crew's sent home and the job's down — over a date in a spreadsheet nobody watches.",
+    bullets: [
+      "Tracks every cert and inspection expiration in one place",
+      "Warns before a job that needs an expired cert is dispatched",
+      "Reads new cards straight off a photo (TallyShot engine)",
+    ],
   },
 ];
 

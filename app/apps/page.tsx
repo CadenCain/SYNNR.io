@@ -40,7 +40,10 @@ export default function AppsPage() {
                   <a className="btn btn-ghost btn-sm" href="/ingest">Live demo</a>
                 </div>
               ) : (
-                <WaitlistForm slug={p.slug} name={p.name} />
+                <>
+                  <WaitlistForm slug={p.slug} name={p.name} />
+                  <a className="learn-more" href={`/apps/${p.slug}`}>Learn more →</a>
+                </>
               )}
             </div>
           ))}

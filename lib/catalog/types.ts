@@ -49,6 +49,10 @@ export type Product = {
   pricing: ProductPricing;
   /** What one seat unlocks, for the product page. */
   seatUnlocks: string;
+  /** The boring, expensive problem this app kills (product page). */
+  problem?: string;
+  /** A few concrete things it does (product page bullets). */
+  bullets?: string[];
 };
 
 /** A live subscription's state, as the entitlement layer needs to see it. */

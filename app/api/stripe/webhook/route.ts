@@ -48,6 +48,21 @@ export async function POST(req: Request) {
           updated_at: new Date().toISOString(),
         });
         await linkCustomer(workspaceId, customerId);
+
+        // Give the buyer an owner membership + their own seat immediately, so a
+        // solo operator can use what they just bought without an admin step.
+        const buyerId = s.metadata?.user_id;
+        const slug = s.metadata?.product_slug;
+        if (workspaceId && buyerId && slug) {
+          await admin.from("memberships").upsert(
+            { user_id: buyerId, workspace_id: workspaceId, role: "owner" } as never,
+            { onConflict: "user_id,workspace_id" }
+          );
+          await admin.from("seat_assignments").upsert(
+            { workspace_id: workspaceId, product_slug: slug, user_id: buyerId } as never,
+            { onConflict: "workspace_id,product_slug,user_id" }
+          );
+        }
       }
     } else if (event.type.startsWith("customer.subscription.")) {
       const sub = event.data.object as Stripe.Subscription;

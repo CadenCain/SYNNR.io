@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { ensurePersonalOrg } from "@/lib/marketplace/provision";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 /**
@@ -31,6 +32,11 @@ export async function GET(req: Request) {
   } else {
     return fail("That sign-in link is invalid or expired — request a new one.");
   }
+
+  // Make sure the user has a home org (personal workspace + owner membership)
+  // before they land — covers the buy-direct path that skips onboarding.
+  const { data: auth } = await supabase.auth.getUser();
+  if (auth.user) await ensurePersonalOrg(auth.user.id, auth.user.email ?? null);
 
   return NextResponse.redirect(new URL(dest, url.origin));
 }
