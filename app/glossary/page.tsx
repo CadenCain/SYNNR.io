@@ -21,7 +21,7 @@ export default function GlossaryIndex() {
         <nav className="topnav">
           <Link className="brand" href="/">{MARK}<b>SYNNR</b></Link>
           <span className="crumb">Field-Ops Glossary</span>
-          <Link className="cta-sm" href="/onboarding">Request Early Access</Link>
+          <Link className="cta-sm" href="/#audit">Request an Operations Audit</Link>
         </nav>
 
         <div className="eyebrow">The language of job readiness</div>
@@ -49,10 +49,10 @@ export default function GlossaryIndex() {
 
         <div className="cta">
           <div>
-            <b>SYNNR checks all of this before the job moves.</b>
-            <span>Crew, certs, loadout, paperwork, and billing backup — verified Ready, At Risk, or Blocked.</span>
+            <b>We build the system that checks all of this.</b>
+            <span>Custom operating systems for oilfield service companies — built on your cloud, owned by you. It starts with an Operations Audit.</span>
           </div>
-          <Link className="go" href="/onboarding">Run a readiness check →</Link>
+          <Link className="go" href="/#audit">Request an Operations Audit →</Link>
         </div>
       </div>
     </div>
