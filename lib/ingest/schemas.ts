@@ -9,6 +9,7 @@ import { z } from "zod";
 export const DOC_TYPES = [
   "CERTIFICATION",
   "RATE_SHEET",
+  "TALLY_SHEET",
   "FIELD_TICKET",
   "LOADOUT_PHOTO",
   "MSA_DOCUMENT",
