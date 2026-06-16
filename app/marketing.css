@@ -161,8 +161,9 @@
 .mkt .nav-links a { font-size:14.5px; color: var(--fg-dim); transition: color .2s; white-space:nowrap; }
 .mkt .nav-links a:hover { color: var(--fg); }
 .mkt .nav-cta { display:flex; align-items:center; gap:10px; }
-@media (max-width: 1000px){ .mkt .nav-cta .btn-ghost { display:none; } }
+/* keep Sign in / Dashboard reachable on mobile (links collapse to the footer) */
 @media (max-width: 860px){ .mkt .nav-links { display:none; } }
+@media (max-width: 380px){ .mkt .nav-cta .btn-ghost { padding-left:14px; padding-right:14px; } }
 
 /* ---- hero ---- */
 .mkt .hero { padding-top: 158px; padding-bottom: 40px; text-align:center; }
