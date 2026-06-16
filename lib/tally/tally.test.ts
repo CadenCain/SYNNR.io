@@ -156,7 +156,7 @@ test("xlsx export produces a valid, readable workbook with the right shape", asy
   // a flagged joint (47, RANGE) row carries the flag text + a fill
   const row47 = ws!.getRow(5 + 47 - 1);
   assert.equal(row47.getCell(1).value, 47);
-  assert.match(String(row47.getCell(4).value), /RANGE/);
+  assert.match(String(row47.getCell(4).value), /range/i);
   const fill = row47.getCell(2).fill as ExcelJS.FillPattern;
   assert.equal(fill?.type, "pattern");
 });

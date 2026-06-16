@@ -37,6 +37,20 @@ function fillFor(j: TallyJoint, t: XlsxTemplate): string | null {
   return null;
 }
 
+const NUM = "#,##0.00";
+const INK = "FF1A1714";
+const BONE = "FFECE5D7";
+const GRID = "FFD9D3C6";
+const thin = { style: "thin" as const, color: { argb: GRID } };
+const allBorders = { top: thin, left: thin, bottom: thin, right: thin };
+
+function flagLabel(j: TallyJoint): string {
+  if (j.flag === "RANGE") return "Review — out of range";
+  if (j.flag === "LOW_CONFIDENCE") return "Review — low confidence";
+  if (j.flag === "UNREADABLE") return "Review — unreadable";
+  return "";
+}
+
 export async function buildTallyWorkbook(
   result: TallyResult,
   opts: XlsxOptions = {}
@@ -44,37 +58,41 @@ export async function buildTallyWorkbook(
   const t: XlsxTemplate = { ...MKS_TEMPLATE, ...(opts.template ?? {}) };
   const wb = new ExcelJS.Workbook();
   wb.creator = "SYNNR TallyShot";
-  const ws = wb.addWorksheet(t.sheetName);
+  const ws = wb.addWorksheet(t.sheetName, { views: [{ state: "frozen", ySplit: 4 }] });
 
-  // Title + sheet metadata
+  ws.columns = [
+    { key: "joint", width: 7 },
+    { key: "length", width: 13 },
+    { key: "subtotal", width: 16 },
+    { key: "flag", width: 30 },
+  ];
+
+  // Title + metadata
   ws.mergeCells("A1:D1");
   ws.getCell("A1").value = t.title;
-  ws.getCell("A1").font = { bold: true, size: 14 };
+  ws.getCell("A1").font = { bold: true, size: 15, color: { argb: INK } };
   const metaBits = [
     result.meta.company && `Company: ${result.meta.company}`,
-    result.meta.sheetNo && `Sheet: ${result.meta.sheetNo}`,
-    result.meta.size && `Size: ${result.meta.size}`,
-    result.usedSample && "[SAMPLE — cardless demo]",
+    result.meta.sheetNo && `Sheet ${result.meta.sheetNo}`,
+    result.meta.size && result.meta.size,
+    result.usedSample && "SAMPLE",
   ].filter(Boolean);
   ws.mergeCells("A2:D2");
-  ws.getCell("A2").value = metaBits.join("   ");
-  ws.getCell("A2").font = { italic: true, color: { argb: "FF666666" } };
+  ws.getCell("A2").value = metaBits.join("   ·   ");
+  ws.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF8A8276" } };
+  ws.getRow(1).height = 22;
 
-  // Header row
+  // Header row (row 4)
   const headerRowIdx = 4;
   const header = ws.getRow(headerRowIdx);
   header.values = [t.headers.joint, t.headers.length, t.headers.subtotal, t.headers.flag];
-  header.font = { bold: true };
-  header.eachCell((c) => {
-    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A1714" } };
-    c.font = { bold: true, color: { argb: "FFECE5D7" } };
+  header.height = 20;
+  header.eachCell((c, col) => {
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: INK } };
+    c.font = { bold: true, color: { argb: BONE } };
+    c.alignment = { vertical: "middle", horizontal: col === 1 ? "center" : col === 4 ? "left" : "right" };
+    c.border = allBorders;
   });
-  ws.columns = [
-    { key: "joint", width: 8 },
-    { key: "length", width: 14 },
-    { key: "subtotal", width: 18 },
-    { key: "flag", width: 48 },
-  ];
 
   const subtotalAt = new Map<number, number>();
   for (const s of result.subtotals) subtotalAt.set(s.to, s.ft);
@@ -84,41 +102,59 @@ export async function buildTallyWorkbook(
   for (const j of result.joints) {
     const row = ws.getRow(rowIdx);
     row.getCell(1).value = j.joint;
+    row.getCell(1).alignment = { horizontal: "center" };
     row.getCell(2).value = j.lengthFt;
+    row.getCell(2).numFmt = NUM;
+    row.getCell(2).alignment = { horizontal: "right" };
     const sub = subtotalAt.get(j.joint);
-    if (sub !== undefined) row.getCell(3).value = sub;
-    row.getCell(4).value = j.trusted ? "" : `${j.flag}: ${j.reason}`;
+    if (sub !== undefined) {
+      row.getCell(3).value = sub;
+      row.getCell(3).numFmt = NUM;
+      row.getCell(3).font = { bold: true };
+      row.getCell(3).alignment = { horizontal: "right" };
+    }
+    row.getCell(4).value = flagLabel(j);
+
+    for (let c = 1; c <= 4; c++) row.getCell(c).border = allBorders;
 
     const fill = fillFor(j, t);
     if (fill) {
-      for (let c = 1; c <= 4; c++) {
-        row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
-      }
-      // a cell comment carrying the reason (fill + comment, per spec)
-      row.getCell(2).note = `${j.flag}: ${j.reason}\nRaw read: "${j.raw}" @ ${(j.confidence * 100).toFixed(0)}%`;
+      for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+      row.getCell(4).font = { color: { argb: "FF9A4A2A" }, bold: true };
+      // full reason lives in a comment, not spilling across the sheet
+      row.getCell(2).note = `${j.reason}\nRaw read: "${j.raw}" @ ${(j.confidence * 100).toFixed(0)}%`;
     }
     rowIdx++;
   }
 
+  // Grand-total row
+  const gt = ws.getRow(rowIdx);
+  gt.getCell(1).value = "GRAND TOTAL (trusted)";
+  ws.mergeCells(rowIdx, 1, rowIdx, 2);
+  gt.getCell(1).font = { bold: true };
+  gt.getCell(3).value = result.grandTotalFt;
+  gt.getCell(3).numFmt = NUM;
+  gt.getCell(3).font = { bold: true, size: 12 };
+  gt.getCell(3).alignment = { horizontal: "right" };
+  for (let c = 1; c <= 4; c++) gt.getCell(c).border = { ...allBorders, top: { style: "medium", color: { argb: INK } } };
+  rowIdx += 2;
+
   // Summary block
-  rowIdx += 1;
   const summary: Array<[string, string | number]> = [
-    ["Joint count", result.jointCount],
-    ["Grand total (trusted)", `${result.grandTotalFt} ${t.lengthUnit}`],
-    ["Provisional total (incl. flagged)", `${result.provisionalTotalFt} ${t.lengthUnit}`],
-    ["Flagged cells", result.flaggedCount],
-    [
-      "String-length cross-check",
-      result.crossCheck.ran ? (result.crossCheck.pass ? `PASS (${result.crossCheck.note})` : `FAIL (${result.crossCheck.note})`) : "n/a",
-    ],
+    ["Joints", result.jointCount],
+    ["Flagged for review", result.flaggedCount],
+    ["Provisional total (incl. flagged)", `${result.provisionalTotalFt.toFixed(2)} ${t.lengthUnit}`],
+    ["String-length cross-check", result.crossCheck.ran ? (result.crossCheck.pass ? "PASS" : "FAIL") : "n/a"],
     ["Confirmed final", result.confirmedFinal ? "Yes" : "No — resolve flags first"],
   ];
   for (const [label, value] of summary) {
     const row = ws.getRow(rowIdx);
     row.getCell(1).value = label;
-    ws.mergeCells(rowIdx, 2, rowIdx, 4);
-    row.getCell(2).value = value;
-    row.getCell(1).font = { bold: true };
+    ws.mergeCells(rowIdx, 1, rowIdx, 2);
+    row.getCell(1).font = { color: { argb: "FF8A8276" } };
+    ws.mergeCells(rowIdx, 3, rowIdx, 4);
+    row.getCell(3).value = value;
+    row.getCell(3).font = { bold: true };
     rowIdx++;
   }
 
@@ -133,9 +169,9 @@ export async function buildTallyWorkbook(
     rowIdx++;
 
     const recRows: Array<[string, string | number]> = [
-      ["Tally A total", `${rec.totalAFt} ${t.lengthUnit}`],
-      ["Tally B total", `${rec.totalBFt} ${t.lengthUnit}`],
-      ["Difference", `${rec.totalDiffFt} ${t.lengthUnit}`],
+      ["Tally A total", `${rec.totalAFt.toFixed(2)} ${t.lengthUnit}`],
+      ["Tally B total", `${rec.totalBFt.toFixed(2)} ${t.lengthUnit}`],
+      ["Difference", `${rec.totalDiffFt.toFixed(2)} ${t.lengthUnit}`],
       ["Tolerance", `±${rec.toleranceFt} ${t.lengthUnit}`],
       ["Result", rec.totalPass ? "PASS — within tolerance" : "FAIL — reconcile before calling it"],
       ["Joint counts", rec.countsMatch ? `Match (${rec.jointCountA})` : `Mismatch (${rec.jointCountA} vs ${rec.jointCountB})`],
@@ -165,7 +201,9 @@ export async function buildTallyWorkbook(
         const row = ws.getRow(rowIdx);
         row.getCell(1).value = d.joint;
         row.getCell(2).value = d.a;
+        row.getCell(2).numFmt = NUM;
         row.getCell(3).value = d.b;
+        row.getCell(3).numFmt = NUM;
         row.getCell(4).value = d.status === "mismatch" ? `${d.diffFt} ft` : d.status === "only_a" ? "missing in B" : "missing in A";
         for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE5CD" } };
         rowIdx++;
