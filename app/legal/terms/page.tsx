@@ -39,7 +39,7 @@ export default function TermsPage() {
         pricing that applies automatically. Each app includes a usage allowance
         (for TallyShot, a pooled monthly scan quota across your seats); usage
         beyond the allowance is billed at the per-unit overage rate shown at
-        checkout (TallyShot: $0.05 per additional sheet). New subscriptions start
+        checkout (TallyShot: $1.00 per additional sheet). New subscriptions start
         with a <strong>14-day free trial</strong> — you are not charged until the
         trial ends, and you may cancel anytime before then at no cost. After the
         trial, plans bill in advance each cycle. You may cancel at any time,

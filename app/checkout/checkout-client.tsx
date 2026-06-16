@@ -57,7 +57,7 @@ export default function CheckoutClient({ slug, initialSeats }: { slug: string; i
           <div className="co-lines">
             <div className="lrow"><span>{seats} seat{seats === 1 ? "" : "s"} × {money(perSeat)}/mo</span><b>{money(monthly)}/mo</b></div>
             <div className="lrow sub"><span>{pooled.toLocaleString()} sheets/mo pooled across your org</span><span>included</span></div>
-            <div className="lrow sub"><span>Extra sheets beyond the pool</span><span>$0.05 each</span></div>
+            <div className="lrow sub"><span>Extra sheets beyond the pool</span><span>{money(product.pricing.overagePerUnitUsd ?? 0)} each</span></div>
             <div className="lrow total"><span>Due today</span><b>{money(0)}</b></div>
             <div className="lrow note"><span>Then {money(monthly)}/mo after your {trialDays}-day free trial.</span></div>
           </div>
