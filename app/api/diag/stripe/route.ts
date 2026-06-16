@@ -13,5 +13,7 @@ export async function GET() {
     STRIPE_WEBHOOK_SECRET: { present: !!process.env.STRIPE_WEBHOOK_SECRET },
     STRIPE_PRICE_TALLYSHOT_SEAT: process.env.STRIPE_PRICE_TALLYSHOT_SEAT || "ABSENT",
     AI_GATEWAY_API_KEY: { present: !!process.env.AI_GATEWAY_API_KEY },
+    // names only (no values) — reveals typos / mis-named vars
+    relatedKeys: Object.keys(process.env).filter((k) => /stripe|webhook|whsec|tally|price/i.test(k)).sort(),
   });
 }
