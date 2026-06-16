@@ -13,6 +13,5 @@ export async function GET() {
     STRIPE_WEBHOOK_SECRET: { present: !!process.env.STRIPE_WEBHOOK_SECRET },
     STRIPE_PRICE_TALLYSHOT_SEAT: process.env.STRIPE_PRICE_TALLYSHOT_SEAT || "ABSENT",
     AI_GATEWAY_API_KEY: { present: !!process.env.AI_GATEWAY_API_KEY },
-    deployedAt: process.env.VERCEL_DEPLOYMENT_ID ? "vercel" : "unknown",
   });
 }
