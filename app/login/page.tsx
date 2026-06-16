@@ -62,7 +62,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=/account`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset`,
       });
       setBusy(false);
       setMsg(error ? { t: friendly(error.message), kind: "err" } : { t: "Password reset email sent — follow the link to set a new password.", kind: "ok" });
