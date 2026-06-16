@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 /**
  * TEMPORARY diagnostic — reports which Stripe-related env vars the LIVE runtime
- * actually sees. Returns presence booleans + key MODE only (sk_live vs sk_test),
- * never the secret values. Price IDs are not secret. Remove after go-live.
+ * sees. Presence booleans + key MODE only (sk_live vs sk_test), never the
+ * secret values. Price IDs aren't secret. Remove after go-live.
  */
 export async function GET() {
   const sk = process.env.STRIPE_SECRET_KEY || "";
