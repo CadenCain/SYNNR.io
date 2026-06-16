@@ -43,8 +43,8 @@ export type Database = {
         Relationships: [];
       };
       usage_events: {
-        Row: { id: string; workspace_id: string; product_slug: string; user_id: string | null; qty: number; ts: string };
-        Insert: { id?: string; workspace_id: string; product_slug: string; user_id?: string | null; qty?: number; ts?: string };
+        Row: { id: string; workspace_id: string; product_slug: string; user_id: string | null; qty: number; device: string | null; ts: string };
+        Insert: { id?: string; workspace_id: string; product_slug: string; user_id?: string | null; qty?: number; device?: string | null; ts?: string };
         Update: Partial<Database["public"]["Tables"]["usage_events"]["Insert"]>;
         Relationships: [];
       };

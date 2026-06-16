@@ -2,6 +2,7 @@ import "../marketing.css";
 import "../apps/apps.css";
 import { redirect } from "next/navigation";
 import { getSignedInOrg, getEntitlementContext } from "@/lib/marketplace/access";
+import { getOrgUsage } from "@/lib/marketplace/usage";
 import { getProduct } from "@/lib/catalog";
 import { SiteNav } from "../site-chrome";
 import PortalButton from "./portal-button";
@@ -12,6 +13,9 @@ export default async function BillingPage() {
   const org = await getSignedInOrg();
   if (!org) redirect("/login?next=/billing");
   const ctx = await getEntitlementContext(org);
+  const usage = ctx.subscriptions.some((s) => s.productSlug === "tallyshot") && org.workspaceId
+    ? await getOrgUsage(org.workspaceId, "tallyshot")
+    : null;
 
   return (
     <div className="mkt">
@@ -40,6 +44,23 @@ export default async function BillingPage() {
             No active subscriptions yet. <a href="/apps">Browse apps</a> to start a free trial.
           </p>
         )}
+
+        {usage && usage.pooledQuota > 0 ? (
+          <div className="usage-card">
+            <div className="usage-head">
+              <span><b>TallyShot usage</b> · this month</span>
+              <span className="mono">{usage.usedThisPeriod.toLocaleString()} / {usage.pooledQuota.toLocaleString()} sheets</span>
+            </div>
+            <div className="usage-bar"><span style={{ width: `${usage.pctUsed}%` }} className={usage.overageUnits ? "over" : ""} /></div>
+            <div className="usage-foot">
+              {usage.overageUnits > 0 ? (
+                <span className="over-note">{usage.overageUnits.toLocaleString()} sheets over pool · ${usage.overageCostUsd.toFixed(2)} overage @ ${usage.overagePerUnitUsd.toFixed(2)}/sheet</span>
+              ) : (
+                <span>{(usage.pooledQuota - usage.usedThisPeriod).toLocaleString()} sheets left in your pool · {usage.seats} seat{usage.seats === 1 ? "" : "s"} × {(usage.pooledQuota / Math.max(1, usage.seats)).toLocaleString()}</span>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         <PortalButton />
       </main>

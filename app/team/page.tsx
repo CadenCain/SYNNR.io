@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSignedInOrg } from "@/lib/marketplace/access";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getProduct } from "@/lib/catalog";
+import { getDeviceActivity } from "@/lib/marketplace/usage";
 import { SiteNav } from "../site-chrome";
 import InviteForm from "./invite-form";
 import { revokeInviteForm, assignSeatForm, revokeSeatForm } from "./actions";
@@ -44,6 +45,7 @@ export default async function TeamPage() {
     admin.from("seat_assignments").select("product_slug, user_id").eq("workspace_id", org.workspaceId),
   ]);
 
+  const devices = await getDeviceActivity(org.workspaceId, "tallyshot");
   const memberIds = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = memberIds.length
     ? await admin.from("profiles").select("id, email, name").in("id", memberIds)
@@ -86,6 +88,7 @@ export default async function TeamPage() {
               <div className="m-id">
                 <b>{emailOf(m.user_id)}{m.user_id === org.userId ? " (you)" : ""}</b>
                 <span className="role">{m.role}</span>
+                {devices[m.user_id] ? <span className="m-devices" title="Distinct devices that saved tallies this week">active on {devices[m.user_id]} device{devices[m.user_id] === 1 ? "" : "s"} this week</span> : null}
               </div>
               <div className="m-seats">
                 {activeSubs.map((s) => {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getSignedInOrg, requireProductApi } from "@/lib/marketplace/access";
+import { deviceLabel } from "@/lib/marketplace/usage";
 import type { TallyResult } from "@/lib/tally";
 
 /**
@@ -47,5 +48,15 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
+  // Record one metered usage unit per saved sheet (drives overage + device visibility).
+  await supabase.from("usage_events").insert({
+    workspace_id: org.workspaceId,
+    product_slug: "tallyshot",
+    user_id: org.userId,
+    qty: 1,
+    device: deviceLabel(req.headers.get("user-agent")),
+  });
+
   return NextResponse.json({ ok: true, id: data.id });
 }

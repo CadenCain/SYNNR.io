@@ -15,6 +15,7 @@
 .mkt .member { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 16px 20px; }
 .mkt .member .m-id b { font-weight: 600; }
 .mkt .member .m-id .role { display: inline-block; margin-left: 10px; font-size: 11px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-faint); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+.mkt .member .m-id .m-devices { display: block; margin-top: 4px; font-size: 12px; color: var(--fg-faint); }
 .mkt .m-seats { display: flex; gap: 8px; flex-wrap: wrap; }
 .mkt .m-seats form { display: inline; }
 .mkt .seat { font-size: 12px; font-family: var(--font-mono); border: 1px solid var(--line); background: var(--bg); color: var(--fg-dim); border-radius: 8px; padding: 6px 11px; cursor: pointer; }

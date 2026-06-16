@@ -32,16 +32,16 @@ test("solo estimate: 1 seat, within quota = just the seat", () => {
   const e = estimateMonthlyUsd(tally, 1, 300)!;
   assert.equal(e.perSeatUsd, 39);
   assert.equal(e.seatCostUsd, 39);
-  assert.equal(e.includedUnits, 500); // 1 seat × 500 pooled
+  assert.equal(e.includedUnits, 1500); // 1 seat × 1500 pooled
   assert.equal(e.overageUnits, 0);
   assert.equal(e.overageUsd, 0);
   assert.equal(e.totalUsd, 39);
 });
 
 test("overage kicks in beyond the pooled quota", () => {
-  // 2 seats → pooled 1000 sheets included; use 1200 → 200 over @ $0.05 = $10
-  const e = estimateMonthlyUsd(tally, 2, 1200)!;
-  assert.equal(e.includedUnits, 1000);
+  // 2 seats → pooled 3000 sheets included; use 3200 → 200 over @ $0.05 = $10
+  const e = estimateMonthlyUsd(tally, 2, 3200)!;
+  assert.equal(e.includedUnits, 3000);
   assert.equal(e.overageUnits, 200);
   assert.equal(e.overageUsd, 10);
   assert.equal(e.seatCostUsd, 78); // 2 × $39
@@ -53,7 +53,7 @@ test("volume band lowers per-seat cost for a fleet", () => {
   const e = estimateMonthlyUsd(tally, 30, 5000)!;
   assert.equal(e.perSeatUsd, 29);
   assert.equal(e.seatCostUsd, 870);
-  assert.equal(e.includedUnits, 15000);
+  assert.equal(e.includedUnits, 45000);
   assert.equal(e.overageUnits, 0);
   assert.equal(e.totalUsd, 870);
 });
@@ -65,8 +65,8 @@ test("50+ seats is not self-serve → estimate returns null (talk to us)", () =>
 });
 
 test("pooled quota scales with seats", () => {
-  assert.equal(pooledQuota(tally, 1), 500);
-  assert.equal(pooledQuota(tally, 10), 5000);
+  assert.equal(pooledQuota(tally, 1), 1500);
+  assert.equal(pooledQuota(tally, 10), 15000);
 });
 
 // --- entitlement ---

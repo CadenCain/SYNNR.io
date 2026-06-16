@@ -21,7 +21,7 @@ export const PRODUCTS: Product[] = [
         { minSeats: 25, pricePerSeatUsd: 29, label: "25–49 seats" },
         { minSeats: 50, pricePerSeatUsd: 25, label: "50+ seats" },
       ],
-      includedQuotaPerSeat: 500, // sheets / seat / month, pooled across the org
+      includedQuotaPerSeat: 1500, // sheets / seat / month, pooled across the org (≈ a 50/day hand with headroom; overage flags sharing/super-use, not normal use)
       overagePerUnitUsd: 0.05,
       unit: "sheet",
       trialDays: 14,
