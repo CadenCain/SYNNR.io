@@ -23,7 +23,7 @@ export default async function AccountPage() {
         <div className="appcard" style={{ maxWidth: 540 }}>
           <div className="appcard-top"><span className="appname">Profile</span><span className="status coming_soon">{nav?.role ?? "member"}</span></div>
           <p className="apptag">{org.email ?? "—"}</p>
-          <AccountClient />
+          <AccountClient isOwner={nav?.role === "owner"} />
           <div className="appcard-foot" style={{ marginTop: 18 }}>
             <a className="btn btn-ghost btn-sm" href="/billing">Billing &amp; seats</a>
             {nav?.canManageTeam ? <a className="btn btn-ghost btn-sm" href="/team">Team</a> : null}

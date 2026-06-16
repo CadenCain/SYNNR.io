@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getSignedInOrg, requireProductApi } from "@/lib/marketplace/access";
 import { deviceLabel } from "@/lib/marketplace/usage";
+import { reportSheetOverage } from "@/lib/marketplace/billing";
 import type { TallyResult } from "@/lib/tally";
 
 /**
@@ -57,6 +58,9 @@ export async function POST(req: Request) {
     qty: 1,
     device: deviceLabel(req.headers.get("user-agent")),
   });
+
+  // Bill the marginal overage if this save pushed the org past its pooled quota.
+  await reportSheetOverage(supabase as never, org.workspaceId, "tallyshot");
 
   return NextResponse.json({ ok: true, id: data.id });
 }

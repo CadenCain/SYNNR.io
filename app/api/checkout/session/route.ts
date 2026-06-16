@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getStripe, priceFor, priceForProduct, normalizePlan } from "@/lib/stripe";
+import type Stripe from "stripe";
+import { getStripe, priceFor, priceForProduct, meterPriceForProduct, normalizePlan } from "@/lib/stripe";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getProduct, isSelfServe } from "@/lib/catalog";
 
@@ -64,10 +65,19 @@ export async function POST(req: Request) {
 
   const origin = new URL(req.url).origin;
   const meta = { plan, product_slug: product?.slug ?? "", seats: String(quantity), workspace_id: workspaceId ?? "", user_id: userId ?? "" };
+
+  // Per-seat base + (when configured) a metered overage item billed per sheet
+  // over the pooled quota. Metered prices take no quantity.
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [{ price, quantity }];
+  if (product) {
+    const meter = meterPriceForProduct(product.slug);
+    if (meter) lineItems.push({ price: meter });
+  }
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price, quantity }],
+      line_items: lineItems,
       success_url: `${origin}/dashboard?subscribed=1`,
       cancel_url: `${origin}${cancelUrl}`,
       customer_email: email,

@@ -45,3 +45,14 @@ export function priceForProduct(slug: string): string | undefined {
   const key = `STRIPE_PRICE_${slug.replace(/[^a-z0-9]/gi, "_").toUpperCase()}_SEAT`;
   return process.env[key];
 }
+
+/**
+ * Metered overage Stripe Price ID for a product, billed per unit over the
+ * pooled quota. Env: STRIPE_PRICE_<SLUG_UPPER>_METER (e.g.
+ * STRIPE_PRICE_TALLYSHOT_METER). Undefined until set → metered billing is a
+ * no-op, so checkout and saves keep working.
+ */
+export function meterPriceForProduct(slug: string): string | undefined {
+  const key = `STRIPE_PRICE_${slug.replace(/[^a-z0-9]/gi, "_").toUpperCase()}_METER`;
+  return process.env[key];
+}
