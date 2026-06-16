@@ -1,3 +1,9 @@
+/* App switcher (in-app header) */
+.mkt .app-switcher { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+.mkt .app-switcher .as-home { font-size: 13px; color: var(--fg-faint); font-family: var(--font-mono); margin-right: 4px; }
+.mkt .app-switcher .as-chip { font-size: 13px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg-dim); }
+.mkt .app-switcher .as-chip.on { background: var(--accent); color: #0b0b0b; border-color: transparent; font-weight: 600; }
+
 /* TallyShot in-app product UI. Inherits .mkt tokens. */
 .mkt .ts { max-width: 760px; }
 .mkt .ts-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }

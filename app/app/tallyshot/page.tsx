@@ -3,6 +3,7 @@ import "../../apps/apps.css";
 import "./tallyshot.css";
 import { requireProduct } from "@/lib/marketplace/access";
 import { SiteNav } from "../../site-chrome";
+import AppSwitcher from "../app-switcher";
 import TallyShotClient from "./tallyshot-client";
 
 export const metadata = { title: "TallyShot — SYNNR" };
@@ -24,6 +25,7 @@ export default async function TallyShotApp() {
       <main className="container apps-wrap">
         {check.allowed ? (
           <>
+            <AppSwitcher current="tallyshot" />
             <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
               <span className="eyebrow">TallyShot{check.via === "flat" ? " · org license" : " · your seat"}</span>
               <h1 className="h2">Scan a tally sheet</h1>

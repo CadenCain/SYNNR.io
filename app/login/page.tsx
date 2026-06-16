@@ -11,21 +11,19 @@ const MARK = (
 );
 
 function nextTarget() {
-  if (typeof window === "undefined") return "/onboarding";
+  if (typeof window === "undefined") return "/dashboard";
   const n = new URLSearchParams(window.location.search).get("next");
-  return n && n.startsWith("/") ? n : "/onboarding";
+  return n && n.startsWith("/") ? n : "/dashboard";
 }
 
 export default function LoginPage() {
-  const [stage, setStage] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: string; kind: "err" | "ok" } | null>(null);
 
   const supabase = getBrowserSupabase();
 
-  // Surface failures handed back by /auth/callback (expired/invalid links).
   useEffect(() => {
     const err = new URLSearchParams(window.location.search).get("error");
     if (err) setMsg({ t: err, kind: "err" });
@@ -34,60 +32,55 @@ export default function LoginPage() {
   const friendly = (m: string) =>
     /failed to fetch|network|load failed/i.test(m)
       ? "Couldn't reach SYNNR — check your connection and try again."
+      : /invalid login credentials/i.test(m)
+      ? "Wrong email or password."
       : m;
 
-  async function sendCode() {
+  async function signIn() {
     setMsg(null);
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setMsg({ t: "Enter a valid work email.", kind: "err" });
-      return;
-    }
-    if (!supabase) {
-      setMsg({ t: "Sign-in isn't enabled yet — try again shortly.", kind: "err" });
-      return;
-    }
+    if (!/\S+@\S+\.\S+/.test(email)) { setMsg({ t: "Enter a valid email.", kind: "err" }); return; }
+    if (!password) { setMsg({ t: "Enter your password.", kind: "err" }); return; }
+    if (!supabase) { setMsg({ t: "Sign-in isn't enabled yet — try again shortly.", kind: "err" }); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget())}`,
-        },
-      });
-      setBusy(false);
-      if (error) {
-        setMsg({ t: friendly(error.message), kind: "err" });
-        return;
-      }
-      setStage("code");
-      setMsg({ t: "Email sent — click the sign-in link in it, or enter the 6-digit code if your email includes one.", kind: "ok" });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) { setBusy(false); setMsg({ t: friendly(error.message), kind: "err" }); return; }
+      window.location.href = `/auth/ensure?next=${encodeURIComponent(nextTarget())}`;
     } catch (e) {
       setBusy(false);
       setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
     }
   }
 
-  async function verify() {
+  async function forgot() {
     setMsg(null);
+    if (!/\S+@\S+\.\S+/.test(email)) { setMsg({ t: "Enter your email first, then tap reset.", kind: "err" }); return; }
     if (!supabase) return;
-    if (code.replace(/\D/g, "").length < 6) {
-      setMsg({ t: "Enter the 6-digit code.", kind: "err" });
-      return;
-    }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: code.replace(/\D/g, ""),
-        type: "email",
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback?next=/account`,
       });
       setBusy(false);
-      if (error) {
-        setMsg({ t: friendly(error.message), kind: "err" });
-        return;
-      }
-      window.location.href = nextTarget();
+      setMsg(error ? { t: friendly(error.message), kind: "err" } : { t: "Password reset email sent — follow the link to set a new password.", kind: "ok" });
+    } catch (e) {
+      setBusy(false);
+      setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
+    }
+  }
+
+  async function magicLink() {
+    setMsg(null);
+    if (!/\S+@\S+\.\S+/.test(email)) { setMsg({ t: "Enter your email first.", kind: "err" }); return; }
+    if (!supabase) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget())}` },
+      });
+      setBusy(false);
+      setMsg(error ? { t: friendly(error.message), kind: "err" } : { t: "Magic sign-in link sent — check your email.", kind: "ok" });
     } catch (e) {
       setBusy(false);
       setMsg({ t: friendly(e instanceof Error ? e.message : "Something went wrong."), kind: "err" });
@@ -98,56 +91,32 @@ export default function LoginPage() {
     <div className="auth">
       <div className="card">
         <div className="brand"><span className="mk">{MARK}</span><b>SYNNR</b></div>
+        <h1>Sign in to SYNNR</h1>
+        <p className="sub">Welcome back. Sign in to your apps.</p>
 
-        {stage === "email" ? (
-          <>
-            <h1>Sign in to SYNNR</h1>
-            <p className="sub">Use your work email — we&rsquo;ll send a one-time code. No password to remember.</p>
-            <label htmlFor="auth-email">Work email</label>
-            <input
-              id="auth-email"
-              type="email"
-              autoComplete="email"
-              placeholder="ray@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendCode()}
-            />
-            <button className="btn" onClick={sendCode} disabled={busy}>
-              {busy ? <span className="spin" /> : null}
-              {busy ? "Sending…" : "Send code"}
-            </button>
-          </>
-        ) : (
-          <>
-            <h1>Check your email</h1>
-            <p className="sub">We emailed <b>{email}</b> — click the sign-in link in it, or enter the 6-digit code below if your email includes one.</p>
-            <label htmlFor="auth-code">Verification code</label>
-            <input
-              id="auth-code"
-              className="code"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="••••••"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              onKeyDown={(e) => e.key === "Enter" && verify()}
-            />
-            <button className="btn" onClick={verify} disabled={busy}>
-              {busy ? <span className="spin" /> : null}
-              {busy ? "Verifying…" : "Verify & continue"}
-            </button>
-            <div className="alt">
-              <button onClick={() => { setStage("email"); setCode(""); setMsg(null); }}>
-                Use a different email
-              </button>
-            </div>
-          </>
-        )}
+        <label htmlFor="auth-email">Email</label>
+        <input id="auth-email" type="email" autoComplete="email" placeholder="you@company.com"
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+
+        <label htmlFor="auth-pass">Password</label>
+        <input id="auth-pass" type="password" autoComplete="current-password" placeholder="••••••••"
+          value={password} onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && signIn()} />
+
+        <button className="btn" onClick={signIn} disabled={busy}>
+          {busy ? <span className="spin" /> : null}{busy ? "Signing in…" : "Sign in"}
+        </button>
 
         {msg ? <div className={`msg ${msg.kind}`}>{msg.t}</div> : <div className="msg" />}
 
+        <div className="alt">
+          <button onClick={forgot}>Forgot password?</button>
+          <span> · </span>
+          <button onClick={magicLink}>Email me a link</button>
+        </div>
+
         <div className="foot">
+          New to SYNNR? <a href="/signup">Create an account</a><br />
           By continuing you agree to SYNNR&rsquo;s <a href="/legal/terms">Terms</a> and{" "}
           <a href="/legal/privacy">Privacy Policy</a>.
         </div>
