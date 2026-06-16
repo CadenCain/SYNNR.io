@@ -37,7 +37,7 @@ export default function AppsPage() {
               {p.status === "live" ? (
                 <div className="appcard-foot">
                   <a className="btn btn-primary btn-sm" href={`/apps/${p.slug}`}>View app</a>
-                  <a className="btn btn-ghost btn-sm" href="/demo">Live demo</a>
+                  <a className="btn btn-ghost btn-sm" href="/ingest">Live demo</a>
                 </div>
               ) : (
                 <>
