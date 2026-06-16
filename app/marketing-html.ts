@@ -46,13 +46,7 @@ export const MARKETING_HTML = `
       <a href="/ingest" class="btn btn-ghost">Try the live demo</a>
     </div>
     <div class="rating reveal" data-d="4">
-      <span class="stars" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2l1.4-6.8L2.2 9.7l6.9-.7z"/></svg>
-      </span>
+      <span class="badge-dot" aria-hidden="true"></span>
       <b>Built by operators</b><span>for oilfield service companies</span>
     </div>
 
@@ -79,6 +73,7 @@ export const MARKETING_HTML = `
         <div class="app-main">
           <div class="app-top">
             <h3 id="appViewTitle">Overview</h3>
+            <span class="sample-tag">Sample preview · illustrative</span>
             <div class="app-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>Search sheets</div>
           </div>
 
@@ -108,7 +103,7 @@ export const MARKETING_HTML = `
               <div class="bc-months"><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span></div>
             </div>
             <div class="qpanel">
-              <div class="qp-title">This week</div>
+              <div class="qp-title">This week <span class="illus">· sample</span></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/></svg></div><div class="qn">Sheets digitized<small>142 this week</small></div><div class="qv pos">142</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z"/></svg></div><div class="qn">Digits flagged for review<small>caught before export</small></div><div class="qv pos">38</div></div>
               <div class="qrow"><div class="qic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8"/><circle cx="12" cy="12" r="9"/></svg></div><div class="qn">Hours saved keying<small>vs. manual entry</small></div><div class="qv pos">~46 hrs</div></div>
@@ -189,12 +184,15 @@ export const MARKETING_HTML = `
         <div class="corner"></div>
         <div class="visual">
           <div class="console" style="box-shadow:none">
-            <div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><div class="console-title"><span class="live"></span>TallyShot · live</div></div>
-            <div class="console-body" style="padding:16px">
-              <div class="viz" style="margin:0;border:0;padding:0;background:none">
-                <div class="bars" style="height:88px">
-                  <div class="bar" style="height:40%"></div><div class="bar" style="height:55%"></div><div class="bar leak" style="height:90%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:64%"></div><div class="bar leak" style="height:82%"></div><div class="bar" style="height:44%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:70%"></div><div class="bar leak" style="height:96%"></div><div class="bar" style="height:52%"></div><div class="bar" style="height:68%"></div>
-                </div>
+            <div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><div class="console-title"><span class="live"></span>TallyShot · read &amp; flag</div></div>
+            <div class="console-body" style="padding:0">
+              <div class="mini-tally">
+                <div class="mt-row mt-head"><span>No.</span><span>Read</span><span>Length</span><span>Status</span></div>
+                <div class="mt-row"><span>44</span><span class="mono">3234</span><span class="mono">32.34</span><span class="mt-tag ok">Trusted</span></div>
+                <div class="mt-row"><span>45</span><span class="mono">3230</span><span class="mono">32.30</span><span class="mt-tag ok">Trusted</span></div>
+                <div class="mt-row flag"><span>46</span><span class="mono">3072</span><span class="mono">30.72</span><span class="mt-tag flag">Range — confirm</span></div>
+                <div class="mt-row warn"><span>47</span><span class="mono">32&#8202;5?</span><span class="mono">32.50</span><span class="mt-tag warn">Low confidence</span></div>
+                <div class="mt-row"><span>48</span><span class="mono">3236</span><span class="mono">32.36</span><span class="mt-tag ok">Trusted</span></div>
               </div>
             </div>
           </div>
@@ -205,7 +203,7 @@ export const MARKETING_HTML = `
 
       <div class="cell span2 reveal" data-d="2">
         <div class="corner"></div>
-        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m6 17 3-2 2 1.5L16 13l4 4"/></svg></div>
+        <div class="icon-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.7"/><circle cx="17.5" cy="18" r="1.7"/></svg></div>
         <h3>LoadCheck <span class="soon">· soon</span></h3>
         <p class="ct">Photograph the truck bed — AI confirms the loadout is complete before the crew rolls, so the gear that didn't make the truck gets caught in the yard.</p>
       </div>
