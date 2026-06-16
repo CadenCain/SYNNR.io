@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 
 /**
  * Marketing-page interactions, ported from the prototype's main-cryptix.js:
@@ -26,6 +27,18 @@ export default function MarketingScripts() {
 
     const allowMotion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (allowMotion) root.classList.add("js-anim");
+
+    /* auth-aware nav: if signed in, swap "Sign in" → "Dashboard" */
+    const supabase = getBrowserSupabase();
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (!data.user) return;
+        root.querySelectorAll<HTMLAnchorElement>('a[href="/login"]').forEach((a) => {
+          a.textContent = "Dashboard";
+          a.setAttribute("href", "/dashboard");
+        });
+      }).catch(() => {});
+    }
 
     /* sticky nav */
     const nav = document.getElementById("nav");

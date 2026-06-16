@@ -1,9 +1,11 @@
 /**
- * Shared marketing nav + footer for the non-homepage marketing routes
- * (/apps, /apps/[slug]). The homepage keeps its bespoke animated header in
- * marketing-html.ts; these are the lighter, static equivalents using the same
- * .mkt design system.
+ * Shared marketing nav + footer. The nav is auth-aware: signed-out shows
+ * Sign in / Browse apps; signed-in shows a profile menu (settings / billing /
+ * team / sign out). The homepage keeps its bespoke animated header.
  */
+import { getNavContext } from "@/lib/marketplace/access";
+import ProfileMenu from "./profile-menu";
+
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
     <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7" />
@@ -11,7 +13,8 @@ const MARK = (
   </svg>
 );
 
-export function SiteNav() {
+export async function SiteNav() {
+  const nav = await getNavContext();
   return (
     <header className="nav nav-static">
       <div className="nav-pill">
@@ -22,8 +25,17 @@ export function SiteNav() {
           <a href="/glossary">Glossary</a>
         </nav>
         <div className="nav-cta">
-          <a href="/login" className="btn btn-ghost btn-sm">Sign in</a>
-          <a href="/apps" className="btn btn-primary btn-sm">Browse apps</a>
+          {nav ? (
+            <>
+              <a href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</a>
+              <ProfileMenu email={nav.email} canManageTeam={nav.canManageTeam} />
+            </>
+          ) : (
+            <>
+              <a href="/login" className="btn btn-ghost btn-sm">Sign in</a>
+              <a href="/apps" className="btn btn-primary btn-sm">Browse apps</a>
+            </>
+          )}
         </div>
       </div>
     </header>

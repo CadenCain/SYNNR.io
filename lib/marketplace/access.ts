@@ -31,6 +31,26 @@ export async function getSignedInOrg(): Promise<SignedInOrg | null> {
   return { userId: auth.user.id, email: auth.user.email ?? null, workspaceId: profile?.workspace_id ?? null };
 }
 
+export type NavContext = { email: string | null; role: string; canManageTeam: boolean };
+
+/** Lightweight identity + role for the top nav (null when signed out). */
+export async function getNavContext(): Promise<NavContext | null> {
+  const org = await getSignedInOrg();
+  if (!org) return null;
+  const supabase = await getServerSupabase();
+  let role = "member";
+  if (supabase && org.workspaceId) {
+    const { data: m } = await supabase
+      .from("memberships")
+      .select("role")
+      .eq("user_id", org.userId)
+      .eq("workspace_id", org.workspaceId)
+      .maybeSingle();
+    role = m?.role ?? "owner"; // legacy users with no membership row own their workspace
+  }
+  return { email: org.email, role, canManageTeam: role === "owner" || role === "admin" };
+}
+
 /** Load the org's active subs + this user's held seats into an EntitlementContext. */
 export async function getEntitlementContext(org: SignedInOrg): Promise<EntitlementContext> {
   const supabase = await getServerSupabase();

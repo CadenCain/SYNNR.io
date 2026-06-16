@@ -2,7 +2,26 @@
    marketing.css; this file only adds the grid, status pills, demo card, and
    pricing band table. */
 
-.mkt .nav-static { position: sticky; top: 0; }
+.mkt .nav-static { position: sticky; top: 0; z-index: 50; }
+
+/* Signed-in profile menu */
+.mkt .profile-menu { position: relative; }
+.mkt .pm-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--fg); font-size: 12px; font-weight: 600; font-family: var(--font-mono); cursor: pointer; letter-spacing: .02em; }
+.mkt .pm-avatar:hover { border-color: var(--accent-soft); }
+.mkt .pm-dropdown { position: absolute; right: 0; top: 46px; min-width: 200px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px; display: flex; flex-direction: column; box-shadow: 0 18px 40px rgba(0,0,0,.5); }
+.mkt .pm-head { padding: 8px 10px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.mkt .pm-email { font-size: 12px; color: var(--fg-faint); word-break: break-all; }
+.mkt .pm-dropdown a, .mkt .pm-dropdown .pm-signout { text-align: left; background: none; border: 0; color: var(--fg-dim); font-size: 14px; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.mkt .pm-dropdown a:hover, .mkt .pm-dropdown .pm-signout:hover { background: var(--bg-2); color: var(--fg); }
+.mkt .pm-signout { border-top: 1px solid var(--line); margin-top: 4px; color: #e08a63; }
+
+/* Account settings */
+.mkt .acct-actions { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 18px; }
+.mkt .acct-block label { display: block; font-size: 13px; color: var(--fg-dim); margin-bottom: 8px; }
+.mkt .acct-row { display: flex; gap: 8px; }
+.mkt .acct-row input { flex: 1; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 11px); color: var(--fg); padding: 9px 12px; font-size: 14px; }
+.mkt .acct-row input:focus { outline: none; border-color: var(--accent-soft); }
+.mkt .acct-signout { margin-top: 16px; color: #e08a63; }
 .mkt .apps-wrap { padding-top: 120px; padding-bottom: 80px; }
 .mkt .apps-wrap .head { margin-bottom: 40px; }
 
