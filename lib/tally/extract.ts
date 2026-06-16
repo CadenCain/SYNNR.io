@@ -35,6 +35,7 @@ export function parseImpliedDecimal(raw: string, decimalPlaces: number): number 
 export function extractJoint(cell: RawCell, cfg: TallyConfig): TallyJoint {
   const lengthFt = parseImpliedDecimal(cell.raw, cfg.decimalPlaces);
   const confidence = cell.confidence;
+  const kind = cell.kind ?? "joint";
 
   let flag: TallyFlag = "TRUSTED";
   let reason = "";
@@ -42,7 +43,8 @@ export function extractJoint(cell: RawCell, cfg: TallyConfig): TallyJoint {
   if (lengthFt === null) {
     flag = "UNREADABLE";
     reason = cell.raw?.trim() ? `Couldn't parse "${cell.raw}"` : "Blank cell";
-  } else if (lengthFt < cfg.range.min || lengthFt > cfg.range.max) {
+  } else if (kind === "joint" && (lengthFt < cfg.range.min || lengthFt > cfg.range.max)) {
+    // pups, crossovers, and the shoe joint are legitimately off-length — never range-flag them
     flag = "RANGE";
     reason = `${lengthFt.toFixed(cfg.decimalPlaces)} ft is outside the expected ${cfg.range.min}–${cfg.range.max} ft — probable misread or pup joint`;
   } else if (confidence < cfg.confidenceThreshold) {
@@ -54,6 +56,8 @@ export function extractJoint(cell: RawCell, cfg: TallyConfig): TallyJoint {
     joint: cell.joint,
     raw: cell.raw,
     lengthFt,
+    cumulativeFt: null, // filled by buildResult (needs joint order)
+    kind,
     confidence,
     flag,
     reason,

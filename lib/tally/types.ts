@@ -20,6 +20,8 @@ export type RawCell = {
   raw: string;
   /** 0.0–1.0 — how sure the reader is of THIS cell (legibility / handwriting). */
   confidence: number;
+  /** Joint type; pups/crossovers/shoe skip the range flag. Defaults to "joint". */
+  kind?: JointKind;
 };
 
 /** What any reader (sample or vision) returns for one tally sheet. */
@@ -49,12 +51,20 @@ export type TallyRead = {
 export const TALLY_FLAGS = ["TRUSTED", "RANGE", "LOW_CONFIDENCE", "UNREADABLE"] as const;
 export type TallyFlag = (typeof TALLY_FLAGS)[number];
 
+/** Joint type — pups/crossovers/shoe are legitimately off-length and must NOT range-flag. */
+export const JOINT_KINDS = ["joint", "pup", "crossover", "shoe"] as const;
+export type JointKind = (typeof JOINT_KINDS)[number];
+
 /** One joint after parsing + flagging. */
 export type TallyJoint = {
   joint: number;
   raw: string;
   /** Parsed length in feet (raw with implied decimal applied), or null if blank/unparseable. */
   lengthFt: number | null;
+  /** Running shoe depth: start depth + sum of lengths down to this joint (2 dp). */
+  cumulativeFt: number | null;
+  /** Joint / pup / crossover / shoe — pups & subs are exempt from the range check. */
+  kind: JointKind;
   confidence: number;
   flag: TallyFlag;
   /** Human-readable reason when flagged (shown in review + xlsx). */
@@ -74,6 +84,8 @@ export type TallyConfig = {
   subtotalEvery: number;
   /** Grand-total vs independent-count tolerance (ft) for the cross-check. */
   crossCheckToleranceFt: number;
+  /** Fixed point for the cumulative (running shoe-depth) column — casing: wellhead depth. */
+  startDepthFt: number;
 };
 
 export const DEFAULT_TALLY_CONFIG: TallyConfig = {
@@ -82,6 +94,7 @@ export const DEFAULT_TALLY_CONFIG: TallyConfig = {
   confidenceThreshold: 0.7,
   subtotalEvery: 10,
   crossCheckToleranceFt: 2,
+  startDepthFt: 0,
 };
 
 export type Subtotal = {

@@ -26,8 +26,8 @@
 .mkt .ts-flagbar.ok { border-color: rgba(120,180,120,0.3); background: rgba(120,180,120,0.07); }
 .mkt .ts-flagbar b { color: var(--fg); }
 
-.mkt .ts-table { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--card); }
-.mkt .ts-table .tr { display: grid; grid-template-columns: 0.5fr 0.7fr 0.9fr 1.6fr; gap: 12px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; }
+.mkt .ts-table { border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; background: var(--card); }
+.mkt .ts-table .tr { display: grid; grid-template-columns: 0.5fr 0.7fr 0.9fr 1fr 1.4fr; gap: 12px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; min-width: 460px; }
 .mkt .ts-table .tr.th { border-top: 0; color: var(--fg-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); }
 .mkt .ts-table .tr.flag { background: rgba(214,120,90,0.10); }
 .mkt .ts-table .tr.warn { background: rgba(220,170,90,0.08); }
@@ -37,6 +37,8 @@
 .mkt .st-edit input { width: 72px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: 5px 8px; font-size: 13px; }
 .mkt .st-edit input:focus { outline: none; border-color: var(--accent-soft); }
 .mkt .st-edit button { background: var(--accent); color: #0b0b0b; border: 0; border-radius: 7px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.mkt .st-edit .pup-btn { background: var(--bg-2); color: var(--fg-dim); border: 1px solid var(--line); }
+.mkt .kind-tag { font-style: normal; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-faint); }
 
 .mkt .ts-subs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px; }
 @media (max-width: 600px) { .mkt .ts-subs { grid-template-columns: 1fr; } }

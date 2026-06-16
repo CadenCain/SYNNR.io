@@ -98,12 +98,13 @@ export default function IngestDemoClient() {
       )}
 
       <div className="ts-table">
-        <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Status</span></div>
+        <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span></div>
         {result.joints.map((j) => (
           <div key={j.joint} className={`tr ${j.trusted ? "" : j.flag === "RANGE" ? "flag" : "warn"}`}>
             <span className="mono">{j.joint}</span>
             <span className="mono">{j.raw}</span>
             <span className="mono">{ft(j.lengthFt)}</span>
+            <span className="mono">{j.cumulativeFt != null ? j.cumulativeFt.toFixed(2) : "—"}</span>
             {j.trusted ? (
               <span className="st ok">Trusted</span>
             ) : (

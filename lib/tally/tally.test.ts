@@ -66,6 +66,39 @@ test("grand total + per-10 subtotals match a hand-total of the fixture", async (
   assert.equal(sumOfSubtotals, result.grandTotalFt, "Σ subtotals = grand total");
 });
 
+test("cumulative depth is a running shoe depth, 2 dp, ending at the provisional total", async () => {
+  const r = await runTallySample();
+  // each cumulative = previous + this length
+  let running = 0;
+  for (const j of r.joints) {
+    running = Math.round((running + (j.lengthFt ?? 0)) * 100) / 100;
+    assert.equal(j.cumulativeFt, running, `joint ${j.joint} cumulative`);
+  }
+  // last joint's cumulative = the full provisional footage (start depth 0)
+  assert.equal(r.joints[r.joints.length - 1].cumulativeFt, r.provisionalTotalFt);
+});
+
+test("start depth offsets the cumulative (wellhead depth)", () => {
+  const joints = extractJoints([{ joint: 1, raw: "3200", confidence: 0.99 }, { joint: 2, raw: "3200", confidence: 0.99 }], { ...SAMPLE_TALLY_CONFIG, startDepthFt: 100 });
+  const res = buildResult(joints, SAMPLE_SHEET3, { ...SAMPLE_TALLY_CONFIG, startDepthFt: 100 });
+  assert.equal(res.joints[0].cumulativeFt, 132); // 100 + 32.00
+  assert.equal(res.joints[1].cumulativeFt, 164); // + 32.00
+});
+
+test("pups & subs are exempt from the range flag (no crying wolf)", () => {
+  const cfg = SAMPLE_TALLY_CONFIG; // band 31–33
+  // a 5 ft joint: flagged as RANGE when it's a normal joint...
+  const asJoint = extractJoints([{ joint: 1, raw: "0500", confidence: 0.99 }], cfg);
+  assert.equal(asJoint[0].flag, "RANGE");
+  // ...but NOT when marked as a pup
+  const asPup = extractJoints([{ joint: 1, raw: "0500", confidence: 0.99, kind: "pup" }], cfg);
+  assert.equal(asPup[0].flag, "TRUSTED");
+  assert.equal(asPup[0].kind, "pup");
+  // a low-confidence pup still flags for confidence (kind only exempts the range check)
+  const shakyPup = extractJoints([{ joint: 1, raw: "0500", confidence: 0.4, kind: "pup" }], cfg);
+  assert.equal(shakyPup[0].flag, "LOW_CONFIDENCE");
+});
+
 test("seeded low-confidence and out-of-range cells get flagged", async () => {
   const result = await runTallySample();
 
@@ -156,7 +189,8 @@ test("xlsx export produces a valid, readable workbook with the right shape", asy
   // a flagged joint (47, RANGE) row carries the flag text + a fill
   const row47 = ws!.getRow(5 + 47 - 1);
   assert.equal(row47.getCell(1).value, 47);
-  assert.match(String(row47.getCell(4).value), /range/i);
+  assert.ok(typeof row47.getCell(3).value === "number", "cumulative depth present"); // col 3 = cumulative
+  assert.match(String(row47.getCell(5).value), /range/i); // col 5 = flag
   const fill = row47.getCell(2).fill as ExcelJS.FillPattern;
   assert.equal(fill?.type, "pattern");
 });

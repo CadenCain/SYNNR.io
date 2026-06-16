@@ -15,8 +15,8 @@ export type XlsxOptions = { template?: Partial<XlsxTemplate>; reconciliation?: R
 export type XlsxTemplate = {
   sheetName: string;
   title: string;
-  /** Column headers, in order: joint #, length, per-10 subtotal, flag. */
-  headers: { joint: string; length: string; subtotal: string; flag: string };
+  /** Column headers, in order: joint #, length, cumulative, per-10 subtotal, flag. */
+  headers: { joint: string; length: string; cumulative: string; subtotal: string; flag: string };
   /** ARGB fills for flagged rows by severity. */
   fills: { range: string; lowConfidence: string; unreadable: string };
   lengthUnit: string;
@@ -25,7 +25,7 @@ export type XlsxTemplate = {
 export const MKS_TEMPLATE: XlsxTemplate = {
   sheetName: "Tally",
   title: "CASING – TUBING – RECORD",
-  headers: { joint: "No.", length: "Length (ft)", subtotal: "Per-10 Subtotal", flag: "Flag" },
+  headers: { joint: "No.", length: "Length (ft)", cumulative: "Cumulative (ft)", subtotal: "Per-10 Subtotal", flag: "Flag" },
   fills: { range: "FFF4CCCC", lowConfidence: "FFFCE5CD", unreadable: "FFF4CCCC" },
   lengthUnit: "ft",
 };
@@ -63,12 +63,13 @@ export async function buildTallyWorkbook(
   ws.columns = [
     { key: "joint", width: 7 },
     { key: "length", width: 13 },
+    { key: "cumulative", width: 15 },
     { key: "subtotal", width: 16 },
-    { key: "flag", width: 30 },
+    { key: "flag", width: 28 },
   ];
 
   // Title + metadata
-  ws.mergeCells("A1:D1");
+  ws.mergeCells("A1:E1");
   ws.getCell("A1").value = t.title;
   ws.getCell("A1").font = { bold: true, size: 15, color: { argb: INK } };
   const metaBits = [
@@ -77,7 +78,7 @@ export async function buildTallyWorkbook(
     result.meta.size && result.meta.size,
     result.usedSample && "SAMPLE",
   ].filter(Boolean);
-  ws.mergeCells("A2:D2");
+  ws.mergeCells("A2:E2");
   ws.getCell("A2").value = metaBits.join("   ·   ");
   ws.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF8A8276" } };
   ws.getRow(1).height = 22;
@@ -85,12 +86,12 @@ export async function buildTallyWorkbook(
   // Header row (row 4)
   const headerRowIdx = 4;
   const header = ws.getRow(headerRowIdx);
-  header.values = [t.headers.joint, t.headers.length, t.headers.subtotal, t.headers.flag];
+  header.values = [t.headers.joint, t.headers.length, t.headers.cumulative, t.headers.subtotal, t.headers.flag];
   header.height = 20;
   header.eachCell((c, col) => {
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: INK } };
     c.font = { bold: true, color: { argb: BONE } };
-    c.alignment = { vertical: "middle", horizontal: col === 1 ? "center" : col === 4 ? "left" : "right" };
+    c.alignment = { vertical: "middle", horizontal: col === 1 ? "center" : col === 5 ? "left" : "right" };
     c.border = allBorders;
   });
 
@@ -106,21 +107,26 @@ export async function buildTallyWorkbook(
     row.getCell(2).value = j.lengthFt;
     row.getCell(2).numFmt = NUM;
     row.getCell(2).alignment = { horizontal: "right" };
+    // cumulative shoe depth
+    row.getCell(3).value = j.cumulativeFt;
+    row.getCell(3).numFmt = NUM;
+    row.getCell(3).alignment = { horizontal: "right" };
+    if (j.kind !== "joint") row.getCell(3).note = `${j.kind}`;
     const sub = subtotalAt.get(j.joint);
     if (sub !== undefined) {
-      row.getCell(3).value = sub;
-      row.getCell(3).numFmt = NUM;
-      row.getCell(3).font = { bold: true };
-      row.getCell(3).alignment = { horizontal: "right" };
+      row.getCell(4).value = sub;
+      row.getCell(4).numFmt = NUM;
+      row.getCell(4).font = { bold: true };
+      row.getCell(4).alignment = { horizontal: "right" };
     }
-    row.getCell(4).value = flagLabel(j);
+    row.getCell(5).value = j.kind !== "joint" ? `${j.kind}${flagLabel(j) ? " · " + flagLabel(j) : ""}` : flagLabel(j);
 
-    for (let c = 1; c <= 4; c++) row.getCell(c).border = allBorders;
+    for (let c = 1; c <= 5; c++) row.getCell(c).border = allBorders;
 
     const fill = fillFor(j, t);
     if (fill) {
-      for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
-      row.getCell(4).font = { color: { argb: "FF9A4A2A" }, bold: true };
+      for (let c = 1; c <= 5; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+      row.getCell(5).font = { color: { argb: "FF9A4A2A" }, bold: true };
       // full reason lives in a comment, not spilling across the sheet
       row.getCell(2).note = `${j.reason}\nRaw read: "${j.raw}" @ ${(j.confidence * 100).toFixed(0)}%`;
     }
@@ -130,13 +136,13 @@ export async function buildTallyWorkbook(
   // Grand-total row
   const gt = ws.getRow(rowIdx);
   gt.getCell(1).value = "GRAND TOTAL (trusted)";
-  ws.mergeCells(rowIdx, 1, rowIdx, 2);
+  ws.mergeCells(rowIdx, 1, rowIdx, 3);
   gt.getCell(1).font = { bold: true };
-  gt.getCell(3).value = result.grandTotalFt;
-  gt.getCell(3).numFmt = NUM;
-  gt.getCell(3).font = { bold: true, size: 12 };
-  gt.getCell(3).alignment = { horizontal: "right" };
-  for (let c = 1; c <= 4; c++) gt.getCell(c).border = { ...allBorders, top: { style: "medium", color: { argb: INK } } };
+  gt.getCell(4).value = result.grandTotalFt;
+  gt.getCell(4).numFmt = NUM;
+  gt.getCell(4).font = { bold: true, size: 12 };
+  gt.getCell(4).alignment = { horizontal: "right" };
+  for (let c = 1; c <= 5; c++) gt.getCell(c).border = { ...allBorders, top: { style: "medium", color: { argb: INK } } };
   rowIdx += 2;
 
   // Summary block
@@ -150,11 +156,11 @@ export async function buildTallyWorkbook(
   for (const [label, value] of summary) {
     const row = ws.getRow(rowIdx);
     row.getCell(1).value = label;
-    ws.mergeCells(rowIdx, 1, rowIdx, 2);
+    ws.mergeCells(rowIdx, 1, rowIdx, 3);
     row.getCell(1).font = { color: { argb: "FF8A8276" } };
-    ws.mergeCells(rowIdx, 3, rowIdx, 4);
-    row.getCell(3).value = value;
-    row.getCell(3).font = { bold: true };
+    ws.mergeCells(rowIdx, 4, rowIdx, 5);
+    row.getCell(4).value = value;
+    row.getCell(4).font = { bold: true };
     rowIdx++;
   }
 
@@ -163,7 +169,7 @@ export async function buildTallyWorkbook(
   if (rec) {
     rowIdx += 1;
     const head = ws.getRow(rowIdx);
-    ws.mergeCells(rowIdx, 1, rowIdx, 4);
+    ws.mergeCells(rowIdx, 1, rowIdx, 5);
     head.getCell(1).value = "DUAL-TALLY RECONCILIATION";
     head.getCell(1).font = { bold: true, size: 12 };
     rowIdx++;
@@ -180,11 +186,11 @@ export async function buildTallyWorkbook(
     for (const [label, value] of recRows) {
       const row = ws.getRow(rowIdx);
       row.getCell(1).value = label;
-      ws.mergeCells(rowIdx, 2, rowIdx, 4);
+      ws.mergeCells(rowIdx, 2, rowIdx, 5);
       row.getCell(2).value = value;
       row.getCell(1).font = { bold: true };
       if (label === "Result") {
-        for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: rec.totalPass ? "FFD9EAD3" : "FFF4CCCC" } };
+        for (let c = 1; c <= 5; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: rec.totalPass ? "FFD9EAD3" : "FFF4CCCC" } };
       }
       rowIdx++;
     }

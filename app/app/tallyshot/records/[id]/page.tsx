@@ -65,12 +65,13 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="ts-table">
-            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Status</span></div>
+            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span></div>
             {result.joints.map((j) => (
               <div key={j.joint} className={`tr ${j.trusted ? "" : j.flag === "RANGE" ? "flag" : "warn"}`}>
                 <span className="mono">{j.joint}</span>
                 <span className="mono">{j.raw}</span>
-                <span className="mono">{ft(j.lengthFt)}{subAt.has(j.joint) ? <em className="sub-tag"> · Σ {subAt.get(j.joint)}</em> : null}</span>
+                <span className="mono">{ft(j.lengthFt)}{j.kind && j.kind !== "joint" ? <em className="kind-tag"> {j.kind}</em> : null}</span>
+                <span className="mono">{j.cumulativeFt != null ? j.cumulativeFt.toFixed(2) : "—"}</span>
                 <span className="st ok">{j.trusted ? "Trusted" : j.flag === "RANGE" ? "Out of range" : j.flag === "LOW_CONFIDENCE" ? "Low confidence" : "Unreadable"}</span>
               </div>
             ))}

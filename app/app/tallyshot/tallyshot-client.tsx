@@ -80,6 +80,14 @@ export default function TallyShotClient() {
     setResult(buildResult(joints, readShell(result), CFG));
   }
 
+  /** Mark a range-flagged joint as a pup/sub — legitimately short, so clear the flag. */
+  function markPup(j: TallyJoint) {
+    if (!result) return;
+    const corrected = extractJoint({ joint: j.joint, raw: j.raw, confidence: 1, kind: "pup" } as RawCell, CFG);
+    const joints = result.joints.map((x) => (x.joint === j.joint ? corrected : x));
+    setResult(buildResult(joints, readShell(result), CFG));
+  }
+
   async function exportXlsx() {
     if (!result) return;
     setBusy(true); setMsg("");
@@ -142,19 +150,21 @@ export default function TallyShotClient() {
           )}
 
           <div className="ts-table">
-            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Status</span></div>
+            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span></div>
             {result.joints.map((j) => (
               <div key={j.joint} className={`tr ${j.trusted ? "" : j.flag === "RANGE" ? "flag" : "warn"}`}>
                 <span className="mono">{j.joint}</span>
                 <span className="mono">{j.raw}</span>
-                <span className="mono">{ft(j.lengthFt)}</span>
+                <span className="mono">{ft(j.lengthFt)}{j.kind !== "joint" ? <em className="kind-tag"> {j.kind}</em> : null}</span>
+                <span className="mono">{j.cumulativeFt != null ? j.cumulativeFt.toFixed(2) : "—"}</span>
                 {j.trusted ? (
-                  <span className="st ok">Trusted</span>
+                  <span className="st ok">Trusted{j.kind !== "joint" ? ` · ${j.kind}` : ""}</span>
                 ) : (
                   <span className="st-edit">
                     <span className="why">{j.flag === "RANGE" ? "Out of range" : "Low confidence"}</span>
                     <input className="mono" value={edits[j.joint] ?? j.raw} onChange={(e) => setEdits({ ...edits, [j.joint]: e.target.value })} aria-label={`Correct joint ${j.joint}`} />
                     <button onClick={() => confirmJoint(j)}>Confirm</button>
+                    {j.flag === "RANGE" ? <button className="pup-btn" onClick={() => markPup(j)} title="It's a pup / sub — legitimately short">Pup</button> : null}
                   </span>
                 )}
               </div>

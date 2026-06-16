@@ -77,8 +77,22 @@ export function crossCheck(
   };
 }
 
+/**
+ * Running shoe depth per joint (casing: add each joint downward from the fixed
+ * start point). Mutates cumulativeFt on each joint, in sheet order.
+ */
+function applyCumulative(joints: TallyJoint[], cfg: TallyConfig): void {
+  const ordered = [...joints].sort((a, b) => a.joint - b.joint);
+  let running = cfg.startDepthFt ?? 0;
+  for (const j of ordered) {
+    if (j.lengthFt !== null) running = round(running + j.lengthFt, cfg.decimalPlaces);
+    j.cumulativeFt = j.lengthFt === null ? null : running;
+  }
+}
+
 /** Assemble the full QC result from extracted joints + the read metadata. */
 export function buildResult(joints: TallyJoint[], read: TallyRead, cfg: TallyConfig): TallyResult {
+  applyCumulative(joints, cfg);
   const grandTotalFt = trustedSum(joints, cfg.decimalPlaces);
   const provisionalTotalFt = provisionalSum(joints, cfg.decimalPlaces);
   const flagged = joints.filter((j) => !j.trusted);
