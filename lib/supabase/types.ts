@@ -54,6 +54,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["invites"]["Insert"]>;
         Relationships: [];
       };
+      tallies: {
+        Row: { id: string; workspace_id: string; created_by: string | null; well_name: string | null; lease: string | null; rig: string | null; company: string | null; sheet_no: string | null; size: string | null; connection: string | null; tally_date: string | null; joint_count: number; grand_total_ft: number; flagged_count: number; confirmed: boolean; cross_check_pass: boolean | null; source: string; result: Json; confirmed_by: string | null; confirmed_by_email: string | null; confirmed_at: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; created_by?: string | null; well_name?: string | null; lease?: string | null; rig?: string | null; company?: string | null; sheet_no?: string | null; size?: string | null; connection?: string | null; tally_date?: string | null; joint_count?: number; grand_total_ft?: number; flagged_count?: number; confirmed?: boolean; cross_check_pass?: boolean | null; source?: string; result: Json; confirmed_by?: string | null; confirmed_by_email?: string | null; confirmed_at?: string | null };
+        Update: Partial<Database["public"]["Tables"]["tallies"]["Insert"]>;
+        Relationships: [];
+      };
       profiles: {
         Row: { id: string; workspace_id: string | null; name: string | null; email: string | null; role: string; created_at: string };
         Insert: { id: string; workspace_id?: string | null; name?: string | null; email?: string | null; role?: string; created_at?: string };

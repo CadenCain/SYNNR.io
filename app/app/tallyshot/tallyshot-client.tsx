@@ -25,6 +25,24 @@ export default function TallyShotClient() {
   const [msg, setMsg] = useState("");
   const [edits, setEdits] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const [well, setWell] = useState("");
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  async function save() {
+    if (!result) return;
+    setBusy(true); setMsg(""); setSavedId(null);
+    try {
+      const r = await fetch("/api/tally/save", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ result, meta: { wellName: well } }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) { setMsg(d.error || "Couldn't save."); setBusy(false); return; }
+      setSavedId(d.id);
+    } catch { setMsg("Couldn't save — try again."); }
+    setBusy(false);
+  }
 
   async function loadSample() {
     setBusy(true); setMsg("");
@@ -83,9 +101,21 @@ export default function TallyShotClient() {
         <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>Photograph a sheet</button>
         <button className="btn btn-ghost" onClick={loadSample} disabled={busy}>{busy ? "Working…" : "Load sample sheet"}</button>
         {result ? <button className="btn btn-ghost" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button> : null}
+        <a className="btn btn-ghost" href="/app/tallyshot/records">Saved tallies</a>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} />
       </div>
       {msg ? <p className="ts-msg">{msg}</p> : null}
+
+      {result ? (
+        savedId ? (
+          <div className="ts-flagbar ok"><b>Saved to records.</b> <a href={`/app/tallyshot/records/${savedId}`}>View it</a> · <a href="/app/tallyshot/records">all saved tallies</a></div>
+        ) : (
+          <div className="ts-save">
+            <input className="mono" placeholder="Well name (e.g. Pad 14 #3H)" value={well} onChange={(e) => setWell(e.target.value)} aria-label="Well name" />
+            <button className="btn btn-primary" onClick={save} disabled={busy}>Save to records</button>
+          </div>
+        )
+      ) : null}
 
       {!result ? (
         <div className="ts-empty">
