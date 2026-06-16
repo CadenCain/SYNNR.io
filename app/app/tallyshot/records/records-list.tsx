@@ -45,8 +45,8 @@ export default function RecordsList({ rows }: { rows: RecRow[] }) {
             <span className="rec-well">{r.well_name || (r.sheet_no ? `Sheet ${r.sheet_no}` : "Untitled tally")}{r.rig ? <em className="rec-rig"> · Rig {r.rig}</em> : null}</span>
             <span className="mono">{Number(r.grand_total_ft).toFixed(2)} ft</span>
             <span className="mono">{r.joint_count}</span>
-            <span className={`rec-status ${r.flagged_count ? "warn" : r.confirmed_at ? "ok" : ""}`}>
-              {r.flagged_count ? `${r.flagged_count} flagged` : r.confirmed_at ? "✓ Verified" : "Saved"}
+            <span className={`rec-status ${r.confirmed_at ? "ok" : r.flagged_count ? "warn" : ""}`}>
+              {r.confirmed_at ? "✓ Verified" : r.flagged_count ? `${r.flagged_count} flagged` : "Saved"}
             </span>
             <span className="rec-date">{fmtDate(r.created_at)}</span>
           </a>
