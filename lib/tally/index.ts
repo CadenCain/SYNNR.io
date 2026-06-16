@@ -14,3 +14,4 @@ export { SampleReader, VisionReader, type VisionInput } from "./reader";
 export { runTally, runTallySample, summarize } from "./run";
 export { SAMPLE_SHEET3, SAMPLE_SHEET3_CELLS, SAMPLE_TALLY_CONFIG } from "./sample";
 export { exportTallyXlsx, buildTallyWorkbook, MKS_TEMPLATE, type XlsxTemplate } from "./xlsx";
+export { reconcileTallies, type Reconciliation, type JointDiff } from "./reconcile";

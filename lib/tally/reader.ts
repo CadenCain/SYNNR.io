@@ -33,13 +33,27 @@ const VisionTallySchema = z.object({
 });
 
 const VISION_SYSTEM = `You read handwritten oilfield casing/tubing tally sheets from a photo.
-Return EVERY joint as { joint, raw, confidence }. CRITICAL RULES:
+Return EVERY joint as { joint, raw, confidence }.
+
+LAYOUT IS DIFFERENT ON EVERY SHEET — sometimes daily, rig to rig. DO NOT assume
+any fixed grid, column count, or template. Auto-detect the structure on THIS
+image every time:
+- Figure out how the sheet is laid out (printed form, free grid, or notebook),
+  how many columns of numbers there are, and the reading order (typically top-to-
+  bottom within a column, then left-to-right across columns).
+- Find the joint numbering it uses (often only every 10th is written, e.g.
+  "70", "80"); infer the 1..N sequence for the rest in the order they're read.
+- Ignore non-length marks (headers, labels, signatures, totals) — those go in
+  meta/independent, not in cells.
+
+CRITICAL RULES:
 - "raw" is the length EXACTLY as written, digits only, with the decimal DROPPED
   (write "3134" for 31.34, "3230" for 32.30). Never add a decimal point.
 - Set "confidence" honestly per cell: lower it for smudged, overwritten, or
   ambiguous digits. Do NOT guess a confident value for an unclear mark.
-- Capture header fields and any crew-written total into meta/independent.
-- Read the columns in order; number joints 1..N as laid out on the sheet.`;
+- Capture header fields and any crew-written grand/sheet total into
+  meta/independent so the totals can be cross-checked.
+- Number the joints in the exact order they appear on THIS sheet's layout.`;
 
 /**
  * Cardless reader — returns the MKS Sheet 3 fixture deterministically. No

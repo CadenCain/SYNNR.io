@@ -16,6 +16,7 @@ import { extractJoints } from "./extract";
 import { SampleReader } from "./reader";
 import { SAMPLE_SHEET3_CELLS, SAMPLE_TALLY_CONFIG, SAMPLE_SHEET3 } from "./sample";
 import { exportTallyXlsx } from "./xlsx";
+import { reconcileTallies } from "./reconcile";
 import ExcelJS from "exceljs";
 
 const PLACES = SAMPLE_TALLY_CONFIG.decimalPlaces;
@@ -178,4 +179,61 @@ test("buildResult is pure over extracted joints", () => {
   const r2 = buildResult(joints, SAMPLE_SHEET3, SAMPLE_TALLY_CONFIG);
   assert.deepEqual(r1.subtotals, r2.subtotals);
   assert.equal(r1.grandTotalFt, r2.grandTotalFt);
+});
+
+// --- dual-tally reconciliation (Reed's tool-hand vs company-man check) ---
+
+function readFrom(cells: { joint: number; raw: string; confidence?: number }[]) {
+  return buildResult(
+    extractJoints(cells.map((c) => ({ joint: c.joint, raw: c.raw, confidence: c.confidence ?? 0.99 })), SAMPLE_TALLY_CONFIG),
+    SAMPLE_SHEET3,
+    SAMPLE_TALLY_CONFIG
+  );
+}
+
+test("two identical tallies reconcile clean", async () => {
+  const a = await runTallySample();
+  const b = await runTallySample();
+  const r = reconcileTallies(a, b);
+  assert.equal(r.totalDiffFt, 0);
+  assert.equal(r.totalPass, true);
+  assert.equal(r.countsMatch, true);
+  assert.equal(r.issueCount, 0);
+});
+
+test("totals within ±2 ft pass; one bad joint is surfaced, not hidden", () => {
+  const base = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3230" }, { joint: 3, raw: "3230" }];
+  // company man read joint 2 as 32.40 instead of 32.30 → 0.10 ft total diff (within 2 ft)
+  const other = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3240" }, { joint: 3, raw: "3230" }];
+  const r = reconcileTallies(readFrom(base), readFrom(other));
+  assert.equal(r.totalPass, true); // 0.10 ft apart, within tolerance
+  assert.equal(r.issueCount, 1); // but the disagreeing joint is flagged
+  const j2 = r.diffs.find((d) => d.joint === 2)!;
+  assert.equal(j2.status, "mismatch");
+  assert.equal(j2.diffFt, -0.1);
+});
+
+test("totals beyond ±2 ft fail the whole-string check", () => {
+  const a = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3230" }];
+  const b = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3530" }]; // +3 ft on joint 2
+  const r = reconcileTallies(readFrom(a), readFrom(b));
+  assert.equal(r.totalPass, false);
+  assert.ok(Math.abs(r.totalDiffFt) > 2);
+});
+
+test("a missed joint is caught as a count mismatch", () => {
+  const a = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3230" }, { joint: 3, raw: "3230" }];
+  const b = [{ joint: 1, raw: "3230" }, { joint: 2, raw: "3230" }]; // company man missed joint 3
+  const r = reconcileTallies(readFrom(a), readFrom(b));
+  assert.equal(r.countsMatch, false);
+  const j3 = r.diffs.find((d) => d.joint === 3)!;
+  assert.equal(j3.status, "only_a");
+  assert.match(r.note, /missed|double-counted/i);
+});
+
+test("custom tolerance is honored", () => {
+  const a = [{ joint: 1, raw: "3230" }];
+  const b = [{ joint: 1, raw: "3330" }]; // 1 ft apart
+  assert.equal(reconcileTallies(readFrom(a), readFrom(b), { toleranceFt: 0.5 }).totalPass, false);
+  assert.equal(reconcileTallies(readFrom(a), readFrom(b), { toleranceFt: 2 }).totalPass, true);
 });

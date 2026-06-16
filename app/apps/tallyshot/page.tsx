@@ -31,7 +31,9 @@ export default function TallyShotPage() {
           <p className="lede">
             Photograph a handwritten casing/tubing tally sheet and get clean Excel
             back — subtotals, grand total, and every shaky digit flagged for a quick
-            human check. Built for the hands and office staff who key counts all day.
+            human check. <b>Works on any rig&apos;s sheet</b> — the layout changes daily and
+            it reads it anyway. No hardware, no laser tape, nobody else has to adopt a thing:
+            the hand running the tally just uses it.
           </p>
           <div className="hero-cta">
             <a className="btn btn-primary" href="/checkout?product=tallyshot&seats=1">Start free trial
