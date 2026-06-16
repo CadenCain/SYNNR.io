@@ -47,9 +47,9 @@ export default function TallyShotPage() {
         {/* The flagged-digit catch — the whole value prop */}
         <section className="section container">
           <div className="head">
-            <span className="eyebrow">Why it's trustworthy</span>
-            <h2 className="h2">It reads the clean digits — and flags the shaky ones.</h2>
-            <p className="lede">Perfect OCR on truck-paper is a fantasy. TallyShot never silently guesses: anything it isn't sure about is flagged for you to confirm, so the total you export is one you can stand behind.</p>
+            <span className="eyebrow">It doesn&apos;t guess — it flags</span>
+            <h2 className="h2">One missed digit is a 45-foot lie in the string.</h2>
+            <p className="lede">That&apos;s exactly why software that auto-trusts itself has burned this industry. TallyShot doesn&apos;t do that: it reads the clean digits and <b>flags every shaky one for you to confirm</b> — a human signs off on the uncertain ones, so the total you export is a number you can actually stand behind.</p>
           </div>
           <div className="demo-card">
             <div className="demo-row demo-head"><span>Joint</span><span>Read</span><span>Length</span><span>Status</span></div>

@@ -323,8 +323,8 @@ export const MARKETING_HTML = `
     </div>
     <div class="trust-strip reveal" data-d="1">
       <div class="trust-item">
-        <div class="ti-k">Flag, don't guess</div>
-        <p>It reads the clean digits and flags the shaky ones for you to confirm — so the number you export is one you can stand behind.</p>
+        <div class="ti-k">It doesn't guess — it flags</div>
+        <p>One missed digit is a 45-foot lie in the string. TallyShot reads the clean digits and flags every shaky one for a human to confirm — so the number you export is one you can stand behind.</p>
       </div>
       <div class="trust-item">
         <div class="ti-k">Your sheets, your format</div>
