@@ -24,17 +24,20 @@ export default function LoginPage() {
 
   const supabase = getBrowserSupabase();
 
-  useEffect(() => {
-    const err = new URLSearchParams(window.location.search).get("error");
-    if (err) setMsg({ t: err, kind: "err" });
-  }, []);
-
   const friendly = (m: string) =>
     /failed to fetch|network|load failed/i.test(m)
       ? "Couldn't reach SYNNR — check your connection and try again."
       : /invalid login credentials/i.test(m)
       ? "Wrong email or password."
+      : /code (challenge|verifier)|otp_expired|expired|invalid|already/i.test(m)
+      ? "That sign-in link couldn't be used — it was opened in a different browser, already clicked, or expired. Sign in with your password below, or request a new link."
       : m;
+
+  useEffect(() => {
+    const err = new URLSearchParams(window.location.search).get("error");
+    if (err) setMsg({ t: friendly(err), kind: "err" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function signIn() {
     setMsg(null);
