@@ -44,7 +44,7 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
           <span className="eyebrow">TallyShot · saved tally</span>
           <h1 className="h2">{title}</h1>
           <p className="lede" style={{ marginInline: 0 }}>
-            {[row.company, row.lease && `Lease ${row.lease}`, row.rig && `Rig ${row.rig}`, row.size, row.connection && `${row.connection} conn`, row.tally_date].filter(Boolean).join("  ·  ") || "Saved tally record"}
+            {[row.company, row.lease && `Lease ${row.lease}`, row.rig && `Rig ${row.rig}`, row.size, row.weight && `${row.weight} lb/ft`, row.grade && `Grade ${row.grade}`, row.connection && `${row.connection} conn`, row.tally_date].filter(Boolean).join("  ·  ") || "Saved tally record"}
           </p>
         </div>
 

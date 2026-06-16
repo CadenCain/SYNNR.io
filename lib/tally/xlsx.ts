@@ -72,15 +72,29 @@ export async function buildTallyWorkbook(
   ws.mergeCells("A1:E1");
   ws.getCell("A1").value = t.title;
   ws.getCell("A1").font = { bold: true, size: 15, color: { argb: INK } };
-  const metaBits = [
-    result.meta.company && `Company: ${result.meta.company}`,
-    result.meta.sheetNo && `Sheet ${result.meta.sheetNo}`,
-    result.meta.size && result.meta.size,
+  const m = result.meta;
+  // Line 1: who / where. Line 2: the string spec a company man reads first.
+  const whoBits = [
+    m.well && `Well: ${m.well}`,
+    m.company && `Company: ${m.company}`,
+    m.lease && `Lease: ${m.lease}`,
+    m.rig && `Rig: ${m.rig}`,
+    m.sheetNo && `Sheet ${m.sheetNo}`,
+    m.date && m.date,
     result.usedSample && "SAMPLE",
   ].filter(Boolean);
+  const specBits = [
+    m.size && `Size: ${m.size}`,
+    m.weight && `Weight: ${m.weight} lb/ft`,
+    m.grade && `Grade: ${m.grade}`,
+    m.connection && `Connection: ${m.connection}`,
+  ].filter(Boolean);
   ws.mergeCells("A2:E2");
-  ws.getCell("A2").value = metaBits.join("   ·   ");
+  ws.getCell("A2").value = whoBits.join("   ·   ");
   ws.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF8A8276" } };
+  ws.mergeCells("A3:E3");
+  ws.getCell("A3").value = specBits.join("   ·   ");
+  ws.getCell("A3").font = { bold: true, size: 10, color: { argb: INK } };
   ws.getRow(1).height = 22;
 
   // Header row (row 4)

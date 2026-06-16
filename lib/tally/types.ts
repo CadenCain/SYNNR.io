@@ -32,7 +32,11 @@ export type TallyRead = {
     well?: string;
     lease?: string;
     rig?: string;
+    /** String spec — what a company man reads first: size, weight, grade, connection. */
     size?: string;
+    weight?: string;
+    grade?: string;
+    connection?: string;
     sheetNo?: string;
     tailedBy?: string;
     date?: string;

@@ -46,6 +46,16 @@
 .mkt .ts-subs .sub b { margin-left: auto; color: var(--fg); }
 .mkt .ts-subs .sub .fl { color: #d6a85a; font-size: 11px; }
 
+/* String-spec form (title block) */
+.mkt .ts-spec { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 16px; margin: 14px 0; }
+.mkt .ts-spec-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); color: var(--fg-dim); margin-bottom: 12px; }
+.mkt .ts-spec-head span { text-transform: none; letter-spacing: 0; color: var(--fg-faint); }
+.mkt .ts-spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 640px) { .mkt .ts-spec-grid { grid-template-columns: repeat(2, 1fr); } }
+.mkt .ts-spec-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.mkt .ts-spec-grid input { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); padding: 8px 10px; font-size: 14px; text-transform: none; letter-spacing: 0; }
+.mkt .ts-spec-grid input:focus { outline: none; border-color: var(--accent-soft); }
+
 /* Save-to-records bar */
 .mkt .ts-save { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
 .mkt .ts-save input { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 11px); color: var(--fg); padding: 10px 12px; font-size: 14px; }

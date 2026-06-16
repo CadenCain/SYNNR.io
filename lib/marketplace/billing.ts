@@ -38,10 +38,14 @@ export async function reportSheetOverage(
     if (!perSeat) return;
 
     const [{ data: sub }, { data: ws }, { count }] = await Promise.all([
-      supabase.from("subscriptions").select("seats").eq("workspace_id", workspaceId).eq("product_slug", productSlug).maybeSingle(),
+      supabase.from("subscriptions").select("seats, status").eq("workspace_id", workspaceId).eq("product_slug", productSlug).maybeSingle(),
       supabase.from("workspaces").select("stripe_customer_id").eq("id", workspaceId).maybeSingle(),
       supabase.from("usage_events").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("product_slug", productSlug).gte("ts", periodStartISO()),
     ]);
+
+    // No overage charges during the free trial — usage is still recorded for
+    // visibility, just not metered to Stripe, so a trial can't end in bill shock.
+    if ((sub as { status?: string } | null)?.status === "trialing") return;
 
     const customer = (ws as { stripe_customer_id?: string } | null)?.stripe_customer_id;
     const seats = (sub as { seats?: number } | null)?.seats ?? 0;

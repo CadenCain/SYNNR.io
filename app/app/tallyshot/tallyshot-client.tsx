@@ -25,8 +25,21 @@ export default function TallyShotClient() {
   const [msg, setMsg] = useState("");
   const [edits, setEdits] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
-  const [well, setWell] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
+  // Editable string spec — what a company man reads first. Pre-filled from the
+  // read meta where present, carried into the export + the saved record.
+  const [spec, setSpec] = useState({ well: "", lease: "", rig: "", size: "", weight: "", grade: "", connection: "", date: "" });
+
+  /** Initialize the spec form from whatever the reader pulled off the sheet. */
+  function specFrom(r: TallyResult) {
+    const m = r.meta ?? {};
+    return { well: m.well ?? "", lease: m.lease ?? "", rig: m.rig ?? "", size: m.size ?? "", weight: m.weight ?? "", grade: m.grade ?? "", connection: m.connection ?? "", date: m.date ?? "" };
+  }
+
+  /** Merge the edited spec back into the result meta (for export). */
+  function withSpec(r: TallyResult): TallyResult {
+    return { ...r, meta: { ...r.meta, well: spec.well || r.meta.well, lease: spec.lease || r.meta.lease, rig: spec.rig || r.meta.rig, size: spec.size || r.meta.size, weight: spec.weight || r.meta.weight, grade: spec.grade || r.meta.grade, connection: spec.connection || r.meta.connection, date: spec.date || r.meta.date } };
+  }
 
   async function save() {
     if (!result) return;
@@ -35,7 +48,7 @@ export default function TallyShotClient() {
       const r = await fetch("/api/tally/save", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result, meta: { wellName: well } }),
+        body: JSON.stringify({ result: withSpec(result), meta: { wellName: spec.well, lease: spec.lease, rig: spec.rig, size: spec.size, weight: spec.weight, grade: spec.grade, connection: spec.connection, date: spec.date } }),
       });
       const d = await r.json();
       if (!r.ok || !d.ok) { setMsg(d.error || "Couldn't save."); setBusy(false); return; }
@@ -50,7 +63,7 @@ export default function TallyShotClient() {
       const r = await fetch("/api/tally", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sample: true }) });
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "Couldn't load."); setBusy(false); return; }
-      setResult(d.result); setEdits({});
+      setResult(d.result); setEdits({}); setSpec(specFrom(d.result));
     } catch { setMsg("Couldn't reach SYNNR — try again."); }
     setBusy(false);
   }
@@ -63,7 +76,7 @@ export default function TallyShotClient() {
       const fd = new FormData(); fd.append("image", file);
       const r = await fetch("/api/tally", { method: "POST", body: fd });
       const d = await r.json();
-      if (d.ok) { setResult(d.result); setEdits({}); }
+      if (d.ok) { setResult(d.result); setEdits({}); setSpec(specFrom(d.result)); }
       else if (d.needsCard) setMsg("Live photo reading turns on when the AI vision card is added. Use “Load sample sheet” to see the full flow now.");
       else setMsg(d.error || "Couldn't read that photo.");
     } catch { setMsg("Couldn't read that photo — try again."); }
@@ -92,7 +105,7 @@ export default function TallyShotClient() {
     if (!result) return;
     setBusy(true); setMsg("");
     try {
-      const r = await fetch("/api/tally/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result }) });
+      const r = await fetch("/api/tally/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result: withSpec(result) }) });
       if (!r.ok) { setMsg("Export failed."); setBusy(false); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -118,8 +131,18 @@ export default function TallyShotClient() {
         savedId ? (
           <div className="ts-flagbar ok"><b>Saved to records.</b> <a href={`/app/tallyshot/records/${savedId}`}>View it</a> · <a href="/app/tallyshot/records">all saved tallies</a></div>
         ) : (
-          <div className="ts-save">
-            <input className="mono" placeholder="Well name (e.g. Pad 14 #3H)" value={well} onChange={(e) => setWell(e.target.value)} aria-label="Well name" />
+          <div className="ts-spec">
+            <div className="ts-spec-head">String spec <span>— shown in the export title block &amp; the saved record</span></div>
+            <div className="ts-spec-grid">
+              <label>Well<input className="mono" value={spec.well} onChange={(e) => setSpec({ ...spec, well: e.target.value })} placeholder="Pad 14 #3H" /></label>
+              <label>Size<input className="mono" value={spec.size} onChange={(e) => setSpec({ ...spec, size: e.target.value })} placeholder={'5-1/2"'} /></label>
+              <label>Weight (lb/ft)<input className="mono" value={spec.weight} onChange={(e) => setSpec({ ...spec, weight: e.target.value })} placeholder="23.0" /></label>
+              <label>Grade<input className="mono" value={spec.grade} onChange={(e) => setSpec({ ...spec, grade: e.target.value })} placeholder="J-55 / L-80" /></label>
+              <label>Connection<input className="mono" value={spec.connection} onChange={(e) => setSpec({ ...spec, connection: e.target.value })} placeholder="BTC / LTC / 8Rd" /></label>
+              <label>Date<input className="mono" value={spec.date} onChange={(e) => setSpec({ ...spec, date: e.target.value })} placeholder="6/16/26" /></label>
+              <label>Lease<input className="mono" value={spec.lease} onChange={(e) => setSpec({ ...spec, lease: e.target.value })} placeholder="Optional" /></label>
+              <label>Rig<input className="mono" value={spec.rig} onChange={(e) => setSpec({ ...spec, rig: e.target.value })} placeholder="Optional" /></label>
+            </div>
             <button className="btn btn-primary" onClick={save} disabled={busy}>Save to records</button>
           </div>
         )
