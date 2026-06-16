@@ -17,6 +17,7 @@ import { SampleReader } from "./reader";
 import { SAMPLE_SHEET3_CELLS, SAMPLE_TALLY_CONFIG, SAMPLE_SHEET3 } from "./sample";
 import { exportTallyXlsx } from "./xlsx";
 import { reconcileTallies } from "./reconcile";
+import { LAYOUT_FIXTURES } from "./layouts";
 import ExcelJS from "exceljs";
 
 const PLACES = SAMPLE_TALLY_CONFIG.decimalPlaces;
@@ -236,4 +237,44 @@ test("custom tolerance is honored", () => {
   const b = [{ joint: 1, raw: "3330" }]; // 1 ft apart
   assert.equal(reconcileTallies(readFrom(a), readFrom(b), { toleranceFt: 0.5 }).totalPass, false);
   assert.equal(reconcileTallies(readFrom(a), readFrom(b), { toleranceFt: 2 }).totalPass, true);
+});
+
+// --- dynamic per-rig layouts: same pipeline parses every layout correctly ---
+
+for (const fx of LAYOUT_FIXTURES) {
+  test(`layout "${fx.label}" parses cleanly through the same pipeline`, async () => {
+    const result = await runTally(new SampleReader(fx.read), fx.cfg);
+
+    // hand-total the fixture's cells independently of the pipeline
+    const hand = round2(
+      fx.read.cells.reduce((a, c) => a + Number(c.raw) / 100, 0)
+    );
+    assert.equal(result.jointCount, fx.read.cells.length, "all joints read");
+    assert.equal(result.provisionalTotalFt, hand, "total matches hand-sum regardless of layout");
+    // joints stay in 1..N order regardless of source layout
+    assert.deepEqual(result.joints.map((j) => j.joint), fx.read.cells.map((c) => c.joint));
+  });
+}
+
+test("layouts are genuinely different (not the same fixture)", () => {
+  const totals = LAYOUT_FIXTURES.map((fx) => round2(fx.read.cells.reduce((a, c) => a + Number(c.raw) / 100, 0)));
+  assert.equal(new Set(totals).size, totals.length, "each layout fixture is distinct");
+});
+
+test("xlsx export includes the dual-tally reconciliation block", async () => {
+  const a = await runTallySample();
+  const b = readFrom([{ joint: 1, raw: "3530" }]); // wildly different → FAIL
+  const rec = reconcileTallies(a, b);
+  const buf = await exportTallyXlsx(a, { reconciliation: rec });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf as unknown as ArrayBuffer);
+  const ws = wb.getWorksheet("Tally")!;
+  let foundHeader = false, foundResult = false;
+  ws.eachRow((row) => {
+    const c1 = String(row.getCell(1).value ?? "");
+    if (c1.includes("DUAL-TALLY RECONCILIATION")) foundHeader = true;
+    if (c1 === "Result" && /FAIL|PASS/.test(String(row.getCell(2).value ?? ""))) foundResult = true;
+  });
+  assert.ok(foundHeader, "reconciliation header present");
+  assert.ok(foundResult, "pass/fail result present in export");
 });

@@ -1,5 +1,8 @@
 import ExcelJS from "exceljs";
 import type { TallyResult, TallyJoint } from "./types";
+import type { Reconciliation } from "./reconcile";
+
+export type XlsxOptions = { template?: Partial<XlsxTemplate>; reconciliation?: Reconciliation };
 
 /**
  * Export a TallyResult to a real .xlsx. This is the ONLY module that depends on
@@ -36,9 +39,9 @@ function fillFor(j: TallyJoint, t: XlsxTemplate): string | null {
 
 export async function buildTallyWorkbook(
   result: TallyResult,
-  opts: Partial<XlsxTemplate> = {}
+  opts: XlsxOptions = {}
 ): Promise<ExcelJS.Workbook> {
-  const t: XlsxTemplate = { ...MKS_TEMPLATE, ...opts };
+  const t: XlsxTemplate = { ...MKS_TEMPLATE, ...(opts.template ?? {}) };
   const wb = new ExcelJS.Workbook();
   wb.creator = "SYNNR TallyShot";
   const ws = wb.addWorksheet(t.sheetName);
@@ -119,11 +122,62 @@ export async function buildTallyWorkbook(
     rowIdx++;
   }
 
+  // Dual-tally reconciliation block (when a second count was reconciled)
+  const rec = opts.reconciliation;
+  if (rec) {
+    rowIdx += 1;
+    const head = ws.getRow(rowIdx);
+    ws.mergeCells(rowIdx, 1, rowIdx, 4);
+    head.getCell(1).value = "DUAL-TALLY RECONCILIATION";
+    head.getCell(1).font = { bold: true, size: 12 };
+    rowIdx++;
+
+    const recRows: Array<[string, string | number]> = [
+      ["Tally A total", `${rec.totalAFt} ${t.lengthUnit}`],
+      ["Tally B total", `${rec.totalBFt} ${t.lengthUnit}`],
+      ["Difference", `${rec.totalDiffFt} ${t.lengthUnit}`],
+      ["Tolerance", `±${rec.toleranceFt} ${t.lengthUnit}`],
+      ["Result", rec.totalPass ? "PASS — within tolerance" : "FAIL — reconcile before calling it"],
+      ["Joint counts", rec.countsMatch ? `Match (${rec.jointCountA})` : `Mismatch (${rec.jointCountA} vs ${rec.jointCountB})`],
+      ["Disagreements", rec.issueCount],
+    ];
+    for (const [label, value] of recRows) {
+      const row = ws.getRow(rowIdx);
+      row.getCell(1).value = label;
+      ws.mergeCells(rowIdx, 2, rowIdx, 4);
+      row.getCell(2).value = value;
+      row.getCell(1).font = { bold: true };
+      if (label === "Result") {
+        for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: rec.totalPass ? "FFD9EAD3" : "FFF4CCCC" } };
+      }
+      rowIdx++;
+    }
+
+    // list each disagreeing joint so nothing is auto-resolved
+    const issues = rec.diffs.filter((d) => d.status !== "match");
+    if (issues.length) {
+      rowIdx += 1;
+      const ih = ws.getRow(rowIdx);
+      ih.values = ["Joint", "Tally A", "Tally B", "Δ / status"];
+      ih.eachCell((c) => { c.font = { bold: true }; });
+      rowIdx++;
+      for (const d of issues) {
+        const row = ws.getRow(rowIdx);
+        row.getCell(1).value = d.joint;
+        row.getCell(2).value = d.a;
+        row.getCell(3).value = d.b;
+        row.getCell(4).value = d.status === "mismatch" ? `${d.diffFt} ft` : d.status === "only_a" ? "missing in B" : "missing in A";
+        for (let c = 1; c <= 4; c++) row.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE5CD" } };
+        rowIdx++;
+      }
+    }
+  }
+
   return wb;
 }
 
 /** Convenience: serialize the workbook to a Buffer (API response / file write). */
-export async function exportTallyXlsx(result: TallyResult, opts: Partial<XlsxTemplate> = {}): Promise<Buffer> {
+export async function exportTallyXlsx(result: TallyResult, opts: XlsxOptions = {}): Promise<Buffer> {
   const wb = await buildTallyWorkbook(result, opts);
   const out = await wb.xlsx.writeBuffer();
   return Buffer.from(out);
