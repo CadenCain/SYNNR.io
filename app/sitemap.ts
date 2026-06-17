@@ -4,7 +4,7 @@ import { GLOSSARY } from "@/lib/content/glossary";
 const BASE = "https://synnr.io";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ["/", "/onboarding", "/checkout", "/login", "/legal/terms", "/legal/privacy", "/glossary"];
+  const pages = ["/", "/apps", "/apps/tallyshot", "/checkout", "/login", "/legal/terms", "/legal/privacy", "/glossary"];
   return [
     ...pages.map((p) => ({
       url: BASE + p,

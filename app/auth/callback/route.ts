@@ -7,7 +7,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
  * Auth callback for emailed sign-in links. Supabase redirects here after the
  * user clicks the link: PKCE flows arrive with ?code=, link-style verifies
  * arrive with ?token_hash=&type=. Exchanges for a cookie session, then sends
- * the user on (default /onboarding). On failure, back to /login with a hint.
+ * the user on (default /dashboard). On failure, back to /login with a hint.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
   const next = url.searchParams.get("next");
-  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/onboarding";
+  const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
   const fail = (m: string) =>
     NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(m)}`, url.origin));
