@@ -117,10 +117,10 @@ export const MARKETING_HTML = `
           <div class="app-view" data-view="audits">
             <div class="panel-card">
               <div class="pc-head"><span class="t">Recent tally sheets</span><span class="meta">Last 7 days</span></div>
-              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 14 · perf run tally</b><small>62 line items · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
-              <div class="vrow"><div class="vic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Lease 7 · daily count</b><small>2 shaky digits flagged</small></div><div class="vtrail"><span class="vval">needs review</span><span class="vpill warn"><span class="sd"></span>2 flags</span></div></div>
-              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Site B · consumables tally</b><small>48 line items · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
-              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 9 · standby log</b><small>read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
+              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 14 #3H · 5-1/2" casing</b><small>94 joints · 3,012 ft · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
+              <div class="vrow"><div class="vic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Lease 7 #2 · 2-7/8" tubing</b><small>2 shaky digits flagged</small></div><div class="vtrail"><span class="vval">needs review</span><span class="vpill warn"><span class="sd"></span>2 flags</span></div></div>
+              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 22 #1H · 5-1/2" casing</b><small>108 joints · 3,480 ft · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
+              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 9 #4 · 7" casing</b><small>76 joints · 2,448 ft · read clean</small></div><div class="vtrail"><span class="vval">100%</span><span class="vpill ok"><span class="sd"></span>Exported</span></div></div>
             </div>
             <div class="view-cta"><p><b>Every sheet</b> read, low-confidence digits flagged, exported to your Excel template.</p><a href="/ingest" class="btn btn-primary btn-sm">Scan a sheet<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
           </div>
@@ -146,8 +146,8 @@ export const MARKETING_HTML = `
           <div class="app-view" data-view="packets">
             <div class="panel-card">
               <div class="pc-head"><span class="t">Exports</span><span class="meta">Your Excel templates</span></div>
-              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 14 tally → daily_count.xlsx</b><small>matched your template</small></div><div class="vtrail"><span class="vpill ok"><span class="sd"></span>Ready</span></div></div>
-              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Site B tally → consumables.xlsx</b><small>matched your template</small></div><div class="vtrail"><span class="vpill ok"><span class="sd"></span>Ready</span></div></div>
+              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 14 #3H → casing_tally.xlsx</b><small>matched your template</small></div><div class="vtrail"><span class="vpill ok"><span class="sd"></span>Ready</span></div></div>
+              <div class="vrow"><div class="vic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></div><div class="vmain"><b>Pad 22 #1H → casing_tally.xlsx</b><small>matched your template</small></div><div class="vtrail"><span class="vpill ok"><span class="sd"></span>Ready</span></div></div>
             </div>
             <div class="view-cta"><p><b>Clean Excel</b> in your own template — not a CSV you have to reformat.</p></div>
           </div>
@@ -250,10 +250,10 @@ export const MARKETING_HTML = `
           <div class="console-bar"><div class="console-dots"><i></i><i></i><i></i></div><div class="console-title"><span class="live"></span>TallyShot · review</div><div class="console-tabs"><span class="on">Read</span><span>Export</span></div></div>
           <div class="console-body">
             <div class="rows">
-              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">Perf guns — qty 12</div><div class="sub">read clean · 99%</div></div><div class="amt">12</div><div class="pill good">Auto</div></div>
-              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">CCL — qty 3</div><div class="sub">read clean · 97%</div></div><div class="amt">3</div><div class="pill good">Auto</div></div>
-              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z"/></svg><div><div class="label">Standby hrs — 6.5?</div><div class="sub">faint handwriting · 58%</div></div><div class="amt">?</div><div class="pill warn">Review</div></div>
-              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">Consumables — 42 lines</div><div class="sub">read clean · 96%</div></div><div class="amt">42</div><div class="pill good">Auto</div></div>
+              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">Jt 46 — 32.30 ft</div><div class="sub">read clean · 99%</div></div><div class="amt">32.30</div><div class="pill good">Auto</div></div>
+              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">Jt 47 — 32.46 ft</div><div class="sub">read clean · 98%</div></div><div class="amt">32.46</div><div class="pill good">Auto</div></div>
+              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z"/></svg><div><div class="label">Jt 48 — 3?.05 ft</div><div class="sub">faint digit · 58%</div></div><div class="amt">?</div><div class="pill warn">Review</div></div>
+              <div class="row"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><div><div class="label">Jt 49 — 32.28 ft</div><div class="sub">read clean · 97%</div></div><div class="amt">32.28</div><div class="pill good">Auto</div></div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
               <div><div class="mono" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-faint)">1 digit to confirm</div><div class="h3" style="color:var(--accent-ink);margin-top:5px">then → Excel</div></div>
@@ -289,7 +289,7 @@ export const MARKETING_HTML = `
       <div class="step3 reveal" data-d="2">
         <div class="visual">
           <div style="align-self:center;width:100%;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--fg-dim);line-height:2">
-            <div><span style="color:var(--accent-ink)">›</span> reading 62 line items</div>
+            <div><span style="color:var(--accent-ink)">›</span> reading 94 joints</div>
             <div><span style="color:var(--accent-ink)">›</span> scoring each digit</div>
             <div><span style="color:var(--good)">✓</span> 2 flagged for review</div>
           </div>
