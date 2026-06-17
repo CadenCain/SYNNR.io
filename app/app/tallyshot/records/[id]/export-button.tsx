@@ -3,12 +3,25 @@
 import { useState } from "react";
 import type { TallyResult } from "@/lib/tally/types";
 
-export default function ExportButton({ result, filename }: { result: TallyResult; filename: string }) {
+const ENDPOINT = { xlsx: "/api/tally/export", pdf: "/api/tally/pdf" } as const;
+const LABEL = { xlsx: "Export to Excel ↓", pdf: "Export PDF ↓" } as const;
+
+export default function ExportButton({
+  result,
+  filename,
+  kind = "xlsx",
+  primary = true,
+}: {
+  result: TallyResult;
+  filename: string;
+  kind?: "xlsx" | "pdf";
+  primary?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   async function go() {
     setBusy(true);
     try {
-      const r = await fetch("/api/tally/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result }) });
+      const r = await fetch(ENDPOINT[kind], { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result }) });
       if (!r.ok) { setBusy(false); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -17,5 +30,5 @@ export default function ExportButton({ result, filename }: { result: TallyResult
     } catch { /* ignore */ }
     setBusy(false);
   }
-  return <button className="btn btn-primary" onClick={go} disabled={busy}>{busy ? "Exporting…" : "Export to Excel ↓"}</button>;
+  return <button className={`btn ${primary ? "btn-primary" : "btn-ghost"}`} onClick={go} disabled={busy}>{busy ? "Exporting…" : LABEL[kind]}</button>;
 }

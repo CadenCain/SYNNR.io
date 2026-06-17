@@ -53,6 +53,7 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
         <div className="ts">
           <div className="ts-actions">
             <ExportButton result={result} filename={`tallyshot-${(row.well_name || "tally").replace(/\s+/g, "-").toLowerCase()}.xlsx`} />
+            <ExportButton result={result} kind="pdf" primary={false} filename={`tallyshot-${(row.well_name || "tally").replace(/\s+/g, "-").toLowerCase()}.pdf`} />
           </div>
 
           <div className="ts-summary">

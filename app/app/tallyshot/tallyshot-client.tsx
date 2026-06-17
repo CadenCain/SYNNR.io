@@ -121,12 +121,28 @@ export default function TallyShotClient() {
     setBusy(false);
   }
 
+  async function exportPdf() {
+    if (!result) return;
+    setBusy(true); setMsg("");
+    try {
+      const r = await fetch("/api/tally/pdf", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result: prepared(result) }) });
+      if (!r.ok) { setMsg("PDF export failed."); setBusy(false); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `tallyshot-${result.meta.sheetNo ? "sheet-" + result.meta.sheetNo : "export"}.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch { setMsg("PDF export failed — try again."); }
+    setBusy(false);
+  }
+
   return (
     <div className="ts">
       <div className="ts-actions">
         <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>Photograph a sheet</button>
         <button className="btn btn-ghost" onClick={loadSample} disabled={busy}>{busy ? "Working…" : "Load sample sheet"}</button>
         {result ? <button className="btn btn-ghost" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button> : null}
+        {result ? <button className="btn btn-ghost" onClick={exportPdf} disabled={busy}>Export PDF ↓</button> : null}
         <a className="btn btn-ghost" href="/app/tallyshot/records">Saved tallies</a>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} />
       </div>
