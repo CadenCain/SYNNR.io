@@ -22,6 +22,8 @@ export type RawCell = {
   confidence: number;
   /** Joint type; pups/crossovers/shoe skip the range flag. Defaults to "joint". */
   kind?: JointKind;
+  /** Field note written by the joint — shoe, float collar, centralizer, X-O, etc. */
+  note?: string;
 };
 
 /** What any reader (sample or vision) returns for one tally sheet. */
@@ -73,6 +75,8 @@ export type TallyJoint = {
   flag: TallyFlag;
   /** Human-readable reason when flagged (shown in review + xlsx). */
   reason: string;
+  /** Field note for this joint — shoe, float collar, centralizer, X-O, etc. */
+  note: string;
   /** A flagged joint is provisional — never counted as final until confirmed. */
   trusted: boolean;
 };

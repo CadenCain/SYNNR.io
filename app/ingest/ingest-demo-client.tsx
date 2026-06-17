@@ -98,7 +98,7 @@ export default function IngestDemoClient() {
       )}
 
       <div className="ts-table">
-        <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span></div>
+        <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span><span>Comments</span></div>
         {result.joints.map((j) => (
           <div key={j.joint} className={`tr ${j.trusted ? "" : j.flag === "RANGE" ? "flag" : "warn"}`}>
             <span className="mono">{j.joint}</span>
@@ -114,6 +114,7 @@ export default function IngestDemoClient() {
                 <button onClick={() => confirmJoint(j)}>Confirm</button>
               </span>
             )}
+            <span className="note-ro">{j.note || "—"}</span>
           </div>
         ))}
       </div>

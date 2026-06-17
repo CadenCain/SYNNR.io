@@ -20,6 +20,7 @@ const VisionTallySchema = z.object({
         joint: z.number().int().describe("1-based joint/row number on the sheet"),
         raw: z.string().describe("the length EXACTLY as written, digits only, decimal implied (e.g. '3134')"),
         confidence: z.number().min(0).max(1).describe("0–1 how sure you are of THIS reading"),
+        note: z.string().describe("any handwritten note/marking next to THIS joint (shoe, float collar, centralizer, pup, X-O/crossover, etc.), else empty"),
       })
     )
     .describe("one entry per joint, in sheet order"),
@@ -53,7 +54,10 @@ CRITICAL RULES:
   ambiguous digits. Do NOT guess a confident value for an unclear mark.
 - Capture header fields and any crew-written grand/sheet total into
   meta/independent so the totals can be cross-checked.
-- Number the joints in the exact order they appear on THIS sheet's layout.`;
+- Number the joints in the exact order they appear on THIS sheet's layout.
+- Capture any handwritten note beside a joint into that cell's "note" (shoe,
+  float collar, centralizer, pup, X-O/crossover, etc.); empty if there's none.
+  Notes are context — they NEVER change the length you read.`;
 
 /**
  * Cardless reader — returns the MKS Sheet 3 fixture deterministically. No
@@ -113,7 +117,7 @@ export class VisionReader implements TallyReader {
         tailedBy: object.meta.tailedBy || undefined,
         date: object.meta.date || undefined,
       },
-      cells: object.cells.map((c) => ({ joint: c.joint, raw: c.raw, confidence: c.confidence })),
+      cells: object.cells.map((c) => ({ joint: c.joint, raw: c.raw, confidence: c.confidence, note: c.note || undefined })),
       independent: object.independent,
       usedSample: false,
     };

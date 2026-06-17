@@ -24,6 +24,7 @@ export default function TallyShotClient() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [edits, setEdits] = useState<Record<number, string>>({});
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   // Editable string spec — what a company man reads first. Pre-filled from the
@@ -36,9 +37,13 @@ export default function TallyShotClient() {
     return { well: m.well ?? "", lease: m.lease ?? "", rig: m.rig ?? "", size: m.size ?? "", weight: m.weight ?? "", grade: m.grade ?? "", connection: m.connection ?? "", date: m.date ?? "" };
   }
 
-  /** Merge the edited spec back into the result meta (for export). */
-  function withSpec(r: TallyResult): TallyResult {
-    return { ...r, meta: { ...r.meta, well: spec.well || r.meta.well, lease: spec.lease || r.meta.lease, rig: spec.rig || r.meta.rig, size: spec.size || r.meta.size, weight: spec.weight || r.meta.weight, grade: spec.grade || r.meta.grade, connection: spec.connection || r.meta.connection, date: spec.date || r.meta.date } };
+  /** Merge the edited spec + per-joint comments back into the result (for export/save). */
+  function prepared(r: TallyResult): TallyResult {
+    return {
+      ...r,
+      meta: { ...r.meta, well: spec.well || r.meta.well, lease: spec.lease || r.meta.lease, rig: spec.rig || r.meta.rig, size: spec.size || r.meta.size, weight: spec.weight || r.meta.weight, grade: spec.grade || r.meta.grade, connection: spec.connection || r.meta.connection, date: spec.date || r.meta.date },
+      joints: r.joints.map((j) => (notes[j.joint] !== undefined ? { ...j, note: notes[j.joint] } : j)),
+    };
   }
 
   async function save() {
@@ -48,7 +53,7 @@ export default function TallyShotClient() {
       const r = await fetch("/api/tally/save", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result: withSpec(result), meta: { wellName: spec.well, lease: spec.lease, rig: spec.rig, size: spec.size, weight: spec.weight, grade: spec.grade, connection: spec.connection, date: spec.date } }),
+        body: JSON.stringify({ result: prepared(result), meta: { wellName: spec.well, lease: spec.lease, rig: spec.rig, size: spec.size, weight: spec.weight, grade: spec.grade, connection: spec.connection, date: spec.date } }),
       });
       const d = await r.json();
       if (!r.ok || !d.ok) { setMsg(d.error || "Couldn't save."); setBusy(false); return; }
@@ -63,7 +68,7 @@ export default function TallyShotClient() {
       const r = await fetch("/api/tally", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sample: true }) });
       const d = await r.json();
       if (!d.ok) { setMsg(d.error || "Couldn't load."); setBusy(false); return; }
-      setResult(d.result); setEdits({}); setSpec(specFrom(d.result));
+      setResult(d.result); setEdits({}); setNotes({}); setSpec(specFrom(d.result));
     } catch { setMsg("Couldn't reach SYNNR — try again."); }
     setBusy(false);
   }
@@ -76,7 +81,7 @@ export default function TallyShotClient() {
       const fd = new FormData(); fd.append("image", file);
       const r = await fetch("/api/tally", { method: "POST", body: fd });
       const d = await r.json();
-      if (d.ok) { setResult(d.result); setEdits({}); setSpec(specFrom(d.result)); }
+      if (d.ok) { setResult(d.result); setEdits({}); setNotes({}); setSpec(specFrom(d.result)); }
       else if (d.needsCard) setMsg("Live photo reading turns on when the AI vision card is added. Use “Load sample sheet” to see the full flow now.");
       else setMsg(d.error || "Couldn't read that photo.");
     } catch { setMsg("Couldn't read that photo — try again."); }
@@ -105,7 +110,7 @@ export default function TallyShotClient() {
     if (!result) return;
     setBusy(true); setMsg("");
     try {
-      const r = await fetch("/api/tally/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result: withSpec(result) }) });
+      const r = await fetch("/api/tally/export", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result: prepared(result) }) });
       if (!r.ok) { setMsg("Export failed."); setBusy(false); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -173,7 +178,7 @@ export default function TallyShotClient() {
           )}
 
           <div className="ts-table">
-            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span></div>
+            <div className="tr th"><span>No.</span><span>Read</span><span>Length</span><span>Cum ft</span><span>Status</span><span>Comments</span></div>
             {result.joints.map((j) => (
               <div key={j.joint} className={`tr ${j.trusted ? "" : j.flag === "RANGE" ? "flag" : "warn"}`}>
                 <span className="mono">{j.joint}</span>
@@ -190,6 +195,7 @@ export default function TallyShotClient() {
                     {j.flag === "RANGE" ? <button className="pup-btn" onClick={() => markPup(j)} title="It's a pup / sub — legitimately short">Pup</button> : null}
                   </span>
                 )}
+                <input className="note-input" value={notes[j.joint] ?? j.note ?? ""} onChange={(e) => setNotes({ ...notes, [j.joint]: e.target.value })} placeholder="—" aria-label={`Comment for joint ${j.joint}`} />
               </div>
             ))}
           </div>

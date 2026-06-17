@@ -27,7 +27,10 @@
 .mkt .ts-flagbar b { color: var(--fg); }
 
 .mkt .ts-table { border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; background: var(--card); }
-.mkt .ts-table .tr { display: grid; grid-template-columns: 0.5fr 0.7fr 0.9fr 1fr 1.4fr; gap: 12px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; min-width: 460px; }
+.mkt .ts-table .tr { display: grid; grid-template-columns: 0.45fr 0.6fr 0.75fr 0.75fr 1.3fr 1.1fr; gap: 12px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; min-width: 580px; }
+.mkt .ts-table .note-input { background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: 5px 8px; font-size: 13px; width: 100%; }
+.mkt .ts-table .note-input:focus { outline: none; border-color: var(--accent-soft); }
+.mkt .ts-table .note-ro { color: var(--fg-dim); font-size: 13px; }
 .mkt .ts-table .tr.th { border-top: 0; color: var(--fg-faint); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-family: var(--font-mono); }
 .mkt .ts-table .tr.flag { background: rgba(214,120,90,0.10); }
 .mkt .ts-table .tr.warn { background: rgba(220,170,90,0.08); }

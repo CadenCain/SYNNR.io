@@ -61,6 +61,7 @@ export function extractJoint(cell: RawCell, cfg: TallyConfig): TallyJoint {
     confidence,
     flag,
     reason,
+    note: cell.note?.trim() || "",
     trusted: flag === "TRUSTED",
   };
 }

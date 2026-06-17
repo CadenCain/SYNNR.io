@@ -54,10 +54,19 @@ const RAW: Array<[number, string, number?]> = [
   [96, "3244"], [97, "3231"], [98, "3241"], [99, "3248"], [100, "3245"],
 ];
 
+/** A few field notes, as a hand would mark them on the sheet. */
+const NOTES: Record<number, string> = {
+  1: "Guide shoe",
+  2: "Float collar",
+  47: "Pup joint",
+  50: "Centralizer",
+};
+
 export const SAMPLE_SHEET3_CELLS: RawCell[] = RAW.map(([joint, raw, confidence]) => ({
   joint,
   raw,
   confidence: confidence ?? C,
+  note: NOTES[joint],
 }));
 
 /**

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "tally:demo": "node --import tsx lib/tally/demo.ts",
-    "stripe:setup": "node scripts/stripe-setup.mjs"
+    "stripe:setup": "node scripts/stripe-setup.mjs",
+    "stripe:meter": "node scripts/stripe-meter.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
