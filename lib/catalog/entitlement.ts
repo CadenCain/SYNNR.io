@@ -17,12 +17,18 @@ export type EntitlementCheck = {
  * org-wide license. UI gating is not enough — call this on the server.
  */
 export function canUseProduct(ctx: EntitlementContext, slug: string): EntitlementCheck {
+  // Free / early-access products: any signed-in user can use them, no sub/seat.
+  // (canUseProduct is only reached for signed-in users.)
+  const product = getProduct(slug);
+  if (product?.free) {
+    return { allowed: true, via: "flat", reason: "Free — early access." };
+  }
+
   const sub = ctx.subscriptions.find((s) => s.productSlug === slug);
   if (!sub || !ACTIVE_STATUSES.has(sub.status)) {
     return { allowed: false, via: null, reason: "Your organization has no active subscription for this app." };
   }
 
-  const product = getProduct(slug);
   if (product?.pricing.model === "flat") {
     return { allowed: true, via: "flat", reason: "Org-wide license." };
   }

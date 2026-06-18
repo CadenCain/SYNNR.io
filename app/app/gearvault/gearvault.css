@@ -1,0 +1,39 @@
+/* GearVault Layer 1 — asset register. Inherits .mkt tokens. */
+.mkt .gv { max-width: 920px; }
+
+.mkt .gv-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.mkt .gv-search { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 11px); color: var(--fg); padding: 12px 14px; font-size: 15px; min-height: 44px; }
+.mkt .gv-search:focus { outline: none; border-color: var(--accent-soft); }
+
+/* Add form */
+.mkt .gv-add { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 18px; margin-bottom: 18px; }
+.mkt .gv-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .mkt .gv-add-grid { grid-template-columns: 1fr; } }
+.mkt .gv-add-grid .gv-wide { grid-column: 1 / -1; }
+.mkt .gv-add-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-faint); }
+.mkt .gv-add-grid input, .mkt .gv-add-grid select { background: var(--bg); border: 1px solid var(--line); border-radius: 9px; color: var(--fg); padding: 10px 12px; font-size: 15px; text-transform: none; letter-spacing: 0; min-height: 44px; }
+.mkt .gv-add-grid input:focus, .mkt .gv-add-grid select:focus { outline: none; border-color: var(--accent-soft); }
+.mkt .gv-add-photo { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.mkt .gv-thumb-lg { width: 84px; height: 84px; border-radius: 12px; object-fit: cover; border: 1px solid var(--line); }
+.mkt .gv-thumb-empty { display: flex; align-items: center; justify-content: center; color: var(--fg-faint); font-size: 11px; background: var(--bg-2); }
+.mkt .gv-add-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+@media (max-width: 520px) { .mkt .gv-add-actions .btn { flex: 1; } }
+
+.mkt .gv-count { font-size: 12px; color: var(--fg-faint); font-family: var(--font-mono); margin-bottom: 12px; }
+
+/* Asset grid */
+.mkt .gv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.mkt .gv-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); overflow: hidden; display: flex; flex-direction: column; }
+.mkt .gv-thumb { width: 100%; height: 150px; object-fit: cover; border-bottom: 1px solid var(--line); }
+.mkt .gv-card .gv-thumb-empty { height: 150px; border-bottom: 1px solid var(--line); }
+.mkt .gv-card-body { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.mkt .gv-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mkt .gv-tag { font-size: 14px; font-weight: 600; color: var(--fg); }
+.mkt .gv-status { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--fg-dim); }
+.mkt .gv-status.gv-yard { color: var(--fg-dim); }
+.mkt .gv-status.gv-truck { color: var(--accent-ink); border-color: rgba(var(--accent-rgb), 0.3); background: rgba(var(--accent-rgb), 0.07); }
+.mkt .gv-status.gv-job { color: #d6a85a; border-color: rgba(220,170,90,0.3); background: rgba(220,170,90,0.07); }
+.mkt .gv-type { font-size: 12px; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.mkt .gv-desc { font-size: 14px; color: var(--fg-dim); line-height: 1.45; }
+.mkt .gv-loc { font-size: 13px; color: var(--fg); }
+.mkt .gv-pending { font-size: 11px; color: #d6a85a; font-family: var(--font-mono); }

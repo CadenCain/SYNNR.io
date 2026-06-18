@@ -29,6 +29,23 @@ export const PRODUCTS: Product[] = [
     },
   },
   {
+    slug: "gearvault",
+    name: "GearVault",
+    tagline: "Every tool and asset on your trucks and in your yard — what you've got, where it is, and whether its certs are current.",
+    status: "live",
+    free: true, // Layer 1 is free early-access while shops load their real gear
+    seatUnlocks: "Free early access: add your assets, track location, browse + search your whole inventory.",
+    pricing: { model: "per_seat", trialDays: 0 },
+    problem:
+      "Gear lives all over — trucks, the yard, a job. Nobody's sure what's where, what's out on loan, or whether a tool's pull/pressure test is still current until it's already on location. Stuff gets lost, re-bought, or sent out expired.",
+    bullets: [
+      "Log every asset: ID/serial, type, description, photo",
+      "Set where it is — yard, a specific truck, or a job",
+      "Browse and search your whole inventory at a glance",
+      "Mobile-first, works in the field — certs & tool check-out coming next",
+    ],
+  },
+  {
     slug: "loadcheck",
     name: "LoadCheck",
     tagline: "Photo-verify the truck loadout before it rolls — nothing missing, nothing wrong.",

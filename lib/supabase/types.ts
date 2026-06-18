@@ -162,6 +162,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["integrations"]["Insert"]>;
         Relationships: [];
       };
+      gearvault_assets: {
+        Row: { id: string; workspace_id: string; asset_tag: string | null; asset_type: string | null; description: string | null; photo_url: string | null; status: string; location_detail: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; workspace_id: string; asset_tag?: string | null; asset_type?: string | null; description?: string | null; photo_url?: string | null; status?: string; location_detail?: string | null; created_by?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["gearvault_assets"]["Insert"]>;
+        Relationships: [];
+      };
       leads: {
         Row: { id: string; email: string; company: string | null; name: string | null; industry: string | null; source: string; created_at: string };
         Insert: { id?: string; email: string; company?: string | null; name?: string | null; industry?: string | null; source?: string; created_at?: string };

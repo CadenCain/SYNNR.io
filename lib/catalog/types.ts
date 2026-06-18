@@ -47,6 +47,8 @@ export type Product = {
   tagline: string;
   status: ProductStatus;
   pricing: ProductPricing;
+  /** Free for any signed-in user (no subscription/seat needed) — early-access products. */
+  free?: boolean;
   /** What one seat unlocks, for the product page. */
   seatUnlocks: string;
   /** The boring, expensive problem this app kills (product page). */
