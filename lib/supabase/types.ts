@@ -168,6 +168,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["gearvault_assets"]["Insert"]>;
         Relationships: [];
       };
+      gearvault_certs: {
+        Row: { id: string; workspace_id: string; asset_id: string; test_type: string; performed_date: string | null; expires_date: string | null; vendor: string | null; cert_url: string | null; created_by: string | null; created_at: string };
+        Insert: { id?: string; workspace_id: string; asset_id: string; test_type?: string; performed_date?: string | null; expires_date?: string | null; vendor?: string | null; cert_url?: string | null; created_by?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["gearvault_certs"]["Insert"]>;
+        Relationships: [];
+      };
       leads: {
         Row: { id: string; email: string; company: string | null; name: string | null; industry: string | null; source: string; created_at: string };
         Insert: { id?: string; email: string; company?: string | null; name?: string | null; industry?: string | null; source?: string; created_at?: string };
