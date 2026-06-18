@@ -1,0 +1,62 @@
+/* Custom Builds (/services) — scoped to .mkt, reuses the marketing tokens. */
+
+.mkt .svc-hero { padding-top: 68px; }
+.mkt .svc-hero .display { max-width: 16ch; margin: 14px 0 0; }
+.mkt .svc-hero .lede { max-width: 60ch; margin: 18px 0 0; }
+.mkt .svc-hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+
+/* The problem — one tight paragraph */
+.mkt .svc-problem { padding-top: 8px; }
+.mkt .svc-problem-body { max-width: 70ch; font-size: 18px; line-height: 1.65; color: var(--fg-dim); margin: 14px 0 0; }
+.mkt .svc-problem-body b { color: var(--fg); }
+
+/* What we build — 3 cards */
+.mkt .svc-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 880px) { .mkt .svc-cards { grid-template-columns: 1fr; } }
+.mkt .svc-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 24px; }
+.mkt .svc-card h3 { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 10px; }
+.mkt .svc-card p { color: var(--fg-dim); line-height: 1.6; font-size: 15px; margin: 0; }
+.mkt .svc-card-note { margin-top: 12px !important; color: var(--accent-ink) !important; font-size: 14px !important; }
+.mkt .svc-card-note a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* How it works — 3 steps */
+.mkt .svc-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: step; }
+@media (max-width: 880px) { .mkt .svc-steps { grid-template-columns: 1fr; } }
+.mkt .svc-step { border-top: 2px solid var(--line-strong); padding-top: 18px; }
+.mkt .svc-step-n { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: var(--accent); color: #0b0b0b; font-weight: 700; font-size: 15px; }
+.mkt .svc-step h3 { font-size: 17px; font-weight: 650; margin: 14px 0 8px; }
+.mkt .svc-step p { color: var(--fg-dim); line-height: 1.6; font-size: 15px; margin: 0; }
+
+/* Pricing — 3 tiers */
+.mkt .svc-pricing { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 880px) { .mkt .svc-pricing { grid-template-columns: 1fr; } }
+.mkt .svc-tier { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 24px; }
+.mkt .svc-tier.featured { border-color: var(--line-strong); background: var(--bg-2); }
+.mkt .svc-tier-name { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg-faint); font-family: var(--font-mono); }
+.mkt .svc-tier-price { font-size: 30px; font-weight: 750; letter-spacing: -0.02em; margin-top: 10px; }
+.mkt .svc-tier-price span { display: block; font-size: 14px; font-weight: 500; color: var(--fg-dim); letter-spacing: 0; margin-top: 4px; }
+.mkt .svc-tier-scope { color: var(--fg-dim); font-size: 14px; line-height: 1.55; margin: 14px 0 0; }
+.mkt .svc-pricing-note { margin-top: 18px; color: var(--fg-faint); font-size: 14px; line-height: 1.6; max-width: 70ch; }
+
+/* Lead capture */
+.mkt .svc-audit { padding-bottom: 80px; }
+.mkt .svc-audit-card { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 36px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--card); padding: 40px; }
+@media (max-width: 880px) { .mkt .svc-audit-card { grid-template-columns: 1fr; gap: 24px; padding: 26px; } }
+.mkt .svc-audit-copy .h2 { margin: 10px 0 0; }
+
+.mkt .svc-form { display: flex; flex-direction: column; gap: 14px; }
+.mkt .svc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .mkt .svc-form-row { grid-template-columns: 1fr; } }
+.mkt .svc-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--fg-dim); line-height: 1.45; }
+.mkt .svc-form input, .mkt .svc-form textarea { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--fg); padding: 11px 13px; font-size: 15px; font-family: inherit; width: 100%; }
+.mkt .svc-form input:focus, .mkt .svc-form textarea:focus { outline: none; border-color: var(--accent-soft); }
+.mkt .svc-form textarea { resize: vertical; min-height: 92px; }
+.mkt .svc-file span em { color: var(--fg-faint); font-style: normal; }
+.mkt .svc-file input[type="file"] { font-size: 13px; color: var(--fg-dim); padding: 9px 11px; }
+.mkt .svc-file input[type="file"]::file-selector-button { background: var(--bg-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin-right: 10px; cursor: pointer; font-size: 13px; }
+.mkt .svc-file-name { color: var(--accent-ink); font-size: 13px; }
+.mkt .svc-form .btn { margin-top: 4px; align-self: flex-start; }
+.mkt .svc-form-err { color: var(--danger); font-size: 14px; }
+.mkt .svc-form-done { border: 1px solid rgba(201,189,151,0.35); background: rgba(201,189,151,0.09); border-radius: var(--radius); padding: 24px; }
+.mkt .svc-form-done b { font-size: 18px; }
+.mkt .svc-form-done p { color: var(--fg-dim); margin: 8px 0 0; line-height: 1.6; }

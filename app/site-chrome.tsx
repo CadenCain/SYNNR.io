@@ -21,6 +21,7 @@ export async function SiteNav() {
         <a className="brand" href="/" aria-label="SYNNR">{MARK}<span className="wordmark">SYNNR</span></a>
         <nav className="nav-links">
           <a href="/apps">Apps</a>
+          <a href="/services">Custom Builds</a>
           <a href="/apps/tallyshot#pricing">Pricing</a>
           <a href="/glossary">Glossary</a>
         </nav>
@@ -51,7 +52,7 @@ export function SiteFooter() {
             <a className="brand" href="/">{MARK}<span className="wordmark">SYNNR</span></a>
             <p className="blurb">The app platform for oilfield service companies. Purpose-built apps, ready to use — pick one, start in minutes.</p>
           </div>
-          <div><h5>Apps</h5><ul><li><a href="/apps/tallyshot">TallyShot</a></li><li><a href="/apps">All apps</a></li><li><a href="/apps/tallyshot#pricing">Pricing</a></li><li><a href="/glossary">Glossary</a></li></ul></div>
+          <div><h5>Apps</h5><ul><li><a href="/apps/tallyshot">TallyShot</a></li><li><a href="/apps">All apps</a></li><li><a href="/services">Custom Builds</a></li><li><a href="/apps/tallyshot#pricing">Pricing</a></li><li><a href="/glossary">Glossary</a></li></ul></div>
           <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/ingest">Live demo</a></li><li><a href="mailto:cadencain@darkstarops.com">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">

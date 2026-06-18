@@ -20,9 +20,9 @@ export const MARKETING_HTML = `
     </a>
     <nav class="nav-links">
       <a href="/apps">Apps</a>
+      <a href="/services">Custom Builds</a>
       <a href="#how">How it works</a>
       <a href="/apps/tallyshot#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
       <a href="/glossary">Glossary</a>
     </nav>
     <div class="nav-cta">
