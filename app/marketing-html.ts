@@ -26,9 +26,19 @@ export const MARKETING_HTML = `
       <a href="/glossary">Glossary</a>
     </nav>
     <div class="nav-cta">
-      <a href="/login" class="btn btn-ghost btn-sm">Sign in</a>
+      <a href="/login" class="btn btn-ghost btn-sm nav-signin">Sign in</a>
       <a href="/apps" class="btn btn-primary btn-sm">Browse apps</a>
+      <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
+    <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
+    <nav class="nav-mobile">
+      <a href="/apps">Apps</a>
+      <a href="/services">Custom Builds</a>
+      <a href="#how">How it works</a>
+      <a href="/apps/tallyshot#pricing">Pricing</a>
+      <a href="/glossary">Glossary</a>
+      <a href="/login">Sign in</a>
+    </nav>
   </div>
 </header>
 

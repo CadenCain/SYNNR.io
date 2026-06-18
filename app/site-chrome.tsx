@@ -33,11 +33,22 @@ export async function SiteNav() {
             </>
           ) : (
             <>
-              <a href="/login" className="btn btn-ghost btn-sm">Sign in</a>
+              <a href="/login" className="btn btn-ghost btn-sm nav-signin">Sign in</a>
               <a href="/apps" className="btn btn-primary btn-sm">Browse apps</a>
             </>
           )}
+          <label className="nav-burger" htmlFor="navMenu" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </label>
         </div>
+        <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
+        <nav className="nav-mobile">
+          <a href="/apps">Apps</a>
+          <a href="/services">Custom Builds</a>
+          <a href="/apps/tallyshot#pricing">Pricing</a>
+          <a href="/glossary">Glossary</a>
+          {nav ? <a href="/dashboard">Dashboard</a> : <a href="/login">Sign in</a>}
+        </nav>
       </div>
     </header>
   );
