@@ -168,12 +168,6 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["leads"]["Insert"]>;
         Relationships: [];
       };
-      free_scans: {
-        Row: { id: string; ip_hash: string; created_at: string };
-        Insert: { id?: string; ip_hash: string; created_at?: string };
-        Update: Partial<Database["public"]["Tables"]["free_scans"]["Insert"]>;
-        Relationships: [];
-      };
       audit_requests: {
         Row: { id: string; company: string | null; name: string | null; email: string; phone: string | null; service_type: string | null; fleet_size: string | null; bottleneck: string | null; source: string; emailed: boolean; created_at: string };
         Insert: { id?: string; company?: string | null; name?: string | null; email: string; phone?: string | null; service_type?: string | null; fleet_size?: string | null; bottleneck?: string | null; source?: string; emailed?: boolean; created_at?: string };
