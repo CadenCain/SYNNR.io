@@ -12,8 +12,8 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
  * A slot is reserved BEFORE the vision call, so failed reads still count and a
  * single IP can't loop the AI. Counts live in the free_scans table (admin only).
  */
-const PER_IP_PER_DAY = 3;
-const GLOBAL_PER_DAY = 250; // ~$15/day ceiling at ~$0.06/scan
+const PER_IP_TOTAL = 1; // ONE free scan per visitor (by IP), ever — then it's the paid trial
+const GLOBAL_PER_DAY = 250; // daily $ ceiling regardless of IP rotation (~$15/day at ~$0.06/scan)
 const MAX_BYTES = 25 * 1024 * 1024;
 
 function dayStartISO(): string {
@@ -39,14 +39,14 @@ export async function POST(req: Request) {
 
   // Cap checks BEFORE spending any AI.
   const [{ count: globalCount }, { count: ipCount }] = await Promise.all([
-    admin.from("free_scans").select("id", { count: "exact", head: true }).gte("created_at", since),
-    admin.from("free_scans").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", since),
+    admin.from("free_scans").select("id", { count: "exact", head: true }).gte("created_at", since), // global = today only
+    admin.from("free_scans").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash),    // per-IP = all-time (one free scan, ever)
   ]);
   if ((globalCount ?? 0) >= GLOBAL_PER_DAY) {
     return NextResponse.json({ ok: false, capped: true, error: "Free scanning is at capacity today — start a free trial to keep going." }, { status: 429 });
   }
-  if ((ipCount ?? 0) >= PER_IP_PER_DAY) {
-    return NextResponse.json({ ok: false, capped: true, error: "You've used your free scans. Start a 14-day free trial to scan all you want." }, { status: 429 });
+  if ((ipCount ?? 0) >= PER_IP_TOTAL) {
+    return NextResponse.json({ ok: false, capped: true, error: "That's your one free scan. Start a 14-day free trial to scan all you want." }, { status: 429 });
   }
 
   // Reserve the slot (counts the attempt, so a bad-photo loop can't burn the AI).
