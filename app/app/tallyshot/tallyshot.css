@@ -37,9 +37,10 @@
 .mkt .st.ok { color: var(--fg-faint); font-size: 12px; font-family: var(--font-mono); }
 .mkt .st-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .mkt .st-edit .why { font-size: 11px; color: #d6a85a; white-space: nowrap; }
-.mkt .st-edit input { width: 72px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: 5px 8px; font-size: 13px; }
+.mkt .st-edit input { width: 72px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--fg); padding: 8px; font-size: 13px; min-height: 40px; }
 .mkt .st-edit input:focus { outline: none; border-color: var(--accent-soft); }
-.mkt .st-edit button { background: var(--accent); color: #0b0b0b; border: 0; border-radius: 7px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.mkt .st-edit button { background: var(--accent); color: #0b0b0b; border: 0; border-radius: 7px; padding: 8px 14px; font-size: 12px; font-weight: 600; cursor: pointer; min-height: 40px; }
+.mkt .ts-table .note-input { min-height: 40px; }
 .mkt .st-edit .pup-btn { background: var(--bg-2); color: var(--fg-dim); border: 1px solid var(--line); }
 .mkt .kind-tag { font-style: normal; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-faint); }
 

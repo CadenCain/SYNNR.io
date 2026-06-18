@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { TallyResult, TallyJoint, RawCell } from "@/lib/tally/types";
 import { extractJoint } from "@/lib/tally/extract";
 import { buildResult } from "@/lib/tally/qc";
@@ -30,6 +30,23 @@ export default function TallyShotClient() {
   // Editable string spec — what a company man reads first. Pre-filled from the
   // read meta where present, carried into the export + the saved record.
   const [spec, setSpec] = useState({ well: "", lease: "", rig: "", size: "", weight: "", grade: "", connection: "", date: "" });
+
+  // Don't lose a scan to a refresh / accidental nav: persist the working draft.
+  const DRAFT_KEY = "tallyshot:draft";
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d?.result?.joints) { setResult(d.result); setSpec(d.spec ?? { well: "", lease: "", rig: "", size: "", weight: "", grade: "", connection: "", date: "" }); setNotes(d.notes ?? {}); }
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try {
+      if (result && !savedId) localStorage.setItem(DRAFT_KEY, JSON.stringify({ result, spec, notes }));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch { /* ignore */ }
+  }, [result, spec, notes, savedId]);
 
   /** Initialize the spec form from whatever the reader pulled off the sheet. */
   function specFrom(r: TallyResult) {
@@ -76,6 +93,17 @@ export default function TallyShotClient() {
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Validate before sending — clear error beats feeding garbage to the reader.
+    if (!file.type.startsWith("image/")) {
+      setMsg("That's not an image — use a photo of the sheet (JPG, PNG, or HEIC).");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      setMsg("That photo is over 25 MB — retake it a little smaller and try again.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setBusy(true); setMsg("");
     try {
       const fd = new FormData(); fd.append("image", file);

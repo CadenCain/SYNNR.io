@@ -1,7 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import SwRegister from "./sw-register";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#131110",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 const geist = Geist({
   variable: "--font-geist",
@@ -51,6 +59,7 @@ export default function RootLayout({
       <body>
         {children}
         <Analytics />
+        <SwRegister />
       </body>
     </html>
   );

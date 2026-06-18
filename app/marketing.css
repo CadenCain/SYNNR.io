@@ -126,6 +126,7 @@
   font-family: var(--font-body); font-size:15px; font-weight:500;
   padding:14px 24px; border-radius: var(--radius-pill); border:1px solid transparent;
   cursor:pointer; transition: all .25s var(--ease); white-space:nowrap;
+  min-height:44px; /* glove-friendly touch target (incl. btn-sm) */
 }
 .mkt .btn svg { width:16px; height:16px; }
 .mkt .btn-primary {
@@ -163,7 +164,7 @@
 .mkt .nav-cta { display:flex; align-items:center; gap:10px; }
 /* Mobile menu — hamburger reveals the section links below 860px (JS-free) */
 .mkt .nav-toggle { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
-.mkt .nav-burger { display:none; align-items:center; justify-content:center; width:38px; height:38px; flex:none; border-radius:999px; border:1px solid var(--line-2); background:var(--bg-2); color:var(--fg); cursor:pointer; }
+.mkt .nav-burger { display:none; align-items:center; justify-content:center; width:44px; height:44px; flex:none; border-radius:999px; border:1px solid var(--line-2); background:var(--bg-2); color:var(--fg); cursor:pointer; }
 .mkt .nav-burger svg { width:18px; height:18px; }
 .mkt .nav-mobile { display:none; }
 @media (max-width: 860px){
