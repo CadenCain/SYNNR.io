@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { TallyResult, TallyJoint, RawCell } from "@/lib/tally/types";
 import { extractJoint } from "@/lib/tally/extract";
 import { buildResult } from "@/lib/tally/qc";
@@ -18,13 +18,20 @@ function readShell(r: TallyResult) {
   };
 }
 
-/** Public, cardless TallyShot demo: load the sample sheet, confirm/correct the
- *  flagged digits, watch the totals update, export the real Excel. */
+/**
+ * Public TallyShot demo: scan ONE real sheet free (no signup), or load the
+ * sample. Confirm flagged digits, then capture email to download the Excel.
+ */
 export default function IngestDemoClient() {
   const [result, setResult] = useState<TallyResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [edits, setEdits] = useState<Record<number, string>>({});
+  const [isReal, setIsReal] = useState(false); // true for a real free scan (gates export behind email)
+  const [email, setEmail] = useState("");
+  const [emailGate, setEmailGate] = useState(false);
+  const [emailed, setEmailed] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function loadSample() {
     setBusy(true); setMsg("");
@@ -32,7 +39,27 @@ export default function IngestDemoClient() {
       const r = await fetch("/api/tally/demo", { method: "POST" });
       const d = await r.json();
       if (!d.ok) { setMsg("Couldn't load the sample — try again."); setBusy(false); return; }
-      setResult(d.result); setEdits({});
+      setResult(d.result); setEdits({}); setIsReal(false); setEmailGate(false); setEmailed(false);
+    } catch { setMsg("Couldn't reach SYNNR — try again."); }
+    setBusy(false);
+  }
+
+  async function onPhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setMsg("Use a photo of the sheet (JPG, PNG, or HEIC)."); return; }
+    if (file.size > 25 * 1024 * 1024) { setMsg("That photo is over 25 MB — retake it a little smaller."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const fd = new FormData(); fd.append("image", file);
+      const r = await fetch("/api/tally/free-scan", { method: "POST", body: fd });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        setResult(d.result); setEdits({}); setIsReal(true); setEmailGate(false); setEmailed(false);
+      } else {
+        setMsg(d.error || "Couldn't read that photo — try a clearer shot.");
+      }
     } catch { setMsg("Couldn't reach SYNNR — try again."); }
     setBusy(false);
   }
@@ -45,7 +72,7 @@ export default function IngestDemoClient() {
     setResult(buildResult(joints, readShell(result), CFG));
   }
 
-  async function exportXlsx() {
+  async function doExport() {
     if (!result) return;
     setBusy(true); setMsg("");
     try {
@@ -54,19 +81,39 @@ export default function IngestDemoClient() {
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "tallyshot-sample.xlsx"; a.click();
+      a.href = url; a.download = isReal ? "tallyshot-scan.xlsx" : "tallyshot-sample.xlsx"; a.click();
       URL.revokeObjectURL(url);
     } catch { setMsg("Export failed — try again."); }
     setBusy(false);
+  }
+
+  /** Real scans: capture email before the first download. Sample: free. */
+  function exportXlsx() {
+    if (isReal && !emailed) { setEmailGate(true); return; }
+    void doExport();
+  }
+
+  async function captureEmail() {
+    if (!/\S+@\S+\.\S+/.test(email.trim())) { setMsg("Enter a valid email."); return; }
+    setBusy(true); setMsg("");
+    try {
+      await fetch("/api/lead", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: email.trim(), source: "free_scan" }) });
+    } catch { /* don't block the download on a lead-save hiccup */ }
+    setEmailed(true); setEmailGate(false); setBusy(false);
+    void doExport();
   }
 
   if (!result) {
     return (
       <div className="ts">
         <div className="ts-empty">
-          <b>See TallyShot read a real tally sheet</b>
-          <p>Load a sample handwritten casing tally. TallyShot applies the implied decimal, totals the joints, and flags the digits it isn&apos;t sure about — no account, no card.</p>
-          <button className="btn btn-primary" onClick={loadSample} disabled={busy}>{busy ? "Reading…" : "Load sample tally sheet"}</button>
+          <b>Scan your own tally sheet — free, no signup</b>
+          <p>Photograph a real handwritten casing/tubing tally and TallyShot reads it: implied decimal, running shoe depth, per-10 subtotals, and every shaky digit flagged for you to confirm. Or load a sample to see it first.</p>
+          <div className="ts-actions" style={{ justifyContent: "center", marginTop: 4 }}>
+            <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Reading…" : "Scan your own sheet"}</button>
+            <button className="btn btn-ghost" onClick={loadSample} disabled={busy}>Load sample sheet</button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhotoPick} />
           {msg ? <div className="ts-msg" style={{ marginTop: 14 }}>{msg}</div> : null}
         </div>
       </div>
@@ -76,11 +123,23 @@ export default function IngestDemoClient() {
   return (
     <div className="ts">
       <div className="ts-actions">
+        <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Reading…" : "Scan your own sheet"}</button>
         <button className="btn btn-ghost" onClick={loadSample} disabled={busy}>Reload sample</button>
-        <button className="btn btn-primary" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button>
-        <a className="btn btn-ghost" href="/checkout?product=tallyshot&seats=1">Scan your own → free trial</a>
+        <button className="btn btn-ghost" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhotoPick} />
       </div>
       {msg ? <p className="ts-msg">{msg}</p> : null}
+
+      {isReal ? (
+        emailGate ? (
+          <div className="ts-save">
+            <input type="email" placeholder="you@company.com — get this as Excel" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+            <button className="btn btn-primary" onClick={captureEmail} disabled={busy}>Email me the Excel ↓</button>
+          </div>
+        ) : (
+          <div className="ts-flagbar ok"><b>Read off your sheet.</b> Confirm any flagged digits, then export. <a href="/checkout?product=tallyshot&seats=1">Start a free trial</a> to scan all you want + save records.</div>
+        )
+      ) : null}
 
       <div className="ts-summary">
         <div className="sc"><div className="n">{result.grandTotalFt}</div><div className="k">Trusted total (ft)</div></div>
