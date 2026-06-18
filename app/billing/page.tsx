@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getSignedInOrg, getEntitlementContext } from "@/lib/marketplace/access";
 import { getOrgUsage } from "@/lib/marketplace/usage";
 import { getProduct } from "@/lib/catalog";
-import { SiteNav } from "../site-chrome";
+import AppShell from "../app/app-shell";
 import PortalButton from "./portal-button";
 
 export const metadata = { title: "Billing — SYNNR" };
@@ -18,14 +18,7 @@ export default async function BillingPage() {
     : null;
 
   return (
-    <div className="mkt">
-      <SiteNav />
-      <main className="container apps-wrap">
-        <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-          <span className="eyebrow">Billing</span>
-          <h1 className="h2">Your plan & seats</h1>
-          <p className="lede" style={{ marginInline: 0 }}>Change seats, update payment, download invoices, or cancel — all self-serve through the Stripe Customer Portal.</p>
-        </div>
+    <AppShell current="billing" title="Your plan & seats" subtitle="Change seats, update payment, download invoices, or cancel — all self-serve through the Stripe Customer Portal.">
 
         {ctx.subscriptions.length ? (
           <div className="bandtable" style={{ marginInline: 0, marginBottom: 28 }}>
@@ -63,7 +56,6 @@ export default async function BillingPage() {
         ) : null}
 
         <PortalButton />
-      </main>
-    </div>
+    </AppShell>
   );
 }

@@ -5,8 +5,7 @@ import { notFound } from "next/navigation";
 import { requireProduct } from "@/lib/marketplace/access";
 import { getServerSupabase } from "@/lib/supabase/server";
 import type { TallyResult } from "@/lib/tally/types";
-import { SiteNav } from "../../../../site-chrome";
-import AppSwitcher from "../../../app-switcher";
+import AppShell from "../../../app-shell";
 import ExportButton from "./export-button";
 import SignOff from "./sign-off";
 
@@ -19,7 +18,7 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
   const { check } = await requireProduct("tallyshot");
   if (!check.allowed) {
     return (
-      <div className="mkt"><SiteNav /><main className="container apps-wrap"><p className="apps-note" style={{ textAlign: "left" }}>{check.reason}</p></main></div>
+      <AppShell current="tallyshot" title="Saved tally"><p className="apps-note" style={{ textAlign: "left" }}>{check.reason}</p></AppShell>
     );
   }
 
@@ -33,21 +32,11 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
   const subAt = new Map<number, number>();
   for (const s of result.subtotals ?? []) subAt.set(s.to, s.ft);
   const title = row.well_name || (row.sheet_no ? `Sheet ${row.sheet_no}` : "Tally");
+  const metaLine = [row.company, row.lease && `Lease ${row.lease}`, row.rig && `Rig ${row.rig}`, row.size, row.weight && `${row.weight} lb/ft`, row.grade && `Grade ${row.grade}`, row.connection && `${row.connection} conn`, row.tally_date].filter(Boolean).join("  ·  ") || "Saved tally record";
 
   return (
-    <div className="mkt">
-      <SiteNav />
-      <main className="container apps-wrap">
-        <AppSwitcher current="tallyshot" />
+    <AppShell current="tallyshot" title={title} subtitle={metaLine}>
         <a className="rec-back" href="/app/tallyshot/records">← All saved tallies</a>
-        <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-          <span className="eyebrow">TallyShot · saved tally</span>
-          <h1 className="h2">{title}</h1>
-          <p className="lede" style={{ marginInline: 0 }}>
-            {[row.company, row.lease && `Lease ${row.lease}`, row.rig && `Rig ${row.rig}`, row.size, row.weight && `${row.weight} lb/ft`, row.grade && `Grade ${row.grade}`, row.connection && `${row.connection} conn`, row.tally_date].filter(Boolean).join("  ·  ") || "Saved tally record"}
-          </p>
-        </div>
-
         <SignOff id={row.id} confirmedBy={row.confirmed_by_email} confirmedAt={row.confirmed_at} />
 
         <div className="ts">
@@ -79,7 +68,6 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
             ))}
           </div>
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

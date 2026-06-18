@@ -6,7 +6,7 @@ import { getSignedInOrg } from "@/lib/marketplace/access";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getProduct } from "@/lib/catalog";
 import { getDeviceActivity } from "@/lib/marketplace/usage";
-import { SiteNav } from "../site-chrome";
+import AppShell from "../app/app-shell";
 import InviteForm from "./invite-form";
 import { revokeInviteForm, assignSeatForm, revokeSeatForm } from "./actions";
 
@@ -19,18 +19,11 @@ export default async function TeamPage() {
   const admin = getAdminSupabase();
   if (!admin || !org.workspaceId) {
     return (
-      <div className="mkt">
-        <SiteNav />
-        <main className="container apps-wrap">
-          <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-            <span className="eyebrow">Team</span>
-            <h1 className="h2">Team & seats</h1>
-          </div>
-          <p className="apps-note" style={{ textAlign: "left", marginTop: 0 }}>
-            {org.workspaceId ? "Team management needs the service-role key configured." : "Set up your workspace to invite teammates."}
-          </p>
-        </main>
-      </div>
+      <AppShell current="team" title="Team & seats">
+        <p className="apps-note" style={{ textAlign: "left", marginTop: 0 }}>
+          {org.workspaceId ? "Team management needs the service-role key configured." : "Set up your workspace to invite teammates."}
+        </p>
+      </AppShell>
     );
   }
 
@@ -59,15 +52,7 @@ export default async function TeamPage() {
   const canManage = callerRole === "owner" || callerRole === "admin";
 
   return (
-    <div className="mkt">
-      <SiteNav />
-      <main className="container apps-wrap">
-        <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-          <span className="eyebrow">Team</span>
-          <h1 className="h2">Team & seats</h1>
-          <p className="lede" style={{ marginInline: 0 }}>Invite your hands and assign each one a seat for the apps you subscribe to.</p>
-        </div>
-
+    <AppShell current="team" title="Team & seats" subtitle="Invite your hands and assign each one a seat for the apps you subscribe to.">
         {canManage ? <InviteForm /> : null}
 
         {activeSubs.length === 0 ? (
@@ -132,7 +117,6 @@ export default async function TeamPage() {
             <p className="apps-note" style={{ textAlign: "left", marginTop: 10 }}>Share the invite link with each person (email delivery turns on with Resend).</p>
           </div>
         ) : null}
-      </main>
-    </div>
+    </AppShell>
   );
 }

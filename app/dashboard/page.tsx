@@ -3,7 +3,7 @@ import "../apps/apps.css";
 import { redirect } from "next/navigation";
 import { getSignedInOrg, getEntitlementContext } from "@/lib/marketplace/access";
 import { PRODUCTS, canUseProduct } from "@/lib/catalog";
-import { SiteNav } from "../site-chrome";
+import AppShell from "../app/app-shell";
 
 export const metadata = { title: "Dashboard — SYNNR" };
 
@@ -13,15 +13,7 @@ export default async function DashboardPage() {
   const ctx = await getEntitlementContext(org);
 
   return (
-    <div className="mkt">
-      <SiteNav />
-      <main className="container apps-wrap">
-        <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-          <span className="eyebrow">Dashboard</span>
-          <h1 className="h2">Your apps</h1>
-          <p className="lede" style={{ marginInline: 0 }}>Open an app you have access to, or add another from the marketplace.</p>
-        </div>
-
+    <AppShell current="dashboard" title="Your apps" subtitle="Open an app you have access to, or add another from the marketplace.">
         <div className="appgrid">
           {PRODUCTS.map((p) => {
             const access = canUseProduct(ctx, p.slug);
@@ -54,7 +46,6 @@ export default async function DashboardPage() {
           <a className="btn btn-ghost btn-sm" href="/billing">Billing</a>
           <a className="btn btn-ghost btn-sm" href="/account">Account</a>
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }
