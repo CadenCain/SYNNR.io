@@ -57,7 +57,7 @@ export default async function RecordDetail({ params }: { params: Promise<{ id: s
           </div>
 
           <div className="ts-summary">
-            <div className="sc"><div className="n">{result.grandTotalFt}</div><div className="k">Grand total (trusted) ft</div></div>
+            <div className="sc"><div className="n">{result.grandTotalFt}</div><div className="k">Trusted total (ft)</div></div>
             <div className="sc"><div className="n">{result.trustedCount}/{result.jointCount}</div><div className="k">Joints trusted</div></div>
             <div className={`sc ${result.flaggedCount ? "amber" : ""}`}><div className="n">{result.flaggedCount}</div><div className="k">Flagged</div></div>
             <div className={`sc ${result.crossCheck?.ran ? (result.crossCheck.pass ? "green" : "red") : ""}`}>

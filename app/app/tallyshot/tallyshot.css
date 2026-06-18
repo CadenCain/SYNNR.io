@@ -59,6 +59,11 @@
 .mkt .ts-spec-grid input { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--fg); padding: 8px 10px; font-size: 14px; text-transform: none; letter-spacing: 0; }
 .mkt .ts-spec-grid input:focus { outline: none; border-color: var(--accent-soft); }
 
+/* Finish block — string spec + save/export, after the review table */
+.mkt .ts-finish { margin-top: 22px; }
+.mkt .ts-finish-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 520px) { .mkt .ts-finish-actions { flex-direction: column; } .mkt .ts-finish-actions .btn { width: 100%; } }
+
 /* Save-to-records bar */
 .mkt .ts-save { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
 .mkt .ts-save input { flex: 1; min-width: 200px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm, 11px); color: var(--fg); padding: 10px 12px; font-size: 14px; }

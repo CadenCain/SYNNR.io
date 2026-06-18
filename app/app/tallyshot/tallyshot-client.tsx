@@ -141,33 +141,10 @@ export default function TallyShotClient() {
       <div className="ts-actions">
         <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={busy}>Photograph a sheet</button>
         <button className="btn btn-ghost" onClick={loadSample} disabled={busy}>{busy ? "Working…" : "Load sample sheet"}</button>
-        {result ? <button className="btn btn-ghost" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button> : null}
-        {result ? <button className="btn btn-ghost" onClick={exportPdf} disabled={busy}>Export PDF ↓</button> : null}
         <a className="btn btn-ghost" href="/app/tallyshot/records">Saved tallies</a>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} />
       </div>
       {msg ? <p className="ts-msg">{msg}</p> : null}
-
-      {result ? (
-        savedId ? (
-          <div className="ts-flagbar ok"><b>Saved to records.</b> <a href={`/app/tallyshot/records/${savedId}`}>View it</a> · <a href="/app/tallyshot/records">all saved tallies</a></div>
-        ) : (
-          <div className="ts-spec">
-            <div className="ts-spec-head">String spec <span>— shown in the export title block &amp; the saved record</span></div>
-            <div className="ts-spec-grid">
-              <label>Well<input className="mono" value={spec.well} onChange={(e) => setSpec({ ...spec, well: e.target.value })} placeholder="Pad 14 #3H" /></label>
-              <label>Size<input className="mono" value={spec.size} onChange={(e) => setSpec({ ...spec, size: e.target.value })} placeholder={'5-1/2"'} /></label>
-              <label>Weight (lb/ft)<input className="mono" value={spec.weight} onChange={(e) => setSpec({ ...spec, weight: e.target.value })} placeholder="23.0" /></label>
-              <label>Grade<input className="mono" value={spec.grade} onChange={(e) => setSpec({ ...spec, grade: e.target.value })} placeholder="J-55 / L-80" /></label>
-              <label>Connection<input className="mono" value={spec.connection} onChange={(e) => setSpec({ ...spec, connection: e.target.value })} placeholder="BTC / LTC / 8Rd" /></label>
-              <label>Date<input className="mono" value={spec.date} onChange={(e) => setSpec({ ...spec, date: e.target.value })} placeholder="6/16/26" /></label>
-              <label>Lease<input className="mono" value={spec.lease} onChange={(e) => setSpec({ ...spec, lease: e.target.value })} placeholder="Optional" /></label>
-              <label>Rig<input className="mono" value={spec.rig} onChange={(e) => setSpec({ ...spec, rig: e.target.value })} placeholder="Optional" /></label>
-            </div>
-            <button className="btn btn-primary" onClick={save} disabled={busy}>Save to records</button>
-          </div>
-        )
-      ) : null}
 
       {!result ? (
         <div className="ts-empty">
@@ -177,7 +154,7 @@ export default function TallyShotClient() {
       ) : (
         <>
           <div className="ts-summary">
-            <div className="sc"><div className="n">{result.grandTotalFt}</div><div className="k">Grand total (trusted) ft</div></div>
+            <div className="sc"><div className="n">{result.grandTotalFt}</div><div className="k">Trusted total (ft)</div></div>
             <div className="sc"><div className="n">{result.trustedCount}/{result.jointCount}</div><div className="k">Joints trusted</div></div>
             <div className={`sc ${result.flaggedCount ? "amber" : ""}`}><div className="n">{result.flaggedCount}</div><div className="k">Flagged</div></div>
             <div className={`sc ${result.crossCheck.ran ? (result.crossCheck.pass ? "green" : "red") : ""}`}>
@@ -220,6 +197,34 @@ export default function TallyShotClient() {
             {result.subtotals.map((s) => (
               <div key={s.from} className="sub"><span>Joints {s.from}–{s.to}</span><b className="mono">{s.ft} ft</b>{s.flagged ? <span className="fl">{s.flagged} flagged</span> : null}</div>
             ))}
+          </div>
+
+          {/* Finish — after review: enter the string spec, then save + export */}
+          <div className="ts-spec ts-finish">
+            {savedId ? (
+              <div className="ts-flagbar ok" style={{ margin: 0 }}>
+                <b>Saved to records.</b> <a href={`/app/tallyshot/records/${savedId}`}>View it</a> · <a href="/app/tallyshot/records">all saved tallies</a>
+              </div>
+            ) : (
+              <>
+                <div className="ts-spec-head">String spec <span>— shown in the export title block &amp; the saved record</span></div>
+                <div className="ts-spec-grid">
+                  <label>Well<input className="mono" value={spec.well} onChange={(e) => setSpec({ ...spec, well: e.target.value })} placeholder="Pad 14 #3H" /></label>
+                  <label>Size<input className="mono" value={spec.size} onChange={(e) => setSpec({ ...spec, size: e.target.value })} placeholder={'5-1/2"'} /></label>
+                  <label>Weight (lb/ft)<input className="mono" value={spec.weight} onChange={(e) => setSpec({ ...spec, weight: e.target.value })} placeholder="23.0" /></label>
+                  <label>Grade<input className="mono" value={spec.grade} onChange={(e) => setSpec({ ...spec, grade: e.target.value })} placeholder="J-55 / L-80" /></label>
+                  <label>Connection<input className="mono" value={spec.connection} onChange={(e) => setSpec({ ...spec, connection: e.target.value })} placeholder="BTC / LTC / 8Rd" /></label>
+                  <label>Date<input className="mono" value={spec.date} onChange={(e) => setSpec({ ...spec, date: e.target.value })} placeholder="6/16/26" /></label>
+                  <label>Lease<input className="mono" value={spec.lease} onChange={(e) => setSpec({ ...spec, lease: e.target.value })} placeholder="Optional" /></label>
+                  <label>Rig<input className="mono" value={spec.rig} onChange={(e) => setSpec({ ...spec, rig: e.target.value })} placeholder="Optional" /></label>
+                </div>
+              </>
+            )}
+            <div className="ts-finish-actions">
+              {!savedId ? <button className="btn btn-primary" onClick={save} disabled={busy}>Save to records</button> : null}
+              <button className="btn btn-ghost" onClick={exportXlsx} disabled={busy}>Export to Excel ↓</button>
+              <button className="btn btn-ghost" onClick={exportPdf} disabled={busy}>Export PDF ↓</button>
+            </div>
           </div>
         </>
       )}
