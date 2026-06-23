@@ -64,7 +64,7 @@ export default function ReadinessForm() {
       </label>
       <div className="svc-form-row">
         <label>Best email<input name="email" type="email" required autoComplete="email" placeholder="you@shop.com" /></label>
-        <label>Phone <span style={{ textTransform: "none", color: "var(--fg-faint)" }}>(optional)</span><input name="phone" type="tel" autoComplete="tel" placeholder="(432) 555-0100" /></label>
+        <label>Phone (optional)<input name="phone" type="tel" autoComplete="tel" placeholder="(432) 555-0100" /></label>
       </div>
       {err ? <p className="svc-form-err">{err}</p> : null}
       <button className="btn btn-primary" type="submit" disabled={busy}>
