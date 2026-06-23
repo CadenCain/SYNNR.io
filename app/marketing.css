@@ -183,6 +183,34 @@
 /* On narrow phones the burger holds Sign in, so drop it from the crowded bar */
 @media (max-width: 480px){ .mkt .nav-signin { display:none; } }
 
+/* ===== Managed-service homepage (problem / steps / fix / why) ===== */
+.mkt .leak-list { list-style:none; padding:0; margin:18px 0 0; display:flex; flex-direction:column; gap:12px; max-width:760px; }
+.mkt .leak-list li { display:flex; gap:14px; align-items:flex-start; font-size:17px; line-height:1.55; color:var(--fg-dim); }
+.mkt .leak-list .lk-ic { flex:none; width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--card); display:flex; align-items:center; justify-content:center; color:var(--accent-2); }
+.mkt .leak-list .lk-ic svg { width:18px; height:18px; }
+
+.mkt .steps3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:20px; }
+@media (max-width:860px){ .mkt .steps3 { grid-template-columns:1fr; } }
+.mkt .step3c { border-top:2px solid var(--line-strong); padding-top:18px; }
+.mkt .step3n { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:999px; background:var(--accent); color:#0b0b0b; font-weight:700; font-size:15px; }
+.mkt .step3c h3 { font-size:18px; font-weight:600; margin:14px 0 8px; letter-spacing:-0.01em; }
+.mkt .step3c p { color:var(--fg-dim); line-height:1.6; font-size:15px; margin:0; }
+
+.mkt .fixgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:20px; }
+@media (max-width:860px){ .mkt .fixgrid { grid-template-columns:1fr 1fr; } }
+@media (max-width:560px){ .mkt .fixgrid { grid-template-columns:1fr; } }
+.mkt .fixc { border:1px solid var(--line); border-radius:var(--radius); background:var(--card); padding:20px; }
+.mkt .fixc h3 { font-size:16px; font-weight:600; margin:0 0 6px; }
+.mkt .fixc p { color:var(--fg-dim); line-height:1.55; font-size:14px; margin:0; }
+
+.mkt .whygrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px; }
+@media (max-width:640px){ .mkt .whygrid { grid-template-columns:1fr; } }
+.mkt .whyc { border-left:2px solid var(--accent-2); border-radius:0; padding:4px 0 4px 18px; }
+.mkt .whyc h3 { font-size:16px; font-weight:600; margin:0 0 6px; }
+.mkt .whyc p { color:var(--fg-dim); line-height:1.55; font-size:14px; margin:0; }
+
+.mkt .faq { max-width:760px; margin:0 auto; }
+
 /* ---- hero ---- */
 .mkt .hero { padding-top: 158px; padding-bottom: 40px; text-align:center; }
 .mkt .hero .pill-badge {

@@ -24,28 +24,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — Purpose-built software for oilfield service companies",
+    default: "SYNNR — operations partner for oilfield service shops",
     template: "%s",
   },
   description:
-    "SYNNR builds software for oilfield service companies — the boring operational stuff, finally done right. Start with TallyShot: photograph a handwritten tally sheet and get clean Excel back, every shaky digit flagged for review.",
+    "Your jobs leak money in the boring stuff — missing tools, wrong trucks, cert misses, kicked-back invoices. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you every week. Free Readiness Map first.",
   keywords: [
-    "oilfield software", "tally sheet to excel", "TallyShot", "field operations software", "wireline",
-    "coil tubing", "handwriting to spreadsheet", "oilfield service software", "digitize tally sheets",
+    "oilfield operations partner", "managed operations service", "wireline", "coil tubing", "cementing",
+    "field operations", "readiness", "Permian", "service shop operations", "loadout cert tracking",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — Purpose-built software for oilfield service companies",
+    title: "SYNNR — operations partner for oilfield service shops",
     description:
-      "TallyShot: photograph a handwritten tally sheet, get clean Excel back with every shaky digit flagged. The boring operational stuff, finally done right.",
+      "We find where your jobs leak money — missing tools, cert misses, kicked-back invoices — build the system that stops it, and run it for you. Free Readiness Map first.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — Purpose-built software for oilfield service companies",
+    title: "SYNNR — operations partner for oilfield service shops",
     description:
-      "TallyShot turns a photo of a handwritten tally sheet into clean Excel — shaky digits flagged for review. Priced for a service shop.",
+      "Your jobs are leaking money in the boring stuff. SYNNR finds it, builds the fix, and runs it for you. Free Readiness Map.",
   },
 };
 

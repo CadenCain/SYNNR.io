@@ -20,10 +20,9 @@ export async function SiteNav() {
       <div className="nav-pill">
         <a className="brand" href="/" aria-label="SYNNR">{MARK}<span className="wordmark">SYNNR</span></a>
         <nav className="nav-links">
-          <a href="/apps">Apps</a>
-          <a href="/services">Custom Builds</a>
-          <a href="/apps/tallyshot#pricing">Pricing</a>
-          <a href="/glossary">Glossary</a>
+          <a href="/#how">How it works</a>
+          <a href="/#fix">What we fix</a>
+          <a href="/#faq">FAQ</a>
         </nav>
         <div className="nav-cta">
           {nav ? (
@@ -34,7 +33,7 @@ export async function SiteNav() {
           ) : (
             <>
               <a href="/login" className="btn btn-ghost btn-sm nav-signin">Sign in</a>
-              <a href="/apps" className="btn btn-primary btn-sm">Browse apps</a>
+              <a href="/readiness-map" className="btn btn-primary btn-sm">Free Readiness Map</a>
             </>
           )}
           <label className="nav-burger" htmlFor="navMenu" aria-label="Open menu">
@@ -43,11 +42,10 @@ export async function SiteNav() {
         </div>
         <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
         <nav className="nav-mobile">
-          <a href="/apps">Apps</a>
-          <a href="/services">Custom Builds</a>
-          <a href="/apps/tallyshot#pricing">Pricing</a>
-          <a href="/glossary">Glossary</a>
-          {nav ? <a href="/dashboard">Dashboard</a> : <a href="/login">Sign in</a>}
+          <a href="/#how">How it works</a>
+          <a href="/#fix">What we fix</a>
+          <a href="/#faq">FAQ</a>
+          {nav ? <a href="/dashboard">Dashboard</a> : <><a href="/login">Sign in</a><a href="/readiness-map">Free Readiness Map</a></>}
         </nav>
       </div>
     </header>
@@ -61,14 +59,14 @@ export function SiteFooter() {
         <div className="footer-grid">
           <div>
             <a className="brand" href="/">{MARK}<span className="wordmark">SYNNR</span></a>
-            <p className="blurb">The app platform for oilfield service companies. Purpose-built apps, ready to use — pick one, start in minutes.</p>
+            <p className="blurb">Operations partner for oilfield &amp; blue-collar service shops. We find where your jobs leak money, build the fix, and run it for you.</p>
           </div>
-          <div><h5>Apps</h5><ul><li><a href="/apps/tallyshot">TallyShot</a></li><li><a href="/apps">All apps</a></li><li><a href="/services">Custom Builds</a></li><li><a href="/apps/tallyshot#pricing">Pricing</a></li><li><a href="/glossary">Glossary</a></li></ul></div>
-          <div><h5>Company</h5><ul><li><a href="/login">Sign in</a></li><li><a href="/ingest">Live demo</a></li><li><a href="mailto:cadencain@darkstarops.com">Contact</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+          <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#fix">What we fix</a></li><li><a href="/#faq">FAQ</a></li><li><a href="/readiness-map">Free Readiness Map</a></li></ul></div>
+          <div><h5>Company</h5><ul><li><a href="/login">Client sign in</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 SYNNR</span>
-          <span>The boring operational stuff, finally done right.</span>
+          <span>Operations systems for service shops.</span>
         </div>
       </div>
     </footer>

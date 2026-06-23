@@ -26,6 +26,10 @@ export async function POST(req: Request) {
   const company = String(form.get("company") ?? "").trim();
   const email = String(form.get("email") ?? "").trim();
   const bottleneck = String(form.get("bottleneck") ?? "").trim();
+  const role = String(form.get("role") ?? "").trim();
+  const runs = String(form.get("runs") ?? "").trim();   // wireline / coil / cementing / construction / other
+  const hurts = String(form.get("hurts") ?? "").trim(); // tools / certs / paperwork / dispatch / billing
+  const phone = String(form.get("phone") ?? "").trim();
   const file = form.get("file");
 
   if (!name) return NextResponse.json({ ok: false, error: "Name is required." }, { status: 400 });
@@ -54,8 +58,10 @@ export async function POST(req: Request) {
       name,
       company: company || null,
       email,
-      bottleneck,
-      source: "services_audit",
+      phone: phone || null,
+      service_type: runs || null,
+      bottleneck: [role && `Role: ${role}`, hurts && `Hurts most: ${hurts}`, bottleneck].filter(Boolean).join("\n"),
+      source: "readiness_map",
     } as never);
     stored = !error;
     if (error) console.error("[services-lead] store failed:", error.message);
@@ -69,13 +75,17 @@ export async function POST(req: Request) {
       const { Resend } = await import("resend");
       const resend = new Resend(resendKey);
       const text = [
-        `New Operations Audit request`,
+        `New Readiness Map request`,
         ``,
         `Name:    ${name}`,
         `Company: ${company || "—"}`,
+        `Role:    ${role || "—"}`,
+        `Runs:    ${runs || "—"}`,
+        `Hurts:   ${hurts || "—"}`,
         `Email:   ${email}`,
+        `Phone:   ${phone || "—"}`,
         ``,
-        `Bottleneck:`,
+        `Job packet / where it hurts:`,
         bottleneck,
         ``,
         attachNote,
@@ -84,7 +94,7 @@ export async function POST(req: Request) {
         from: FROM,
         to: TO,
         replyTo: email,
-        subject: `Operations Audit — ${company || name}`,
+        subject: `Readiness Map — ${company || name}`,
         text,
         ...(attachment ? { attachments: [attachment] } : {}),
       });
@@ -97,7 +107,7 @@ export async function POST(req: Request) {
 
   // Mark whether the email went out (best-effort).
   if (admin && stored) {
-    await admin.from("audit_requests").update({ emailed } as never).eq("email", email).eq("source", "services_audit").is("emailed", null);
+    await admin.from("audit_requests").update({ emailed } as never).eq("email", email).eq("source", "readiness_map").is("emailed", null);
   }
 
   // Never break the funnel: as long as we stored OR emailed, it's a success.
