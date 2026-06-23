@@ -10,6 +10,12 @@ import { getProduct, isSelfServe } from "@/lib/catalog";
  * so the checkout page falls back to the demo flow.
  */
 export async function POST(req: Request) {
+  // PARKED: SYNNR is a managed service — no self-serve checkout. This endpoint
+  // is disabled so it can never create a Stripe checkout / take a payment.
+  // Re-enable by setting ENABLE_CHECKOUT=1 (kept reversible per "park, don't delete").
+  if (process.env.ENABLE_CHECKOUT !== "1") {
+    return NextResponse.json({ ok: false, error: "Checkout is disabled — SYNNR is a managed service. Book a Readiness Call." }, { status: 410 });
+  }
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* defaults */ }
 

@@ -8,6 +8,11 @@ import { getServerSupabase } from "@/lib/supabase/server";
  * Returns configured:false when Stripe isn't wired yet.
  */
 export async function POST(req: Request) {
+  // PARKED: managed-service model — no self-serve billing portal. Disabled so it
+  // can't touch Stripe. Re-enable with ENABLE_CHECKOUT=1 (reversible).
+  if (process.env.ENABLE_CHECKOUT !== "1") {
+    return NextResponse.json({ ok: false, error: "Billing portal is disabled." }, { status: 410 });
+  }
   const stripe = getStripe();
   if (!stripe) return NextResponse.json({ ok: true, configured: false });
 

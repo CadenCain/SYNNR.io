@@ -21,6 +21,7 @@ export default function ReadinessForm() {
       const d = await r.json();
       if (!r.ok || !d.ok) { setErr(d.error || "Something went wrong — email cadencain@darkstarops.com."); setBusy(false); return; }
       setDone(true);
+      setTimeout(() => document.getElementById("pick-time")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
     } catch {
       setErr("Couldn't reach SYNNR — try again, or email cadencain@darkstarops.com.");
       setBusy(false);
@@ -30,8 +31,8 @@ export default function ReadinessForm() {
   if (done) {
     return (
       <div className="svc-form-done">
-        <b>Got it.</b>
-        <p>Now pick a time below and we&apos;ll dig into your biggest money leak on the call. If you&apos;d rather, just reply to the email we send.</p>
+        <b>Step 1 done ✓</b>
+        <p>Now grab a time in step 2 below and we&apos;ll dig into your biggest money leak on the call. Prefer email? Just reply to the note we send.</p>
       </div>
     );
   }
