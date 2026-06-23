@@ -10,7 +10,6 @@ export default function ReadinessForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
-  const [fileName, setFileName] = useState("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,7 +31,7 @@ export default function ReadinessForm() {
     return (
       <div className="svc-form-done">
         <b>Got it.</b>
-        <p>I&apos;ll map where your jobs are leaking money and email you this week.</p>
+        <p>Now pick a time below and we&apos;ll dig into your biggest money leak on the call. If you&apos;d rather, just reply to the email we send.</p>
       </div>
     );
   }
@@ -59,14 +58,8 @@ export default function ReadinessForm() {
         </select>
       </label>
       <label>
-        Describe one real job packet or loadout — what goes wrong with it?
-        <textarea name="bottleneck" required rows={4} placeholder="A line or two is plenty. Or just upload it below." />
-      </label>
-      <label className="svc-file">
-        <span>Upload one job packet / loadout list and we&apos;ll map it. <em>(optional — PDF, JPG, PNG, XLSX, CSV)</em></span>
-        <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.csv,application/pdf,image/jpeg,image/png"
-          onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")} />
-        {fileName ? <span className="svc-file-name">{fileName}</span> : null}
+        What made you reach out — what&apos;s the headache?
+        <textarea name="bottleneck" required rows={4} placeholder="A line or two is plenty. No job packet needed — we'll dig in on the call." />
       </label>
       <div className="svc-form-row">
         <label>Best email<input name="email" type="email" required autoComplete="email" placeholder="you@shop.com" /></label>
@@ -74,7 +67,7 @@ export default function ReadinessForm() {
       </div>
       {err ? <p className="svc-form-err">{err}</p> : null}
       <button className="btn btn-primary" type="submit" disabled={busy}>
-        {busy ? "Sending…" : "Get my free Readiness Map"}
+        {busy ? "Sending…" : "Send my details →"}
       </button>
     </form>
   );

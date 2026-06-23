@@ -10,7 +10,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
  *
  * Accepts multipart/form-data: name, company, email, bottleneck, file (optional).
  */
-const TO = "cadencain@synnr.io";
+const TO = "cadencain@darkstarops.com";
 const FROM = "SYNNR <noreply@synnr.io>";
 const MAX_ATTACH_BYTES = 10 * 1024 * 1024; // 10 MB
 

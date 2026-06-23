@@ -1,0 +1,6 @@
+/* Readiness Call page — Calendly section + placeholder. Inherits .mkt tokens. */
+.mkt .rm-cal { margin-top: 34px; }
+.mkt .rm-cal-placeholder { border: 1px dashed var(--line-2); border-radius: var(--radius); background: var(--card); padding: 40px 24px; text-align: center; }
+.mkt .rm-cal-placeholder b { display: block; font-size: 16px; color: var(--fg); margin-bottom: 6px; }
+.mkt .rm-cal-placeholder p { color: var(--fg-dim); font-size: 14px; line-height: 1.55; max-width: 440px; margin: 0 auto; }
+.mkt .calendly-inline-widget { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }

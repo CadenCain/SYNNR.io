@@ -26,8 +26,7 @@ export const MARKETING_HTML = `
       <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-cta">
-      <a href="/login" class="btn btn-ghost btn-sm nav-signin">Sign in</a>
-      <a href="/readiness-map" class="btn btn-primary btn-sm">Free Readiness Map</a>
+      <a href="/readiness-map" class="btn btn-primary btn-sm">Book a call</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
@@ -36,7 +35,7 @@ export const MARKETING_HTML = `
       <a href="#how">How it works</a>
       <a href="#fix">What we fix</a>
       <a href="#faq">FAQ</a>
-      <a href="/readiness-map">Free Readiness Map</a>
+      <a href="/readiness-map">Book your free Readiness Call</a>
     </nav>
   </div>
 </header>
@@ -49,11 +48,11 @@ export const MARKETING_HTML = `
     <h1 class="display reveal" data-d="1">Your jobs are leaking money<br/>in the <span class="grad">boring stuff</span></h1>
     <p class="lede reveal" data-d="2">Missing tools. Wrong trucks. Invoices that get kicked back. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you — so you don't have to staff it.</p>
     <div class="hero-cta reveal" data-d="3">
-      <a href="/readiness-map" class="btn btn-primary">Get your free Readiness Map
+      <a href="/readiness-map" class="btn btn-primary">Book your free Readiness Call
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Send one real job packet. We'll show you what it's costing you. No charge, no pitch deck.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">15 minutes. Tell us how your shop runs and we'll pinpoint your biggest money leak — free. No packet to dig up, no pitch.</p>
   </div>
 </section>
 
@@ -78,7 +77,7 @@ export const MARKETING_HTML = `
     <h2 class="h2">Map it. Build the fix. Run it for you.</h2>
   </div>
   <div class="steps3">
-    <div class="step3c"><span class="step3n">1</span><h3>Send us one job packet — free.</h3><p>We map exactly where it's costing you, and put a dollar figure on it. That's the Readiness Map.</p></div>
+    <div class="step3c"><span class="step3n">1</span><h3>Hop on a 15-min call — free.</h3><p>Tell us how your shop runs and where it hurts. We pinpoint your biggest money leak — that's your Readiness Map.</p></div>
     <div class="step3c"><span class="step3n">2</span><h3>We build the fix.</h3><p>A system tied to your actual jobs, specs, and rate sheets — built around your shop, not a template.</p></div>
     <div class="step3c"><span class="step3n">3</span><h3>We run it for you.</h3><p>Every week — so the misses get caught and you don't have to hire and train someone to watch it.</p></div>
   </div>
@@ -137,11 +136,11 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="final-card">
       <div class="glow"></div>
-      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free Readiness Map</span>
-      <h2 class="display">Send us one job packet.</h2>
-      <p class="lede" style="margin:14px auto 0">We'll show you what it's costing you — free. No account, no pitch.</p>
+      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free Readiness Call</span>
+      <h2 class="display">Tell us about your operation.</h2>
+      <p class="lede" style="margin:14px auto 0">We'll find your biggest money leak — free. 15 minutes, no packet to dig up, no pitch.</p>
       <div class="hero-cta" style="justify-content:center;margin-top:26px">
-        <a href="/readiness-map" class="btn btn-primary">Get your free Readiness Map
+        <a href="/readiness-map" class="btn btn-primary">Book your free Readiness Call
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
       </div>
