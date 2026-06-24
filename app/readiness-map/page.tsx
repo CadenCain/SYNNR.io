@@ -13,6 +13,9 @@ export const metadata = {
 };
 
 export default function ReadinessMapPage() {
+  // Copy must match what actually happens: instant booking only when Calendly is wired.
+  const calWired = !!process.env.NEXT_PUBLIC_CALENDLY_URL;
+
   return (
     <div className="mkt">
       <SiteNav />
@@ -22,8 +25,9 @@ export default function ReadinessMapPage() {
             <span className="eyebrow">Free Readiness Call</span>
             <h1 className="h2" style={{ marginTop: 8 }}>Book your free Readiness Call</h1>
             <p className="lede" style={{ marginInline: 0 }}>
-              A free 15-minute call. Two quick steps and you&apos;re booked — tell us about your shop, then grab a time.
-              We&apos;ll come ready to pinpoint your biggest money leak. No packet to dig up, no pitch.
+              {calWired
+                ? "A free 15-minute call. Two quick steps and you're booked — tell us about your shop, then grab a time. We'll come ready to pinpoint your biggest money leak. No packet to dig up, no pitch."
+                : "A free 15-minute call. Tell us about your shop and we'll email you a time this week. We'll come ready to pinpoint your biggest money leak. No packet to dig up, no pitch."}
             </p>
           </div>
 
@@ -38,7 +42,10 @@ export default function ReadinessMapPage() {
             <div className="rm-step" id="pick-time">
               <div className="rm-step-h">
                 <span className="rm-num">2</span>
-                <div><b>Pick a time</b><span>Grab a 15-minute slot that works for you</span></div>
+                <div>
+                  <b>{calWired ? "Pick a time" : "We'll email you a time"}</b>
+                  <span>{calWired ? "Grab a 15-minute slot that works for you" : "Send your details above and we'll reach out this week to schedule"}</span>
+                </div>
               </div>
               <CalendlyEmbed />
             </div>

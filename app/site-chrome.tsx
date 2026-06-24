@@ -47,7 +47,7 @@ export function SiteFooter() {
             <a className="brand" href="/">{MARK}<span className="wordmark">SYNNR</span></a>
             <p className="blurb">Operations partner for oilfield &amp; blue-collar service shops. We find where your jobs leak money, build the fix, and run it for you.</p>
           </div>
-          <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#fix">What we fix</a></li><li><a href="/#faq">FAQ</a></li><li><a href="/readiness-map">Free Readiness Map</a></li></ul></div>
+          <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#fix">What we fix</a></li><li><a href="/#faq">FAQ</a></li><li><a href="/readiness-map">Book a call</a></li></ul></div>
           <div><h5>Company</h5><ul><li><a href="/readiness-map">Book a call</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">

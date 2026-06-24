@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Your jobs leak money in the boring stuff — missing tools, wrong trucks, cert misses, kicked-back invoices. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you every week. Free Readiness Map first.",
+    "Your jobs leak money in the boring stuff — missing tools, wrong trucks, cert misses, kicked-back invoices. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you every week. Free Readiness Call first.",
   keywords: [
     "oilfield operations partner", "managed operations service", "wireline", "coil tubing", "cementing",
     "field operations", "readiness", "Permian", "service shop operations", "loadout cert tracking",
@@ -38,14 +38,14 @@ export const metadata: Metadata = {
     siteName: "SYNNR",
     title: "SYNNR — operations partner for oilfield service shops",
     description:
-      "We find where your jobs leak money — missing tools, cert misses, kicked-back invoices — build the system that stops it, and run it for you. Free Readiness Map first.",
+      "We find where your jobs leak money — missing tools, cert misses, kicked-back invoices — build the system that stops it, and run it for you. Free Readiness Call first.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
     title: "SYNNR — operations partner for oilfield service shops",
     description:
-      "Your jobs are leaking money in the boring stuff. SYNNR finds it, builds the fix, and runs it for you. Free Readiness Map.",
+      "Your jobs are leaking money in the boring stuff. SYNNR finds it, builds the fix, and runs it for you. Free Readiness Call.",
   },
 };
 

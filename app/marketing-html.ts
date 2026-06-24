@@ -115,7 +115,7 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Proof</span>
     <h2 class="h2">Real results, soon.</h2>
-    <p class="lede" style="margin-inline:0">We're onboarding our first design-partner shops now. Before-and-afters and real numbers go here once they're real — we don't make them up. Want to be one of the first? The Readiness Map is free.</p>
+    <p class="lede" style="margin-inline:0">We're onboarding our first design-partner shops now. Before-and-afters and real numbers go here once they're real — we don't make them up. Want to be one of the first? The Readiness Call is free.</p>
   </div>
 </section>
 
@@ -125,9 +125,9 @@ export const MARKETING_HTML = `
     <div class="faq">
       <div class="qa"><button>Do I need to be technical?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>No. You show us the problem, we handle the build and run it. You never touch the tech.</p></div></div>
       <div class="qa"><button>Are you a software company?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>No. We're an operations partner. The tech is just how we fix it — it's invisible plumbing.</p></div></div>
-      <div class="qa"><button>What's it cost?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Depends what's actually broken — that's what the free Readiness Map is for. No blind quotes. We price on what the leaks cost you, not on hours.</p></div></div>
+      <div class="qa"><button>What's it cost?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Depends what's actually broken — that's what the free Readiness Call is for. No blind quotes. We price on what the leaks cost you, not on hours.</p></div></div>
       <div class="qa"><button>Is my data safe?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Yes. Handled carefully, human in the loop, nothing leaves as final until it's checked.</p></div></div>
-      <div class="qa"><button>How fast?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>First Map in days. First build in weeks, not months.</p></div></div>
+      <div class="qa"><button>How fast?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>We map your biggest leak on the call. First build in weeks, not months.</p></div></div>
     </div>
   </div>
 </section>

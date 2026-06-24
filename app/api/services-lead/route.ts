@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       const { Resend } = await import("resend");
       const resend = new Resend(resendKey);
       const text = [
-        `New Readiness Map request`,
+        `New Readiness Call request`,
         ``,
         `Name:    ${name}`,
         `Company: ${company || "—"}`,
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
         from: FROM,
         to: TO,
         replyTo: email,
-        subject: `Readiness Map — ${company || name}`,
+        subject: `Readiness Call — ${company || name}`,
         text,
         ...(attachment ? { attachments: [attachment] } : {}),
       });

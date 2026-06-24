@@ -4,8 +4,9 @@ import { useState } from "react";
 
 const RUNS = ["Wireline", "Coil tubing", "Cementing", "Construction / sub-trade", "Other"];
 const HURTS = ["Missing tools / loadouts", "Certs & inspections", "Paperwork & tallies", "Dispatch / scheduling", "Billing / kickbacks"];
+const CAL_WIRED = !!process.env.NEXT_PUBLIC_CALENDLY_URL;
 
-/** Free Readiness Map intake → /api/services-lead (stores + emails the founder). */
+/** Free Readiness Call intake → /api/services-lead (stores + emails the founder). */
 export default function ReadinessForm() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -31,8 +32,12 @@ export default function ReadinessForm() {
   if (done) {
     return (
       <div className="svc-form-done">
-        <b>Step 1 done ✓</b>
-        <p>Now grab a time in step 2 below and we&apos;ll dig into your biggest money leak on the call. Prefer email? Just reply to the note we send.</p>
+        <b>Got it ✓</b>
+        <p>
+          {CAL_WIRED
+            ? "Now grab a time in step 2 below and we'll dig into your biggest money leak on the call. Prefer email? Just reply to the note we send."
+            : "We'll email you this week to lock in a 15-minute Readiness Call and dig into your biggest money leak. Prefer to reply? Just answer the note we send."}
+        </p>
       </div>
     );
   }
