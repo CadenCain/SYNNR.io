@@ -150,9 +150,15 @@
   padding:11px 11px 11px 20px; border-radius: var(--radius-pill);
   border:1px solid transparent; transition: all .3s var(--ease);
 }
-.mkt .nav.scrolled .nav-pill {
-  background: rgba(10,11,14,.7); backdrop-filter: blur(18px) saturate(140%);
+.mkt .nav.scrolled .nav-pill,
+.mkt .nav.nav-static .nav-pill {
+  background: rgba(10,11,14,.92); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
   border-color: var(--line); box-shadow: 0 12px 40px -18px rgba(0,0,0,.8);
+}
+/* Inner pages: back the entire fixed bar so floating-pill strip doesn't bleed. */
+.mkt .nav.nav-static {
+  background: rgba(10,11,14,.88); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--line);
 }
 .mkt .brand { display:flex; align-items:center; gap:10px; }
 .mkt .brand .mark { width:24px; height:24px; flex:none; }

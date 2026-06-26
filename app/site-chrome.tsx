@@ -16,9 +16,10 @@ export function SiteNav() {
       <div className="nav-pill">
         <a className="brand" href="/" aria-label="SYNNR">{MARK}<span className="wordmark">SYNNR</span></a>
         <nav className="nav-links">
+          <a href="/#problem">The problem</a>
           <a href="/#how">How it works</a>
-          <a href="/#fix">What we fix</a>
-          <a href="/#faq">FAQ</a>
+          <a href="/#track">What we track</a>
+          <a href="/#why">Why SYNNR</a>
         </nav>
         <div className="nav-cta">
           <a href="/readiness-audit" className="btn btn-primary btn-sm">Free readiness audit</a>
