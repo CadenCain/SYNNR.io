@@ -138,6 +138,22 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
+<section class="section container" id="miss">
+  <div class="head" style="text-align:left;margin-inline:0">
+    <span class="eyebrow">Cost of a miss</span>
+    <h2 class="h2">Cheaper than one bad day.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">You already know what a miss costs. We're a fraction of any of them.</p>
+  </div>
+  <ul class="miss-list" aria-label="What a single miss costs">
+    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A day of NPT sitting on location</span></li>
+    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A hotshot run to chase down what got left behind</span></li>
+    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A failed DOT inspection that sidelines a truck</span></li>
+    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A failed safety audit — fines, shutdowns, paperwork hell</span></li>
+    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>Getting dropped from an operator's vendor list</span></li>
+  </ul>
+  <p class="miss-kicker"><b>One of these costs more than a year of SYNNR.</b> We're the insurance against all of them.</p>
+</section>
+
 <section class="section final" id="cta">
   <div class="container">
     <div class="final-card">

@@ -215,6 +215,34 @@
 .mkt .whyc h3 { font-size:16px; font-weight:600; margin:0 0 6px; }
 .mkt .whyc p { color:var(--fg-dim); line-height:1.55; font-size:14px; margin:0; }
 
+/* ---- cost-of-miss list ---- */
+.mkt .miss-list { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+.mkt .miss-item {
+  display:flex; align-items:flex-start; gap:14px;
+  padding:16px 18px; border:1px solid var(--line); border-radius:var(--radius);
+  background:var(--card); color:var(--fg);
+  font-size:15.5px; line-height:1.45;
+}
+.mkt .miss-item .miss-x {
+  flex:none; width:22px; height:22px; border-radius:6px;
+  display:grid; place-items:center;
+  background: rgba(var(--accent-rgb),.10); color: var(--accent-ink);
+  border:1px solid rgba(var(--accent-rgb),.22);
+  font-size:13px; font-weight:600; margin-top:1px;
+}
+.mkt .miss-kicker {
+  margin-top:22px; padding:20px 22px;
+  border:1px solid rgba(var(--accent-rgb),.30);
+  border-radius:var(--radius);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),.10), rgba(var(--accent-rgb),.03));
+  color:var(--fg); font-size:17px; line-height:1.5;
+}
+.mkt .miss-kicker b { color: var(--accent-ink); font-weight:600; }
+@media (max-width:560px){
+  .mkt .miss-item { font-size:15px; padding:14px 16px; }
+  .mkt .miss-kicker { font-size:16px; padding:18px; }
+}
+
 .mkt .faq { max-width:760px; margin:0 auto; }
 
 /* ---- hero ---- */
