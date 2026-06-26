@@ -1,7 +1,7 @@
 /**
  * Shared marketing nav + footer for the public service site. No "Dashboard" or
- * "Sign in" — SYNNR is a service, not a software login. Every CTA books the
- * free Readiness Call. The homepage keeps its bespoke animated header.
+ * "Sign in" — SYNNR is a service, not a software login. Every CTA is the
+ * free readiness audit. The homepage keeps its bespoke animated header.
  */
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -21,7 +21,7 @@ export function SiteNav() {
           <a href="/#faq">FAQ</a>
         </nav>
         <div className="nav-cta">
-          <a href="/readiness-map" className="btn btn-primary btn-sm">Book a call</a>
+          <a href="/readiness-audit" className="btn btn-primary btn-sm">Free readiness audit</a>
           <label className="nav-burger" htmlFor="navMenu" aria-label="Open menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </label>
@@ -29,9 +29,9 @@ export function SiteNav() {
         <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
         <nav className="nav-mobile">
           <a href="/#how">How it works</a>
-          <a href="/#fix">What we fix</a>
-          <a href="/#faq">FAQ</a>
-          <a href="/readiness-map">Book your free Readiness Call</a>
+          <a href="/#track">What we track</a>
+          <a href="/#why">Why SYNNR</a>
+          <a href="/readiness-audit">Get your free readiness audit</a>
         </nav>
       </div>
     </header>
@@ -45,14 +45,14 @@ export function SiteFooter() {
         <div className="footer-grid">
           <div>
             <a className="brand" href="/">{MARK}<span className="wordmark">SYNNR</span></a>
-            <p className="blurb">Operations partner for oilfield &amp; blue-collar service shops. We find where your jobs leak money, build the fix, and run it for you.</p>
+            <p className="blurb">Equipment &amp; cert readiness tracking for oilfield service shops, done for you. Never miss an expiration or asset again.</p>
           </div>
-          <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#fix">What we fix</a></li><li><a href="/#faq">FAQ</a></li><li><a href="/readiness-map">Book a call</a></li></ul></div>
-          <div><h5>Company</h5><ul><li><a href="/readiness-map">Book a call</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+          <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#track">What we track</a></li><li><a href="/#why">Why SYNNR</a></li><li><a href="/readiness-audit">Free readiness audit</a></li></ul></div>
+          <div><h5>Company</h5><ul><li><a href="/readiness-audit">Free readiness audit</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 SYNNR</span>
-          <span>Operations systems for service shops.</span>
+          <span>Equipment &amp; cert readiness, done for you.</span>
         </div>
       </div>
     </footer>

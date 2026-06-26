@@ -1,0 +1,46 @@
+.ra-wrap {
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.ra-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.ra-form-done {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.ra-form-done b {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+
+.ra-form-done p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--fg-secondary);
+}
+
+@media (max-width: 640px) {
+  .ra-wrap {
+    max-width: 100%;
+    padding-inline: 16px;
+  }
+
+  .ra-form-done {
+    padding: 24px 20px;
+  }
+}

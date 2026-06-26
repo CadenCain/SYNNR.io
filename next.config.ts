@@ -21,7 +21,12 @@ const PARKED = [
 
 const nextConfig: NextConfig = {
   async redirects() {
-    return PARKED.map((source) => ({ source, destination: "/", permanent: false }));
+    return [
+      // Redirect old /readiness-map to new /readiness-audit
+      { source: "/readiness-map", destination: "/readiness-audit", permanent: false },
+      // Park old SaaS marketplace/app/auth routes
+      ...PARKED.map((source) => ({ source, destination: "/", permanent: false })),
+    ];
   },
 };
 

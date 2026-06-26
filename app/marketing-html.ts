@@ -1,7 +1,7 @@
-// SYNNR marketing page — managed-service operations partner for oilfield &
-// blue-collar service shops. Sells outcomes (recurring run-it-for-you), not
-// software. Every CTA → the free Readiness Map intake. Rendered via
-// dangerouslySetInnerHTML and driven by MarketingScripts.
+// SYNNR marketing page — done-for-you equipment & cert readiness tracking for
+// oilfield service shops. We track every asset + cert, alert before anything
+// lapses, run it for the shop. Operator voice. Every CTA → the free readiness
+// audit (email funnel). Rendered via dangerouslySetInnerHTML + MarketingScripts.
 export const MARKETING_HTML = `
 <div class="page-atmosphere" aria-hidden="true">
   <div class="bg-grid"></div>
@@ -22,20 +22,20 @@ export const MARKETING_HTML = `
     <nav class="nav-links">
       <a href="#problem">The problem</a>
       <a href="#how">How it works</a>
-      <a href="#fix">What we fix</a>
-      <a href="#faq">FAQ</a>
+      <a href="#track">What we track</a>
+      <a href="#why">Why SYNNR</a>
     </nav>
     <div class="nav-cta">
-      <a href="/readiness-map" class="btn btn-primary btn-sm">Book a call</a>
+      <a href="/readiness-audit" class="btn btn-primary btn-sm">Free readiness audit</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
     <nav class="nav-mobile">
       <a href="#problem">The problem</a>
       <a href="#how">How it works</a>
-      <a href="#fix">What we fix</a>
-      <a href="#faq">FAQ</a>
-      <a href="/readiness-map">Book your free Readiness Call</a>
+      <a href="#track">What we track</a>
+      <a href="#why">Why SYNNR</a>
+      <a href="/readiness-audit">Free readiness audit</a>
     </nav>
   </div>
 </header>
@@ -44,15 +44,15 @@ export const MARKETING_HTML = `
 
 <section class="hero section">
   <div class="container">
-    <span class="pill-badge reveal"><span class="d"></span>Operations partner for service shops</span>
-    <h1 class="display reveal" data-d="1">Your jobs are leaking money<br/>in the <span class="grad">boring stuff</span></h1>
-    <p class="lede reveal" data-d="2">Missing tools. Wrong trucks. Invoices that get kicked back. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you — so you don't have to staff it.</p>
+    <span class="pill-badge reveal"><span class="d"></span>Equipment &amp; cert readiness for oilfield service shops</span>
+    <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling <span class="grad">ready</span></h1>
+    <p class="lede reveal" data-d="2">Every asset and cert in your yard — tools, BOPs, trailers, equipment — tracked in one place, with a text before anything expires or goes missing. No more 5am scrambles. No more NPT. No more looking bad to the operator.</p>
     <div class="hero-cta reveal" data-d="3">
-      <a href="/readiness-map" class="btn btn-primary">Book your free Readiness Call
+      <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">15 minutes. Tell us how your shop runs and we'll pinpoint your biggest money leak — free. No packet to dig up, no pitch.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Send your list or we log it on-site. We show you what's expired, expiring, and missing — free.</p>
   </div>
 </section>
 
@@ -60,75 +60,81 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">The problem</span>
     <h2 class="h2">You don't lose money on the big stuff.</h2>
-    <p class="lede" style="margin-inline:0">You lose it on the boring failures nobody's counting:</p>
   </div>
-  <ul class="leak-list">
-    <li><span class="lk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16V6h11v10M14 9h4l3 3v4h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>A truck rolls out missing one part — now it's a hotshot and a half-day gone.</li>
-    <li><span class="lk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V6Z"/><path d="M9 12l2 2 4-4"/></svg></span>A cert lapsed three days ago and the crew gets turned around at the gate.</li>
-    <li><span class="lk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4Z"/><path d="M14 4v6h6"/></svg></span>A tally gets re-keyed into Excel wrong, the invoice kicks back, the day vanishes.</li>
-    <li><span class="lk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></span>Four people "checked" and everybody trusted the last guy.</li>
-  </ul>
-  <p class="lede" style="margin-inline:0;margin-top:8px">None of it is a skill problem. It's that <b>nothing catches it before the truck rolls.</b></p>
+  <p class="lede" style="margin-inline:0;max-width:72ch">
+    You lose it at 5am, when a crew's gotta roll and the gear's not there — or it's the wrong one, or the BOP cert
+    expired and nobody knew. Right now your whole yard lives in somebody's head, a whiteboard, and three spreadsheets.
+    So the failure isn't an <b>if</b>, it's a <b>when</b>: the crew rolls out late or with the wrong gear, you eat the
+    NPT, you pay for the hotshot, and you look unreliable to the operator — who's got a long memory and a short vendor
+    list. Every shop deals with this. The only question is how much it's quietly costing you.
+  </p>
+</section>
+
+<section class="section container" id="why-need">
+  <div class="head" style="text-align:left;margin-inline:0">
+    <span class="eyebrow">Why you need it</span>
+    <h2 class="h2">You're already buried.</h2>
+  </div>
+  <p class="lede" style="margin-inline:0;max-width:72ch">
+    The last thing you've got time for is walking the yard checking what's expired, what's out, or what's even here —
+    so you don't, until it bites you. SYNNR takes it off your plate completely. One live view of every asset and cert,
+    a text before anything goes down, and a check-out/check-in system so you always know what's out and what's in the
+    yard. You stop checking. You stop wondering. You stop getting surprised.
+  </p>
+  <div class="callout">One prevented NPT day pays for it ten times over. It's not a cost — it's insurance against a bleed you've already got.</div>
 </section>
 
 <section class="section container" id="how">
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">How it works</span>
-    <h2 class="h2">Map it. Build the fix. Run it for you.</h2>
+    <h2 class="h2">We set it up. We run it. You get the text.</h2>
   </div>
   <div class="steps3">
-    <div class="step3c"><span class="step3n">1</span><h3>Hop on a 15-min call — free.</h3><p>Tell us how your shop runs and where it hurts. We pinpoint your biggest money leak — that's your Readiness Map.</p></div>
-    <div class="step3c"><span class="step3n">2</span><h3>We build the fix.</h3><p>A system tied to your actual jobs, specs, and rate sheets — built around your shop, not a template.</p></div>
-    <div class="step3c"><span class="step3n">3</span><h3>We run it for you.</h3><p>Every week — so the misses get caught and you don't have to hire and train someone to watch it.</p></div>
+    <div class="step3c"><span class="step3n">1</span><h3>Free readiness audit</h3><p>Send us your list or we log it on-site. We show you what's expired, expiring, and missing.</p></div>
+    <div class="step3c"><span class="step3n">2</span><h3>We build your readiness system</h3><p>Every asset and cert — with status, location, and expiration dates. Done for you.</p></div>
+    <div class="step3c"><span class="step3n">3</span><h3>You're covered</h3><p>Automatic text alerts before anything lapses, check-out/check-in so nothing walks off, one view across every yard. We watch it. You get the text.</p></div>
   </div>
 </section>
 
-<section class="section container" id="fix">
+<section class="section container" id="track">
   <div class="head" style="text-align:left;margin-inline:0">
-    <span class="eyebrow">What we fix</span>
-    <h2 class="h2">The costs nobody's counting.</h2>
+    <span class="eyebrow">What we track</span>
+    <h2 class="h2">Everything that has to be ready.</h2>
   </div>
   <div class="fixgrid">
-    <div class="fixc"><h3>Paperwork &amp; tallies</h3><p>The re-keying that eats hours and kicks back invoices.</p></div>
-    <div class="fixc"><h3>Loadouts that roll out wrong</h3><p>The truck leaves missing the one tool the job needed.</p></div>
-    <div class="fixc"><h3>Cert &amp; paperwork misses</h3><p>The lapse that stops a job cold on location.</p></div>
-    <div class="fixc"><h3>Dispatch chaos</h3><p>Schedules that don't know if the job's actually ready.</p></div>
-    <div class="fixc"><h3>Invoice kickbacks</h3><p>Jobs that bill with weak backup and bounce back.</p></div>
-    <div class="fixc"><h3>The trips back</h3><p>Hotshots, return runs, lost photos — the quiet bleed.</p></div>
+    <div class="fixc"><h3>Equipment &amp; assets</h3><p>Tools, BOPs, trailers — anything in the yard.</p></div>
+    <div class="fixc"><h3>Certs &amp; inspections</h3><p>Crew certs (H2S, well control) and equipment tests (BOP tests, etc.).</p></div>
+    <div class="fixc"><h3>Check-out / check-in</h3><p>Who's got it, where it is, what's back.</p></div>
+    <div class="fixc"><h3>Last-tested &amp; expiration dates</h3><p>Flagged before they lapse — not after.</p></div>
   </div>
 </section>
 
 <section class="section container" id="why">
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Why SYNNR</span>
-    <h2 class="h2">Built and run by an operator.</h2>
+    <h2 class="h2">Built by someone who's lived it.</h2>
   </div>
   <div class="whygrid">
-    <div class="whyc"><h3>An operator, not a software vendor</h3><p>Field background, not a login you have to figure out yourself.</p></div>
-    <div class="whyc"><h3>Built around your shop</h3><p>Your specs, your rate sheets, your rules — not a one-size template.</p></div>
-    <div class="whyc"><h3>We run it for you</h3><p>You get the result without hiring and training someone new.</p></div>
-    <div class="whyc"><h3>Human-checked, field-tested</h3><p>Nothing goes live until it survives a real yard.</p></div>
+    <div class="whyc"><h3>Done for you</h3><p>You never log into anything or maintain a thing. We run it.</p></div>
+    <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble.</p></div>
+    <div class="whyc"><h3>Proactive alerts</h3><p>&ldquo;BOP #3 expires in 10 days&rdquo; — before it's a problem.</p></div>
+    <div class="whyc"><h3>Every yard, one view</h3><p>All your locations, all your gear, one place.</p></div>
+  </div>
+</section>
+
+<section class="section container" id="pricing">
+  <div class="head" style="text-align:left;margin-inline:0">
+    <span class="eyebrow">Pricing</span>
+    <h2 class="h2">Priced to your operation.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, priced per asset and per yard — it scales with your shop. You get the number after the free audit, once we both know exactly what we're tracking. One prevented NPT day covers it.</p>
   </div>
 </section>
 
 <section class="section container" id="proof">
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Proof</span>
-    <h2 class="h2">Real results, soon.</h2>
-    <p class="lede" style="margin-inline:0">We're onboarding our first design-partner shops now. Before-and-afters and real numbers go here once they're real — we don't make them up. Want to be one of the first? The Readiness Call is free.</p>
-  </div>
-</section>
-
-<section class="section" id="faq">
-  <div class="container">
-    <div class="head"><span class="eyebrow">FAQ</span><h2 class="h2">Straight answers</h2></div>
-    <div class="faq">
-      <div class="qa"><button>Do I need to be technical?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>No. You show us the problem, we handle the build and run it. You never touch the tech.</p></div></div>
-      <div class="qa"><button>Are you a software company?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>No. We're an operations partner. The tech is just how we fix it — it's invisible plumbing.</p></div></div>
-      <div class="qa"><button>What's it cost?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Depends what's actually broken — that's what the free Readiness Call is for. No blind quotes. We price on what the leaks cost you, not on hours.</p></div></div>
-      <div class="qa"><button>Is my data safe?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>Yes. Handled carefully, human in the loop, nothing leaves as final until it's checked.</p></div></div>
-      <div class="qa"><button>How fast?<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="ans"><p>We map your biggest leak on the call. First build in weeks, not months.</p></div></div>
-    </div>
+    <h2 class="h2">Real numbers, soon.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">We're onboarding our first shops now. Real numbers from our first shops go here once they're real — we don't make them up.</p>
   </div>
 </section>
 
@@ -136,14 +142,15 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="final-card">
       <div class="glow"></div>
-      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free Readiness Call</span>
-      <h2 class="display">Tell us about your operation.</h2>
-      <p class="lede" style="margin:14px auto 0">We'll find your biggest money leak — free. 15 minutes, no packet to dig up, no pitch.</p>
+      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free readiness audit</span>
+      <h2 class="display">Get your free readiness audit.</h2>
+      <p class="lede" style="margin:14px auto 0">Send us your asset list — or we'll log it on-site. We'll show you what's expired, expiring, and missing. No charge.</p>
       <div class="hero-cta" style="justify-content:center;margin-top:26px">
-        <a href="/readiness-map" class="btn btn-primary">Book your free Readiness Call
+        <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
       </div>
+      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">Or just email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
     </div>
   </div>
 </section>
@@ -157,7 +164,7 @@ export const MARKETING_HTML = `
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
-      <span style="color:var(--fg-faint)">Operations systems for service shops · <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></span>
+      <span style="color:var(--fg-faint)">Equipment &amp; cert readiness for oilfield service shops · <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></span>
     </div>
   </div>
 </footer>

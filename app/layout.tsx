@@ -24,28 +24,28 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — operations partner for oilfield service shops",
+    default: "SYNNR — equipment & cert readiness for oilfield service shops",
     template: "%s",
   },
   description:
-    "Your jobs leak money in the boring stuff — missing tools, wrong trucks, cert misses, kicked-back invoices. SYNNR finds where your operation bleeds, builds the system that stops it, and runs it for you every week. Free Readiness Call first.",
+    "Keep your crews rolling ready. Equipment & cert readiness tracking for oilfield service shops, done for you. Never miss an expiration or asset. Free readiness audit.",
   keywords: [
-    "oilfield operations partner", "managed operations service", "wireline", "coil tubing", "cementing",
-    "field operations", "readiness", "Permian", "service shop operations", "loadout cert tracking",
+    "equipment readiness", "cert tracking", "oilfield service", "wireline", "coil tubing", "cementing",
+    "BOP testing", "crew certs", "H2S certification", "well control", "Permian", "service shop operations",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — operations partner for oilfield service shops",
+    title: "SYNNR — equipment & cert readiness for oilfield service shops",
     description:
-      "We find where your jobs leak money — missing tools, cert misses, kicked-back invoices — build the system that stops it, and run it for you. Free Readiness Call first.",
+      "Keep your crews rolling ready. Track every asset and cert in your yard, get alerted before anything expires. Done for you. Free readiness audit.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — operations partner for oilfield service shops",
+    title: "SYNNR — equipment & cert readiness for oilfield service shops",
     description:
-      "Your jobs are leaking money in the boring stuff. SYNNR finds it, builds the fix, and runs it for you. Free Readiness Call.",
+      "Keep your crews rolling ready. Track every asset and cert. Get a free readiness audit — we'll show you what's expired, expiring, and missing.",
   },
 };
 
