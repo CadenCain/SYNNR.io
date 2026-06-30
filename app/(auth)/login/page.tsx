@@ -18,7 +18,7 @@ export default async function LoginPage() {
       <p className="text-center text-sm text-ink-dim">
         New here?{" "}
         <Link href="/signup" className="font-medium text-[#e7ddc7] hover:underline">
-          Start free
+          Get started
         </Link>
       </p>
     </div>

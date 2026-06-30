@@ -27,7 +27,7 @@ export const MARKETING_HTML = `
     </nav>
     <div class="nav-cta">
       <a href="/login" class="nav-login">Log in</a>
-      <a href="/signup" class="btn btn-primary btn-sm">Start free</a>
+      <a href="/signup" class="btn btn-primary btn-sm">Get started</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
@@ -37,7 +37,7 @@ export const MARKETING_HTML = `
       <a href="#track">What we track</a>
       <a href="#pricing">Pricing</a>
       <a href="/login">Log in</a>
-      <a href="/signup">Start free</a>
+      <a href="/signup">Get started</a>
     </nav>
   </div>
 </header>
@@ -50,12 +50,12 @@ export const MARKETING_HTML = `
     <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling <span class="grad">ready</span></h1>
     <p class="lede reveal" data-d="2">Track every asset and cert in your yard — tools, BOPs, trailers, crew certs, DOT. Snap a photo, set the date, and get a text before anything expires or goes missing. Set it up yourself in minutes, or import your list and load a whole yard at once.</p>
     <div class="hero-cta reveal" data-d="3">
-      <a href="/signup" class="btn btn-primary">Start free — 14 days
+      <a href="/signup" class="btn btn-primary">Get started
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
       <a href="#pricing" class="btn btn-ghost">See pricing</a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Start free, no card to look around · cancel anytime · your data, exportable.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Billed monthly, per yard · cancel anytime · your data, exportable.</p>
   </div>
 </section>
 
@@ -172,7 +172,7 @@ export const MARKETING_HTML = `
         <li>Email expiration alerts</li>
         <li>The full renewal loop</li>
       </ul>
-      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Start free</a>
+      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Get started</a>
     </div>
     <div class="tier tier-featured">
       <span class="tier-pop">Most popular</span>
@@ -185,7 +185,7 @@ export const MARKETING_HTML = `
         <li>Roles &amp; permissions</li>
         <li>CSV import + priority support</li>
       </ul>
-      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Start free</a>
+      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Get started</a>
     </div>
     <div class="tier">
       <div class="tier-name">Fleet</div>
@@ -200,23 +200,23 @@ export const MARKETING_HTML = `
       <a href="/readiness-audit" class="btn btn-ghost btn-sm tier-cta">Talk to us</a>
     </div>
   </div>
-  <p class="tiers-note">14-day free trial · cancel anytime · your data, exportable. Don&apos;t want to do the data entry? Our team will load your whole yard for you — $998&ndash;$3,000 one-time, then you&apos;re self-serve.</p>
+  <p class="tiers-note">Card required · billed monthly per active yard · cancel anytime · your data, exportable. Don&apos;t want to do the data entry? Our team will load your whole yard for you — $998&ndash;$3,000 one-time, then you&apos;re self-serve.</p>
 </section>
 
 <section class="section final" id="cta">
   <div class="container">
     <div class="final-card">
       <div class="glow"></div>
-      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Start free</span>
+      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Get started</span>
       <h2 class="display">Stop getting turned around at the gate.</h2>
-      <p class="lede" style="margin:14px auto 0">Add your first yard, snap your certs, and get a text before anything expires. Free for 14 days — load your list in minutes.</p>
+      <p class="lede" style="margin:14px auto 0">Add your first yard, snap your certs, and get a text before anything expires. Set it up in minutes — import your list and go.</p>
       <div class="hero-cta" style="justify-content:center;margin-top:26px">
-        <a href="/signup" class="btn btn-primary">Start free — 14 days
+        <a href="/signup" class="btn btn-primary">Get started
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
         <a href="/login" class="btn btn-ghost">Log in</a>
       </div>
-      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">14-day free trial · cancel anytime · or email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
+      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">Billed monthly · cancel anytime · or email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
     </div>
   </div>
 </section>

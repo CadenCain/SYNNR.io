@@ -35,7 +35,7 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName }: { companyName?: string }) {
+export default function AppNav({ companyName, userName }: { companyName?: string; userName?: string }) {
   const path = usePathname() || "/app";
   const router = useRouter();
 
@@ -85,18 +85,33 @@ export default function AppNav({ companyName }: { companyName?: string }) {
         >
           <Plus className="h-[18px] w-[18px]" /> Quick action
         </Link>
-        <button
-          onClick={signOut}
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-dim transition-colors hover:bg-surface hover:text-ink"
-        >
-          <LogOut className="h-[18px] w-[18px]" /> Sign out
-        </button>
+        <div className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
+          {userName ? (
+            <div className="flex items-center gap-2.5 px-3 py-1">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e7ddc7] text-xs font-semibold text-coal">
+                {userName.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="min-w-0 truncate text-sm text-ink" title={userName}>{userName}</span>
+            </div>
+          ) : null}
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-dim transition-colors hover:bg-surface hover:text-ink"
+          >
+            <LogOut className="h-[18px] w-[18px]" /> Sign out
+          </button>
+        </div>
       </aside>
 
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 py-3 backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
+        {userName ? (
+          <span className="ml-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#e7ddc7] text-xs font-semibold text-coal" title={userName}>
+            {userName.slice(0, 1).toUpperCase()}
+          </span>
+        ) : null}
       </header>
 
       {/* Mobile bottom tab bar */}

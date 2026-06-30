@@ -37,9 +37,11 @@ export async function POST() {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price, quantity }],
+    // No trial — card charged immediately, billed monthly.
     subscription_data: { metadata: { company_id: company.id } },
-    success_url: `${origin}/app/settings/billing?ok=1`,
-    cancel_url: `${origin}/app/settings/billing`,
+    payment_method_collection: "always",
+    success_url: `${origin}/onboarding/billing?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/onboarding/billing`,
     allow_promotion_codes: true,
   });
 

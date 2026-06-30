@@ -86,9 +86,9 @@ export default function SignupForm() {
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
       <Button type="submit" disabled={busy} className="w-full">
-        {busy ? "Creating account…" : "Start free"}
+        {busy ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-xs text-ink-dim">14-day free trial · cancel anytime · your data, exportable.</p>
+      <p className="text-center text-xs text-ink-dim">Card required at the next step · billed monthly · cancel anytime.</p>
     </form>
   );
 }

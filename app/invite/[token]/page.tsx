@@ -50,7 +50,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <p className="mt-1 text-sm text-ink-dim">You&apos;ve been invited as {preview.role}. Log in or start free, then open this link again to accept.</p>
             <div className="mt-4 flex gap-2">
               <Link href="/login" className="flex-1"><Button className="w-full" variant="outline">Log in</Button></Link>
-              <Link href="/signup" className="flex-1"><Button className="w-full">Start free</Button></Link>
+              <Link href="/signup" className="flex-1"><Button className="w-full">Get started</Button></Link>
             </div>
           </>
         ) : (

@@ -19,7 +19,7 @@ async function createCompany(formData: FormData) {
   // Atomic company + owner membership (SECURITY DEFINER rpc).
   const { error } = await sb.rpc("saas_create_company", { p_name: name });
   if (error) throw new Error(error.message);
-  redirect("/app");
+  redirect("/onboarding/billing");
 }
 
 export default async function OnboardingPage() {

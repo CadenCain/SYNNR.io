@@ -4,15 +4,15 @@ import { getSaasUser } from "@/lib/saas/auth";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Start free · SYNNR" };
+export const metadata = { title: "Get started · SYNNR" };
 
 export default async function SignupPage() {
   if (await getSaasUser()) redirect("/app");
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Start free</h1>
-        <p className="mt-1 text-sm text-ink-dim">14 days, no charge. Add a yard and load your list in minutes.</p>
+        <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
+        <p className="mt-1 text-sm text-ink-dim">$298/yard a month, billed monthly. Add your card at the next step. Cancel anytime.</p>
       </div>
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">
