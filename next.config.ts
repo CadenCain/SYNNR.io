@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
 
-// The old SaaS marketplace / gated-app surface is PARKED, not deleted: the page
-// code stays in the repo (may be reused), but every old route is made
-// unreachable here — it 307s to home so no stale marketplace/app/login/checkout
-// page is ever served. Re-enable by removing the matching entry.
+// Leftover dead-marketplace routes still in the tree (app/apps, app/checkout,
+// app/ingest, app/demo) are parked — they 307 to home so no stale page is
+// served. The self-serve SaaS now OWNS /login, /signup, and /app/** (the old
+// versions were relocated to legacy/ out of the route tree), so those are no
+// longer parked. /dashboard, /billing, /team, /account were also relocated;
+// kept parked here so stray hits to those old URLs still land on home.
 const PARKED = [
   "/dashboard",
-  "/app/:path*",
   "/apps",
   "/apps/:path*",
   "/checkout",
@@ -15,8 +16,6 @@ const PARKED = [
   "/account",
   "/ingest",
   "/demo",
-  "/login",
-  "/signup",
 ];
 
 const nextConfig: NextConfig = {
