@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Warehouse, Plus } from "lucide-react";
+import { Warehouse, Plus, Upload } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
@@ -66,7 +66,10 @@ export default async function Dashboard() {
             <h2 className="text-lg font-semibold">No yards yet</h2>
             <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add your first yard and start tracking trucks, shops, assets, and certs.</p>
           </div>
-          <Link href="/app/yards" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add a yard</Link>
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            <Link href="/app/yards" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add a yard</Link>
+            <Link href="/app/import" className={buttonClass("outline")}><Upload className="h-[18px] w-[18px]" /> Import a list</Link>
+          </div>
         </Card>
       ) : actionList.length > 0 ? (
         <section className="flex flex-col gap-3">

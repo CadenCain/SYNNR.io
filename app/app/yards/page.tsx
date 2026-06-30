@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { MapPin, Plus, ChevronRight } from "lucide-react";
+import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +33,12 @@ export default async function YardsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yards</h1>
-        <p className="mt-1 text-sm text-ink-dim">Each yard holds your trucks, shops, assets, and certs.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Yards</h1>
+          <p className="mt-1 text-sm text-ink-dim">Each yard holds your trucks, shops, assets, and certs.</p>
+        </div>
+        <Link href="/app/import" className={buttonClass("outline", "sm")}><Upload className="h-4 w-4" /> Import</Link>
       </div>
 
       {yards.length > 0 && (
