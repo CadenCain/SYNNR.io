@@ -14,10 +14,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  // Fail-closed: in production, CRON_SECRET must be set AND must match.
+  // In local dev (NODE_ENV !== 'production'), skip the check so manual hits work.
   const secret = process.env.CRON_SECRET;
-  const auth = req.headers.get("authorization") || "";
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  if (process.env.NODE_ENV === "production") {
+    if (!secret) {
+      return NextResponse.json({ ok: false, error: "CRON_SECRET not configured" }, { status: 500 });
+    }
+    const auth = req.headers.get("authorization") || "";
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
   }
 
   const db = getReadinessDb();
