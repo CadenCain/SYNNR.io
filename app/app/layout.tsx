@@ -22,9 +22,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     "Operator";
 
   return (
-    <div className="saas min-h-dvh bg-coal text-ink antialiased md:flex">
+    <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
+      {/* ambient depth */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(60rem 40rem at 80% -10%, rgba(231,221,199,0.05), transparent 60%), radial-gradient(50rem 30rem at -10% 110%, rgba(231,221,199,0.035), transparent 55%)",
+        }}
+      />
       <AppNav companyName={company.name} userName={userName} />
-      <div className="min-w-0 flex-1">
+      <div className="relative z-10 min-w-0 flex-1">
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {children}
         </main>

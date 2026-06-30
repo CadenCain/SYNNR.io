@@ -1,21 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Box } from "lucide-react";
+import { Plus, Box, Settings2, Trash2, ChevronRight } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
-import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, kindLabel } from "@/lib/saas/taxonomy";
+import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
-import RenewControl from "@/app/app/_components/renew-control";
+import { PageHeader } from "@/components/ui/page-header";
+import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { addComplianceItem, addAsset } from "./actions";
+import { updateUnit, deleteUnit } from "@/app/app/_actions";
 
 export const dynamic = "force-dynamic";
 
-interface CItem {
-  id: string; title: string; kind: string; issued_date: string | null;
-  expiration_date: string | null; status: ComplianceStatus; responsible_person: string | null;
-}
+const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
 
 export default async function UnitDetail({ params }: { params: Promise<{ unitId: string }> }) {
   const { company } = await requireCompany();
@@ -32,46 +30,55 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status, responsible_person")
+    .select("id, title, kind, issued_date, expiration_date, status")
     .eq("parent_type", "unit").eq("parent_id", unitId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
-  const items = (ciData ?? []) as CItem[];
+  const items = (ciData ?? []) as RowItem[];
 
   const { data: assetData } = await db
     .from("saas_assets").select("id, name, category, status").eq("unit_id", unitId).order("name");
   const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string }[];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link href={`/app/yards/${u.yard_id}`} className="text-sm text-ink-dim hover:text-ink">← {yardName ?? "Yard"}</Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{u.name}</h1>
-        <p className="mt-1 text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</p>
-      </div>
+    <div className="flex flex-col gap-7">
+      <PageHeader
+        back={{ href: `/app/yards/${u.yard_id}`, label: yardName ?? "Yard" }}
+        title={u.name}
+        description={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`}
+        actions={
+          <details className="group relative">
+            <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+              <Settings2 className="h-4 w-4" /> Manage
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">
+              <form action={updateUnit} className="flex flex-col gap-2">
+                <input type="hidden" name="id" value={u.id} />
+                <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={u.name} required className={`${fld} mt-1 w-full`} /></label>
+                <label className="text-xs text-ink-faint">Type
+                  <select name="type" defaultValue={u.type} className={`${fld} mt-1 w-full`}>
+                    {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select></label>
+                <label className="text-xs text-ink-faint">Identifier<input name="identifier" defaultValue={u.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                <Button type="submit" size="sm">Save</Button>
+              </form>
+              <form action={deleteUnit} className="mt-2 border-t border-line pt-2">
+                <input type="hidden" name="id" value={u.id} />
+                <input type="hidden" name="yard_id" value={u.yard_id} />
+                <button type="submit" className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
+                  <Trash2 className="h-3.5 w-3.5" /> Delete unit
+                </button>
+              </form>
+            </div>
+          </details>
+        }
+      />
 
-      {/* Truck book — compliance items */}
+      {/* Truck book */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-ink">Truck book — certs, inspections &amp; DOT</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Truck book — certs, inspections &amp; DOT</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
-            {items.map((it) => (
-              <Card key={it.id} className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{it.title}</span>
-                      <StatusBadge status={it.status} />
-                    </div>
-                    <div className="mt-0.5 text-sm text-ink-dim">
-                      {kindLabel(it.kind)}
-                      {it.expiration_date ? ` · expires ${it.expiration_date}` : " · no expiration set"}
-                      {it.responsible_person ? ` · ${it.responsible_person}` : ""}
-                    </div>
-                  </div>
-                  <RenewControl itemId={it.id} companyId={company.id} redirectPath={here} />
-                </div>
-              </Card>
-            ))}
+            {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} />)}
           </div>
         )}
         <Card className="p-5">
@@ -81,35 +88,32 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="parent_id" value={u.id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. Annual DOT inspection"
-                className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
-              <select name="kind" defaultValue="inspection"
-                className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7] sm:w-44">
+              <input name="title" required placeholder="e.g. Annual DOT inspection" className={`${fld} flex-1`} />
+              <select name="kind" defaultValue="inspection" className={`${fld} sm:w-44`}>
                 {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-dim">Issued
-                <input name="issued_date" type="date" className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" /></label>
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-dim">Expires
-                <input name="expiration_date" type="date" className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" /></label>
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Issued<input name="issued_date" type="date" className={fld} /></label>
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Expires<input name="expiration_date" type="date" className={fld} /></label>
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
           </form>
         </Card>
       </section>
 
-      {/* Assets on this unit */}
+      {/* Assets */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-ink">Assets on this unit</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Assets on this unit</h2>
         {assets.length > 0 && (
           <div className="flex flex-col gap-2">
             {assets.map((a) => (
               <Link key={a.id} href={`/app/assets/${a.id}`}>
-                <Card className="flex items-center gap-3 p-3 transition-colors hover:border-line-2 hover:bg-surface">
-                  <Box className="h-5 w-5 shrink-0 text-ink-dim" />
+                <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Box className="h-4 w-4 text-ink-dim" /></span>
                   <span className="flex-1 truncate font-medium">{a.name}</span>
                   <span className="text-sm text-ink-dim">{categoryLabel(a.category)}</span>
+                  <ChevronRight className="h-4 w-4 text-ink-faint" />
                 </Card>
               </Link>
             ))}
@@ -121,10 +125,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
-            <input name="name" required placeholder="Asset name (e.g. BOP #3)"
-              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
-            <select name="category" defaultValue="pressure_control"
-              className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7] sm:w-48">
+            <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} flex-1`} />
+            <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
               {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
             <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
