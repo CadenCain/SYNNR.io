@@ -61,6 +61,7 @@ export default function LoginForm() {
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Logging in…" : "Log in"}
       </Button>
+      <a href="/forgot" className="text-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
     </form>
   );
 }
