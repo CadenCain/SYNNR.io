@@ -1,19 +1,19 @@
-.ra-wrap {
+.mkt .ra-wrap {
   max-width: 680px;
   margin-inline: auto;
 }
 
-.ra-card {
+.mkt .ra-card {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   overflow: hidden;
-  background: var(--bg-secondary);
+  background: var(--card);
 }
 
-.ra-form-done {
+.mkt .ra-form-done {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -21,26 +21,26 @@
   text-align: center;
 }
 
-.ra-form-done b {
+.mkt .ra-form-done b {
   font-size: 20px;
   font-weight: 600;
-  color: var(--fg-primary);
+  color: var(--fg);
 }
 
-.ra-form-done p {
+.mkt .ra-form-done p {
   margin: 0;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--fg-secondary);
+  color: var(--fg-dim);
 }
 
 @media (max-width: 640px) {
-  .ra-wrap {
+  .mkt .ra-wrap {
     max-width: 100%;
     padding-inline: 16px;
   }
 
-  .ra-form-done {
+  .mkt .ra-form-done {
     padding: 24px 20px;
   }
 }

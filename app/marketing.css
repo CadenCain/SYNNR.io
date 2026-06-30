@@ -215,6 +215,16 @@
 .mkt .whyc h3 { font-size:16px; font-weight:600; margin:0 0 6px; }
 .mkt .whyc p { color:var(--fg-dim); line-height:1.55; font-size:14px; margin:0; }
 
+/* ---- callout (inline emphasis box inside body copy) ---- */
+.mkt .callout {
+  margin-top:22px; padding:18px 20px;
+  border-left:3px solid var(--accent-2);
+  border-radius:6px;
+  background: rgba(var(--accent-rgb),.06);
+  color:var(--fg); font-size:16px; line-height:1.55;
+  max-width:72ch;
+}
+
 /* ---- cost-of-miss list ---- */
 .mkt .miss-list { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
 .mkt .miss-item {
