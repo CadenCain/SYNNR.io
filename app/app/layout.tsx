@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { company } = await requireCompany();
 
   return (
-    <div className="saas min-h-dvh bg-zinc-950 text-zinc-100 antialiased md:flex">
+    <div className="saas min-h-dvh bg-coal text-ink antialiased md:flex">
       <AppNav companyName={company.name} />
       <div className="min-w-0 flex-1">
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">

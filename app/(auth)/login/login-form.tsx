@@ -36,24 +36,24 @@ export default function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-300">Email</span>
+        <span className="text-ink">Email</span>
         <input
           name="email"
           type="email"
           required
           autoComplete="email"
-          className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
           placeholder="you@shop.com"
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-300">Password</span>
+        <span className="text-ink">Password</span>
         <input
           name="password"
           type="password"
           required
           autoComplete="current-password"
-          className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
           placeholder="••••••••"
         />
       </label>

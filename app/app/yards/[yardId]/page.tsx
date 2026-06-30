@@ -41,24 +41,24 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/app/yards" className="text-sm text-zinc-500 hover:text-zinc-300">← Yards</Link>
+        <Link href="/app/yards" className="text-sm text-ink-dim hover:text-ink">← Yards</Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{y.name}</h1>
-        {y.location ? <p className="mt-1 text-sm text-zinc-400">{y.location}</p> : null}
+        {y.location ? <p className="mt-1 text-sm text-ink-dim">{y.location}</p> : null}
       </div>
 
       {units.length > 0 && (
         <div className="flex flex-col gap-2">
           {units.map((u) => (
             <Link key={u.id} href={`/app/units/${u.id}`}>
-              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900">
-                  <Truck className="h-5 w-5 text-zinc-400" />
+              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
+                  <Truck className="h-5 w-5 text-ink-dim" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{u.name}</div>
-                  <div className="truncate text-sm text-zinc-500">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
+                  <div className="truncate text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-600" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>
           ))}
@@ -66,20 +66,20 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
       )}
 
       <Card className="p-5">
-        <h2 className="mb-3 text-sm font-medium text-zinc-300">{units.length ? "Add another unit" : "Add a truck, rig, or shop"}</h2>
+        <h2 className="mb-3 text-sm font-medium text-ink">{units.length ? "Add another unit" : "Add a truck, rig, or shop"}</h2>
         <form action={createUnit} className="flex flex-col gap-3">
           <input type="hidden" name="yard_id" value={y.id} />
           <div className="flex flex-col gap-3 sm:flex-row">
             <input name="name" required placeholder="Name (e.g. Rig 4)"
-              className="h-11 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]" />
+              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
             <select name="type" defaultValue="truck"
-              className="h-11 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]">
+              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]">
               {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <input name="identifier" placeholder="VIN / unit # (optional)"
-              className="h-11 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]" />
+              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
             <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add unit</Button>
           </div>
         </form>

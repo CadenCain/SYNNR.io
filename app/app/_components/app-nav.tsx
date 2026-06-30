@@ -49,13 +49,13 @@ export default function AppNav({ companyName }: { companyName?: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 p-4 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-coal p-4 md:flex">
         <Link href="/app" className="mb-1 flex items-center gap-2.5 px-2 py-1">
           {MARK}
           <span className="font-semibold tracking-tight">SYNNR</span>
         </Link>
         {companyName ? (
-          <div className="mb-5 truncate px-2 text-xs text-zinc-500" title={companyName}>{companyName}</div>
+          <div className="mb-5 truncate px-2 text-xs text-ink-dim" title={companyName}>{companyName}</div>
         ) : (
           <div className="mb-5" />
         )}
@@ -70,7 +70,7 @@ export default function AppNav({ companyName }: { companyName?: string }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                  active ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200",
+                  active ? "bg-elevated text-ink" : "text-ink-dim hover:bg-surface hover:text-ink",
                 )}
               >
                 <Icon className="h-[18px] w-[18px]" />
@@ -81,32 +81,32 @@ export default function AppNav({ companyName }: { companyName?: string }) {
         </nav>
         <Link
           href="/app/quick"
-          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-[#e7ddc7] px-3 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-[#f3ecdb]"
+          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-[#e7ddc7] px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-[#f3ecdb]"
         >
           <Plus className="h-[18px] w-[18px]" /> Quick action
         </Link>
         <button
           onClick={signOut}
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-zinc-300"
+          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-dim transition-colors hover:bg-surface hover:text-ink"
         >
           <LogOut className="h-[18px] w-[18px]" /> Sign out
         </button>
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-zinc-800 bg-zinc-950/90 px-4 py-3 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 py-3 backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-zinc-800 bg-zinc-950/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-coal/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {TABS_LEFT.map((t) => (
           <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact)} />
         ))}
         {/* Center quick action */}
         <Link href="/app/quick" className="flex flex-col items-center gap-1" aria-label="Quick action">
-          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#e7ddc7] text-zinc-950 shadow-lg shadow-black/40">
+          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#e7ddc7] text-coal shadow-lg shadow-black/40">
             <Plus className="h-6 w-6" />
           </span>
         </Link>
@@ -135,7 +135,7 @@ function Tab({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex flex-col items-center gap-1 py-1 text-[11px]",
-        active ? "text-zinc-100" : "text-zinc-500",
+        active ? "text-ink" : "text-ink-dim",
       )}
     >
       <Icon className="h-5 w-5" />

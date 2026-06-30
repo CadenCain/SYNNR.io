@@ -40,7 +40,7 @@ export default function PhotoUpload({
       <button
         onClick={() => ref.current?.click()}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-[13px] font-medium text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-elevated disabled:opacity-50"
       >
         <Camera className="h-4 w-4" /> {busy ? "Uploading…" : hasPhoto ? "Replace photo" : "Add photo"}
       </button>

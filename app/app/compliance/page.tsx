@@ -31,21 +31,21 @@ export default async function CompliancePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
-        <p className="mt-1 text-sm text-zinc-400">Everything with an expiration, soonest first.</p>
+        <p className="mt-1 text-sm text-ink-dim">Everything with an expiration, soonest first.</p>
       </div>
 
       {items.length === 0 ? (
-        <Card className="px-6 py-12 text-center text-sm text-zinc-400">
+        <Card className="px-6 py-12 text-center text-sm text-ink-dim">
           No compliance items yet. Add certs and inspections from a unit or asset.
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
           {items.map((i) => (
             <Link key={i.id} href={hrefFor(i)}>
-              <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">
+              <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:border-line-2 hover:bg-surface">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{i.title}</div>
-                  <div className="text-sm text-zinc-500">
+                  <div className="text-sm text-ink-dim">
                     {kindLabel(i.kind)} · {i.parent_type}
                     {i.expiration_date ? ` · expires ${i.expiration_date}` : ""}
                   </div>

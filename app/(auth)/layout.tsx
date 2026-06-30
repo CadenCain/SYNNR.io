@@ -6,7 +6,7 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="saas flex min-h-dvh flex-col bg-zinc-950 text-zinc-100 antialiased">
+    <div className="saas flex min-h-dvh flex-col bg-coal text-ink antialiased">
       <header className="flex items-center justify-center px-4 py-6">
         <Link href="/" className="flex items-center gap-2.5">
           <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">

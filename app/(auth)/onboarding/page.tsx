@@ -32,19 +32,19 @@ export default async function OnboardingPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Name your company</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <p className="mt-1 text-sm text-ink-dim">
           This is your workspace. You&apos;ll add yards, trucks, shops, and certs next.
         </p>
       </div>
       <form action={createCompany} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-zinc-300">Company name</span>
+          <span className="text-ink">Company name</span>
           <input
             name="name"
             type="text"
             required
             autoFocus
-            className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+            className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
             placeholder="Ace Wireline Services"
           />
         </label>

@@ -52,35 +52,35 @@ export default function SignupForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-300">Your name</span>
+        <span className="text-ink">Your name</span>
         <input
           name="fullName"
           type="text"
           autoComplete="name"
-          className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
           placeholder="John Smith"
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-300">Email</span>
+        <span className="text-ink">Email</span>
         <input
           name="email"
           type="email"
           required
           autoComplete="email"
-          className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
           placeholder="you@shop.com"
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-300">Password</span>
+        <span className="text-ink">Password</span>
         <input
           name="password"
           type="password"
           required
           minLength={8}
           autoComplete="new-password"
-          className="h-11 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
           placeholder="At least 8 characters"
         />
       </label>
@@ -88,7 +88,7 @@ export default function SignupForm() {
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating account…" : "Start free"}
       </Button>
-      <p className="text-center text-xs text-zinc-500">14-day free trial · cancel anytime · your data, exportable.</p>
+      <p className="text-center text-xs text-ink-dim">14-day free trial · cancel anytime · your data, exportable.</p>
     </form>
   );
 }

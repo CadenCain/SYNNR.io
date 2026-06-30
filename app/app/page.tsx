@@ -45,13 +45,13 @@ export default async function Dashboard() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Compliance</h1>
-        <p className="mt-1 text-sm text-zinc-400">Every cert, inspection, and DOT item across your yards — at a glance.</p>
+        <p className="mt-1 text-sm text-ink-dim">Every cert, inspection, and DOT item across your yards — at a glance.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {rollup.map((r) => (
           <Card key={r.label} className="p-5">
-            <div className="flex items-center gap-2 text-sm text-zinc-400"><StatusDot status={r.status} />{r.label}</div>
+            <div className="flex items-center gap-2 text-sm text-ink-dim"><StatusDot status={r.status} />{r.label}</div>
             <div className="mt-2 text-3xl font-semibold tabular-nums">{r.count}</div>
           </Card>
         ))}
@@ -59,25 +59,25 @@ export default async function Dashboard() {
 
       {yardCount === 0 ? (
         <Card className="flex flex-col items-center gap-4 px-6 py-14 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900">
-            <Warehouse className="h-6 w-6 text-zinc-400" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-surface">
+            <Warehouse className="h-6 w-6 text-ink-dim" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">No yards yet</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-zinc-400">Add your first yard and start tracking trucks, shops, assets, and certs.</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add your first yard and start tracking trucks, shops, assets, and certs.</p>
           </div>
           <Link href="/app/yards" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add a yard</Link>
         </Card>
       ) : actionList.length > 0 ? (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-zinc-300">Needs attention</h2>
+          <h2 className="text-sm font-medium text-ink">Needs attention</h2>
           <div className="flex flex-col gap-2">
             {actionList.map((i) => (
               <Link key={i.id} href={hrefFor(i)}>
-                <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">
+                <Card className="flex items-center justify-between gap-3 p-4 transition-colors hover:border-line-2 hover:bg-surface">
                   <div className="min-w-0">
                     <div className="truncate font-medium">{i.title}</div>
-                    <div className="text-sm text-zinc-500">{i.expiration_date ? `expires ${i.expiration_date}` : "no date"}</div>
+                    <div className="text-sm text-ink-dim">{i.expiration_date ? `expires ${i.expiration_date}` : "no date"}</div>
                   </div>
                   <StatusBadge status={i.status} />
                 </Card>
@@ -86,7 +86,7 @@ export default async function Dashboard() {
           </div>
         </section>
       ) : (
-        <Card className="px-6 py-12 text-center text-sm text-zinc-400">
+        <Card className="px-6 py-12 text-center text-sm text-ink-dim">
           Nothing expiring soon. You&apos;re rolling ready. ✓
         </Card>
       )}

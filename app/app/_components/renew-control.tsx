@@ -78,7 +78,7 @@ export default function RenewControl({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-[13px] font-medium text-zinc-200 hover:bg-zinc-800"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-elevated"
       >
         <Camera className="h-4 w-4" /> Renew
       </button>
@@ -86,8 +86,8 @@ export default function RenewControl({
   }
 
   return (
-    <form onSubmit={save} className="mt-3 flex flex-col gap-2 rounded-lg border border-zinc-700 bg-zinc-950 p-3">
-      <label className="flex flex-col gap-1 text-xs text-zinc-400">
+    <form onSubmit={save} className="mt-3 flex flex-col gap-2 rounded-lg border border-line-2 bg-coal p-3">
+      <label className="flex flex-col gap-1 text-xs text-ink-dim">
         New proof photo
         <input
           ref={fileRef}
@@ -95,28 +95,28 @@ export default function RenewControl({
           accept="image/*"
           capture="environment"
           onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
-          className="text-sm text-zinc-300 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1.5 file:text-zinc-100"
+          className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1.5 file:text-ink"
         />
         {fileName ? <span className="text-emerald-400">✓ {fileName}</span> : null}
       </label>
-      <label className="flex flex-col gap-1 text-xs text-zinc-400">
+      <label className="flex flex-col gap-1 text-xs text-ink-dim">
         New expiration date
         <input
           name="expiration_date"
           type="date"
           required
           defaultValue={plusOneYear()}
-          className="h-10 rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-100 outline-none focus:border-[#e7ddc7]"
+          className="h-10 rounded-md border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-[#e7ddc7]"
         />
       </label>
       {err ? <p className="text-xs text-amber-400">{err}</p> : null}
       <div className="flex gap-2">
         <button type="submit" disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#e7ddc7] px-3 py-1.5 text-[13px] font-medium text-zinc-950 disabled:opacity-50">
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#e7ddc7] px-3 py-1.5 text-[13px] font-medium text-coal disabled:opacity-50">
           <Check className="h-4 w-4" /> {busy ? "Saving…" : "Save"}
         </button>
         <button type="button" onClick={() => setOpen(false)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-[13px] text-zinc-300 hover:bg-zinc-800">
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] text-ink hover:bg-elevated">
           <X className="h-4 w-4" /> Cancel
         </button>
       </div>

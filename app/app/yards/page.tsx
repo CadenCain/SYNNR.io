@@ -35,25 +35,25 @@ export default async function YardsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Yards</h1>
-        <p className="mt-1 text-sm text-zinc-400">Each yard holds your trucks, shops, assets, and certs.</p>
+        <p className="mt-1 text-sm text-ink-dim">Each yard holds your trucks, shops, assets, and certs.</p>
       </div>
 
       {yards.length > 0 && (
         <div className="flex flex-col gap-2">
           {yards.map((y) => (
             <Link key={y.id} href={`/app/yards/${y.id}`}>
-              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-zinc-700 hover:bg-zinc-900">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900">
-                  <MapPin className="h-5 w-5 text-zinc-400" />
+              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
+                  <MapPin className="h-5 w-5 text-ink-dim" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{y.name}</div>
-                  <div className="truncate text-sm text-zinc-500">
+                  <div className="truncate text-sm text-ink-dim">
                     {y.location ? y.location + " · " : ""}
                     {y.saas_units?.[0]?.count ?? 0} units · {y.saas_assets?.[0]?.count ?? 0} assets
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-600" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>
           ))}
@@ -61,12 +61,12 @@ export default async function YardsPage() {
       )}
 
       <Card className="p-5">
-        <h2 className="mb-3 text-sm font-medium text-zinc-300">{yards.length ? "Add another yard" : "Add your first yard"}</h2>
+        <h2 className="mb-3 text-sm font-medium text-ink">{yards.length ? "Add another yard" : "Add your first yard"}</h2>
         <form action={createYard} className="flex flex-col gap-3 sm:flex-row">
           <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
-            className="h-11 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]" />
+            className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
           <input name="location" placeholder="Location (optional)"
-            className="h-11 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-zinc-100 outline-none focus:border-[#e7ddc7]" />
+            className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
           <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add yard</Button>
         </form>
       </Card>

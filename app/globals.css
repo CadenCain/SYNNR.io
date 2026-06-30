@@ -10,6 +10,21 @@
 @theme {
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* SYNNR brand palette — warm charcoal + bone. Used by the /app + auth
+     surface so the product feels like the marketing site (not generic zinc).
+     Generates utilities: bg-coal, bg-surface, bg-elevated, text-ink,
+     text-ink-dim, text-ink-faint, border-line, border-line-2, bg-bone, etc. */
+  --color-coal:      #100f0e;
+  --color-surface:   #18140f;
+  --color-elevated:  #211b14;
+  --color-ink:       #ece5d7;
+  --color-ink-dim:   #a59d8c;
+  --color-ink-faint: #756c5b;
+  --color-line:      #2a241c;
+  --color-line-2:    #38301f;
+  --color-bone:      #e7ddc7;
+  --color-bone-soft: #f3ecdb;
 }
 
 *,

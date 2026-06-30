@@ -12,10 +12,10 @@ export default async function SignupPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Start free</h1>
-        <p className="mt-1 text-sm text-zinc-400">14 days, no charge. Add a yard and load your list in minutes.</p>
+        <p className="mt-1 text-sm text-ink-dim">14 days, no charge. Add a yard and load your list in minutes.</p>
       </div>
       <SignupForm />
-      <p className="text-center text-sm text-zinc-400">
+      <p className="text-center text-sm text-ink-dim">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-[#e7ddc7] hover:underline">
           Log in

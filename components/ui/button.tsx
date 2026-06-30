@@ -9,10 +9,10 @@ type Variant = "default" | "outline" | "ghost" | "danger" | "subtle";
 type Size = "default" | "sm" | "lg" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
-  default: "bg-[#e7ddc7] text-zinc-950 hover:bg-[#f3ecdb]",
-  outline: "border border-zinc-700 bg-transparent text-zinc-100 hover:bg-zinc-800",
-  ghost: "bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100",
-  subtle: "bg-zinc-800 text-zinc-100 hover:bg-zinc-700",
+  default: "bg-[#e7ddc7] text-coal hover:bg-[#f3ecdb]",
+  outline: "border border-line-2 bg-transparent text-ink hover:bg-elevated",
+  ghost: "bg-transparent text-ink hover:bg-elevated hover:text-ink",
+  subtle: "bg-elevated text-ink hover:bg-elevated",
   danger: "border border-red-500/40 bg-transparent text-red-400 hover:bg-red-500/10",
 };
 const SIZES: Record<Size, string> = {
