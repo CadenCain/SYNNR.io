@@ -46,7 +46,7 @@ export const MARKETING_HTML = `
   <div class="container">
     <span class="pill-badge reveal"><span class="d"></span>Equipment &amp; cert readiness for oilfield service shops</span>
     <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling <span class="grad">ready</span></h1>
-    <p class="lede reveal" data-d="2">Every asset and cert in your yard — tools, BOPs, trailers, equipment — tracked in one place, with a text before anything expires or goes missing. No more 5am scrambles. No more NPT. No more looking bad to the operator.</p>
+    <p class="lede reveal" data-d="2">SYNNR is a done-for-you readiness system for oilfield service shops. We track every asset and cert in your yard, text you before anything expires or goes missing, and keep a live check-out/check-in — so a crew never rolls out late, short, or with a lapsed cert again. You don't log into anything. We run it. You get the text.</p>
     <div class="hero-cta reveal" data-d="3">
       <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -115,10 +115,10 @@ export const MARKETING_HTML = `
     <h2 class="h2">Built by someone who's lived it.</h2>
   </div>
   <div class="whygrid">
-    <div class="whyc"><h3>Done for you</h3><p>You never log into anything or maintain a thing. We run it.</p></div>
-    <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble.</p></div>
-    <div class="whyc"><h3>Proactive alerts</h3><p>&ldquo;BOP #3 expires in 10 days&rdquo; — before it's a problem.</p></div>
-    <div class="whyc"><h3>Every yard, one view</h3><p>All your locations, all your gear, one place.</p></div>
+    <div class="whyc"><h3>Done for you</h3><p>Your team never logs into anything or maintains a thing. We run it.</p></div>
+    <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble and built SYNNR to kill it.</p></div>
+    <div class="whyc"><h3>Proactive, not reactive</h3><p>&ldquo;BOP #3 expires in 10 days&rdquo; — you hear about it before it costs you, not after.</p></div>
+    <div class="whyc"><h3>Every yard, one view</h3><p>All your locations, all your gear, one place — no whiteboard, no three spreadsheets.</p></div>
   </div>
 </section>
 
@@ -126,15 +126,46 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Pricing</span>
     <h2 class="h2">Priced to your operation.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, priced per asset and per yard — it scales with your shop. You get the number after the free audit, once we both know exactly what we're tracking. One prevented NPT day covers it.</p>
+    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, priced per asset and per yard. Setup is one-time — we log your yard and build the system. Pick the tier that fits; we confirm the exact number at your free audit.</p>
+  </div>
+  <div class="tiers">
+    <div class="tier">
+      <div class="tier-name">Single Yard</div>
+      <p class="tier-best">1 yard, up to ~100 assets</p>
+      <div class="tier-row"><span>Setup (one-time)</span><b>$500</b></div>
+      <div class="tier-row"><span>Monthly</span><b>$300&ndash;$500</b></div>
+    </div>
+    <div class="tier tier-featured">
+      <div class="tier-name">Multi-Crew</div>
+      <p class="tier-best">1&ndash;2 yards, a few hundred assets</p>
+      <div class="tier-row"><span>Setup (one-time)</span><b>$1,000</b></div>
+      <div class="tier-row"><span>Monthly</span><b>$750&ndash;$1,500</b></div>
+    </div>
+    <div class="tier">
+      <div class="tier-name">Multi-Yard</div>
+      <p class="tier-best">3+ locations</p>
+      <div class="tier-row"><span>Setup (one-time)</span><b>Custom</b></div>
+      <div class="tier-row"><span>Monthly</span><b>Custom</b></div>
+    </div>
+  </div>
+  <p class="tiers-note">Final number is set at your free readiness audit, once we both know exactly what we're tracking. One prevented NPT day covers a year of any tier.</p>
+  <div class="hero-cta" style="margin-top:22px">
+    <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
+      <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
   </div>
 </section>
 
 <section class="section container" id="proof">
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Proof</span>
-    <h2 class="h2">Real numbers, soon.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">We're onboarding our first shops now. Real numbers from our first shops go here once they're real — we don't make them up.</p>
+    <h2 class="h2">Built by someone who's lived the 5am scramble.</h2>
+    <p class="lede" style="margin-inline:0;max-width:72ch">
+      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. The free readiness audit is the proof: before you pay a dollar, we show you exactly what's expired, expiring, and missing in your operation. You see the value before you buy it.
+    </p>
+    <p class="lede" style="margin-inline:0;max-width:72ch;color:var(--fg-dim);font-size:16px">
+      We're onboarding our first shops now. Real numbers go here the day they're real — we don't make them up.
+    </p>
   </div>
 </section>
 
@@ -142,16 +173,17 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Cost of a miss</span>
     <h2 class="h2">Cheaper than one bad day.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">You already know what a miss costs. We're a fraction of any of them.</p>
+    <p class="lede" style="margin-inline:0;max-width:64ch">You already know what a miss costs. Here's the math we're up against — and we're a fraction of any single one.</p>
   </div>
   <ul class="miss-list" aria-label="What a single miss costs">
-    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A day of NPT sitting on location</span></li>
-    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A hotshot run to chase down what got left behind</span></li>
-    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A failed DOT inspection that sidelines a truck</span></li>
-    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>A failed safety audit — fines, shutdowns, paperwork hell</span></li>
-    <li class="miss-item"><span class="miss-x" aria-hidden="true">×</span><span>Getting dropped from an operator's vendor list</span></li>
+    <li class="miss-item"><span class="miss-what">A day of NPT sitting on location</span><span class="miss-cost">$10,000+</span></li>
+    <li class="miss-item"><span class="miss-what">A hotshot run to chase down what got left behind</span><span class="miss-cost">$500&ndash;$2,000</span></li>
+    <li class="miss-item"><span class="miss-what">A failed DOT inspection that sidelines a truck</span><span class="miss-cost">Thousands + lost revenue days</span></li>
+    <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">Fines, shutdowns, paperwork hell</span></li>
+    <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">The whole account</span></li>
   </ul>
-  <p class="miss-kicker"><b>One of these costs more than a year of SYNNR.</b> We're the insurance against all of them.</p>
+  <p class="miss-kicker"><b>One prevented NPT day pays for 6&ndash;12 months of SYNNR.</b> Everything after that is pure protection.</p>
+  <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
 </section>
 
 <section class="section final" id="cta">

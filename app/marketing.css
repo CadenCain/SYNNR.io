@@ -225,20 +225,19 @@
   max-width:72ch;
 }
 
-/* ---- cost-of-miss list ---- */
+/* ---- cost-of-miss list (2-column: what + typical hit) ---- */
 .mkt .miss-list { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
 .mkt .miss-item {
-  display:flex; align-items:flex-start; gap:14px;
+  display:flex; align-items:center; gap:18px;
   padding:16px 18px; border:1px solid var(--line); border-radius:var(--radius);
   background:var(--card); color:var(--fg);
   font-size:15.5px; line-height:1.45;
 }
-.mkt .miss-item .miss-x {
-  flex:none; width:22px; height:22px; border-radius:6px;
-  display:grid; place-items:center;
-  background: rgba(var(--accent-rgb),.10); color: var(--accent-ink);
-  border:1px solid rgba(var(--accent-rgb),.22);
-  font-size:13px; font-weight:600; margin-top:1px;
+.mkt .miss-item .miss-what { flex:1 1 auto; min-width:0; }
+.mkt .miss-item .miss-cost {
+  flex:none; text-align:right;
+  font-family: var(--font-mono); font-size:14.5px;
+  color: var(--accent-ink); white-space:nowrap;
 }
 .mkt .miss-kicker {
   margin-top:22px; padding:20px 22px;
@@ -248,9 +247,45 @@
   color:var(--fg); font-size:17px; line-height:1.5;
 }
 .mkt .miss-kicker b { color: var(--accent-ink); font-weight:600; }
+.mkt .miss-note { margin-top:10px; font-size:12.5px; color:var(--fg-faint); font-family:var(--font-mono); }
 @media (max-width:560px){
-  .mkt .miss-item { font-size:15px; padding:14px 16px; }
+  .mkt .miss-item {
+    flex-direction:column; align-items:flex-start; gap:6px;
+    font-size:15px; padding:14px 16px;
+  }
+  .mkt .miss-item .miss-cost { text-align:left; white-space:normal; }
   .mkt .miss-kicker { font-size:16px; padding:18px; }
+}
+
+/* ---- pricing tiers ---- */
+.mkt .tiers { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:880px){ .mkt .tiers { grid-template-columns:1fr; } }
+.mkt .tier {
+  border:1px solid var(--line); border-radius:var(--radius);
+  background:var(--card); padding:24px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.mkt .tier-featured {
+  border-color: rgba(var(--accent-rgb),.32);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb),.06), var(--card) 60%);
+}
+.mkt .tier-name {
+  font-family: var(--font-mono); font-size:12px;
+  text-transform:uppercase; letter-spacing:.08em;
+  color: var(--accent-ink);
+}
+.mkt .tier-best { margin:2px 0 14px; color:var(--fg-dim); font-size:14px; line-height:1.4; }
+.mkt .tier-row {
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  padding:10px 0; border-top:1px solid var(--line);
+  font-size:14.5px;
+}
+.mkt .tier-row:first-of-type { border-top:none; padding-top:0; }
+.mkt .tier-row span { color:var(--fg-dim); }
+.mkt .tier-row b { color:var(--fg); font-weight:650; font-size:16px; letter-spacing:-0.01em; }
+.mkt .tiers-note { margin-top:18px; max-width:72ch; color:var(--fg-dim); font-size:15px; line-height:1.55; }
+@media (max-width:560px){
+  .mkt .tier { padding:20px; }
 }
 
 .mkt .faq { max-width:760px; margin:0 auto; }
