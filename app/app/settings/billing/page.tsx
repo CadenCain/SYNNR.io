@@ -1,0 +1,61 @@
+import Link from "next/link";
+import { requireCompany } from "@/lib/saas/auth";
+import { saasDb } from "@/lib/saas/db";
+import { Card } from "@/components/ui/card";
+import BillingActions from "./billing-actions";
+
+export const dynamic = "force-dynamic";
+
+const PER_YARD = 298;
+
+const STATUS_LABEL: Record<string, string> = {
+  trialing: "Free trial", active: "Active", past_due: "Payment failed", canceled: "Canceled", none: "No subscription",
+};
+
+export default async function BillingSettings() {
+  const { company } = await requireCompany();
+  const db = await saasDb();
+
+  const [{ data: comp }, { count: yardCount }] = await Promise.all([
+    db.from("saas_companies").select("subscription_status, trial_ends_at, stripe_customer_id").eq("id", company.id).maybeSingle(),
+    db.from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id),
+  ]);
+  const c = (comp as { subscription_status: string; trial_ends_at: string | null; stripe_customer_id: string | null } | null);
+  const status = c?.subscription_status ?? "none";
+  const yards = Math.max(1, yardCount ?? 0);
+  const subscribed = status === "active" || status === "past_due";
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link href="/app/settings" className="text-sm text-ink-dim hover:text-ink">← Settings</Link>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Billing</h1>
+        <p className="mt-1 text-sm text-ink-dim">Per yard, per month. Scales with your operation.</p>
+      </div>
+
+      <Card className="flex flex-col gap-4 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm text-ink-dim">Status</div>
+            <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}</div>
+            {status === "trialing" && c?.trial_ends_at ? (
+              <div className="mt-0.5 text-sm text-ink-faint">Trial ends {new Date(c.trial_ends_at).toLocaleDateString()}</div>
+            ) : null}
+          </div>
+          <BillingActions subscribed={subscribed} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 border-t border-line pt-4 sm:grid-cols-3">
+          <div><div className="text-sm text-ink-dim">Yards</div><div className="text-xl font-semibold tabular-nums">{yardCount ?? 0}</div></div>
+          <div><div className="text-sm text-ink-dim">Per yard</div><div className="text-xl font-semibold tabular-nums">${PER_YARD}/mo</div></div>
+          <div><div className="text-sm text-ink-dim">Estimated</div><div className="text-xl font-semibold tabular-nums">${(yards * PER_YARD).toLocaleString()}/mo</div></div>
+        </div>
+      </Card>
+
+      <p className="text-xs text-ink-faint">
+        Billed monthly at ${PER_YARD} per active yard. Add or remove yards anytime — your subscription quantity follows.
+        14-day free trial, cancel anytime, your data stays exportable.
+      </p>
+    </div>
+  );
+}

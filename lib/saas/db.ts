@@ -1,5 +1,17 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
+
+/**
+ * Service-role client for trusted server contexts with no user session
+ * (the alerts cron). Bypasses RLS — only use where there is no caller to scope
+ * to. Returns null if env isn't set.
+ */
+export function saasAdmin(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
 
 /**
  * Loosely-typed cookie-aware Supabase client for saas_* tables. RLS is
