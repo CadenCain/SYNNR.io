@@ -26,8 +26,8 @@ export const MARKETING_HTML = `
       <a href="#why">Why SYNNR</a>
     </nav>
     <div class="nav-cta">
-      <a href="/app" class="nav-login">Log in</a>
-      <a href="/readiness-audit" class="btn btn-primary btn-sm">Free readiness audit</a>
+      <a href="/login" class="nav-login">Log in</a>
+      <a href="/signup" class="btn btn-primary btn-sm">Start free</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
@@ -35,9 +35,9 @@ export const MARKETING_HTML = `
       <a href="#problem">The problem</a>
       <a href="#how">How it works</a>
       <a href="#track">What we track</a>
-      <a href="#why">Why SYNNR</a>
-      <a href="/app">Log in</a>
-      <a href="/readiness-audit">Free readiness audit</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/login">Log in</a>
+      <a href="/signup">Start free</a>
     </nav>
   </div>
 </header>
@@ -48,13 +48,14 @@ export const MARKETING_HTML = `
   <div class="container">
     <span class="pill-badge reveal"><span class="d"></span>Equipment &amp; cert readiness for oilfield service shops</span>
     <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling <span class="grad">ready</span></h1>
-    <p class="lede reveal" data-d="2">SYNNR is a done-for-you readiness system for oilfield service shops. We track every asset and cert in your yard, text you before anything expires or goes missing, and keep a live check-out/check-in — so a crew never rolls out late, short, or with a lapsed cert again. You don't log into anything. We run it. You get the text.</p>
+    <p class="lede reveal" data-d="2">Track every asset and cert in your yard — tools, BOPs, trailers, crew certs, DOT. Snap a photo, set the date, and get a text before anything expires or goes missing. Set it up yourself in minutes, or import your list and load a whole yard at once.</p>
     <div class="hero-cta reveal" data-d="3">
-      <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
+      <a href="/signup" class="btn btn-primary">Start free — 14 days
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
+      <a href="#pricing" class="btn btn-ghost">See pricing</a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Tell us about your yard or we come log it on-site. We show you what's expired, expiring, and missing — free.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Start free, no card to look around · cancel anytime · your data, exportable.</p>
   </div>
 </section>
 
@@ -89,12 +90,12 @@ export const MARKETING_HTML = `
 <section class="section container" id="how" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">How it works</span>
-    <h2 class="h2" data-fx="words">We set it up. We run it. You get the text.</h2>
+    <h2 class="h2" data-fx="words">Up and running in an afternoon.</h2>
   </div>
   <div class="steps3">
-    <div class="step3c"><span class="step3n">1</span><h3>Free readiness audit</h3><p>Tell us about your yard or we come log it on-site. We show you what's expired, expiring, and missing.</p></div>
-    <div class="step3c"><span class="step3n">2</span><h3>We build your readiness system</h3><p>Every asset and cert — with status, location, and expiration dates. Done for you.</p></div>
-    <div class="step3c"><span class="step3n">3</span><h3>You're covered</h3><p>Automatic text alerts before anything lapses, check-out/check-in so nothing walks off, one view across every yard. We watch it. You get the text.</p></div>
+    <div class="step3c"><span class="step3n">1</span><h3>Sign up &amp; add your yard</h3><p>Create your account and add a yard. Import an existing asset/cert list or add as you go.</p></div>
+    <div class="step3c"><span class="step3n">2</span><h3>Snap a photo of each cert &amp; asset</h3><p>Photograph the cert or asset, set the expiration date. That's the record — done from your phone.</p></div>
+    <div class="step3c"><span class="step3n">3</span><h3>Get a text before it expires</h3><p>We watch every date across every yard. You get the heads-up before it lapses — not after.</p></div>
   </div>
 </section>
 
@@ -117,44 +118,10 @@ export const MARKETING_HTML = `
     <h2 class="h2" data-fx="words">Built by someone who's lived it.</h2>
   </div>
   <div class="whygrid">
-    <div class="whyc"><h3>Done for you</h3><p>Your team never logs into anything or maintains a thing. We run it.</p></div>
+    <div class="whyc"><h3>Yours in minutes</h3><p>Add a yard, snap your certs, done. No consultant, no data-entry marathon — import your list and go. (Or have us load it for you.)</p></div>
     <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble and built SYNNR to kill it.</p></div>
     <div class="whyc"><h3>Proactive, not reactive</h3><p>&ldquo;BOP #3 expires in 10 days&rdquo; — you hear about it before it costs you, not after.</p></div>
     <div class="whyc"><h3>Every yard, one view</h3><p>All your locations, all your gear, one place — no whiteboard, no three spreadsheets.</p></div>
-  </div>
-</section>
-
-<section class="section container" id="pricing" data-fx-atmos>
-  <div class="head" style="text-align:left;margin-inline:0">
-    <span class="eyebrow">Pricing</span>
-    <h2 class="h2" data-fx="words">Priced to your operation.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, priced per asset and per yard. Setup is one-time — we log your yard and build the system. Pick the tier that fits; we confirm the exact number at your free audit.</p>
-  </div>
-  <div class="tiers">
-    <div class="tier">
-      <div class="tier-name">Single Yard</div>
-      <p class="tier-best">1 yard, up to ~100 assets</p>
-      <div class="tier-row"><span>Setup (one-time)</span><b>$500</b></div>
-      <div class="tier-row"><span>Monthly</span><b>$300&ndash;$500</b></div>
-    </div>
-    <div class="tier tier-featured">
-      <div class="tier-name">Multi-Crew</div>
-      <p class="tier-best">1&ndash;2 yards, a few hundred assets</p>
-      <div class="tier-row"><span>Setup (one-time)</span><b>$1,000</b></div>
-      <div class="tier-row"><span>Monthly</span><b>$750&ndash;$1,500</b></div>
-    </div>
-    <div class="tier">
-      <div class="tier-name">Multi-Yard</div>
-      <p class="tier-best">3+ locations</p>
-      <div class="tier-row"><span>Setup (one-time)</span><b>Custom</b></div>
-      <div class="tier-row"><span>Monthly</span><b>Custom</b></div>
-    </div>
-  </div>
-  <p class="tiers-note">Final number is set at your free readiness audit, once we both know exactly what we're tracking. One prevented NPT day covers a year of any tier.</p>
-  <div class="hero-cta" style="margin-top:22px">
-    <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
-      <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-    </a>
   </div>
 </section>
 
@@ -163,7 +130,7 @@ export const MARKETING_HTML = `
     <span class="eyebrow">Proof</span>
     <h2 class="h2" data-fx="words">Built by someone who's lived the 5am scramble.</h2>
     <p class="lede" style="margin-inline:0;max-width:72ch">
-      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. The free readiness audit is the proof: before you pay a dollar, we show you exactly what's expired, expiring, and missing in your operation. You see the value before you buy it.
+      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. Starting free is the proof: add a yard, snap a few certs, and see exactly what's expired, expiring, and missing in your operation before you pay a dollar.
     </p>
     <p class="lede" style="margin-inline:0;max-width:72ch;color:var(--fg-dim);font-size:16px">
       We're onboarding our first shops now. Real numbers go here the day they're real — we don't make them up.
@@ -184,23 +151,72 @@ export const MARKETING_HTML = `
     <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">Fines, shutdowns, paperwork hell</span></li>
     <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">The whole account</span></li>
   </ul>
-  <p class="miss-kicker"><b>One prevented NPT day pays for 6&ndash;12 months of SYNNR.</b> Everything after that is pure protection.</p>
+  <p class="miss-kicker"><b>One prevented NPT day covers more than two years of SYNNR for a yard.</b> Everything after that is pure protection.</p>
   <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
+</section>
+
+<section class="section container" id="pricing" data-fx-atmos>
+  <div class="head" style="text-align:left;margin-inline:0">
+    <span class="eyebrow">Pricing</span>
+    <h2 class="h2" data-fx="words">Priced per yard. Scales with you.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, per yard — never per-seat, so you're never punished for adding crew. Less than $10 a day per yard. Annual billing saves two months.</p>
+  </div>
+  <div class="tiers">
+    <div class="tier">
+      <div class="tier-name">Single Yard</div>
+      <p class="tier-best">1 yard, getting started</p>
+      <div class="tier-price">$298<span>per yard / month, billed annually</span></div>
+      <ul class="tier-features">
+        <li>Unlimited assets &amp; users</li>
+        <li>Photo + proof storage</li>
+        <li>Email expiration alerts</li>
+        <li>The full renewal loop</li>
+      </ul>
+      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Start free</a>
+    </div>
+    <div class="tier tier-featured">
+      <span class="tier-pop">Most popular</span>
+      <div class="tier-name">Operator</div>
+      <p class="tier-best">Growing shops, 2+ yards</p>
+      <div class="tier-price">$258<span>per yard / month, billed annually</span></div>
+      <ul class="tier-features">
+        <li>Everything in Single Yard</li>
+        <li>SMS &ldquo;you get the text&rdquo; alerts</li>
+        <li>Roles &amp; permissions</li>
+        <li>CSV import + priority support</li>
+      </ul>
+      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Start free</a>
+    </div>
+    <div class="tier">
+      <div class="tier-name">Fleet</div>
+      <p class="tier-best">Multi-yard operations</p>
+      <div class="tier-price">Custom<span>for 3+ locations</span></div>
+      <ul class="tier-features">
+        <li>Everything in Operator</li>
+        <li>SSO + dedicated support</li>
+        <li>Done-for-you yard load</li>
+        <li>Custom integrations</li>
+      </ul>
+      <a href="/readiness-audit" class="btn btn-ghost btn-sm tier-cta">Talk to us</a>
+    </div>
+  </div>
+  <p class="tiers-note">14-day free trial · cancel anytime · your data, exportable. Don&apos;t want to do the data entry? Our team will load your whole yard for you — $998&ndash;$3,000 one-time, then you&apos;re self-serve.</p>
 </section>
 
 <section class="section final" id="cta">
   <div class="container">
     <div class="final-card">
       <div class="glow"></div>
-      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free readiness audit</span>
-      <h2 class="display">Get your free readiness audit.</h2>
-      <p class="lede" style="margin:14px auto 0">Tell us about your operation — or we'll come log it on-site. We'll show you what's expired, expiring, and missing. No charge.</p>
+      <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Start free</span>
+      <h2 class="display">Stop getting turned around at the gate.</h2>
+      <p class="lede" style="margin:14px auto 0">Add your first yard, snap your certs, and get a text before anything expires. Free for 14 days — load your list in minutes.</p>
       <div class="hero-cta" style="justify-content:center;margin-top:26px">
-        <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
+        <a href="/signup" class="btn btn-primary">Start free — 14 days
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
+        <a href="/login" class="btn btn-ghost">Log in</a>
       </div>
-      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">Or just email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
+      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">14-day free trial · cancel anytime · or email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
     </div>
   </div>
 </section>

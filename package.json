@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
-    "tally:demo": "node --import tsx lib/tally/demo.ts",
     "stripe:setup": "node scripts/stripe-setup.mjs",
     "stripe:meter": "node scripts/stripe-meter.mjs"
   },

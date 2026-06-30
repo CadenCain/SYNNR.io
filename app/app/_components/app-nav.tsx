@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getBrowserSupabase } from "@/lib/supabase/client";
 
 /** Desktop sidebar items. */
 const SIDEBAR = [
@@ -34,17 +35,30 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav() {
+export default function AppNav({ companyName }: { companyName?: string }) {
   const path = usePathname() || "/app";
+  const router = useRouter();
+
+  async function signOut() {
+    const sb = getBrowserSupabase();
+    if (sb) await sb.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <>
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 p-4 md:flex">
-        <Link href="/app" className="mb-6 flex items-center gap-2.5 px-2 py-1">
+        <Link href="/app" className="mb-1 flex items-center gap-2.5 px-2 py-1">
           {MARK}
           <span className="font-semibold tracking-tight">SYNNR</span>
         </Link>
+        {companyName ? (
+          <div className="mb-5 truncate px-2 text-xs text-zinc-500" title={companyName}>{companyName}</div>
+        ) : (
+          <div className="mb-5" />
+        )}
         <nav className="flex flex-col gap-1">
           {SIDEBAR.map((item) => {
             const active = isActive(path, item.href, item.exact);
@@ -71,6 +85,12 @@ export default function AppNav() {
         >
           <Plus className="h-[18px] w-[18px]" /> Quick action
         </Link>
+        <button
+          onClick={signOut}
+          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-zinc-300"
+        >
+          <LogOut className="h-[18px] w-[18px]" /> Sign out
+        </button>
       </aside>
 
       {/* Mobile top bar */}

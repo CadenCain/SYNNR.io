@@ -264,6 +264,7 @@
 .mkt .tiers { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
 @media (max-width:880px){ .mkt .tiers { grid-template-columns:1fr; } }
 .mkt .tier {
+  position:relative;
   border:1px solid var(--line); border-radius:var(--radius);
   background:var(--card); padding:24px;
   display:flex; flex-direction:column; gap:6px;
@@ -272,6 +273,19 @@
   border-color: rgba(var(--accent-rgb),.32);
   background: linear-gradient(180deg, rgba(var(--accent-rgb),.06), var(--card) 60%);
 }
+.mkt .tier-pop {
+  position:absolute; top:-10px; left:24px;
+  font-family: var(--font-mono); font-size:10.5px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.08em;
+  color:#1a1613; background:var(--accent);
+  padding:3px 9px; border-radius:999px;
+}
+.mkt .tier-price { margin:6px 0 4px; font-size:30px; font-weight:700; letter-spacing:-0.02em; color:var(--fg); }
+.mkt .tier-price span { display:block; margin-top:4px; font-size:13px; font-weight:500; letter-spacing:0; color:var(--fg-dim); }
+.mkt .tier-features { list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.mkt .tier-features li { position:relative; padding-left:22px; font-size:14px; color:var(--fg-dim); line-height:1.45; }
+.mkt .tier-features li::before { content:"✓"; position:absolute; left:0; top:0; color:var(--accent-ink); font-weight:700; }
+.mkt .tier-cta { margin-top:18px; width:100%; }
 .mkt .tier-name {
   font-family: var(--font-mono); font-size:12px;
   text-transform:uppercase; letter-spacing:.08em;
