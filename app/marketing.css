@@ -167,7 +167,10 @@
 .mkt .nav-links { display:flex; align-items:center; gap:28px; }
 .mkt .nav-links a { font-size:14.5px; color: var(--fg-dim); transition: color .2s; white-space:nowrap; }
 .mkt .nav-links a:hover { color: var(--fg); }
-.mkt .nav-cta { display:flex; align-items:center; gap:10px; }
+.mkt .nav-cta { display:flex; align-items:center; gap:14px; }
+.mkt .nav-login { font-size:14.5px; color: var(--fg-dim); transition: color .2s; white-space:nowrap; }
+.mkt .nav-login:hover { color: var(--fg); }
+@media (max-width:760px){ .mkt .nav-cta .nav-login { display:none; } }
 /* Mobile menu — hamburger reveals the section links below 860px (JS-free) */
 .mkt .nav-toggle { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
 .mkt .nav-burger { display:none; align-items:center; justify-content:center; width:44px; height:44px; flex:none; border-radius:999px; border:1px solid var(--line-2); background:var(--bg-2); color:var(--fg); cursor:pointer; }

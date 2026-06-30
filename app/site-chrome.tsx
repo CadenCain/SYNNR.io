@@ -22,6 +22,7 @@ export function SiteNav() {
           <a href="/#why">Why SYNNR</a>
         </nav>
         <div className="nav-cta">
+          <a href="/app" className="nav-login">Log in</a>
           <a href="/readiness-audit" className="btn btn-primary btn-sm">Free readiness audit</a>
           <label className="nav-burger" htmlFor="navMenu" aria-label="Open menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -33,6 +34,7 @@ export function SiteNav() {
           <a href="/#how">How it works</a>
           <a href="/#track">What we track</a>
           <a href="/#why">Why SYNNR</a>
+          <a href="/app">Log in</a>
           <a href="/readiness-audit">Get your free readiness audit</a>
         </nav>
       </div>

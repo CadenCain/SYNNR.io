@@ -26,6 +26,7 @@ export const MARKETING_HTML = `
       <a href="#why">Why SYNNR</a>
     </nav>
     <div class="nav-cta">
+      <a href="/app" class="nav-login">Log in</a>
       <a href="/readiness-audit" class="btn btn-primary btn-sm">Free readiness audit</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
@@ -35,6 +36,7 @@ export const MARKETING_HTML = `
       <a href="#how">How it works</a>
       <a href="#track">What we track</a>
       <a href="#why">Why SYNNR</a>
+      <a href="/app">Log in</a>
       <a href="/readiness-audit">Free readiness audit</a>
     </nav>
   </div>
