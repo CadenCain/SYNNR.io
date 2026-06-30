@@ -8,6 +8,11 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
  */
 const TO = "cadencain@darkstarops.com";
 const FROM = "SYNNR <noreply@synnr.io>";
+const MAX_FIELD = 4_000; // per-field char cap — leaves room for any legitimate "tell us about your shop" payload while killing 5MB bot pastes.
+
+// Anchored so substring matches like "me@shop.com please call back" can't slip
+// past validation and get stored / sent to Resend as replyTo.
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 export async function POST(req: Request) {
   let form: FormData;
@@ -26,25 +31,37 @@ export async function POST(req: Request) {
   const phone = String(form.get("phone") ?? "").trim();
 
   if (!name) return NextResponse.json({ ok: false, error: "Name is required." }, { status: 400 });
-  if (!/\S+@\S+\.\S+/.test(email)) return NextResponse.json({ ok: false, error: "Enter a valid email." }, { status: 400 });
+  if (!EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "Enter a valid email." }, { status: 400 });
   if (headache.length < 3) return NextResponse.json({ ok: false, error: "Tell us your biggest headache." }, { status: 400 });
+  if (name.length > MAX_FIELD || company.length > MAX_FIELD || email.length > MAX_FIELD ||
+      headache.length > MAX_FIELD || role.length > MAX_FIELD || runs.length > MAX_FIELD || phone.length > MAX_FIELD) {
+    return NextResponse.json({ ok: false, error: "Field too long." }, { status: 413 });
+  }
 
   // 1) Store the lead (admin client — server-only, bypasses RLS for a public funnel).
-  let stored = false;
+  //    Capture the inserted row id so step 3 can update THAT row by id — without
+  //    that we'd match by (email, source) and clobber prior submissions from
+  //    repeat shops.
+  let insertedId: string | null = null;
   const admin = getAdminSupabase();
   if (admin) {
-    const { error } = await admin.from("audit_requests").insert({
-      name,
-      company: company || null,
-      email,
-      phone: phone || null,
-      service_type: runs || null,
-      bottleneck: [role && `Role: ${role}`, `Headache: ${headache}`].filter(Boolean).join("\n"),
-      source: "readiness_audit",
-    } as never);
-    stored = !error;
+    const { data, error } = await admin
+      .from("audit_requests")
+      .insert({
+        name,
+        company: company || null,
+        email,
+        phone: phone || null,
+        service_type: runs || null,
+        bottleneck: [role && `Role: ${role}`, `Headache: ${headache}`].filter(Boolean).join("\n"),
+        source: "readiness_audit",
+      } as never)
+      .select("id")
+      .single();
     if (error) console.error("[readiness-audit] store failed:", error.message);
+    insertedId = (data as { id: string } | null)?.id ?? null;
   }
+  const stored = !!insertedId;
 
   // 2) Email the founder's inbox (best-effort).
   let emailed = false;
@@ -80,9 +97,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // Mark whether the email went out (best-effort).
-  if (admin && stored) {
-    await admin.from("audit_requests").update({ emailed } as never).eq("email", email).eq("source", "readiness_audit").is("emailed", null);
+  // 3) Flag emailed on the SAME row we just inserted (by id). The old code
+  //    filtered by `.is('emailed', null)` on a NOT-NULL boolean column — that
+  //    matched zero rows and never persisted the flag.
+  if (admin && insertedId && emailed) {
+    await admin.from("audit_requests").update({ emailed: true } as never).eq("id", insertedId);
   }
 
   // Never break the funnel: as long as we stored OR emailed, it's a success.

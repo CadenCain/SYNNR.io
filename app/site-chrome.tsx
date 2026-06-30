@@ -29,6 +29,7 @@ export function SiteNav() {
         </div>
         <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
         <nav className="nav-mobile">
+          <a href="/#problem">The problem</a>
           <a href="/#how">How it works</a>
           <a href="/#track">What we track</a>
           <a href="/#why">Why SYNNR</a>

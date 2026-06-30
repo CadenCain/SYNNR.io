@@ -1,5 +1,4 @@
 import "../marketing.css";
-import "../services/services.css";
 import "./readiness-audit.css";
 import { SiteNav, SiteFooter } from "../site-chrome";
 import ReadinessAuditForm from "./readiness-audit-form";
@@ -7,7 +6,7 @@ import ReadinessAuditForm from "./readiness-audit-form";
 export const metadata = {
   title: "Free readiness audit | SYNNR",
   description:
-    "Send us your asset list or we'll log it on-site. We'll show you what's expired, expiring, and missing. Free.",
+    "Tell us about your yard or we'll come log it on-site. We'll show you what's expired, expiring, and missing. Free.",
 };
 
 export default function ReadinessAuditPage() {
@@ -20,7 +19,7 @@ export default function ReadinessAuditPage() {
             <span className="eyebrow">Free readiness audit</span>
             <h1 className="h2" style={{ marginTop: 8 }}>Get your free readiness audit</h1>
             <p className="lede" style={{ marginInline: 0 }}>
-              Send us your asset list — or we'll log it on-site. We'll show you what's expired, expiring, and missing. No charge, no pitch.
+              Tell us about your yard — or we'll come log it on-site. We'll show you what's expired, expiring, and missing. No charge, no pitch.
             </p>
           </div>
 

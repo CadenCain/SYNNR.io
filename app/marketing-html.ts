@@ -52,7 +52,7 @@ export const MARKETING_HTML = `
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Send your list or we log it on-site. We show you what's expired, expiring, and missing — free.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Tell us about your yard or we come log it on-site. We show you what's expired, expiring, and missing — free.</p>
   </div>
 </section>
 
@@ -90,7 +90,7 @@ export const MARKETING_HTML = `
     <h2 class="h2">We set it up. We run it. You get the text.</h2>
   </div>
   <div class="steps3">
-    <div class="step3c"><span class="step3n">1</span><h3>Free readiness audit</h3><p>Send us your list or we log it on-site. We show you what's expired, expiring, and missing.</p></div>
+    <div class="step3c"><span class="step3n">1</span><h3>Free readiness audit</h3><p>Tell us about your yard or we come log it on-site. We show you what's expired, expiring, and missing.</p></div>
     <div class="step3c"><span class="step3n">2</span><h3>We build your readiness system</h3><p>Every asset and cert — with status, location, and expiration dates. Done for you.</p></div>
     <div class="step3c"><span class="step3n">3</span><h3>You're covered</h3><p>Automatic text alerts before anything lapses, check-out/check-in so nothing walks off, one view across every yard. We watch it. You get the text.</p></div>
   </div>
@@ -160,7 +160,7 @@ export const MARKETING_HTML = `
       <div class="glow"></div>
       <span class="eyebrow" style="justify-content:center;margin-bottom:18px">Free readiness audit</span>
       <h2 class="display">Get your free readiness audit.</h2>
-      <p class="lede" style="margin:14px auto 0">Send us your asset list — or we'll log it on-site. We'll show you what's expired, expiring, and missing. No charge.</p>
+      <p class="lede" style="margin:14px auto 0">Tell us about your operation — or we'll come log it on-site. We'll show you what's expired, expiring, and missing. No charge.</p>
       <div class="hero-cta" style="justify-content:center;margin-top:26px">
         <a href="/readiness-audit" class="btn btn-primary">Get your free readiness audit
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>

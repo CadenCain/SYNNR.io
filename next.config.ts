@@ -22,9 +22,10 @@ const PARKED = [
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      // Redirect old /readiness-map to new /readiness-audit
+      // Old funnel URLs land directly on the live one (single hop — no chains).
       { source: "/readiness-map", destination: "/readiness-audit", permanent: false },
-      // Park old SaaS marketplace/app/auth routes
+      { source: "/services", destination: "/readiness-audit", permanent: false },
+      // Park old SaaS marketplace/app/auth routes.
       ...PARKED.map((source) => ({ source, destination: "/", permanent: false })),
     ];
   },
