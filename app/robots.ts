@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard", "/app/", "/apps", "/checkout", "/billing", "/team", "/account", "/ingest", "/demo", "/login", "/signup", "/api/"],
+      disallow: ["/dashboard", "/app/", "/apps", "/checkout", "/billing", "/team", "/account", "/ingest", "/demo", "/login", "/signup", "/op", "/op/", "/api/"],
     },
     sitemap: "https://synnr.io/sitemap.xml",
   };
