@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 
-/** PWA manifest — lets a crew install TallyShot to the home screen. */
+/** PWA manifest — installs SYNNR to the home screen. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TallyShot — SYNNR",
-    short_name: "TallyShot",
+    name: "SYNNR",
+    short_name: "SYNNR",
     description:
-      "Photograph a handwritten tally sheet, get clean Excel back — every shaky digit flagged for a human to confirm.",
-    start_url: "/app/tallyshot",
+      "Equipment & cert readiness for oilfield service shops. Track every asset and cert; get a text before anything expires.",
+    start_url: "/app",
     display: "standalone",
     background_color: "#131110",
     theme_color: "#131110",
