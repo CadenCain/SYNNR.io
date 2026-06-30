@@ -56,10 +56,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="problem">
+<section class="section container" id="problem" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">The problem</span>
-    <h2 class="h2">You don't lose money on the big stuff.</h2>
+    <h2 class="h2" data-fx="words">You don't lose money on the big stuff.</h2>
   </div>
   <p class="lede" style="margin-inline:0;max-width:72ch">
     You lose it at 5am, when a crew's gotta roll and the gear's not there — or it's the wrong one, or the BOP cert
@@ -70,10 +70,10 @@ export const MARKETING_HTML = `
   </p>
 </section>
 
-<section class="section container" id="why-need">
+<section class="section container" id="why-need" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Why you need it</span>
-    <h2 class="h2">You're already buried.</h2>
+    <h2 class="h2" data-fx="words">You're already buried.</h2>
   </div>
   <p class="lede" style="margin-inline:0;max-width:72ch">
     The last thing you've got time for is walking the yard checking what's expired, what's out, or what's even here —
@@ -84,10 +84,10 @@ export const MARKETING_HTML = `
   <div class="callout">One prevented NPT day pays for it ten times over. It's not a cost — it's insurance against a bleed you've already got.</div>
 </section>
 
-<section class="section container" id="how">
+<section class="section container" id="how" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">How it works</span>
-    <h2 class="h2">We set it up. We run it. You get the text.</h2>
+    <h2 class="h2" data-fx="words">We set it up. We run it. You get the text.</h2>
   </div>
   <div class="steps3">
     <div class="step3c"><span class="step3n">1</span><h3>Free readiness audit</h3><p>Tell us about your yard or we come log it on-site. We show you what's expired, expiring, and missing.</p></div>
@@ -96,10 +96,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="track">
+<section class="section container" id="track" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">What we track</span>
-    <h2 class="h2">Everything that has to be ready.</h2>
+    <h2 class="h2" data-fx="words">Everything that has to be ready.</h2>
   </div>
   <div class="fixgrid">
     <div class="fixc"><h3>Equipment &amp; assets</h3><p>Tools, BOPs, trailers — anything in the yard.</p></div>
@@ -109,10 +109,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="why">
+<section class="section container" id="why" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Why SYNNR</span>
-    <h2 class="h2">Built by someone who's lived it.</h2>
+    <h2 class="h2" data-fx="words">Built by someone who's lived it.</h2>
   </div>
   <div class="whygrid">
     <div class="whyc"><h3>Done for you</h3><p>Your team never logs into anything or maintains a thing. We run it.</p></div>
@@ -122,10 +122,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="pricing">
+<section class="section container" id="pricing" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Pricing</span>
-    <h2 class="h2">Priced to your operation.</h2>
+    <h2 class="h2" data-fx="words">Priced to your operation.</h2>
     <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, priced per asset and per yard. Setup is one-time — we log your yard and build the system. Pick the tier that fits; we confirm the exact number at your free audit.</p>
   </div>
   <div class="tiers">
@@ -156,10 +156,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="proof">
+<section class="section container" id="proof" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Proof</span>
-    <h2 class="h2">Built by someone who's lived the 5am scramble.</h2>
+    <h2 class="h2" data-fx="words">Built by someone who's lived the 5am scramble.</h2>
     <p class="lede" style="margin-inline:0;max-width:72ch">
       SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. The free readiness audit is the proof: before you pay a dollar, we show you exactly what's expired, expiring, and missing in your operation. You see the value before you buy it.
     </p>
@@ -169,10 +169,10 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<section class="section container" id="miss">
+<section class="section container" id="miss" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Cost of a miss</span>
-    <h2 class="h2">Cheaper than one bad day.</h2>
+    <h2 class="h2" data-fx="words">Cheaper than one bad day.</h2>
     <p class="lede" style="margin-inline:0;max-width:64ch">You already know what a miss costs. Here's the math we're up against — and we're a fraction of any single one.</p>
   </div>
   <ul class="miss-list" aria-label="What a single miss costs">
