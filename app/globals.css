@@ -11,18 +11,18 @@
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  /* SYNNR brand palette — warm charcoal + bone. Used by the /app + auth
-     surface so the product feels like the marketing site (not generic zinc).
-     Generates utilities: bg-coal, bg-surface, bg-elevated, text-ink,
-     text-ink-dim, text-ink-faint, border-line, border-line-2, bg-bone, etc. */
-  --color-coal:      #100f0e;
-  --color-surface:   #18140f;
-  --color-elevated:  #211b14;
-  --color-ink:       #ece5d7;
-  --color-ink-dim:   #a59d8c;
-  --color-ink-faint: #756c5b;
-  --color-line:      #2a241c;
-  --color-line-2:    #38301f;
+  /* SYNNR app palette — crisp neutral near-black (Kravio-style) with a warm
+     bone brand accent. Used by the /app + auth surface. Generates utilities:
+     bg-coal, bg-surface, bg-elevated, text-ink/-dim/-faint, border-line/-2,
+     bg-bone, etc. (Marketing keeps its own warm palette.) */
+  --color-coal:      #0a0a0b;
+  --color-surface:   #141416;
+  --color-elevated:  #1c1c20;
+  --color-ink:       #ededee;
+  --color-ink-dim:   #9a9aa2;
+  --color-ink-faint: #6a6a72;
+  --color-line:      #232327;
+  --color-line-2:    #2f2f36;
   --color-bone:      #e7ddc7;
   --color-bone-soft: #f3ecdb;
 }
@@ -33,9 +33,15 @@
   box-sizing: border-box;
 }
 
-* {
-  margin: 0;
-  padding: 0;
+/* Base reset lives in @layer base so Tailwind utilities (@layer utilities)
+   win — otherwise an unlayered `* { padding: 0 }` silently overrides every
+   px-/py-/p- utility and the whole app renders with no padding. Marketing's
+   unlayered .mkt CSS still beats both layers, so it's unaffected. */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {

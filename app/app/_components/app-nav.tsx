@@ -2,20 +2,31 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut } from "lucide-react";
+import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-/** Desktop sidebar items. */
-const SIDEBAR = [
-  { href: "/app", label: "Home", icon: LayoutGrid, exact: true },
-  { href: "/app/yards", label: "Yards", icon: Warehouse },
-  { href: "/app/compliance", label: "Compliance", icon: ShieldCheck },
-  { href: "/app/alerts", label: "Alerts", icon: Bell },
-  { href: "/app/settings", label: "Settings", icon: Settings },
+const GROUPS: { label: string; items: { href: string; label: string; icon: typeof LayoutGrid; exact?: boolean }[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
+      { href: "/app/compliance", label: "Compliance", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/app/yards", label: "Yards", icon: Warehouse },
+      { href: "/app/alerts", label: "Alerts", icon: Bell },
+    ],
+  },
+  {
+    label: "Account",
+    items: [{ href: "/app/settings", label: "Settings", icon: Settings }],
+  },
 ];
 
-/** Mobile bottom tabs — center is the camera-first Quick Action. */
 const TABS_LEFT = [
   { href: "/app", label: "Home", icon: LayoutGrid, exact: true },
   { href: "/app/yards", label: "Yards", icon: Warehouse },
@@ -49,58 +60,72 @@ export default function AppNav({ companyName, userName }: { companyName?: string
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-coal p-4 md:flex">
-        <Link href="/app" className="mb-1 flex items-center gap-2.5 px-2 py-1">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-coal px-3 py-4 md:flex">
+        <div className="flex items-center gap-2.5 px-2 pb-4">
           {MARK}
-          <span className="font-semibold tracking-tight">SYNNR</span>
-        </Link>
-        {companyName ? (
-          <div className="mb-5 truncate px-2 text-xs text-ink-dim" title={companyName}>{companyName}</div>
-        ) : (
-          <div className="mb-5" />
-        )}
-        <nav className="flex flex-col gap-1">
-          {SIDEBAR.map((item) => {
-            const active = isActive(path, item.href, item.exact);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                  active ? "bg-elevated text-ink" : "text-ink-dim hover:bg-surface hover:text-ink",
-                )}
-              >
-                <Icon className="h-[18px] w-[18px]" />
-                {item.label}
-              </Link>
-            );
-          })}
+          <div className="min-w-0 leading-tight">
+            <div className="font-semibold tracking-tight">SYNNR</div>
+            {companyName ? <div className="truncate text-xs text-ink-faint" title={companyName}>{companyName}</div> : null}
+          </div>
+        </div>
+
+        {/* Search (jump to compliance list) */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); router.push("/app/compliance"); }}
+          className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-faint focus-within:border-line-2"
+        >
+          <Search className="h-4 w-4" />
+          <input
+            placeholder="Search compliance…"
+            className="w-full bg-transparent text-ink placeholder:text-ink-faint outline-none"
+          />
+          <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-ink-faint lg:inline">⌘K</kbd>
+        </form>
+
+        <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
+          {GROUPS.map((g) => (
+            <div key={g.label} className="flex flex-col gap-1">
+              <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-ink-faint">{g.label}</div>
+              {g.items.map((item) => {
+                const active = isActive(path, item.href, item.exact);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      active ? "bg-elevated text-ink" : "text-ink-dim hover:bg-white/[0.03] hover:text-ink",
+                    )}
+                  >
+                    <Icon className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
+
         <Link
           href="/app/quick"
-          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-[#e7ddc7] px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-[#f3ecdb]"
+          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-bone px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-bone-soft"
         >
           <Plus className="h-[18px] w-[18px]" /> Quick action
         </Link>
-        <div className="mt-auto flex flex-col gap-1 border-t border-line pt-3">
-          {userName ? (
-            <div className="flex items-center gap-2.5 px-3 py-1">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e7ddc7] text-xs font-semibold text-coal">
-                {userName.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="min-w-0 truncate text-sm text-ink" title={userName}>{userName}</span>
-            </div>
-          ) : null}
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-dim transition-colors hover:bg-surface hover:text-ink"
-          >
-            <LogOut className="h-[18px] w-[18px]" /> Sign out
-          </button>
-        </div>
+
+        {userName ? (
+          <div className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-ink" title={userName}>{userName}</span>
+            <button onClick={signOut} title="Sign out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-white/[0.03] hover:text-ink">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       {/* Mobile top bar */}
@@ -108,7 +133,7 @@ export default function AppNav({ companyName, userName }: { companyName?: string
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
         {userName ? (
-          <span className="ml-auto flex h-7 w-7 items-center justify-center rounded-full bg-[#e7ddc7] text-xs font-semibold text-coal" title={userName}>
+          <span className="ml-auto flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal" title={userName}>
             {userName.slice(0, 1).toUpperCase()}
           </span>
         ) : null}
@@ -116,43 +141,22 @@ export default function AppNav({ companyName, userName }: { companyName?: string
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-coal/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
-        {TABS_LEFT.map((t) => (
-          <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact)} />
-        ))}
-        {/* Center quick action */}
+        {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact)} />)}
         <Link href="/app/quick" className="flex flex-col items-center gap-1" aria-label="Quick action">
-          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#e7ddc7] text-coal shadow-lg shadow-black/40">
+          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-coal shadow-lg shadow-black/40">
             <Plus className="h-6 w-6" />
           </span>
         </Link>
-        {TABS_RIGHT.map((t) => (
-          <Tab key={t.href} {...t} active={isActive(path, t.href)} />
-        ))}
+        {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href)} />)}
       </nav>
     </>
   );
 }
 
-function Tab({
-  href,
-  label,
-  icon: Icon,
-  active,
-}: {
-  href: string;
-  label: string;
-  icon: typeof LayoutGrid;
-  active: boolean;
-}) {
+function Tab({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof LayoutGrid; active: boolean }) {
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex flex-col items-center gap-1 py-1 text-[11px]",
-        active ? "text-ink" : "text-ink-dim",
-      )}
-    >
+    <Link href={href} aria-current={active ? "page" : undefined}
+      className={cn("flex flex-col items-center gap-1 py-1 text-[11px]", active ? "text-ink" : "text-ink-faint")}>
       <Icon className="h-5 w-5" />
       {label}
     </Link>
