@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { kindLabel } from "@/lib/saas/taxonomy";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
 import { computeReadiness } from "@/lib/saas/status";
+import ShareProof from "./_components/share-proof";
 
 export const dynamic = "force-dynamic";
 
@@ -105,9 +106,12 @@ export default async function Dashboard() {
           <h1 className="text-[26px] font-semibold tracking-tight">Hello, {first} <span className="align-middle">👋</span></h1>
           <p className="mt-1 text-sm text-ink-dim">Here&apos;s where {company.name} stands right now.</p>
         </div>
-        <Link href="/app/dispatch" className={buttonClass("default")}>
-          <Truck className="h-[18px] w-[18px]" /> Roll a truck
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <ShareProof scope="company" />
+          <Link href="/app/dispatch" className={buttonClass("default")}>
+            <Truck className="h-[18px] w-[18px]" /> Roll a truck
+          </Link>
+        </div>
       </div>
 
       {/* KPIs */}

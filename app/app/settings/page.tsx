@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Users, CreditCard, ChevronRight, Download } from "lucide-react";
+import { Bell, Users, CreditCard, ChevronRight, Download, Share2 } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
 
@@ -11,6 +11,7 @@ export default async function SettingsHub() {
     { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
     { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
+    { href: "/app/settings/proofs", icon: Share2, title: "Readiness proofs", desc: "Share links you've created — view or revoke", live: true },
   ];
   return (
     <div className="flex flex-col gap-6">

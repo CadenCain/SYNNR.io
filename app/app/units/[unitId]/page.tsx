@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { addComplianceItem, addAsset } from "./actions";
 import { updateUnit, deleteUnit } from "@/app/app/_actions";
+import ShareProof from "@/app/app/_components/share-proof";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         description={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`}
         actions={
           <>
+          <ShareProof scope="unit" unitId={u.id} />
           {!isOut ? (
             <Link href={`/app/units/${unitId}/dispatch`}
               className="flex h-9 items-center gap-1.5 rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">

@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { updateYard, deleteYard } from "@/app/app/_actions";
+import ShareProof from "@/app/app/_components/share-proof";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,8 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
         title={y.name}
         description={y.location ?? undefined}
         actions={
+          <>
+          <ShareProof scope="yard" yardId={y.id} />
           <details className="group relative">
             <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
               <Settings2 className="h-4 w-4" /> Manage
@@ -66,6 +69,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
               </form>
             </div>
           </details>
+          </>
         }
       />
 
