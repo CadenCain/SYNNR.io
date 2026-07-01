@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Users, CreditCard, ChevronRight } from "lucide-react";
+import { Bell, Users, CreditCard, ChevronRight, Download } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
 
@@ -36,6 +36,19 @@ export default async function SettingsHub() {
             </Link>
           );
         })}
+        {/* Plain <a> so the browser downloads the CSV instead of client-routing */}
+        <a href="/api/saas/export">
+          <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
+              <Download className="h-5 w-5 text-ink-dim" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">Export data</div>
+              <div className="truncate text-sm text-ink-dim">Download every item as CSV — your data, always yours</div>
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
+          </Card>
+        </a>
       </div>
     </div>
   );

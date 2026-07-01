@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { syncYardQuantity } from "@/lib/saas/billing";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
 
@@ -17,6 +18,7 @@ async function createYard(formData: FormData) {
   const db = await saasDb();
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
   if (error) throw new Error(error.message);
+  await syncYardQuantity(company.id); // per-yard billing follows the yard count
   revalidatePath("/app/yards");
 }
 

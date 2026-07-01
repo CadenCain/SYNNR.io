@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { syncYardQuantity } from "@/lib/saas/billing";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -24,6 +25,7 @@ export async function deleteYard(fd: FormData) {
   const id = str(fd, "id");
   const db = await saasDb();
   await db.from("saas_yards").delete().eq("id", id).eq("company_id", company.id);
+  await syncYardQuantity(company.id); // per-yard billing follows the yard count
   redirect("/app/yards");
 }
 
