@@ -315,7 +315,11 @@
   font-family: var(--font-mono); font-size:12px; letter-spacing:.05em; color: var(--fg-dim);
   white-space:nowrap; max-width:100%;
 }
-.mkt .hero .pill-badge .d { width:7px; height:7px; border-radius:50%; background: var(--good); box-shadow:0 0 10px var(--good); }
+.mkt .hero .pill-badge .d { width:7px; height:7px; border-radius:50%; background: var(--good); box-shadow:0 0 10px var(--good); flex:none; }
+@media (max-width:560px){
+  .mkt .hero .pill-badge { white-space:normal; align-items:flex-start; font-size:11px; padding:7px 13px; line-height:1.45; text-align:left; }
+  .mkt .hero .pill-badge .d { margin-top:5px; }
+}
 .mkt .hero h1 { margin-top:26px; }
 .mkt .hero .lede { margin: 22px auto 0; max-width: 62ch; font-size: clamp(17px,1.8vw,21px); }
 .mkt .hero-cta { display:flex; flex-wrap:wrap; gap:13px; justify-content:center; margin-top:34px; }
