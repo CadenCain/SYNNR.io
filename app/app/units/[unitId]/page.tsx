@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Box, Settings2, Trash2, ChevronRight } from "lucide-react";
+import { Plus, Box, Settings2, Trash2, ChevronRight, Truck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
@@ -39,13 +39,41 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     .from("saas_assets").select("id, name, category, status").eq("unit_id", unitId).order("name");
   const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string }[];
 
+  // Is this unit currently out? (latest checkout with no linked check-in)
+  const { data: lastCo } = await db
+    .from("saas_dispatch_checks").select("id, started_at")
+    .eq("unit_id", unitId).eq("type", "checkout")
+    .order("started_at", { ascending: false }).limit(1).maybeSingle();
+  let isOut = false;
+  if (lastCo) {
+    const { count } = await db
+      .from("saas_dispatch_checks").select("id", { count: "exact", head: true })
+      .eq("checkout_id", (lastCo as { id: string }).id).eq("type", "checkin");
+    isOut = (count ?? 0) === 0;
+  }
+
   return (
     <div className="flex flex-col gap-7">
+      {isOut ? (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-amber-400">
+            <Truck className="h-4 w-4" /> Out on a job since {new Date((lastCo as { started_at: string }).started_at).toLocaleString()}
+          </div>
+          <Link href={`/app/units/${unitId}/dispatch`} className="shrink-0 rounded-lg bg-bone px-3 py-2 text-sm font-semibold text-coal">Check in →</Link>
+        </div>
+      ) : null}
       <PageHeader
         back={{ href: `/app/yards/${u.yard_id}`, label: yardName ?? "Yard" }}
         title={u.name}
         description={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`}
         actions={
+          <>
+          {!isOut ? (
+            <Link href={`/app/units/${unitId}/dispatch`}
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">
+              <Truck className="h-4 w-4" /> Roll this truck
+            </Link>
+          ) : null}
           <details className="group relative">
             <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
               <Settings2 className="h-4 w-4" /> Manage
@@ -70,6 +98,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               </form>
             </div>
           </details>
+          </>
         }
       />
 

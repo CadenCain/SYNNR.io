@@ -20,13 +20,14 @@ export async function GET() {
   if (!company) return NextResponse.json({ ok: false, error: "no company" }, { status: 400 });
 
   const db = await saasDb();
-  const [{ data: items }, { data: units }, { data: assets }, { data: yards }] = await Promise.all([
+  const [{ data: items }, { data: units }, { data: assets }, { data: yards }, { data: crew }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select("title, kind, status, issued_date, expiration_date, reminder_days, parent_type, parent_id")
       .eq("company_id", company.id),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", company.id),
     db.from("saas_assets").select("id, name, unit_id, yard_id").eq("company_id", company.id),
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
+    db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
 
   const yardName = new Map(((yards ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
@@ -35,13 +36,16 @@ export async function GET() {
   const unitYard = new Map(unitRows.map((u) => [u.id, yardName.get(u.yard_id) ?? ""]));
   const assetRows = (assets ?? []) as { id: string; name: string; unit_id: string | null; yard_id: string | null }[];
   const assetInfo = new Map(assetRows.map((a) => [a.id, a]));
+  const crewName = new Map(((crew ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
   type Row = { title: string; kind: string; status: string; issued_date: string | null; expiration_date: string | null; reminder_days: number; parent_type: string; parent_id: string };
-  const header = ["yard", "unit", "asset", "item", "kind", "status", "issued", "expires", "reminder_days"];
+  const header = ["yard", "unit", "asset", "crew", "item", "kind", "status", "issued", "expires", "reminder_days"];
   const lines = [header.join(",")];
   for (const i of ((items ?? []) as Row[])) {
-    let yard = "", unit = "", asset = "";
-    if (i.parent_type === "unit") {
+    let yard = "", unit = "", asset = "", crewMember = "";
+    if (i.parent_type === "crew") {
+      crewMember = crewName.get(i.parent_id) ?? "";
+    } else if (i.parent_type === "unit") {
       unit = unitName.get(i.parent_id) ?? "";
       yard = unitYard.get(i.parent_id) ?? "";
     } else {
@@ -50,7 +54,7 @@ export async function GET() {
       unit = a?.unit_id ? unitName.get(a.unit_id) ?? "" : "";
       yard = a?.yard_id ? yardName.get(a.yard_id) ?? "" : a?.unit_id ? unitYard.get(a.unit_id) ?? "" : "";
     }
-    lines.push([yard, unit, asset, i.title, i.kind, i.status, i.issued_date ?? "", i.expiration_date ?? "", i.reminder_days].map(esc).join(","));
+    lines.push([yard, unit, asset, crewMember, i.title, i.kind, i.status, i.issued_date ?? "", i.expiration_date ?? "", i.reminder_days].map(esc).join(","));
   }
 
   const today = new Date().toISOString().slice(0, 10);

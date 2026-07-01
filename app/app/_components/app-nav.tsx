@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut, Search } from "lucide-react";
+import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut, Search, HardHat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -18,6 +18,7 @@ const GROUPS: { label: string; items: { href: string; label: string; icon: typeo
     label: "Operations",
     items: [
       { href: "/app/yards", label: "Yards", icon: Warehouse },
+      { href: "/app/crew", label: "Crew", icon: HardHat },
       { href: "/app/alerts", label: "Alerts", icon: Bell },
     ],
   },

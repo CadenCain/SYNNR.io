@@ -74,6 +74,30 @@ export async function deleteAsset(fd: FormData) {
   redirect(unit_id ? `/app/units/${unit_id}` : "/app/yards");
 }
 
+// ── CREW ──
+export async function updateCrewMember(fd: FormData) {
+  const { company } = await requireCompany();
+  const id = str(fd, "id");
+  const name = str(fd, "name");
+  const role = str(fd, "role") || null;
+  const phone = str(fd, "phone") || null;
+  const status = str(fd, "status") || "active";
+  if (!id || !name) return;
+  const db = await saasDb();
+  const { error } = await db.from("saas_crew_members").update({ name, role, phone, status }).eq("id", id).eq("company_id", company.id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/app/crew/${id}`);
+}
+export async function deleteCrewMember(fd: FormData) {
+  const { company } = await requireCompany();
+  const id = str(fd, "id");
+  const db = await saasDb();
+  // Crew certs live in saas_compliance_items(parent_type='crew') — remove them with the member.
+  await db.from("saas_compliance_items").delete().eq("parent_type", "crew").eq("parent_id", id).eq("company_id", company.id);
+  await db.from("saas_crew_members").delete().eq("id", id).eq("company_id", company.id);
+  redirect("/app/crew");
+}
+
 // ── COMPLIANCE ITEM ──
 export async function updateComplianceItem(fd: FormData) {
   const { company } = await requireCompany();
