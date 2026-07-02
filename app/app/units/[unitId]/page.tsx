@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Box, Settings2, Trash2, ChevronRight, Truck } from "lucide-react";
+import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, HardHat, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { addComplianceItem, addAsset } from "./actions";
-import { updateUnit, deleteUnit } from "@/app/app/_actions";
+import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,24 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const { data: assetData } = await db
     .from("saas_assets").select("id, name, category, status").eq("unit_id", unitId).order("name");
   const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string }[];
+
+  // Crew: standing assignments + everyone else, with worst-card status chips.
+  const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
+    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
+    db.from("saas_crew_members").select("id, name, role").eq("company_id", company.id).eq("status", "active").order("name"),
+    db.from("saas_compliance_items_with_status").select("parent_id, status").eq("company_id", company.id).eq("parent_type", "crew"),
+  ]);
+  const assignedIds = new Set(((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
+  const rank: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
+  const worstByCrew = new Map<string, ComplianceStatus>();
+  for (const c of (crewCertData ?? []) as { parent_id: string; status: ComplianceStatus }[]) {
+    const cur = worstByCrew.get(c.parent_id);
+    if (!cur || rank[c.status] < rank[cur]) worstByCrew.set(c.parent_id, c.status);
+  }
+  const allCrew = ((crewListData ?? []) as { id: string; name: string; role: string | null }[])
+    .map((c) => ({ ...c, worst: worstByCrew.get(c.id) ?? null }));
+  const assignedCrew = allCrew.filter((c) => assignedIds.has(c.id));
+  const unassignedCrew = allCrew.filter((c) => !assignedIds.has(c.id));
 
   // Is this unit currently out? (latest checkout with no linked check-in)
   const { data: lastCo } = await db
@@ -131,6 +150,62 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             </div>
           </form>
         </Card>
+      </section>
+
+      {/* Loadout checklist — the template behind "Roll a truck" */}
+      <Link href={`/app/units/${unitId}/loadout`}>
+        <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium">Loadout checklist</div>
+            <div className="truncate text-sm text-ink-dim">What this truck leaves the yard with — edit items, required vs optional</div>
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
+        </Card>
+      </Link>
+
+      {/* Crew on this unit — standing assignment; their cards decide this
+          truck's ready call at checkout and pre-select on Roll a truck. */}
+      <section className="flex flex-col gap-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
+        {assignedCrew.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {assignedCrew.map((c) => (
+              <Card key={c.id} className="flex items-center gap-3 p-4">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><HardHat className="h-4 w-4 text-ink-dim" /></span>
+                <Link href={`/app/crew/${c.id}`} className="min-w-0 flex-1 hover:underline">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  <span className="block truncate text-sm text-ink-dim">{c.role ?? "crew"}</span>
+                </Link>
+                {c.worst ? <StatusBadge status={c.worst} /> : <span className="text-xs text-ink-faint">no cards</span>}
+                <form action={unassignCrewFromUnit}>
+                  <input type="hidden" name="unit_id" value={u.id} />
+                  <input type="hidden" name="crew_member_id" value={c.id} />
+                  <button type="submit" title="Unassign" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
+                    <X className="h-4 w-4" />
+                  </button>
+                </form>
+              </Card>
+            ))}
+          </div>
+        )}
+        {unassignedCrew.length > 0 ? (
+          <Card className="p-5">
+            <h3 className="mb-3 text-sm font-medium text-ink">{assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"}</h3>
+            <form action={assignCrewToUnit} className="flex flex-col gap-3 sm:flex-row">
+              <input type="hidden" name="unit_id" value={u.id} />
+              <select name="crew_member_id" required defaultValue="" className={`${fld} flex-1`}>
+                <option value="" disabled>Pick a hand…</option>
+                {unassignedCrew.map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` — ${c.role}` : ""}</option>)}
+              </select>
+              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Assign</Button>
+            </form>
+          </Card>
+        ) : assignedCrew.length === 0 ? (
+          <Card className="px-6 py-8 text-center text-sm text-ink-dim">
+            No crew yet. <Link href="/app/crew" className="text-bone hover:underline">Add your hands</Link> first, then assign them here.
+          </Card>
+        ) : null}
       </section>
 
       {/* Assets */}

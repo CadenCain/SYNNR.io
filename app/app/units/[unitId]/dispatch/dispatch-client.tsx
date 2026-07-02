@@ -62,16 +62,19 @@ export default function DispatchClient(props: {
   toggles: ToggleRow[];
   facts: FactRow[];
   crew: CrewOption[];
+  initialCrewIds?: string[];
 }) {
   const router = useRouter();
   const [missing, setMissing] = useState<Set<string>>(
     () => new Set(props.toggles.filter((t) => t.initialMissing).map((t) => t.key)),
   );
-  const [crewIds, setCrewIds] = useState<Set<string>>(new Set());
+  const [crewIds, setCrewIds] = useState<Set<string>>(() => new Set(props.initialCrewIds ?? []));
   const [jobRef, setJobRef] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
+  const [askOverride, setAskOverride] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
 
   const selectedCrew = props.crew.filter((c) => crewIds.has(c.id));
 
@@ -125,16 +128,21 @@ export default function DispatchClient(props: {
 
   async function submit() {
     setErr("");
-    if (props.mode === "checkout" && !ready) {
-      const confirmed = window.confirm(
-        `This truck is NOT ready:\n\n• ${failures.join("\n• ")}\n\nRoll out anyway? This is logged as an override with your name.`,
-      );
-      if (!confirmed) return;
+    // Not ready → explicit acknowledged override with a reason (spec P0.1),
+    // not a browser confirm. First tap opens the panel; the panel confirms.
+    if (props.mode === "checkout" && !ready && !askOverride) {
+      setAskOverride(true);
+      return;
     }
     setBusy(true);
     const res =
       props.mode === "checkout"
-        ? await submitCheckout({ unitId: props.unitId, jobRef: jobRef.trim() || null, notes: null, crewIds: [...crewIds], items: buildItems(), ready })
+        ? await submitCheckout({
+            unitId: props.unitId, jobRef: jobRef.trim() || null, notes: null,
+            crewIds: [...crewIds], items: buildItems(), ready,
+            overrideReason: ready ? null : overrideReason.trim() || null,
+            failures,
+          })
         : await submitCheckin({ unitId: props.unitId, checkoutId: props.checkoutId!, notes: null, items: buildItems() });
     setBusy(false);
     if (!res.ok) { setErr(res.error ?? "Couldn't save."); return; }
@@ -270,14 +278,38 @@ export default function DispatchClient(props: {
 
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
 
-      <button onClick={submit} disabled={busy}
-        className={cn("h-14 rounded-xl text-base font-semibold disabled:opacity-50",
-          props.mode === "checkin" ? "bg-bone text-coal"
-            : ready ? "bg-bone text-coal" : "border border-red-500/50 bg-red-500/10 text-red-300")}>
-        {busy ? "Saving…"
-          : props.mode === "checkin" ? "Complete check-in"
-          : ready ? "Mark rolled out" : "Roll out anyway (logged)"}
-      </button>
+      {askOverride && !ready ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-4">
+          <p className="text-sm font-semibold text-red-300">
+            This truck is NOT ready. Rolling out anyway is recorded with your name, the time, and every failing item.
+          </p>
+          <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+            Why is it rolling anyway?
+            <input value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)}
+              placeholder="e.g. operator waived DOT — paperwork en route"
+              className="h-12 rounded-xl border border-red-500/40 bg-coal px-4 text-base text-ink outline-none focus:border-red-400" />
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button onClick={submit} disabled={busy}
+              className="h-14 flex-1 rounded-xl bg-red-500/80 text-base font-semibold text-white disabled:opacity-50">
+              {busy ? "Saving…" : "Confirm — roll out NOT ready"}
+            </button>
+            <button onClick={() => setAskOverride(false)} disabled={busy}
+              className="h-14 rounded-xl border border-line-2 px-6 text-base text-ink">
+              Go back &amp; fix it
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={submit} disabled={busy}
+          className={cn("h-14 rounded-xl text-base font-semibold disabled:opacity-50",
+            props.mode === "checkin" ? "bg-bone text-coal"
+              : ready ? "bg-bone text-coal" : "border border-red-500/50 bg-red-500/10 text-red-300")}>
+          {busy ? "Saving…"
+            : props.mode === "checkin" ? "Complete check-in"
+            : ready ? "Mark rolled out" : "Roll out anyway (logged)"}
+        </button>
+      )}
     </div>
   );
 }

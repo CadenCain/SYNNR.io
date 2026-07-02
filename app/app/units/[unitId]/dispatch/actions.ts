@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { notifyEvent, logEvent } from "@/lib/saas/notify";
 
 export interface CheckItemInput {
   source_type: "loadout_item" | "asset" | "cert" | "crew_cert";
@@ -28,9 +29,12 @@ export async function submitCheckout(args: {
   crewIds: string[];
   items: CheckItemInput[];
   ready: boolean;
+  overrideReason?: string | null;
+  failures?: string[]; // named failing lines, for the alert + event copy
 }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
   const db = await saasDb();
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
 
   const { data: check, error } = await db
     .from("saas_dispatch_checks")
@@ -39,11 +43,11 @@ export async function submitCheckout(args: {
       unit_id: args.unitId,
       type: "checkout",
       performed_by: user.id,
-      performed_by_name:
-        (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null,
+      performed_by_name: actor,
       status: args.ready ? "ready" : "not_ready_override",
       job_ref: args.jobRef,
       notes: args.notes,
+      override_reason: args.ready ? null : args.overrideReason?.trim() || null,
       completed_at: new Date().toISOString(),
     })
     .select("id")
@@ -82,6 +86,22 @@ export async function submitCheckout(args: {
   }
   if (missingIds.length) {
     await db.from("saas_assets").update({ status: "missing" }).in("id", missingIds).eq("company_id", company.id);
+  }
+
+  // Command-center stream + instant alerts. Fire-and-forget — never blocks the save.
+  const { data: unitRow } = await db.from("saas_units").select("name, yard_id").eq("id", args.unitId).maybeSingle();
+  const u = unitRow as { name: string; yard_id: string } | null;
+  const unitName = u?.name ?? "unit";
+  const failLine = (args.failures ?? []).slice(0, 3).join("; ");
+  if (args.ready) {
+    void logEvent({ companyId: company.id, kind: "rolled_out", unitId: args.unitId, actor, message: `${unitName} rolled out Ready${args.jobRef ? ` — ${args.jobRef}` : ""}` });
+  } else {
+    void logEvent({ companyId: company.id, kind: "rolled_out_override", unitId: args.unitId, actor, message: `${unitName} rolled out NOT ready — ${failLine || "override"}${args.overrideReason ? ` (“${args.overrideReason.trim()}”)` : ""} — overridden by ${actor ?? "unknown"}` });
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: u?.yard_id, message: `${unitName} rolled out NOT ready — ${failLine || "override"}` });
+  }
+  // A checkout that surfaced failures is a miss caught before it hit a location.
+  if ((args.failures ?? []).length > 0) {
+    void logEvent({ companyId: company.id, kind: "miss_caught", unitId: args.unitId, actor, message: `Caught before rollout on ${unitName}: ${failLine}` });
   }
 
   revalidatePath(`/app/units/${args.unitId}`);
@@ -147,6 +167,18 @@ export async function submitCheckin(args: {
   }
   if (gone.length) {
     await db.from("saas_assets").update({ status: "missing" }).in("id", gone).eq("company_id", company.id);
+  }
+
+  const actor2 = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
+  const { data: unitRow2 } = await db.from("saas_units").select("name, yard_id").eq("id", args.unitId).maybeSingle();
+  const u2 = unitRow2 as { name: string; yard_id: string } | null;
+  const unitName2 = u2?.name ?? "unit";
+  if (anyMissing) {
+    const goneLabels = args.items.filter((i) => i.result === "missing").map((i) => i.label).slice(0, 3).join(", ");
+    void logEvent({ companyId: company.id, kind: "checkin_partial", unitId: args.unitId, actor: actor2, message: `${unitName2} checked in — not returned: ${goneLabels}` });
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: u2?.yard_id, message: `${unitName2} came back missing gear: ${goneLabels}` });
+  } else {
+    void logEvent({ companyId: company.id, kind: "checked_in", unitId: args.unitId, actor: actor2, message: `${unitName2} checked in — all accounted for` });
   }
 
   revalidatePath(`/app/units/${args.unitId}`);

@@ -98,6 +98,103 @@ export async function deleteCrewMember(fd: FormData) {
   redirect("/app/crew");
 }
 
+// ── SAMPLE YARD (spec P2: see the app full before entering real data) ──
+const SAMPLE_YARD = "Sample Yard (demo)";
+const SAMPLE_TAG = " (demo)";
+
+export async function loadSampleYard() {
+  const { company } = await requireCompany();
+  const db = await saasDb();
+  const iso = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
+
+  const { data: existing } = await db.from("saas_yards").select("id").eq("company_id", company.id).eq("name", SAMPLE_YARD).maybeSingle();
+  if (existing) { redirect("/app"); }
+
+  const { data: yard, error } = await db.from("saas_yards")
+    .insert({ company_id: company.id, name: SAMPLE_YARD, location: "Odessa, TX" }).select("id").single();
+  if (error) throw new Error(error.message);
+  const yardId = (yard as { id: string }).id;
+
+  const { data: unit } = await db.from("saas_units")
+    .insert({ company_id: company.id, yard_id: yardId, name: `Wireline 7${SAMPLE_TAG}`, type: "wireline_truck", identifier: "WL-007" })
+    .select("id").single();
+  const unitId = (unit as { id: string }).id;
+
+  const { data: asset } = await db.from("saas_assets")
+    .insert({ company_id: company.id, yard_id: yardId, unit_id: unitId, name: `BOP #3${SAMPLE_TAG}`, category: "pressure_control" })
+    .select("id").single();
+  const assetId = (asset as { id: string }).id;
+
+  await db.from("saas_compliance_items").insert([
+    { company_id: company.id, parent_type: "unit", parent_id: unitId, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-300), expiration_date: iso(65) },
+    { company_id: company.id, parent_type: "unit", parent_id: unitId, title: "DOT sticker", kind: "dot_sticker", issued_date: iso(-350), expiration_date: iso(12) },
+    { company_id: company.id, parent_type: "asset", parent_id: assetId, title: "BOP test", kind: "test", issued_date: iso(-190), expiration_date: iso(-4) },
+  ]);
+
+  const { data: hand1 } = await db.from("saas_crew_members")
+    .insert({ company_id: company.id, name: `Jerry Boles${SAMPLE_TAG}`, role: "operator", phone: "432-555-0101" }).select("id").single();
+  const { data: hand2 } = await db.from("saas_crew_members")
+    .insert({ company_id: company.id, name: `Manny Ortiz${SAMPLE_TAG}`, role: "driver" }).select("id").single();
+  const h1 = (hand1 as { id: string }).id, h2 = (hand2 as { id: string }).id;
+  await db.from("saas_compliance_items").insert([
+    { company_id: company.id, parent_type: "crew", parent_id: h1, title: "H2S Clear", kind: "cert", issued_date: iso(-360), expiration_date: iso(6) },
+    { company_id: company.id, parent_type: "crew", parent_id: h2, title: "CDL", kind: "cert", issued_date: iso(-400), expiration_date: iso(500) },
+  ]);
+  await db.from("saas_unit_crew").insert([
+    { company_id: company.id, unit_id: unitId, crew_member_id: h1 },
+    { company_id: company.id, unit_id: unitId, crew_member_id: h2 },
+  ]);
+
+  revalidatePath("/app");
+  redirect("/app");
+}
+
+export async function clearSampleYard() {
+  const { company } = await requireCompany();
+  const db = await saasDb();
+  // Yard cascade removes units/assets; their compliance rows + crew are cleaned by tag.
+  const { data: yard } = await db.from("saas_yards").select("id").eq("company_id", company.id).eq("name", SAMPLE_YARD).maybeSingle();
+  if (yard) {
+    const yardId = (yard as { id: string }).id;
+    const { data: units } = await db.from("saas_units").select("id").eq("yard_id", yardId);
+    const unitIds = ((units ?? []) as { id: string }[]).map((x) => x.id);
+    if (unitIds.length) {
+      const { data: assets } = await db.from("saas_assets").select("id").in("unit_id", unitIds);
+      const assetIds = ((assets ?? []) as { id: string }[]).map((x) => x.id);
+      await db.from("saas_compliance_items").delete().eq("company_id", company.id).in("parent_id", [...unitIds, ...assetIds]);
+    }
+    await db.from("saas_yards").delete().eq("id", yardId);
+  }
+  const { data: crew } = await db.from("saas_crew_members").select("id").eq("company_id", company.id).like("name", `%${SAMPLE_TAG}`);
+  const crewIds = ((crew ?? []) as { id: string }[]).map((x) => x.id);
+  if (crewIds.length) {
+    await db.from("saas_compliance_items").delete().eq("company_id", company.id).eq("parent_type", "crew").in("parent_id", crewIds);
+    await db.from("saas_crew_members").delete().in("id", crewIds);
+  }
+  revalidatePath("/app");
+  redirect("/app");
+}
+
+// ── UNIT ↔ CREW (standing assignment — feeds the checkout ready decision) ──
+export async function assignCrewToUnit(fd: FormData) {
+  const { company } = await requireCompany();
+  const unit_id = str(fd, "unit_id");
+  const crew_member_id = str(fd, "crew_member_id");
+  if (!unit_id || !crew_member_id) return;
+  const db = await saasDb();
+  await db.from("saas_unit_crew").upsert({ unit_id, crew_member_id, company_id: company.id });
+  revalidatePath(`/app/units/${unit_id}`);
+}
+export async function unassignCrewFromUnit(fd: FormData) {
+  const { company } = await requireCompany();
+  const unit_id = str(fd, "unit_id");
+  const crew_member_id = str(fd, "crew_member_id");
+  const db = await saasDb();
+  await db.from("saas_unit_crew").delete()
+    .eq("unit_id", unit_id).eq("crew_member_id", crew_member_id).eq("company_id", company.id);
+  revalidatePath(`/app/units/${unit_id}`);
+}
+
 // ── COMPLIANCE ITEM ──
 export async function updateComplianceItem(fd: FormData) {
   const { company } = await requireCompany();

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { logEvent } from "@/lib/saas/notify";
 
 export async function addComplianceItem(formData: FormData) {
   const { company } = await requireCompany();
@@ -57,6 +58,14 @@ export async function renewComplianceItem(args: {
       label: "proof",
     });
   }
+
+  const { data: itemRow } = await db.from("saas_compliance_items").select("title").eq("id", args.itemId).maybeSingle();
+  void logEvent({
+    companyId: company.id,
+    kind: "renewed",
+    message: `${(itemRow as { title: string } | null)?.title ?? "Item"} renewed — good to ${args.expiration_date}`,
+  });
+
   if (args.redirectPath) revalidatePath(args.redirectPath);
 }
 

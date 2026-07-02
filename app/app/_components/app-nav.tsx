@@ -47,7 +47,15 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName, userName }: { companyName?: string; userName?: string }) {
+export default function AppNav({ companyName, userName, readiness }: { companyName?: string; userName?: string; readiness?: number | null }) {
+  const pill =
+    readiness == null
+      ? null
+      : readiness >= 90
+        ? { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", txt: `${readiness}%` }
+        : readiness >= 70
+          ? { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", txt: `${readiness}%` }
+          : { cls: "border-red-500/40 bg-red-500/10 text-red-400", txt: `${readiness}%` };
   const path = usePathname() || "/app";
   const router = useRouter();
 
@@ -64,10 +72,11 @@ export default function AppNav({ companyName, userName }: { companyName?: string
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-coal px-3 py-4 md:flex">
         <div className="flex items-center gap-2.5 px-2 pb-4">
           {MARK}
-          <div className="min-w-0 leading-tight">
+          <div className="min-w-0 flex-1 leading-tight">
             <div className="font-semibold tracking-tight">SYNNR</div>
             {companyName ? <div className="truncate text-xs text-ink-faint" title={companyName}>{companyName}</div> : null}
           </div>
+          {pill ? <span title="Overall readiness" className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         </div>
 
         {/* Search (jump to compliance list) */}
@@ -133,6 +142,7 @@ export default function AppNav({ companyName, userName }: { companyName?: string
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 py-3 backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
+        {pill ? <span className={`ml-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         {userName ? (
           <span className="ml-auto flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal" title={userName}>
             {userName.slice(0, 1).toUpperCase()}

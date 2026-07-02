@@ -105,24 +105,48 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
       initialMissing: a.status === "missing",
     }));
 
-  const { data: certData } = await db
-    .from("saas_compliance_items_with_status")
-    .select("id, title, kind, expiration_date, status")
-    .eq("parent_type", "unit").eq("parent_id", unitId);
-  const facts: FactRow[] = ((certData ?? []) as { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus }[])
-    .map((c) => ({
+  // Paper facts: the unit's certs PLUS its assets' certs (a BOP test on the
+  // BOP is exactly the kind of miss this screen exists to catch).
+  const assetIds = ((assetData ?? []) as { id: string }[]).map((a) => a.id);
+  const assetNameById = new Map(((assetData ?? []) as { id: string; name: string }[]).map((a) => [a.id, a.name]));
+  const [{ data: unitCertData }, { data: assetCertData }] = await Promise.all([
+    db.from("saas_compliance_items_with_status")
+      .select("id, title, kind, expiration_date, status, parent_id")
+      .eq("parent_type", "unit").eq("parent_id", unitId),
+    assetIds.length
+      ? db.from("saas_compliance_items_with_status")
+          .select("id, title, kind, expiration_date, status, parent_id")
+          .eq("parent_type", "asset").in("parent_id", assetIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  type CertRow = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_id: string };
+  const facts: FactRow[] = [
+    ...((unitCertData ?? []) as CertRow[]).map((c) => ({
       key: `ce-${c.id}`,
       source_type: "cert" as const,
       source_id: c.id,
       label: c.title,
       sub: c.expiration_date ? `expires ${c.expiration_date}` : "no expiration set",
       status: c.status,
-    }));
+    })),
+    ...((assetCertData ?? []) as CertRow[]).map((c) => ({
+      key: `ce-${c.id}`,
+      source_type: "cert" as const,
+      source_id: c.id,
+      label: `${c.title} (${assetNameById.get(c.parent_id) ?? "asset"})`,
+      sub: c.expiration_date ? `expires ${c.expiration_date}` : "no expiration set",
+      status: c.status,
+    })),
+  ];
 
-  // Crew + their certs (crew certs live in the same compliance table, parent_type='crew')
-  const { data: crewData } = await db
-    .from("saas_crew_members").select("id, name, role")
-    .eq("company_id", company.id).eq("status", "active").order("name");
+  // Crew + their certs (crew certs live in the same compliance table, parent_type='crew').
+  // Standing unit assignments pre-select so the ready call includes the real crew by default.
+  const [{ data: crewData }, { data: assignedData }] = await Promise.all([
+    db.from("saas_crew_members").select("id, name, role")
+      .eq("company_id", company.id).eq("status", "active").order("name"),
+    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
+  ]);
+  const assignedCrewIds = ((assignedData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id);
   const crewRows = (crewData ?? []) as { id: string; name: string; role: string | null }[];
   let crew: CrewOption[] = [];
   if (crewRows.length) {
@@ -148,7 +172,8 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
         description="Flip anything that's missing. Paper and crew cards are pulled live — they don't lie."
       />
       <DispatchClient mode="checkout" unitId={unitId} unitName={unit.name}
-        toggles={[...loadoutRows, ...assetRows]} facts={facts} crew={crew} />
+        toggles={[...loadoutRows, ...assetRows]} facts={facts} crew={crew}
+        initialCrewIds={assignedCrewIds} />
     </div>
   );
 }
