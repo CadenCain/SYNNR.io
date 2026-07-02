@@ -202,6 +202,55 @@ export default function MarketingFx() {
       cleanups.push(() => finalObserver.disconnect());
     }
 
+    /* ---------------------------------------------------------------------
+     * 7. Command-center showcase (#showcase)
+     * DJI-style perspective rise: scroll progress drives --p ∈ [0,1] on the
+     * stage (frame rotateX/translateY/scale + chip parallax in CSS). Once
+     * ~45% visible, .live fires the one-shot interior choreography (tiles →
+     * NOT READY flip → banner → SMS chip). Touch/reduced-motion: --p pinned
+     * to 1 (no scrub), choreography still plays (or resolves instantly under
+     * reduced motion via CSS).
+     * ------------------------------------------------------------------- */
+    const stage = root.querySelector<HTMLElement>(".show-stage");
+    if (stage) {
+      const coarse = matchMedia("(pointer: coarse)").matches;
+      if (reducedMotion || coarse) {
+        stage.style.setProperty("--p", "1");
+      } else {
+        let raf = 0;
+        const onScroll = () => {
+          if (raf) return;
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            const r = stage.getBoundingClientRect();
+            const vh = window.innerHeight;
+            const p = Math.min(1, Math.max(0, (vh - r.top) / (vh * 0.72)));
+            stage.style.setProperty("--p", p.toFixed(4));
+          });
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+        cleanups.push(() => {
+          window.removeEventListener("scroll", onScroll);
+          if (raf) cancelAnimationFrame(raf);
+        });
+      }
+      const liveObserver = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              e.target.classList.add("live");
+              liveObserver.disconnect();
+              return;
+            }
+          }
+        },
+        { threshold: 0.45 },
+      );
+      liveObserver.observe(stage);
+      cleanups.push(() => liveObserver.disconnect());
+    }
+
     return () => cleanups.forEach((c) => c());
   }, []);
 
