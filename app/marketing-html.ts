@@ -129,13 +129,13 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Inside SYNNR</span>
     <h2 class="h2" data-fx="words">Watch it catch the miss.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">This is the command center a shop leaves open all day. Every tile is a truck. Scroll — and watch hu-179 get stopped at the gate.</p>
+    <p class="lede" style="margin-inline:0;max-width:64ch">This is the command center a shop leaves open all day. Every tile is a truck. Scroll — and watch Truck 12 get stopped at the gate.</p>
   </div>
 
   <div class="show-stage" aria-hidden="false">
     <div class="show-glow" aria-hidden="true"></div>
 
-    <div class="show-frame" role="img" aria-label="SYNNR command center: fleet readiness board with two trucks Ready and hu-179 flagged NOT READY — BOP number 3 missing, roll-out blocked pending override">
+    <div class="show-frame" role="img" aria-label="SYNNR command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 missing, roll-out blocked pending override">
       <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
       <div class="show-body" aria-hidden="true">
         <div class="show-kpis">
@@ -147,7 +147,7 @@ export const MARKETING_HTML = `
           <div class="show-tile t1"><span class="tname">Wireline 7</span><span class="chip ok">Ready</span><span class="twhy">All current</span></div>
           <div class="show-tile t2"><span class="tname">Pump 3</span><span class="chip ok">Ready</span><span class="twhy">DOT good · crew current</span></div>
           <div class="show-tile t3">
-            <span class="tname">hu-179</span>
+            <span class="tname">Truck 12</span>
             <span class="chip scan">Checking…</span>
             <span class="chip bad">Not ready</span>
             <span class="twhy why-ok">Running loadout check…</span>
@@ -156,17 +156,17 @@ export const MARKETING_HTML = `
         </div>
         <div class="show-banner">
           <span class="bang">!</span>
-          <span class="btext"><b>NOT READY — hu-179.</b> BOP #3 missing · roll-out blocked until confirmed or overridden</span>
+          <span class="btext"><b>NOT READY — Truck 12.</b> BOP #3 missing · roll-out blocked until confirmed or overridden</span>
         </div>
         <div class="show-feed">
-          <span class="dotline"></span>Caught before rollout on hu-179: BOP #3 — missing <span class="ftime">4:58 AM</span>
+          <span class="dotline"></span>Caught before rollout on Truck 12: BOP #3 — missing <span class="ftime">4:58 AM</span>
         </div>
       </div>
     </div>
 
     <div class="show-chip c1" aria-hidden="true">
       <span class="cico">▮</span>
-      <span><b>SYNNR:</b> hu-179 NOT ready — BOP missing. —renegade</span>
+      <span><b>SYNNR:</b> Truck 12 NOT ready — BOP missing. —your shop</span>
     </div>
     <div class="show-chip c2" aria-hidden="true">
       <span class="cok">✓</span>

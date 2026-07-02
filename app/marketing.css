@@ -143,7 +143,7 @@
 .mkt .btn:hover .arrow { transform: translateX(3px); }
 
 /* ---- nav ---- */
-.mkt .nav { position: fixed; top:0; left:0; right:0; z-index:60; padding: 16px var(--pad); display:flex; justify-content:center; transition: padding .3s var(--ease); }
+.mkt .nav { position: fixed; top:0; left:0; right:0; z-index:60; padding: max(16px, env(safe-area-inset-top)) var(--pad) 16px; display:flex; justify-content:center; transition: padding .3s var(--ease); }
 .mkt .nav-pill {
   width:100%; max-width: var(--container); position: relative;
   display:flex; align-items:center; justify-content:space-between; gap:20px;

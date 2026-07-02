@@ -139,8 +139,9 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
         ) : null}
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 py-3 backdrop-blur md:hidden">
+      {/* Mobile top bar — top padding respects the notch/status bar so the
+          wordmark doesn't jam the top edge on a real phone. */}
+      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
         {pill ? <span className={`ml-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
