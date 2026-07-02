@@ -24,28 +24,29 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — equipment & cert readiness for oilfield service shops",
+    default: "SYNNR — the rolling-ready system for oilfield service shops",
     template: "%s",
   },
   description:
-    "Keep your crews rolling ready. Equipment & cert readiness tracking for oilfield service shops, done for you. Never miss an expiration or asset. Free readiness audit.",
+    "Keep your crews rolling ready. Track every asset, cert, DOT item, and crew card — and run a pre-dispatch check that catches the miss before the truck leaves the yard. Get the text before anything expires.",
   keywords: [
-    "equipment readiness", "cert tracking", "oilfield service", "wireline", "coil tubing", "cementing",
-    "BOP testing", "crew certs", "H2S certification", "well control", "Permian", "service shop operations",
+    "equipment readiness", "cert tracking", "pre-dispatch check", "loadout check", "oilfield service", "wireline",
+    "coil tubing", "cementing", "BOP testing", "crew certs", "H2S certification", "well control", "DOT inspection",
+    "Permian", "service shop operations",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — equipment & cert readiness for oilfield service shops",
+    title: "SYNNR — the rolling-ready system for oilfield service shops",
     description:
-      "Keep your crews rolling ready. Track every asset and cert in your yard, get alerted before anything expires. Done for you. Free readiness audit.",
+      "Catch the miss before the truck leaves the yard. Pre-dispatch loadout checks, cert/DOT/crew-card tracking with alerts, and shareable readiness-proof links.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — equipment & cert readiness for oilfield service shops",
+    title: "SYNNR — the rolling-ready system for oilfield service shops",
     description:
-      "Keep your crews rolling ready. Track every asset and cert. Get a free readiness audit — we'll show you what's expired, expiring, and missing.",
+      "Catch the miss before the truck leaves the yard. Loadout checks, cert & crew-card tracking, alerts before anything expires, and readiness-proof links.",
   },
 };
 
