@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bell, Settings2 } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
+import { getItemCustomers } from "@/lib/saas/customers";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -40,6 +41,7 @@ export default async function AlertsPage() {
     : legacy.length ? legacy.join(", ") : null;
 
   type Row = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_type: string; parent_id: string };
+  const itemCustomers = await getItemCustomers(db, company.id, ((itemData ?? []) as { id: string }[]).map((i) => i.id));
   const nameOf = (rows: unknown, id: string) =>
     (((rows ?? []) as { id: string; name: string }[]).find((r) => r.id === id)?.name) ?? "";
   // Failing = expired OR no-date-on-file ("Missing" — unverifiable), plus due-soon.
@@ -58,6 +60,7 @@ export default async function AlertsPage() {
         : i.parent_type === "crew" ? `${nameOf(crewData, i.parent_id)} (crew)`
         : nameOf(assetData, i.parent_id),
       href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`,
+      customers: itemCustomers.get(i.id) ?? [],
     }));
 
   type Sent = { sent_at: string; channel: string; recipient: string | null; label: string | null; saas_compliance_items: { title: string } | { title: string }[] | null };

@@ -1045,3 +1045,30 @@
   .mkt .show-tile.t3 .why-bad { display: block; opacity: 1; }
   .mkt .show-kpi .bar i { transform: scaleX(1); }
 }
+
+/* ── Pricing v3: one number + optional setup (replaces the 3-tile table) ── */
+.mkt .price-hero {
+  margin-top: 34px;
+  padding: 34px 32px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.008));
+  border: 1px solid var(--line-2);
+  border-radius: 20px;
+}
+.mkt .price-big { display: flex; align-items: baseline; gap: 14px; font-family: var(--font-display); font-weight: 650; font-size: clamp(44px, 7vw, 64px); letter-spacing: -0.02em; color: var(--fg); }
+.mkt .price-big span { font-family: var(--font-body, inherit); font-weight: 400; font-size: 16px; letter-spacing: 0; color: var(--fg-dim); }
+.mkt .price-hero-features { margin-top: 18px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; }
+@media (max-width: 700px) { .mkt .price-hero-features { grid-template-columns: 1fr; } .mkt .price-hero { padding: 26px 20px; } }
+.mkt .setup-card {
+  margin-top: 18px;
+  padding: 24px 28px;
+  border: 1px dashed var(--line-2);
+  border-radius: 16px;
+}
+.mkt .setup-card h3 { font-size: 16.5px; font-weight: 600; color: var(--fg); }
+.mkt .setup-card p { margin-top: 8px; font-size: 14.5px; color: var(--fg-dim); line-height: 1.6; }
+.mkt .setup-card ul { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.mkt .setup-card li { font-size: 14.5px; color: var(--fg-dim); line-height: 1.6; padding-left: 18px; position: relative; }
+.mkt .setup-card li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 7px; height: 7px; border-radius: 999px; background: var(--accent); opacity: .7; }
+.mkt .setup-card li b { color: var(--fg); }
+.mkt .setup-note { margin-top: 14px !important; }
+.mkt .setup-note a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }

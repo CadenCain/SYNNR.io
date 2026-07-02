@@ -209,6 +209,26 @@ export async function updateComplianceItem(fd: FormData) {
   const { error } = await db.from("saas_compliance_items")
     .update({ title, kind, issued_date, expiration_date }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+
+  // Customer relevance tags: comma-separated names → ensure each customer
+  // exists, then replace this item's joins. Blank = applies to all jobs.
+  if (fd.has("customers")) {
+    const names = str(fd, "customers").split(",").map((n) => n.trim()).filter(Boolean);
+    await db.from("saas_item_customers").delete().eq("item_id", id).eq("company_id", company.id);
+    for (const name of names) {
+      await db.from("saas_customers").upsert(
+        { company_id: company.id, name },
+        { onConflict: "company_id,name", ignoreDuplicates: true },
+      );
+      const { data: cust } = await db.from("saas_customers").select("id")
+        .eq("company_id", company.id).eq("name", name).maybeSingle();
+      if (cust) {
+        await db.from("saas_item_customers").insert({
+          item_id: id, customer_id: (cust as { id: string }).id, company_id: company.id,
+        });
+      }
+    }
+  }
   if (redirectPath) revalidatePath(redirectPath);
 }
 export async function deleteComplianceItem(fd: FormData) {

@@ -12,7 +12,7 @@ export default async function SignupPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-        <p className="mt-1 text-sm text-ink-dim">$298/yard a month, billed monthly. Add your card at the next step. Cancel anytime.</p>
+        <p className="mt-1 text-sm text-ink-dim">$500 per yard a month, billed monthly. Add your card at the next step. Cancel anytime.</p>
       </div>
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">

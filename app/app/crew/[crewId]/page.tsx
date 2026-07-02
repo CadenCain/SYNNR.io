@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateCrewMember, deleteCrewMember } from "@/app/app/_actions";
 
@@ -33,6 +34,8 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
     .eq("parent_type", "crew").eq("parent_id", crewId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const certs = (certData ?? []) as RowItem[];
+  const itemCustomers = await getItemCustomers(db, company.id, certs.map((i) => i.id));
+  for (const it of certs) it.customers = itemCustomers.get(it.id) ?? [];
 
   return (
     <div className="flex flex-col gap-7">

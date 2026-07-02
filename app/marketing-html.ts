@@ -1,6 +1,6 @@
 // SYNNR marketing page — the rolling-ready system for oilfield service shops:
 // pre-dispatch loadout checks, certs/DOT/crew-card tracking with alerts before
-// anything lapses, and shareable readiness-proof links. Self-serve ($298/yard/mo,
+// anything lapses, and shareable readiness-proof links. Self-serve ($500/yard/mo,
 // card required). Operator voice. CTAs → /signup. Rendered via
 // dangerouslySetInnerHTML + MarketingScripts + MarketingFx.
 export const MARKETING_HTML = `
@@ -25,7 +25,8 @@ export const MARKETING_HTML = `
       <a href="#how">How it works</a>
       <a href="#dispatch">The 5am check</a>
       <a href="#track">What we track</a>
-      <a href="#why">Why SYNNR</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/readiness-audit">Free audit</a>
     </nav>
     <div class="nav-cta">
       <a href="/login" class="btn btn-ghost btn-sm nav-login">Log in</a>
@@ -38,6 +39,7 @@ export const MARKETING_HTML = `
       <a href="#dispatch">The 5am check</a>
       <a href="#track">What we track</a>
       <a href="#pricing">Pricing</a>
+      <a href="/readiness-audit">Free audit</a>
       <a href="/login">Log in</a>
       <a href="/signup">Get started</a>
     </nav>
@@ -55,9 +57,10 @@ export const MARKETING_HTML = `
       <a href="/signup" class="btn btn-primary">Get started
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
+      <a href="/readiness-audit" class="btn btn-ghost">Free readiness map</a>
       <a href="#pricing" class="btn btn-ghost">See pricing</a>
     </div>
-    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">Billed monthly, per yard · cancel anytime · your data, exportable.</p>
+    <p class="mono reveal" data-d="3" style="margin-top:18px;font-size:12.5px;color:var(--fg-faint)">$500 per yard / month · billed monthly · cancel anytime · your data, exportable.</p>
   </div>
 </section>
 
@@ -231,56 +234,42 @@ export const MARKETING_HTML = `
     <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">Fines, shutdowns, paperwork hell</span></li>
     <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">The whole account</span></li>
   </ul>
-  <p class="miss-kicker"><b>One prevented NPT day covers more than two years of SYNNR for a yard.</b> Everything after that is pure protection.</p>
+  <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of SYNNR for a yard.</b> Everything after that is pure protection.</p>
   <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
 </section>
 
 <section class="section container" id="pricing" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Pricing</span>
-    <h2 class="h2" data-fx="words">Priced per yard. Scales with you.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, per yard — never per-seat, so you're never punished for adding crew. Less than $10 a day per yard. Annual billing saves two months.</p>
+    <h2 class="h2" data-fx="words">One number. Per yard.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">Flat monthly, per yard — never per-seat, so you're never punished for adding crew or trucks. No contracts. No annual lock-in.</p>
   </div>
-  <div class="tiers">
-    <div class="tier">
-      <div class="tier-name">Single Yard</div>
-      <p class="tier-best">1 yard, getting started</p>
-      <div class="tier-price">$298<span>per yard / month, billed annually</span></div>
-      <ul class="tier-features">
-        <li>Pre-dispatch loadout checks</li>
-        <li>Certs, DOT, gear &amp; crew cards</li>
-        <li>Email alerts + readiness proof links</li>
-        <li>Unlimited assets, crew &amp; users</li>
-      </ul>
-      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Get started</a>
+  <div class="price-hero">
+    <div class="price-big">$500<span>per yard / month</span></div>
+    <ul class="tier-features price-hero-features">
+      <li>Pre-dispatch loadout checks with enforcement</li>
+      <li>Certs, DOT, gear &amp; crew cards — alerts before they lapse</li>
+      <li>Readiness proof links + immutable dispatch records</li>
+      <li>Unlimited assets, crew &amp; users. Every yard costs the same.</li>
+    </ul>
+    <div class="hero-cta" style="margin-top:22px">
+      <a href="/signup" class="btn btn-primary">Get started
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="/readiness-audit" class="btn btn-ghost">Get a free readiness map</a>
     </div>
-    <div class="tier tier-featured">
-      <span class="tier-pop">Most popular</span>
-      <div class="tier-name">Operator</div>
-      <p class="tier-best">Growing shops, 2+ yards</p>
-      <div class="tier-price">$258<span>per yard / month, billed annually</span></div>
-      <ul class="tier-features">
-        <li>Everything in Single Yard</li>
-        <li>Every yard in one view</li>
-        <li>Roles &amp; permissions</li>
-        <li>CSV import + priority support</li>
-      </ul>
-      <a href="/signup" class="btn btn-primary btn-sm tier-cta">Get started</a>
-    </div>
-    <div class="tier">
-      <div class="tier-name">Fleet</div>
-      <p class="tier-best">Multi-yard operations</p>
-      <div class="tier-price">Custom<span>for 3+ locations</span></div>
-      <ul class="tier-features">
-        <li>Everything in Operator</li>
-        <li>SSO + dedicated support</li>
-        <li>Done-for-you yard load</li>
-        <li>Custom integrations</li>
-      </ul>
-      <a href="/readiness-audit" class="btn btn-ghost btn-sm tier-cta">Talk to us</a>
-    </div>
+    <p class="mono" style="margin-top:16px;font-size:12.5px;color:var(--fg-faint)">Card required · billed monthly per active yard · cancel anytime · your data, exportable.</p>
   </div>
-  <p class="tiers-note">Card required · billed monthly per active yard · cancel anytime · your data, exportable. Don&apos;t want to do the data entry? Our team will load your whole yard for you — $998&ndash;$3,000 one-time, then you&apos;re self-serve.</p>
+
+  <div class="setup-card">
+    <h3>Don't want to do the data entry? Setup is optional and one-time.</h3>
+    <p>Load your own yard free with the importer — or we do it for you:</p>
+    <ul>
+      <li><b>Remote setup — $750 first yard, +$250 each additional.</b> Send your lists and spreadsheets; we load the yard and hand it back running.</li>
+      <li><b>Onsite setup — $1,500 first yard, +$400 each additional.</b> In person, anywhere in the Permian Basin / West Texas. Outside the region: same rate plus travel at cost.</li>
+    </ul>
+    <p class="setup-note">3+ yards, or need something custom? <a href="mailto:cadencain@darkstarops.com">Talk to us</a> — fleet deals are negotiated, not discounted by formula.</p>
+  </div>
 </section>
 
 <section class="section final" id="cta">

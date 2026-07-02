@@ -1,4 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
+import { getItemCustomers } from "@/lib/saas/customers";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { kindLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,7 @@ export default async function CompliancePage() {
     db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
   const items = (data ?? []) as Item[];
+  const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
   const name = (rows: unknown, id: string) =>
     (((rows ?? []) as { id: string; name: string }[]).find((r) => r.id === id)?.name) ?? "";
 
@@ -40,6 +42,7 @@ export default async function CompliancePage() {
       : i.parent_type === "crew" ? `${name(crewData, i.parent_id)} (crew)`
       : name(assetData, i.parent_id),
     href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`,
+    customers: itemCustomers.get(i.id) ?? [],
   }));
 
   const gearCount = items.filter((i) => i.parent_type !== "crew").length;

@@ -12,6 +12,8 @@ const inputCls = "h-10 rounded-lg border border-line-2 bg-coal px-3 text-sm text
 export interface RowItem {
   id: string; title: string; kind: string;
   issued_date: string | null; expiration_date: string | null; status: ComplianceStatus;
+  /** customer/operator names this requirement applies to; empty = all jobs */
+  customers?: string[];
 }
 
 /** One compliance item: status, dates, Renew (camera), and an Edit/Delete disclosure. */
@@ -27,6 +29,13 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
           <div className="mt-0.5 text-sm text-ink-dim">
             {kindLabel(item.kind)}{item.expiration_date ? ` · expires ${item.expiration_date}` : " · no expiration set"}
           </div>
+          {item.customers && item.customers.length > 0 ? (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {item.customers.map((c) => (
+                <span key={c} className="rounded-full border border-line-2 bg-coal px-2 py-0.5 text-[11px] text-ink-dim">{c}</span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <RenewControl itemId={item.id} companyId={companyId} redirectPath={redirectPath} />
@@ -48,6 +57,8 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
                   <label className="flex flex-1 flex-col gap-1 text-[11px] text-ink-faint">Expires
                     <input type="date" name="expiration_date" defaultValue={item.expiration_date ?? ""} className={inputCls} /></label>
                 </div>
+                <label className="flex flex-col gap-1 text-[11px] text-ink-faint">Customers this applies to (comma separated; blank = all jobs)
+                  <input name="customers" defaultValue={(item.customers ?? []).join(", ")} placeholder="e.g. Oxy, Diamondback" className={inputCls} /></label>
                 <Button type="submit" size="sm">Save changes</Button>
               </form>
               <form action={deleteComplianceItem} className="mt-2 border-t border-line pt-2">

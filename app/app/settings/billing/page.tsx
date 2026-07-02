@@ -6,7 +6,7 @@ import BillingActions from "./billing-actions";
 
 export const dynamic = "force-dynamic";
 
-const PER_YARD = 298;
+const PER_YARD = 500;
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Free trial", active: "Active", past_due: "Payment failed", canceled: "Canceled", none: "No subscription",

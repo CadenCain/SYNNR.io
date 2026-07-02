@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem, addAsset } from "./actions";
 import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
@@ -37,6 +38,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     .eq("parent_type", "unit").eq("parent_id", unitId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const items = (ciData ?? []) as RowItem[];
+  const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
+  for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
 
   const { data: assetData } = await db
     .from("saas_assets").select("id, name, category, status").eq("unit_id", unitId).order("name");

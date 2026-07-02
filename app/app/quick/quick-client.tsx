@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, ChevronLeft, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { extractExpirationDate } from "@/lib/ocr-date";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
 import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
@@ -56,12 +57,25 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
   const [err, setErr] = useState("");
   const [doneMsg, setDoneMsg] = useState("");
   const [fileName, setFileName] = useState("");
+  const [expiration, setExpiration] = useState(plusOneYear());
+  const [ocr, setOcr] = useState<"idle" | "reading" | "unconfirmed" | "confirmed" | "none">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onPickPhoto(file: File | undefined) {
+    setFileName(file?.name ?? "");
+    if (!file) return;
+    setOcr("reading");
+    const read = await extractExpirationDate(file);
+    if (read) { setExpiration(read); setOcr("unconfirmed"); }
+    else setOcr("none");
+  }
 
   function reset(toHome = true) {
     setPicked(null);
     setErr("");
     setFileName("");
+    setOcr("idle");
+    setExpiration(plusOneYear());
     if (fileRef.current) fileRef.current.value = "";
     if (toHome) setMode("home");
   }
@@ -69,10 +83,9 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
   async function saveRenew(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!picked) return;
+    if (ocr === "unconfirmed" || ocr === "reading") return;
     setErr("");
     setBusy(true);
-    const fd = new FormData(e.currentTarget);
-    const expiration = String(fd.get("expiration_date") ?? "");
     let storage_path: string | null = null;
     let content_type: string | null = null;
     const file = fileRef.current?.files?.[0];
@@ -160,14 +173,32 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
     return (
       <form onSubmit={saveRenew} className="flex flex-col gap-4">
         <BackBar onBack={() => setPicked(null)} label={picked.title} sub={picked.parentLabel} />
-        <CameraField fileRef={fileRef} fileName={fileName} setFileName={setFileName} label="Shoot the new cert" />
+        <CameraField fileRef={fileRef} fileName={fileName} setFileName={setFileName} label="Shoot the new cert" onFile={onPickPhoto} />
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           New expiration date
-          <input name="expiration_date" type="date" required defaultValue={plusOneYear()} className={FIELD} />
+          <input name="expiration_date" type="date" required value={expiration}
+            onChange={(e) => { setExpiration(e.target.value); if (ocr === "unconfirmed") setOcr("confirmed"); }}
+            className={cn(FIELD, ocr === "unconfirmed" && "border-amber-500/60 ring-1 ring-amber-500/30")} />
         </label>
+        {ocr === "reading" ? (
+          <p className="text-sm text-ink-dim">Reading the photo…</p>
+        ) : ocr === "unconfirmed" ? (
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
+            <span className="text-sm text-amber-400">Read from the photo — confirm it&apos;s right.</span>
+            <button type="button" onClick={() => setOcr("confirmed")}
+              className="shrink-0 rounded-lg border border-amber-500/50 px-3 py-1.5 text-sm font-semibold text-amber-300">
+              Looks right
+            </button>
+          </div>
+        ) : ocr === "confirmed" ? (
+          <p className="text-sm text-emerald-400">✓ Date confirmed by you.</p>
+        ) : ocr === "none" && fileName ? (
+          <p className="text-sm text-ink-faint">Couldn&apos;t read a date off the photo — set it yourself.</p>
+        ) : null}
         {err ? <p className="text-sm text-amber-400">{err}</p> : null}
-        <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
-          {busy ? "Saving…" : "Save — it's renewed"}
+        <button type="submit" disabled={busy || ocr === "reading" || ocr === "unconfirmed"}
+          className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
+          {busy ? "Saving…" : ocr === "unconfirmed" ? "Confirm the date first" : "Save — it's renewed"}
         </button>
       </form>
     );
@@ -248,11 +279,12 @@ function BackBar({ onBack, label, sub }: { onBack: () => void; label: string; su
   );
 }
 
-function CameraField({ fileRef, fileName, setFileName, label }: {
+function CameraField({ fileRef, fileName, setFileName, label, onFile }: {
   fileRef: React.RefObject<HTMLInputElement | null>;
   fileName: string;
   setFileName: (s: string) => void;
   label: string;
+  onFile?: (f: File | undefined) => void;
 }) {
   return (
     <div>
@@ -264,7 +296,7 @@ function CameraField({ fileRef, fileName, setFileName, label }: {
         {fileName ? <><Check className="h-5 w-5" /> Photo ready</> : <><Camera className="h-6 w-6" /> {label}</>}
       </button>
       <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden
-        onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")} />
+        onChange={(e) => { const f = e.target.files?.[0]; if (onFile) void onFile(f); else setFileName(f?.name ?? ""); }} />
     </div>
   );
 }

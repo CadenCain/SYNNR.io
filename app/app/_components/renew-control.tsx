@@ -2,20 +2,28 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, X } from "lucide-react";
+import { Camera, Check, X, ScanLine } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { extractExpirationDate } from "@/lib/ocr-date";
 import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
 
 /**
  * The product's core loop: snap → renewed → done. Two taps.
- * Tap Renew → camera opens → photograph the new cert → confirm the new
- * expiration date (pre-filled +1yr) → Save. Status flips on refresh.
+ *
+ * Trust layer (the most-requested pattern from operator feedback): when a
+ * proof photo is attached we OCR it and PRE-FILL the expiration — flagged
+ * unconfirmed — and Save stays disabled until the human explicitly accepts
+ * or corrects the date. A blind auto-read never saves itself; one missed
+ * digit on a BOP cert is a real invoice.
  */
 function plusOneYear(): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
 }
+
+type OcrState = "idle" | "reading" | "unconfirmed" | "confirmed" | "none";
 
 export default function RenewControl({
   itemId,
@@ -31,17 +39,31 @@ export default function RenewControl({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [fileName, setFileName] = useState("");
+  const [expiration, setExpiration] = useState(plusOneYear());
+  const [ocr, setOcr] = useState<OcrState>("idle");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onPick(file: File | undefined) {
+    setFileName(file?.name ?? "");
+    if (!file) return;
+    setOcr("reading");
+    const read = await extractExpirationDate(file);
+    if (read) {
+      setExpiration(read);
+      setOcr("unconfirmed"); // Save blocked until the human accepts/corrects
+    } else {
+      setOcr("none"); // nothing plausible found — plain manual entry, no block
+    }
+  }
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr("");
-    const fd = new FormData(e.currentTarget);
-    const expiration = String(fd.get("expiration_date") ?? "");
     if (!expiration) {
       setErr("Set the new expiration date.");
       return;
     }
+    if (ocr === "unconfirmed" || ocr === "reading") return; // belt + suspenders
     setBusy(true);
     let storage_path: string | null = null;
     let content_type: string | null = null;
@@ -66,6 +88,7 @@ export default function RenewControl({
       await renewComplianceItem({ itemId, expiration_date: expiration, storage_path, content_type, redirectPath });
       setOpen(false);
       setFileName("");
+      setOcr("idle");
       router.refresh();
     } catch {
       setErr("Couldn't save. Try again.");
@@ -85,6 +108,8 @@ export default function RenewControl({
     );
   }
 
+  const saveBlocked = busy || ocr === "reading" || ocr === "unconfirmed";
+
   return (
     <form onSubmit={save} className="mt-3 flex flex-col gap-2 rounded-lg border border-line-2 bg-coal p-3">
       <label className="flex flex-col gap-1 text-xs text-ink-dim">
@@ -94,7 +119,7 @@ export default function RenewControl({
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+          onChange={(e) => void onPick(e.target.files?.[0])}
           className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1.5 file:text-ink"
         />
         {fileName ? <span className="text-emerald-400">✓ {fileName}</span> : null}
@@ -105,17 +130,41 @@ export default function RenewControl({
           name="expiration_date"
           type="date"
           required
-          defaultValue={plusOneYear()}
-          className="h-10 rounded-md border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-[#e7ddc7]"
+          value={expiration}
+          onChange={(e) => {
+            setExpiration(e.target.value);
+            if (ocr === "unconfirmed") setOcr("confirmed"); // human corrected = confirmed
+          }}
+          className={cn(
+            "h-10 rounded-md border bg-surface px-3 text-sm text-ink outline-none",
+            ocr === "unconfirmed"
+              ? "border-amber-500/60 ring-1 ring-amber-500/30 focus:border-amber-400"
+              : "border-line-2 focus:border-[#e7ddc7]",
+          )}
         />
       </label>
+      {ocr === "reading" ? (
+        <p className="flex items-center gap-1.5 text-xs text-ink-dim"><ScanLine className="h-3.5 w-3.5 animate-pulse" /> Reading the photo…</p>
+      ) : ocr === "unconfirmed" ? (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
+          <span className="text-xs text-amber-400">Read from the photo — confirm it&apos;s right before saving.</span>
+          <button type="button" onClick={() => setOcr("confirmed")}
+            className="shrink-0 rounded-md border border-amber-500/50 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:bg-amber-500/15">
+            Looks right
+          </button>
+        </div>
+      ) : ocr === "confirmed" ? (
+        <p className="text-xs text-emerald-400">✓ Date confirmed by you.</p>
+      ) : ocr === "none" && fileName ? (
+        <p className="text-xs text-ink-faint">Couldn&apos;t read a date off the photo — set it yourself.</p>
+      ) : null}
       {err ? <p className="text-xs text-amber-400">{err}</p> : null}
       <div className="flex gap-2">
-        <button type="submit" disabled={busy}
+        <button type="submit" disabled={saveBlocked}
           className="inline-flex items-center gap-1.5 rounded-lg bg-[#e7ddc7] px-3 py-1.5 text-[13px] font-medium text-coal disabled:opacity-50">
           <Check className="h-4 w-4" /> {busy ? "Saving…" : "Save"}
         </button>
-        <button type="button" onClick={() => setOpen(false)}
+        <button type="button" onClick={() => { setOpen(false); setOcr("idle"); setFileName(""); }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] text-ink hover:bg-elevated">
           <X className="h-4 w-4" /> Cancel
         </button>

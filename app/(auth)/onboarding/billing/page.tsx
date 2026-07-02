@@ -8,7 +8,7 @@ import BillingActions from "@/app/app/settings/billing/billing-actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Subscribe · SYNNR" };
 
-const PER_YARD = 298;
+const PER_YARD = 500;
 
 export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
   const { company } = await requireCompany();
