@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Users, CreditCard, ChevronRight, Download, Share2 } from "lucide-react";
+import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
 
@@ -12,6 +12,7 @@ export default async function SettingsHub() {
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
     { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
     { href: "/app/settings/proofs", icon: Share2, title: "Readiness proofs", desc: "Share links you've created — view or revoke", live: true },
+    { href: "/app/settings/enforcement", icon: ShieldCheck, title: "Check-out enforcement", desc: "Photo proof on flagged items, second-person sign-off", live: true },
   ];
   return (
     <div className="flex flex-col gap-6">

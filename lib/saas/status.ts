@@ -62,5 +62,24 @@ export function computeReadiness(inputs: {
   return Math.max(0, Math.min(100, pct));
 }
 
-/** The one status vocabulary (spec §2.3): Ready / Due soon / Not ready / Out. */
-export type UnitState = "ready" | "due_soon" | "not_ready" | "out";
+/** The one status vocabulary (spec §2.3): Ready / Due soon / Not ready / Out /
+ *  Not set up (nothing tracked — never green). */
+export type UnitState = "ready" | "due_soon" | "not_ready" | "out" | "not_setup";
+
+/**
+ * THE one "worst status" — every surface (crew chips, unit tiles, checkout)
+ * ranks through this so the same record never reads two ways (walkthrough H1).
+ *
+ * Severity: expired (proven lapsed) > none (NO DATE ON FILE — can't prove it,
+ * treated as failing, shows as "Missing") > expiring > valid.
+ */
+const WORST_RANK: Record<ComplianceStatus, number> = { expired: 0, none: 1, expiring: 2, valid: 3 };
+export function worstStatus(statuses: ComplianceStatus[]): ComplianceStatus | null {
+  if (statuses.length === 0) return null;
+  return statuses.reduce((w, s) => (WORST_RANK[s] < WORST_RANK[w] ? s : w));
+}
+
+/** A compliance item that fails readiness: expired, or unverifiable (no date). */
+export function isFailing(status: ComplianceStatus): boolean {
+  return status === "expired" || status === "none";
+}

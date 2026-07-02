@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { HardHat, Plus, ChevronRight } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
+import { worstStatus } from "@/lib/saas/status";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -38,12 +39,12 @@ export default async function CrewPage() {
   const { data: certData } = await db
     .from("saas_compliance_items_with_status")
     .select("parent_id, status").eq("company_id", company.id).eq("parent_type", "crew");
-  const worst = new Map<string, ComplianceStatus>();
-  const rank: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
+  const byCrew = new Map<string, ComplianceStatus[]>();
   for (const c of (certData ?? []) as { parent_id: string; status: ComplianceStatus }[]) {
-    const cur = worst.get(c.parent_id);
-    if (!cur || rank[c.status] < rank[cur]) worst.set(c.parent_id, c.status);
+    byCrew.set(c.parent_id, [...(byCrew.get(c.parent_id) ?? []), c.status]);
   }
+  const worst = new Map<string, ComplianceStatus>();
+  for (const [id, list] of byCrew) { const w = worstStatus(list); if (w) worst.set(id, w); }
 
   return (
     <div className="flex flex-col gap-7">

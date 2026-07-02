@@ -12,6 +12,7 @@ import { addComplianceItem, addAsset } from "./actions";
 import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { worstStatus } from "@/lib/saas/status";
 
 export const dynamic = "force-dynamic";
 
@@ -48,12 +49,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     db.from("saas_compliance_items_with_status").select("parent_id, status").eq("company_id", company.id).eq("parent_type", "crew"),
   ]);
   const assignedIds = new Set(((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
-  const rank: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
-  const worstByCrew = new Map<string, ComplianceStatus>();
+  const certsByCrew = new Map<string, ComplianceStatus[]>();
   for (const c of (crewCertData ?? []) as { parent_id: string; status: ComplianceStatus }[]) {
-    const cur = worstByCrew.get(c.parent_id);
-    if (!cur || rank[c.status] < rank[cur]) worstByCrew.set(c.parent_id, c.status);
+    certsByCrew.set(c.parent_id, [...(certsByCrew.get(c.parent_id) ?? []), c.status]);
   }
+  const worstByCrew = new Map<string, ComplianceStatus>();
+  for (const [id, list] of certsByCrew) { const w = worstStatus(list); if (w) worstByCrew.set(id, w); }
   const allCrew = ((crewListData ?? []) as { id: string; name: string; role: string | null }[])
     .map((c) => ({ ...c, worst: worstByCrew.get(c.id) ?? null }));
   const assignedCrew = allCrew.filter((c) => assignedIds.has(c.id));

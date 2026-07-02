@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
-import { computeReadiness, type UnitState } from "./status";
+import { computeReadiness, worstStatus, isFailing, type UnitState } from "./status";
 
 /**
  * One readiness engine for the whole app (spec §5 "one source of truth"):
@@ -9,10 +9,12 @@ import { computeReadiness, type UnitState } from "./status";
  *
  * A unit is:
  *   out       — latest checkout has no linked check-in
- *   not_ready — an expired cert (unit, its assets, or assigned crew) or a
- *               missing asset
+ *   not_ready — an expired OR no-date ("Missing") cert on the unit, its
+ *               assets, or assigned crew — or an asset flagged missing.
+ *               An item we can't prove is an item that fails (walkthrough C1).
  *   due_soon  — anything expiring inside its reminder window
  *   ready     — everything current
+ *   not_setup — nothing tracked at all; never reads green
  */
 export interface UnitTile {
   id: string;
@@ -33,7 +35,6 @@ export interface CompanyReadiness {
   hardFail: boolean;
 }
 
-const RANK: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
 const daysUntil = (iso: string) => Math.ceil((new Date(iso + "T00:00:00Z").getTime() - Date.now()) / 86400e3);
 
 export async function getCompanyReadiness(db: SupabaseClient, companyId: string): Promise<CompanyReadiness> {
@@ -98,42 +99,49 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
       ...(crewByUnit.get(u.id) ?? []).flatMap((cid) => itemsByParent.get(cid) ?? []),
     ];
     const crewItems = (crewByUnit.get(u.id) ?? []).flatMap((cid) => itemsByParent.get(cid) ?? []);
-    const crewWorst = crewItems.length
-      ? crewItems.reduce<ComplianceStatus>((w, i) => (RANK[i.status] < RANK[w] ? i.status : w), "none")
-      : null;
+    const crewWorst = worstStatus(crewItems.map((i) => i.status));
 
     const missingAsset = unitAssets.find((a) => a.status === "missing");
     const expired = scope.filter((i) => i.status === "expired").sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))[0];
+    const noDate = scope.find((i) => i.status === "none");
     const expiring = scope.filter((i) => i.status === "expiring").sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))[0];
 
     let state: UnitState; let why: string;
     if (outSince.has(u.id)) {
       state = "out";
       why = `Out since ${new Date(outSince.get(u.id)!).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-      if (missingAsset || expired) why += missingAsset ? ` · ${missingAsset.name} missing` : ` · ${expired!.title} expired`;
+      if (missingAsset || expired || noDate) {
+        why += missingAsset ? ` · ${missingAsset.name} missing` : expired ? ` · ${expired.title} expired` : ` · ${noDate!.title} unverified`;
+      }
     } else if (missingAsset) {
       state = "not_ready"; why = `${missingAsset.name} — missing`;
     } else if (expired) {
       const d = expired.expiration_date ? Math.abs(daysUntil(expired.expiration_date)) : 0;
       state = "not_ready"; why = `${expired.title} — expired${d ? ` ${d}d ago` : ""}`;
+    } else if (noDate) {
+      state = "not_ready"; why = `${noDate.title} — no expiration on file`;
     } else if (expiring) {
       state = "due_soon"; why = `${expiring.title} expires${expiring.expiration_date ? ` in ${daysUntil(expiring.expiration_date)}d` : " soon"}`;
+    } else if (scope.length === 0) {
+      state = "not_setup"; why = "Nothing tracked yet";
     } else {
-      state = "ready"; why = scope.length ? "All current" : "Nothing tracked yet";
+      state = "ready"; why = "All current";
     }
     return { id: u.id, name: u.name, type: u.type, yardName, state, why, crewWorst, outSince: outSince.get(u.id) ?? null };
   });
 
-  // Blended company score (formula in lib/saas/status.ts)
+  // Blended company score (formula in lib/saas/status.ts). Currency counts
+  // EVERY item — a no-date "Missing" item is in the denominator and not the
+  // numerator, so it drags the score exactly like an expired one (C1).
   const split = (pred: (i: Item) => boolean) => {
-    const s = { expired: 0, expiring: 0, valid: 0 };
-    for (const i of items) if (pred(i) && i.status !== "none") s[i.status as "expired" | "expiring" | "valid"]++;
-    return s;
+    let valid = 0, total = 0;
+    for (const i of items) if (pred(i)) { total++; if (i.status === "valid") valid++; }
+    return { valid, total };
   };
   const gear = split((i) => i.parent_type !== "crew");
   const crew = split((i) => i.parent_type === "crew");
-  const gearTotal = gear.expired + gear.expiring + gear.valid;
-  const crewTotal = crew.expired + crew.expiring + crew.valid;
+  const gearTotal = gear.total;
+  const crewTotal = crew.total;
 
   const latestByUnit = new Map<string, string>();
   for (const co of (coData ?? []) as { id: string; unit_id: string }[]) {
@@ -148,11 +156,14 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
     for (const r of (rows ?? []) as { result: string }[]) {
       if (r.result === "ok") { loadoutOk++; loadoutTotal++; }
       else if (r.result === "missing") { loadoutMissing++; loadoutTotal++; }
+      else if (r.result === "unconfirmed") { loadoutTotal++; } // never checked ≠ ok
     }
   }
 
   const anyAssetMissing = assets.some((a) => a.status === "missing");
-  const hardFail = counts.expired > 0 || anyAssetMissing || loadoutMissing > 0;
+  // Hard cap when anything is unprovable: expired, no-date, missing asset,
+  // or a required loadout line missing on the latest check-out.
+  const hardFail = counts.expired > 0 || counts.none > 0 || anyAssetMissing || loadoutMissing > 0;
   const readiness = computeReadiness({
     certCurrency: gearTotal > 0 ? gear.valid / gearTotal : null,
     loadoutCompleteness: loadoutTotal > 0 ? loadoutOk / loadoutTotal : null,

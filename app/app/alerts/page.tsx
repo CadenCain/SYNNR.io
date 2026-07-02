@@ -14,7 +14,7 @@ export default async function AlertsPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
 
-  const [{ data: settingsData }, { data: itemData }, { data: sentData }] = await Promise.all([
+  const [{ data: settingsData }, { data: itemData }, { data: sentData }, { data: recipData }] = await Promise.all([
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_compliance_items_with_status")
       .select("id, title, expiration_date, status")
@@ -24,16 +24,25 @@ export default async function AlertsPage() {
       .eq("company_id", company.id)
       .order("sent_at", { ascending: false })
       .limit(50),
+    db.from("saas_alert_recipients").select("name, channels").eq("company_id", company.id),
   ]);
 
   const s = settingsData as { email_enabled: boolean; lead_days: number; recipients: string[] } | null;
   const leadDays = s?.lead_days ?? 30;
-  const recipients = (s?.recipients ?? []).filter(Boolean);
+  const routed = (recipData ?? []) as { name: string; channels: string[] }[];
+  const legacy = (s?.recipients ?? []).filter(Boolean);
+  const recipientLine = routed.length
+    ? routed.map((r) => `${r.name}${r.channels.includes("sms") ? " (email + text)" : ""}`).join(", ")
+    : legacy.length ? legacy.join(", ") : null;
 
   type Row = { id: string; title: string; expiration_date: string | null; status: ComplianceStatus };
+  // Failing = expired OR no-date-on-file ("Missing" — unverifiable), plus due-soon.
   const upcoming = ((itemData ?? []) as Row[])
-    .filter((i) => i.status === "expired" || i.status === "expiring")
-    .sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""));
+    .filter((i) => i.status === "expired" || i.status === "expiring" || i.status === "none")
+    .sort((a, b) => {
+      const rank = (s: string) => (s === "expired" ? 0 : s === "none" ? 1 : 2);
+      return rank(a.status) - rank(b.status) || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? "");
+    });
 
   type Sent = { sent_at: string; channel: string; saas_compliance_items: { title: string } | { title: string }[] | null };
   const history = ((sentData ?? []) as Sent[]).map((h) => ({
@@ -56,12 +65,12 @@ export default async function AlertsPage() {
             <Bell className="h-5 w-5" />
           </span>
           <div>
-            <div className="font-medium">{s?.email_enabled === false ? "Email alerts off" : "Email alerts on"}</div>
+            <div className="font-medium">{s?.email_enabled === false ? "Alerts off" : "Alerts on"}</div>
             <div className="text-sm text-ink-dim">Heads-up {leadDays} days before expiration · daily sweep at 6:30am CT</div>
           </div>
         </div>
         <div className="text-sm text-ink-dim">
-          To: {recipients.length ? recipients.join(", ") : "company owner (default)"}
+          To: {recipientLine ?? "company owner (default)"} · <Link href="/app/settings/notifications" className="text-bone hover:underline">manage recipients</Link>
         </div>
       </Card>
 

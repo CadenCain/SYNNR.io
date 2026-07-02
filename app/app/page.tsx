@@ -30,8 +30,9 @@ const STATE_UI = {
   due_soon: { chip: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Due soon" },
   not_ready: { chip: "border-red-500/40 bg-red-500/10 text-red-400", label: "Not ready" },
   out: { chip: "border-line-2 bg-elevated text-ink-dim", label: "Out" },
+  not_setup: { chip: "border-line-2 bg-elevated text-ink-faint", label: "Not set up" },
 } as const;
-const STATE_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, out: 2, ready: 3 };
+const STATE_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, out: 2, ready: 3, not_setup: 4 };
 
 export default async function Dashboard() {
   const { company, user } = await requireCompany();
@@ -62,13 +63,35 @@ export default async function Dashboard() {
   const { count: missCount } = await db.from("saas_events").select("id", { count: "exact", head: true })
     .eq("company_id", company.id).eq("kind", "miss_caught").gte("created_at", monthStart.toISOString());
   const missesCaught = missCount ?? 0;
+
+  // Real week-over-week deltas from the event stream (no fabricated trends).
+  const weekAgo = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400e3).toISOString();
+  const countEvents = async (kind: string, from: string, to?: string) => {
+    let q = db.from("saas_events").select("id", { count: "exact", head: true })
+      .eq("company_id", company.id).eq("kind", kind).gte("created_at", from);
+    if (to) q = q.lt("created_at", to);
+    const { count } = await q;
+    return count ?? 0;
+  };
+  const [missThisWk, missLastWk, ovrThisWk, ovrLastWk] = await Promise.all([
+    countEvents("miss_caught", weekAgo),
+    countEvents("miss_caught", twoWeeksAgo, weekAgo),
+    countEvents("rolled_out_override", weekAgo),
+    countEvents("rolled_out_override", twoWeeksAgo, weekAgo),
+  ]);
+  const delta = (now: number, prev: number) =>
+    now === prev ? "even with last week" : now > prev ? `+${now - prev} vs last week` : `${now - prev} vs last week`;
   const overridesMonth = checksMonth.filter((c) => c.type === "checkout" && c.status === "not_ready_override").length;
   const warningsMonth = (alertsMonth ?? []).length;
   const hasSample = Boolean(sampleYard);
 
   const actionList = items
-    .filter((i) => i.status === "expired" || i.status === "expiring")
-    .sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))
+    .filter((i) => i.status === "expired" || i.status === "expiring" || i.status === "none")
+    .sort((a, b) => {
+      const rank = (s: string) => (s === "expired" ? 0 : s === "none" ? 1 : 2);
+      return rank(a.status) - rank(b.status) || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? "");
+    })
     .slice(0, 12);
   const hrefFor = (i: Item) => i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`;
 
@@ -84,9 +107,9 @@ export default async function Dashboard() {
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance" },
     { icon: Truck, label: "Rolling now", value: rd.rollingNow, accent: "text-ink", href: "/app/dispatch", sub: rd.rollingNow ? "out on jobs" : "all in the yard" },
-    { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: "before rollout, this month" },
+    { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
-    { icon: AlertTriangle, label: "Overrides", value: overridesMonth, accent: overridesMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "rolled out NOT ready" },
+    { icon: AlertTriangle, label: "Overrides", value: overridesMonth, accent: overridesMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: overridesMonth > 0 ? `rolled out NOT ready · ${delta(ovrThisWk, ovrLastWk)}` : "rolled out NOT ready" },
   ];
 
   return (
@@ -121,7 +144,7 @@ export default async function Dashboard() {
                     <div className={`h-full rounded-full ${k.bar >= 90 ? "bg-emerald-500" : k.bar >= 70 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${k.bar}%` }} />
                   </div>
                 ) : (
-                  <div className="mt-2 h-1.5 truncate text-xs text-ink-faint">{k.sub ?? ""}</div>
+                  <div className="mt-1.5 min-h-4 truncate text-xs leading-4 text-ink-faint">{k.sub ?? ""}</div>
                 )}
               </Card>
             </Link>

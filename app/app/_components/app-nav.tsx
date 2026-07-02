@@ -81,12 +81,13 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
 
         {/* Search (jump to compliance list) */}
         <form
-          onSubmit={(e) => { e.preventDefault(); router.push("/app/compliance"); }}
+          action="/app/search"
           className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-faint focus-within:border-line-2"
         >
           <Search className="h-4 w-4" />
           <input
-            placeholder="Search compliance…"
+            name="q"
+            placeholder="Search trucks, crew, certs…"
             className="w-full bg-transparent text-ink placeholder:text-ink-faint outline-none"
           />
           <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-ink-faint lg:inline">⌘K</kbd>

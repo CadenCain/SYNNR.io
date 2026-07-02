@@ -9,8 +9,9 @@ export interface CheckItemInput {
   source_type: "loadout_item" | "asset" | "cert" | "crew_cert";
   source_id: string | null;
   label: string;
-  result: "ok" | "missing" | "expired" | "na";
+  result: "ok" | "missing" | "expired" | "na" | "unconfirmed";
   note?: string | null;
+  photo_path?: string | null;
 }
 
 /**
@@ -31,10 +32,40 @@ export async function submitCheckout(args: {
   ready: boolean;
   overrideReason?: string | null;
   failures?: string[]; // named failing lines, for the alert + event copy
+  cosignerName?: string | null;
+  cosignerPin?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
   const db = await saasDb();
   const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
+
+  // Enforcement (walkthrough C4): server-side check — the client hint is UX,
+  // this is the gate. Co-sign PIN must match the company PIN.
+  const { data: enfData } = await db
+    .from("saas_enforcement_settings")
+    .select("require_photo_on_flagged, require_cosign, cosign_pin")
+    .eq("company_id", company.id).maybeSingle();
+  const enf = enfData as { require_photo_on_flagged: boolean; require_cosign: boolean; cosign_pin: string | null } | null;
+  let cosignerName: string | null = null;
+  let cosignedAt: string | null = null;
+  if (enf?.require_cosign) {
+    if (!args.cosignerName?.trim() || !args.cosignerPin?.trim()) {
+      return { ok: false, error: "Second-person sign-off required." };
+    }
+    if (!enf.cosign_pin || args.cosignerPin.trim() !== enf.cosign_pin) {
+      return { ok: false, error: "Co-sign PIN doesn't match." };
+    }
+    cosignerName = args.cosignerName.trim();
+    cosignedAt = new Date().toISOString();
+  }
+  if (enf?.require_photo_on_flagged) {
+    const flaggedNoPhoto = args.items.filter(
+      (i) => (i.source_type === "loadout_item" || i.source_type === "asset") && i.result === "missing" && !i.photo_path,
+    );
+    if (flaggedNoPhoto.length > 0) {
+      return { ok: false, error: `Photo required on flagged items: ${flaggedNoPhoto.map((i) => i.label).join(", ")}` };
+    }
+  }
 
   const { data: check, error } = await db
     .from("saas_dispatch_checks")
@@ -48,6 +79,8 @@ export async function submitCheckout(args: {
       job_ref: args.jobRef,
       notes: args.notes,
       override_reason: args.ready ? null : args.overrideReason?.trim() || null,
+      cosigner_name: cosignerName,
+      cosigned_at: cosignedAt,
       completed_at: new Date().toISOString(),
     })
     .select("id")
@@ -65,6 +98,7 @@ export async function submitCheckout(args: {
         label: i.label,
         result: i.result,
         note: i.note ?? null,
+        photo_path: i.photo_path ?? null,
       })),
     );
     if (itemsErr) return { ok: false, error: itemsErr.message };

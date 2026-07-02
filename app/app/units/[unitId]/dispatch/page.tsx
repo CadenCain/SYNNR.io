@@ -17,6 +17,16 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
   if (!unitData) notFound();
   const unit = unitData as { id: string; name: string; type: string; yard_id: string };
 
+  const { data: enfData } = await db
+    .from("saas_enforcement_settings")
+    .select("require_photo_on_flagged, require_cosign")
+    .eq("company_id", company.id).maybeSingle();
+  const enfRow = enfData as { require_photo_on_flagged: boolean; require_cosign: boolean } | null;
+  const enforcement = {
+    requirePhotoOnFlagged: enfRow?.require_photo_on_flagged ?? false,
+    requireCosign: enfRow?.require_cosign ?? false,
+  };
+
   // Open checkout = latest checkout with no linked check-in → we're in check-in mode.
   const { data: lastCheckout } = await db
     .from("saas_dispatch_checks").select("id, started_at, job_ref")
@@ -55,8 +65,8 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
           title={`Check in — ${unit.name}`}
           description={`Out since ${new Date(openCheckout.started_at).toLocaleString()}${openCheckout.job_ref ? ` · ${openCheckout.job_ref}` : ""}. Flip anything that didn't come back.`}
         />
-        <DispatchClient mode="checkin" unitId={unitId} unitName={unit.name} checkoutId={openCheckout.id}
-          toggles={toggles} facts={[]} crew={[]} />
+        <DispatchClient mode="checkin" unitId={unitId} unitName={unit.name} companyId={company.id} checkoutId={openCheckout.id}
+          toggles={toggles} facts={[]} crew={[]} enforcement={enforcement} />
       </div>
     );
   }
@@ -171,9 +181,9 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
         title={`Roll ${unit.name}`}
         description="Flip anything that's missing. Paper and crew cards are pulled live — they don't lie."
       />
-      <DispatchClient mode="checkout" unitId={unitId} unitName={unit.name}
+      <DispatchClient mode="checkout" unitId={unitId} unitName={unit.name} companyId={company.id}
         toggles={[...loadoutRows, ...assetRows]} facts={facts} crew={crew}
-        initialCrewIds={assignedCrewIds} />
+        initialCrewIds={assignedCrewIds} enforcement={enforcement} />
     </div>
   );
 }
