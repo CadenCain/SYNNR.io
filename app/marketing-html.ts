@@ -136,9 +136,9 @@ export const MARKETING_HTML = `
       <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
       <div class="show-body" aria-hidden="true">
         <div class="show-kpis">
-          <div class="show-kpi k1"><span class="lbl">Readiness</span><span class="val amber">74%</span><span class="bar"><i></i></span></div>
-          <div class="show-kpi k2"><span class="lbl">Rolling now</span><span class="val">2</span><span class="sub">out on jobs</span></div>
-          <div class="show-kpi k3"><span class="lbl">Misses caught</span><span class="val green">4</span><span class="sub">this month</span></div>
+          <div class="show-kpi k1"><span class="lbl">Readiness</span><span class="val amber" data-n="74" data-suffix="%">74%</span><span class="bar"><i></i></span></div>
+          <div class="show-kpi k2"><span class="lbl">Rolling now</span><span class="val" data-n="2">2</span><span class="sub">out on jobs</span></div>
+          <div class="show-kpi k3"><span class="lbl">Misses caught</span><span class="val green" data-n="4">4</span><span class="sub">this month</span></div>
         </div>
         <div class="show-board">
           <div class="show-tile t1"><span class="tname">Wireline 7</span><span class="chip ok">Ready</span><span class="twhy">All current</span></div>
@@ -172,6 +172,11 @@ export const MARKETING_HTML = `
   </div>
 
   <p class="show-caption">That red banner is the product: the miss caught in the yard at 5am — not on location at 9, with a company man watching.</p>
+  <div class="show-cta">
+    <a href="/signup" class="btn btn-primary">Catch your first miss
+      <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </a>
+  </div>
 </section>
 
 <section class="section container" id="track" data-fx-atmos>

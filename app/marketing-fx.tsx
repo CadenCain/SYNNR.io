@@ -241,6 +241,25 @@ export default function MarketingFx() {
             if (e.isIntersecting) {
               e.target.classList.add("live");
               liveObserver.disconnect();
+              // Count-up KPIs (74% / 2 / 4). HTML already holds the final
+              // text, so no-JS and reduced-motion render the truth statically.
+              if (!reducedMotion) {
+                const vals = stage.querySelectorAll<HTMLElement>(".show-kpi .val[data-n]");
+                vals.forEach((el, vi) => {
+                  const target = parseInt(el.dataset.n ?? "0", 10);
+                  const suffix = el.dataset.suffix ?? "";
+                  const start = performance.now() + 250 + vi * 150;
+                  const dur = 950;
+                  const tick = (now: number) => {
+                    const t = Math.min(1, Math.max(0, (now - start) / dur));
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    el.textContent = `${Math.round(target * eased)}${suffix}`;
+                    if (t < 1) requestAnimationFrame(tick);
+                  };
+                  el.textContent = `0${suffix}`;
+                  requestAnimationFrame(tick);
+                });
+              }
               return;
             }
           }
@@ -249,6 +268,38 @@ export default function MarketingFx() {
       );
       liveObserver.observe(stage);
       cleanups.push(() => liveObserver.disconnect());
+
+      // Pointer tilt on the frame (desktop fine-pointer only) — lerped in
+      // rAF so it never fights the scroll scrub, ±2.2deg max.
+      if (!reducedMotion && matchMedia("(pointer: fine)").matches) {
+        let targetX = 0, targetY = 0, curX = 0, curY = 0, tiltRaf = 0, active = false;
+        const step = () => {
+          curX += (targetX - curX) * 0.12;
+          curY += (targetY - curY) * 0.12;
+          stage.style.setProperty("--tx", `${curX.toFixed(3)}deg`);
+          stage.style.setProperty("--ty", `${curY.toFixed(3)}deg`);
+          if (active || Math.abs(curX) > 0.01 || Math.abs(curY) > 0.01) tiltRaf = requestAnimationFrame(step);
+          else tiltRaf = 0;
+        };
+        const onMove = (ev: PointerEvent) => {
+          const r = stage.getBoundingClientRect();
+          targetX = ((ev.clientX - r.left) / r.width - 0.5) * 4.4;   // rotateY
+          targetY = -((ev.clientY - r.top) / r.height - 0.5) * 3.2;  // rotateX
+          active = true;
+          if (!tiltRaf) tiltRaf = requestAnimationFrame(step);
+        };
+        const onLeave = () => {
+          targetX = 0; targetY = 0; active = false;
+          if (!tiltRaf) tiltRaf = requestAnimationFrame(step);
+        };
+        stage.addEventListener("pointermove", onMove);
+        stage.addEventListener("pointerleave", onLeave);
+        cleanups.push(() => {
+          stage.removeEventListener("pointermove", onMove);
+          stage.removeEventListener("pointerleave", onLeave);
+          if (tiltRaf) cancelAnimationFrame(tiltRaf);
+        });
+      }
     }
 
     return () => cleanups.forEach((c) => c());

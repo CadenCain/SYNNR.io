@@ -879,7 +879,8 @@
     0 10px 30px -18px rgba(0,0,0,0.7);
   overflow: hidden;
   transform:
-    rotateX(calc((1 - var(--p)) * 9deg))
+    rotateX(calc((1 - var(--p)) * 9deg + var(--ty, 0deg)))
+    rotateY(var(--tx, 0deg))
     translateY(calc((1 - var(--p)) * 70px))
     scale(calc(0.92 + var(--p) * 0.08));
   opacity: calc(0.25 + var(--p) * 0.75);
@@ -909,7 +910,9 @@
 .mkt .show-kpi .val.green { color: #7bc47f; }
 .mkt .show-kpi .sub { font-size: 10.5px; color: var(--fg-faint); }
 .mkt .show-kpi .bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; }
-.mkt .show-kpi .bar i { display: block; height: 100%; width: 74%; border-radius: 999px; background: #e6c46a; }
+.mkt .show-kpi .bar i { display: block; height: 100%; width: 74%; border-radius: 999px; background: #e6c46a; transform: scaleX(0); transform-origin: left; }
+.mkt .live .show-kpi .bar i { animation: showBarFill 1s cubic-bezier(.25,.7,.25,1) .35s forwards; }
+@keyframes showBarFill { to { transform: scaleX(1); } }
 
 /* Fleet board tiles */
 .mkt .show-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -929,6 +932,8 @@
 }
 .mkt .show-tile .chip.ok { color: #7bc47f; border-color: rgba(123,196,127,.35); background: rgba(123,196,127,.08); }
 .mkt .show-tile .chip.scan { color: var(--fg-dim); border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.mkt .live .show-tile.t3 .chip.scan { animation: showScanPulse .9s ease-in-out 2 , showSwapOut .4s ease 1.45s forwards; }
+@keyframes showScanPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 .mkt .show-tile .chip.bad { color: #e0756a; border-color: rgba(224,117,106,.4); background: rgba(224,117,106,.1); }
 .mkt .show-tile .twhy { font-size: 11px; color: var(--fg-faint); }
 .mkt .show-tile .twhy.why-bad { color: #e09a91; }
@@ -955,6 +960,8 @@
   opacity: 0; transform: translateY(8px);
 }
 .mkt .live .show-banner { animation: showSwapIn .5s ease 2.1s forwards; }
+.mkt .live .show-banner .bang { animation: showBangPop .55s cubic-bezier(.2,.9,.3,1.4) 2.35s backwards; }
+@keyframes showBangPop { 0% { transform: scale(.3); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
 .mkt .show-banner .bang {
   flex: none; display: grid; place-items: center;
   width: 22px; height: 22px; border-radius: 999px;
@@ -1006,7 +1013,8 @@
 }
 .mkt .show-chip.c1 { left: calc(50% - 430px - 150px); top: 24%; transform: translateY(calc((1 - var(--p)) * 120px)); }
 .mkt .show-chip.c2 { right: calc(50% - 430px - 140px); bottom: 16%; transform: translateY(calc((1 - var(--p)) * 170px)); }
-.mkt .live .show-chip.c1 { animation: showChipIn .6s cubic-bezier(.2,.8,.25,1.15) 2.3s forwards, showFloatA 9s ease-in-out 3s infinite; }
+.mkt .live .show-chip.c1 { animation: showChipIn .6s cubic-bezier(.2,.8,.25,1.15) 2.3s forwards, showBuzz .5s ease 2.95s, showFloatA 9s ease-in-out 3.6s infinite; }
+@keyframes showBuzz { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-2.2deg); } 40% { transform: rotate(2deg); } 60% { transform: rotate(-1.4deg); } 80% { transform: rotate(.8deg); } }
 .mkt .live .show-chip.c2 { animation: showChipIn .6s cubic-bezier(.2,.8,.25,1.15) 2.8s forwards, showFloatB 11s ease-in-out 3.5s infinite; }
 @keyframes showChipIn { from { opacity: 0; transform: translateY(18px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes showFloatA { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
@@ -1016,6 +1024,7 @@
   margin: 26px auto 0; max-width: 56ch;
   text-align: center; font-size: 14px; color: var(--fg-dim);
 }
+.mkt .show-cta { display: flex; justify-content: center; margin-top: 22px; }
 
 /* Mobile: chips fold under the frame, no perspective scrub (JS sets --p=1) */
 @media (max-width: 900px) {
@@ -1034,4 +1043,5 @@
   .mkt .show-tile.t3 .chip.scan, .mkt .show-tile.t3 .why-ok { display: none; }
   .mkt .show-tile.t3 .chip.bad { display: inline-block; opacity: 1; }
   .mkt .show-tile.t3 .why-bad { display: block; opacity: 1; }
+  .mkt .show-kpi .bar i { transform: scaleX(1); }
 }
