@@ -9,7 +9,7 @@ export type ComplianceStatus = "valid" | "expiring" | "expired" | "none";
 
 const STYLES: Record<ComplianceStatus, { dot: string; chip: string; label: string }> = {
   valid: { dot: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Valid" },
-  expiring: { dot: "bg-amber-500", chip: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Expiring" },
+  expiring: { dot: "bg-amber-500", chip: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Due soon" },
   expired: { dot: "bg-red-500", chip: "bg-red-500/10 text-red-400 border-red-500/30", label: "Expired" },
   none: { dot: "bg-ink-faint", chip: "bg-ink-faint/10 text-ink-dim border-ink-faint/30", label: "Missing" },
 };

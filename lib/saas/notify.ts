@@ -118,19 +118,21 @@ export async function notifyEvent(args: {
     const emails = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.email as string);
     const phones = recips.filter((r) => r.channels.includes("sms") && r.phone).map((r) => r.phone as string);
 
-    const sends: { channel: string }[] = [];
+    const emailNames = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.name);
+    const smsRecips = recips.filter((r) => r.channels.includes("sms") && r.phone);
+    const sends: { channel: string; recipient: string }[] = [];
     if (emails.length) {
       const ok = await sendEmail(emails, `SYNNR alert — ${args.message}`,
         `<p style="font:14px/1.5 -apple-system,sans-serif">${args.message}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${args.companyName} · <a href="https://www.synnr.io/app">open SYNNR</a></p>`);
-      if (ok) sends.push({ channel: "email" });
+      if (ok) sends.push({ channel: "email", recipient: emailNames.join(", ") });
     }
-    for (const p of phones) {
-      const ok = await sendSms(p, sms);
-      if (ok) sends.push({ channel: "sms" });
+    for (const r of smsRecips) {
+      const ok = await sendSms(r.phone as string, sms);
+      if (ok) sends.push({ channel: "sms", recipient: r.name });
     }
     if (sends.length) {
       await admin.from("saas_alerts_sent").insert(
-        sends.map((x) => ({ company_id: args.companyId, compliance_item_id: null, channel: x.channel, label: args.message })),
+        sends.map((x) => ({ company_id: args.companyId, compliance_item_id: null, channel: x.channel, label: args.message, recipient: x.recipient })),
       );
     }
   } catch (e) {

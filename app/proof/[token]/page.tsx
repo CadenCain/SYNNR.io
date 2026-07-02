@@ -21,7 +21,7 @@ const CHIP: Record<ComplianceStatus, string> = {
   expired: "border-red-500/30 bg-red-500/10 text-red-400",
   none: "border-line-2 bg-elevated text-ink-dim",
 };
-const LABEL: Record<ComplianceStatus, string> = { valid: "Valid", expiring: "Expiring", expired: "Expired", none: "No date" };
+const LABEL: Record<ComplianceStatus, string> = { valid: "Valid", expiring: "Due soon", expired: "Expired", none: "Missing" };
 
 function Invalid({ reason }: { reason: string }) {
   return (
@@ -103,9 +103,42 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
     : assetNames.get(i.parent_id) ?? "asset";
 
   const missingAssets = assets.filter((a) => a.status === "missing");
-  const expiredCount = items.filter((i) => i.status === "expired").length;
-  const ready = expiredCount === 0 && missingAssets.length === 0;
+  const failingCount = items.filter((i) => i.status === "expired" || i.status === "none").length;
+  const ready = failingCount === 0 && missingAssets.length === 0;
   const generatedAt = new Date().toLocaleString();
+
+  // Unit scope: include the latest immutable dispatch record (spec #1d) —
+  // who checked it, the verdict, and photo proof.
+  let record: {
+    type: string; status: string; performed_by_name: string | null; cosigner_name: string | null;
+    started_at: string; override_reason: string | null;
+    lines: { label: string; result: string; photoUrl: string | null }[];
+  } | null = null;
+  if (proof.scope === "unit" && proof.unit_id) {
+    const { data: chk } = await admin
+      .from("saas_dispatch_checks")
+      .select("id, type, status, performed_by_name, cosigner_name, started_at, override_reason")
+      .eq("unit_id", proof.unit_id).eq("type", "checkout")
+      .order("started_at", { ascending: false }).limit(1).maybeSingle();
+    if (chk) {
+      const c = chk as { id: string; type: string; status: string; performed_by_name: string | null; cosigner_name: string | null; started_at: string; override_reason: string | null };
+      const { data: lineData } = await admin
+        .from("saas_dispatch_check_items")
+        .select("label, result, photo_path")
+        .eq("check_id", c.id)
+        .in("source_type", ["loadout_item", "asset"]);
+      const lines: { label: string; result: string; photoUrl: string | null }[] = [];
+      for (const l of (lineData ?? []) as { label: string; result: string; photo_path: string | null }[]) {
+        let photoUrl: string | null = null;
+        if (l.photo_path) {
+          const { data: signed } = await admin.storage.from("proofs").createSignedUrl(l.photo_path, 3600);
+          photoUrl = signed?.signedUrl ?? null;
+        }
+        lines.push({ label: l.label, result: l.result, photoUrl });
+      }
+      record = { ...c, lines };
+    }
+  }
 
   return (
     <div className="saas min-h-dvh bg-coal px-4 py-10 text-ink antialiased print:bg-white print:text-black">
@@ -131,12 +164,45 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           <p className="mt-1 text-sm text-ink-dim">{scopeName}</p>
           {!ready ? (
             <p className="mt-2 text-sm text-red-300">
-              {expiredCount > 0 ? `${expiredCount} expired item${expiredCount === 1 ? "" : "s"}` : ""}
-              {expiredCount > 0 && missingAssets.length > 0 ? " · " : ""}
+              {failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : ""}
+              {failingCount > 0 && missingAssets.length > 0 ? " · " : ""}
               {missingAssets.length > 0 ? `${missingAssets.length} asset${missingAssets.length === 1 ? "" : "s"} unaccounted for` : ""}
             </p>
           ) : null}
         </div>
+
+        {/* Latest dispatch record — the enforcement artifact */}
+        {record ? (
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">Last pre-dispatch check</h2>
+              <span className="text-xs text-ink-faint">{new Date(record.started_at).toLocaleString()}</span>
+            </div>
+            <p className="mt-2 text-sm">
+              <span className={record.status === "not_ready_override" ? "font-semibold text-red-400" : "font-semibold text-emerald-400"}>
+                {record.status === "not_ready_override" ? "Rolled out NOT ready — override" : "Rolled out Ready"}
+              </span>
+              <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "—"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
+              {record.override_reason ? <span className="text-ink-dim"> · reason: &ldquo;{record.override_reason}&rdquo;</span> : null}
+            </p>
+            {record.lines.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+                {record.lines.map((l, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${l.result === "ok" ? CHIP.valid : l.result === "missing" ? CHIP.expired : CHIP.none}`}>
+                      {l.result === "ok" ? "OK" : l.result === "missing" ? "Missing" : "Not checked"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{l.label}</span>
+                    {l.photoUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <a href={l.photoUrl} target="_blank" rel="noreferrer"><img src={l.photoUrl} alt={`Photo — ${l.label}`} className="h-9 w-9 rounded-md border border-line-2 object-cover" /></a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
         {/* Items table */}
         {items.length > 0 && (

@@ -7,7 +7,7 @@ import DispatchClient, { type ToggleRow, type FactRow, type CrewOption } from ".
 export const dynamic = "force-dynamic";
 
 export default async function DispatchPage({ params }: { params: Promise<{ unitId: string }> }) {
-  const { company } = await requireCompany();
+  const { company, user } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
 
@@ -19,12 +19,17 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
 
   const { data: enfData } = await db
     .from("saas_enforcement_settings")
-    .select("require_photo_on_flagged, require_cosign")
+    .select("photo_mode, require_pin, require_cosign, cosign_pin")
     .eq("company_id", company.id).maybeSingle();
-  const enfRow = enfData as { require_photo_on_flagged: boolean; require_cosign: boolean } | null;
+  const enfRow = enfData as { photo_mode: string; require_pin: boolean; require_cosign: boolean; cosign_pin: string | null } | null;
   const enforcement = {
-    requirePhotoOnFlagged: enfRow?.require_photo_on_flagged ?? false,
+    // Sensible defaults when never configured: photo on flagged, PIN on
+    // (bites only once a PIN is set), co-sign off (spec #1).
+    photoMode: (enfRow?.photo_mode ?? "flagged") as "off" | "flagged" | "all",
     requireCosign: enfRow?.require_cosign ?? false,
+    requirePin: enfRow?.require_pin ?? true,
+    pinConfigured: Boolean(enfRow?.cosign_pin),
+    defaultCheckerName: (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "",
   };
 
   // Open checkout = latest checkout with no linked check-in → we're in check-in mode.

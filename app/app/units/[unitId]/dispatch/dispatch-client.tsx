@@ -46,8 +46,11 @@ export interface CrewOption {
   certs: { id: string; title: string; status: ComplianceStatus; expiration_date: string | null }[];
 }
 export interface EnforcementConfig {
-  requirePhotoOnFlagged: boolean;
+  photoMode: "off" | "flagged" | "all";
   requireCosign: boolean;
+  requirePin: boolean;          // name + PIN checker sign-on (shared tablet)
+  pinConfigured: boolean;       // PIN rules only bite once a PIN exists
+  defaultCheckerName: string;   // logged-in user, editable
 }
 
 type LineResult = "ok" | "missing" | undefined; // undefined = unconfirmed
@@ -105,6 +108,8 @@ export default function DispatchClient(props: {
   const [jobRef, setJobRef] = useState("");
   const [cosignName, setCosignName] = useState("");
   const [cosignPin, setCosignPin] = useState("");
+  const [checkerName, setCheckerName] = useState(props.enforcement.defaultCheckerName);
+  const [checkerPin, setCheckerPin] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
@@ -150,11 +155,18 @@ export default function DispatchClient(props: {
   }, [props.facts, selectedCrew, isCheckout]);
 
   const ready = failures.length === 0;
-  const flaggedWithoutPhoto = props.enforcement.requirePhotoOnFlagged
-    ? props.toggles.filter((t) => results[t.key] === "missing" && !photos[t.key])
-    : [];
+  const pinActive = props.enforcement.requirePin && props.enforcement.pinConfigured;
+  const flaggedWithoutPhoto =
+    props.enforcement.photoMode === "all"
+      ? props.toggles.filter((t) => !photos[t.key])
+      : props.enforcement.photoMode === "flagged"
+        ? props.toggles.filter((t) => results[t.key] === "missing" && !photos[t.key])
+        : [];
+  const checkerMissing = isCheckout && pinActive && (!checkerName.trim() || !checkerPin.trim());
   const cosignMissing = isCheckout && props.enforcement.requireCosign && (!cosignName.trim() || !cosignPin.trim());
-  const blocked = flaggedWithoutPhoto.length > 0 || cosignMissing;
+  const cosignSame = isCheckout && props.enforcement.requireCosign &&
+    cosignName.trim().length > 0 && cosignName.trim().toLowerCase() === checkerName.trim().toLowerCase();
+  const blocked = (isCheckout && flaggedWithoutPhoto.length > 0) || checkerMissing || cosignMissing || cosignSame;
 
   async function capturePhoto(key: string, file: File) {
     setPhotoBusyKey(key);
@@ -296,14 +308,16 @@ export default function DispatchClient(props: {
                   </div>
                   <TriToggle value={results[t.key]} onSet={(v) => setResults((p) => ({ ...p, [t.key]: p[t.key] === v ? undefined : v }))} />
                 </div>
-                {results[t.key] === "missing" && (
+                {(results[t.key] === "missing" || props.enforcement.photoMode === "all") && isCheckout && (
                   <div className="flex items-center gap-2">
                     <button type="button" disabled={photoBusyKey === t.key}
                       onClick={() => { photoForKey.current = t.key; fileRef.current?.click(); }}
                       className={cn("flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium",
                         photos[t.key] ? "border-emerald-500/40 text-emerald-400" : "border-line-2 text-ink-dim hover:text-ink")}>
                       <Camera className="h-3.5 w-3.5" />
-                      {photoBusyKey === t.key ? "Uploading…" : photos[t.key] ? "Photo attached ✓" : props.enforcement.requirePhotoOnFlagged ? "Add photo (required)" : "Add photo"}
+                      {photoBusyKey === t.key ? "Uploading…" : photos[t.key] ? "Photo attached ✓"
+                        : props.enforcement.photoMode === "all" ? "Add photo (required)"
+                        : results[t.key] === "missing" && props.enforcement.photoMode === "flagged" ? "Add photo (required)" : "Add photo"}
                     </button>
                   </div>
                 )}
@@ -366,6 +380,20 @@ export default function DispatchClient(props: {
         </label>
       )}
 
+      {/* Who did the check — name + PIN on a shared tablet (org setting) */}
+      {isCheckout && pinActive && (
+        <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
+          <h2 className={SECTION}>Checked by</h2>
+          <p className="text-sm text-ink-dim">Sign the check — your name goes on the record.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input value={checkerName} onChange={(e) => setCheckerName(e.target.value)} placeholder="Your name"
+              className="h-12 flex-1 rounded-xl border border-line-2 bg-coal px-4 text-base text-ink outline-none focus:border-bone" />
+            <input value={checkerPin} onChange={(e) => setCheckerPin(e.target.value)} placeholder="PIN" type="password" inputMode="numeric"
+              className="h-12 w-32 rounded-xl border border-line-2 bg-coal px-4 text-base text-ink outline-none focus:border-bone" />
+          </div>
+        </section>
+      )}
+
       {/* Second-person co-sign (org setting) */}
       {isCheckout && props.enforcement.requireCosign && (
         <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
@@ -381,10 +409,12 @@ export default function DispatchClient(props: {
       )}
 
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
-      {flaggedWithoutPhoto.length > 0 && (
-        <p className="text-sm text-amber-400">Photo required on each flagged item: {flaggedWithoutPhoto.map((t) => t.label).join(", ")}</p>
+      {isCheckout && flaggedWithoutPhoto.length > 0 && (
+        <p className="text-sm text-amber-400">Photo required on: {flaggedWithoutPhoto.map((t) => t.label).join(", ")}</p>
       )}
+      {checkerMissing && <p className="text-sm text-amber-400">Sign the check — name + PIN.</p>}
       {cosignMissing && <p className="text-sm text-amber-400">Second-person sign-off required before rollout.</p>}
+      {cosignSame && <p className="text-sm text-red-400">Co-signer must be a different person than the checker.</p>}
 
       {askOverride && !ready && isCheckout ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 p-4">

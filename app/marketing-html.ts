@@ -122,6 +122,58 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
+<section class="section container showcase" id="showcase" data-fx-atmos>
+  <div class="head" style="text-align:left;margin-inline:0">
+    <span class="eyebrow">Inside SYNNR</span>
+    <h2 class="h2" data-fx="words">Watch it catch the miss.</h2>
+    <p class="lede" style="margin-inline:0;max-width:64ch">This is the command center a shop leaves open all day. Every tile is a truck. Scroll — and watch hu-179 get stopped at the gate.</p>
+  </div>
+
+  <div class="show-stage" aria-hidden="false">
+    <div class="show-glow" aria-hidden="true"></div>
+
+    <div class="show-frame" role="img" aria-label="SYNNR command center: fleet readiness board with two trucks Ready and hu-179 flagged NOT READY — BOP number 3 missing, roll-out blocked pending override">
+      <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
+      <div class="show-body" aria-hidden="true">
+        <div class="show-kpis">
+          <div class="show-kpi k1"><span class="lbl">Readiness</span><span class="val amber">74%</span><span class="bar"><i></i></span></div>
+          <div class="show-kpi k2"><span class="lbl">Rolling now</span><span class="val">2</span><span class="sub">out on jobs</span></div>
+          <div class="show-kpi k3"><span class="lbl">Misses caught</span><span class="val green">4</span><span class="sub">this month</span></div>
+        </div>
+        <div class="show-board">
+          <div class="show-tile t1"><span class="tname">Wireline 7</span><span class="chip ok">Ready</span><span class="twhy">All current</span></div>
+          <div class="show-tile t2"><span class="tname">Pump 3</span><span class="chip ok">Ready</span><span class="twhy">DOT good · crew current</span></div>
+          <div class="show-tile t3">
+            <span class="tname">hu-179</span>
+            <span class="chip scan">Checking…</span>
+            <span class="chip bad">Not ready</span>
+            <span class="twhy why-ok">Running loadout check…</span>
+            <span class="twhy why-bad">BOP #3 — missing</span>
+          </div>
+        </div>
+        <div class="show-banner">
+          <span class="bang">!</span>
+          <span class="btext"><b>NOT READY — hu-179.</b> BOP #3 missing · roll-out blocked until confirmed or overridden</span>
+        </div>
+        <div class="show-feed">
+          <span class="dotline"></span>Caught before rollout on hu-179: BOP #3 — missing <span class="ftime">4:58 AM</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="show-chip c1" aria-hidden="true">
+      <span class="cico">▮</span>
+      <span><b>SYNNR:</b> hu-179 NOT ready — BOP missing. —renegade</span>
+    </div>
+    <div class="show-chip c2" aria-hidden="true">
+      <span class="cok">✓</span>
+      <span>Readiness proof — <b>shared with operator</b></span>
+    </div>
+  </div>
+
+  <p class="show-caption">That red banner is the product: the miss caught in the yard at 5am — not on location at 9, with a company man watching.</p>
+</section>
+
 <section class="section container" id="track" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">What we track</span>

@@ -13,6 +13,7 @@ import { kindLabel } from "@/lib/saas/taxonomy";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
 import ShareProof from "./_components/share-proof";
 import { loadSampleYard, clearSampleYard } from "./_actions";
+import { Sparkline } from "@/components/ui/sparkline";
 
 export const dynamic = "force-dynamic";
 
@@ -74,12 +75,24 @@ export default async function Dashboard() {
     const { count } = await q;
     return count ?? 0;
   };
-  const [missThisWk, missLastWk, ovrThisWk, ovrLastWk] = await Promise.all([
+  const [missThisWk, missLastWk, ovrThisWk, ovrLastWk, { data: snapData }] = await Promise.all([
     countEvents("miss_caught", weekAgo),
     countEvents("miss_caught", twoWeeksAgo, weekAgo),
     countEvents("rolled_out_override", weekAgo),
     countEvents("rolled_out_override", twoWeeksAgo, weekAgo),
+    db.from("saas_readiness_snapshots")
+      .select("day, readiness, rolling, misses_caught")
+      .eq("company_id", company.id)
+      .order("day", { ascending: true })
+      .limit(14),
   ]);
+  type Snap = { day: string; readiness: number | null; rolling: number; misses_caught: number };
+  const snaps = (snapData ?? []) as Snap[];
+  const spark = {
+    readiness: snaps.map((s) => s.readiness),
+    rolling: snaps.map((s) => s.rolling as number | null),
+    misses: snaps.map((s) => s.misses_caught as number | null),
+  };
   const delta = (now: number, prev: number) =>
     now === prev ? "even with last week" : now > prev ? `+${now - prev} vs last week` : `${now - prev} vs last week`;
   const overridesMonth = checksMonth.filter((c) => c.type === "checkout" && c.status === "not_ready_override").length;
@@ -102,12 +115,12 @@ export default async function Dashboard() {
   const outUnits = rd.units.filter((u) => u.state === "out");
   const dueToRoll = rd.units.filter((u) => u.state !== "out");
 
-  const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string }[] = [
+  const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
     rd.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
-      : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance" },
-    { icon: Truck, label: "Rolling now", value: rd.rollingNow, accent: "text-ink", href: "/app/dispatch", sub: rd.rollingNow ? "out on jobs" : "all in the yard" },
-    { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month" },
+      : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
+    { icon: Truck, label: "Rolling now", value: rd.rollingNow, accent: "text-ink", href: "/app/dispatch", sub: rd.rollingNow ? "out on jobs" : "all in the yard", spark: spark.rolling, sparkColor: "#9a9aa2" },
+    { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month", spark: spark.misses, sparkColor: "#34d399" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
     { icon: AlertTriangle, label: "Overrides", value: overridesMonth, accent: overridesMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: overridesMonth > 0 ? `rolled out NOT ready · ${delta(ovrThisWk, ovrLastWk)}` : "rolled out NOT ready" },
   ];
@@ -146,6 +159,11 @@ export default async function Dashboard() {
                 ) : (
                   <div className="mt-1.5 min-h-4 truncate text-xs leading-4 text-ink-faint">{k.sub ?? ""}</div>
                 )}
+                {k.spark ? (
+                  <div className="mt-1.5 flex items-center">
+                    <Sparkline values={k.spark} stroke={k.sparkColor ?? "#9a9aa2"} />
+                  </div>
+                ) : null}
               </Card>
             </Link>
           );

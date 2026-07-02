@@ -173,3 +173,35 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
 
   return { readiness, counts, units, rollingNow: outSince.size, hardFail };
 }
+
+/**
+ * Daily history snapshot (spec #3): one row per company per day so KPI
+ * sparklines are real. Called by the daily cron with the service-role client.
+ */
+export async function snapshotAllCompanies(admin: SupabaseClient): Promise<{ snapped: number; errors: string[] }> {
+  const out = { snapped: 0, errors: [] as string[] };
+  const { data: companies, error } = await admin.from("saas_companies").select("id");
+  if (error) { out.errors.push(error.message); return out; }
+  const day = new Date().toISOString().slice(0, 10);
+  const dayStart = `${day}T00:00:00Z`;
+  for (const c of (companies ?? []) as { id: string }[]) {
+    try {
+      const rd = await getCompanyReadiness(admin, c.id);
+      const { count } = await admin
+        .from("saas_events").select("id", { count: "exact", head: true })
+        .eq("company_id", c.id).eq("kind", "miss_caught").gte("created_at", dayStart);
+      const { error: upErr } = await admin.from("saas_readiness_snapshots").upsert({
+        company_id: c.id,
+        day,
+        readiness: rd.readiness,
+        rolling: rd.rollingNow,
+        misses_caught: count ?? 0,
+      }, { onConflict: "company_id,day" });
+      if (upErr) out.errors.push(`${c.id}: ${upErr.message}`);
+      else out.snapped++;
+    } catch (e) {
+      out.errors.push(`${c.id}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return out;
+}

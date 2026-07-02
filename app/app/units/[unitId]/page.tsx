@@ -60,6 +60,15 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const assignedCrew = allCrew.filter((c) => assignedIds.has(c.id));
   const unassignedCrew = allCrew.filter((c) => !assignedIds.has(c.id));
 
+  // Dispatch history — immutable records, newest first.
+  const { data: historyData } = await db
+    .from("saas_dispatch_checks")
+    .select("id, type, status, performed_by_name, started_at")
+    .eq("unit_id", unitId)
+    .order("started_at", { ascending: false })
+    .limit(6);
+  const history = (historyData ?? []) as { id: string; type: string; status: string; performed_by_name: string | null; started_at: string }[];
+
   // Is this unit currently out? (latest checkout with no linked check-in)
   const { data: lastCo } = await db
     .from("saas_dispatch_checks").select("id, started_at")
@@ -164,6 +173,36 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
       </Link>
+
+      {/* Dispatch history — the immutable records (spec #1d) */}
+      {history.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Dispatch history</h2>
+          <div className="flex flex-col gap-2">
+            {history.map((h) => (
+              <Link key={h.id} href={`/app/records/${h.id}`}>
+                <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">
+                      {h.type === "checkin" ? "Checked in" : "Rolled out"} · {new Date(h.started_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </div>
+                    <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
+                  </div>
+                  {h.status === "not_ready_override" ? (
+                    <span className="shrink-0 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready — override</span>
+                  ) : h.status === "partial" ? (
+                    <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Items not returned</span>
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">{h.type === "checkin" ? "All back" : "Ready"}</span>
+                  )}
+                  <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Crew on this unit — standing assignment; their cards decide this
           truck's ready call at checkout and pre-select on Roll a truck. */}

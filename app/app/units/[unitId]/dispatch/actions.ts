@@ -34,36 +34,59 @@ export async function submitCheckout(args: {
   failures?: string[]; // named failing lines, for the alert + event copy
   cosignerName?: string | null;
   cosignerPin?: string | null;
+  checkerName?: string | null;
+  checkerPin?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
   const db = await saasDb();
-  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
+  let actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
 
-  // Enforcement (walkthrough C4): server-side check — the client hint is UX,
-  // this is the gate. Co-sign PIN must match the company PIN.
+  // Enforcement (spec #1): server-side gate — the client hints are UX only.
+  // One company PIN covers checker sign-on and co-sign; PIN rules only bite
+  // once a PIN is actually configured (else a fresh org could never roll).
   const { data: enfData } = await db
     .from("saas_enforcement_settings")
-    .select("require_photo_on_flagged, require_cosign, cosign_pin")
+    .select("photo_mode, require_pin, require_cosign, cosign_pin")
     .eq("company_id", company.id).maybeSingle();
-  const enf = enfData as { require_photo_on_flagged: boolean; require_cosign: boolean; cosign_pin: string | null } | null;
+  const enf = enfData as { photo_mode: string; require_pin: boolean; require_cosign: boolean; cosign_pin: string | null } | null;
+  const pinConfigured = Boolean(enf?.cosign_pin);
+  const photoMode = enf?.photo_mode ?? "flagged";
+
+  // (a) Who did the check — name + PIN sign-on for shared yard tablets.
+  if ((enf?.require_pin ?? true) && pinConfigured) {
+    if (!args.checkerName?.trim() || !args.checkerPin?.trim()) {
+      return { ok: false, error: "Sign the check: name + PIN." };
+    }
+    if (args.checkerPin.trim() !== enf!.cosign_pin) {
+      return { ok: false, error: "Checker PIN doesn't match." };
+    }
+    actor = args.checkerName.trim();
+  }
+
+  // (c) Second-person sign-off — must be a different person than the checker.
   let cosignerName: string | null = null;
   let cosignedAt: string | null = null;
   if (enf?.require_cosign) {
     if (!args.cosignerName?.trim() || !args.cosignerPin?.trim()) {
       return { ok: false, error: "Second-person sign-off required." };
     }
-    if (!enf.cosign_pin || args.cosignerPin.trim() !== enf.cosign_pin) {
+    if (!pinConfigured || args.cosignerPin.trim() !== enf.cosign_pin) {
       return { ok: false, error: "Co-sign PIN doesn't match." };
+    }
+    if (actor && args.cosignerName.trim().toLowerCase() === actor.toLowerCase()) {
+      return { ok: false, error: "Co-signer must be a different person than the checker." };
     }
     cosignerName = args.cosignerName.trim();
     cosignedAt = new Date().toISOString();
   }
-  if (enf?.require_photo_on_flagged) {
-    const flaggedNoPhoto = args.items.filter(
-      (i) => (i.source_type === "loadout_item" || i.source_type === "asset") && i.result === "missing" && !i.photo_path,
-    );
-    if (flaggedNoPhoto.length > 0) {
-      return { ok: false, error: `Photo required on flagged items: ${flaggedNoPhoto.map((i) => i.label).join(", ")}` };
+
+  // (b) Photo proof — off | flagged | all
+  if (photoMode !== "off") {
+    const gearLines = args.items.filter((i) => i.source_type === "loadout_item" || i.source_type === "asset");
+    const needing = photoMode === "all" ? gearLines : gearLines.filter((i) => i.result === "missing");
+    const noPhoto = needing.filter((i) => !i.photo_path);
+    if (noPhoto.length > 0) {
+      return { ok: false, error: `Photo required: ${noPhoto.map((i) => i.label).join(", ")}` };
     }
   }
 

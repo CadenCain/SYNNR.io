@@ -23,7 +23,7 @@ function isoDay(d: Date): string {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString().slice(0, 10);
 }
 
-interface DueItem { id: string; title: string; kind: string; expiration_date: string; parent_type: string; parent_id: string; yard_id: string | null }
+interface DueItem { id: string; title: string; kind: string; expiration_date: string | null; parent_type: string; parent_id: string; yard_id: string | null }
 interface Recip { name: string; email: string | null; phone: string | null; channels: string[]; yard_ids: string[] | null }
 
 export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResult> {
@@ -51,12 +51,13 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     horizon.setUTCDate(horizon.getUTCDate() + leadDays);
     const horizonIso = isoDay(horizon);
 
+    // Due = expiring inside the window, already expired, OR no date on file
+    // ("Missing" — unverifiable is failing; it alerts too).
     const { data: itemsData } = await admin
       .from("saas_compliance_items")
       .select("id, title, kind, expiration_date, parent_type, parent_id")
       .eq("company_id", company.id)
-      .not("expiration_date", "is", null)
-      .lte("expiration_date", horizonIso);
+      .or(`expiration_date.lte.${horizonIso},expiration_date.is.null`);
     let due: DueItem[] = ((itemsData ?? []) as Omit<DueItem, "yard_id">[]).map((i) => ({ ...i, yard_id: null }));
     if (due.length === 0) continue;
 
@@ -105,14 +106,20 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     if (recips.length === 0) continue;
 
     const line = (i: DueItem) =>
-      `${i.title}${i.parent_type === "crew" ? " (crew card)" : ""} — ${i.expiration_date < todayIso ? "EXPIRED" : "expires"} ${i.expiration_date}`;
+      `${i.title}${i.parent_type === "crew" ? " (crew card)" : ""} — ${
+        i.expiration_date === null ? "MISSING (no expiration on file)"
+        : i.expiration_date < todayIso ? `EXPIRED ${i.expiration_date}` : `expires ${i.expiration_date}`}`;
 
     const emailedIds = new Set<string>();
     const smsedIds = new Set<string>();
+    const recipientsByItem = new Map<string, Set<string>>();
+    const noteRecip = (ids: Iterable<string>, who: string) => {
+      for (const id of ids) recipientsByItem.set(id, new Set([...(recipientsByItem.get(id) ?? []), who]));
+    };
     for (const r of recips) {
       const mine = due.filter((i) => i.yard_id === null || r.yard_ids === null || r.yard_ids.includes(i.yard_id));
       if (mine.length === 0) continue;
-      const sorted = [...mine].sort((a, b) => a.expiration_date.localeCompare(b.expiration_date));
+      const sorted = [...mine].sort((a, b) => (a.expiration_date ?? "0000").localeCompare(b.expiration_date ?? "0000"));
 
       if (r.channels.includes("email") && r.email) {
         const ok = await sendEmail(
@@ -120,21 +127,22 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
           `[SYNNR] ${sorted.length} expiring — ${company.name}`,
           `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen SYNNR to renew: ${appUrl}</pre>`,
         );
-        if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); }
+        if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else res.errors.push(`email ${company.id} → ${r.name}`);
       }
       if (r.channels.includes("sms") && r.phone) {
         const worst = sorted[0];
         const body = `SYNNR: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} —${company.name}`;
         const ok = await sendSms(r.phone, body);
-        if (ok) { res.sms_sent++; sorted.forEach((i) => smsedIds.add(i.id)); }
+        if (ok) { res.sms_sent++; sorted.forEach((i) => smsedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else res.errors.push(`sms ${company.id} → ${r.name}`);
       }
     }
 
+    const who = (id: string) => [...(recipientsByItem.get(id) ?? [])].join(", ") || null;
     const rows = [
-      ...[...emailedIds].map((id) => ({ company_id: company.id, compliance_item_id: id, channel: "email" })),
-      ...[...smsedIds].filter((id) => !emailedIds.has(id)).map((id) => ({ company_id: company.id, compliance_item_id: id, channel: "sms" })),
+      ...[...emailedIds].map((id) => ({ company_id: company.id, compliance_item_id: id, channel: "email", recipient: who(id) })),
+      ...[...smsedIds].filter((id) => !emailedIds.has(id)).map((id) => ({ company_id: company.id, compliance_item_id: id, channel: "sms", recipient: who(id) })),
     ];
     if (rows.length > 0) {
       const { error: logErr } = await admin.from("saas_alerts_sent").insert(rows);
