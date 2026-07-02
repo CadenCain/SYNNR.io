@@ -170,15 +170,18 @@
 .mkt .nav-cta { display:flex; align-items:center; gap:14px; }
 .mkt .nav-login { font-size:14.5px; color: var(--fg-dim); transition: color .2s; white-space:nowrap; }
 .mkt .nav-login:hover { color: var(--fg); }
-/* Keep Log in visible on mobile — shops sign in from the truck. Compact to fit. */
-@media (max-width:760px){
-  .mkt .nav-cta { gap:10px; }
-  .mkt .nav-cta .nav-login { font-size:13.5px; }
-}
 /* Mobile menu — hamburger reveals the section links below 860px (JS-free) */
 .mkt .nav-toggle { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
 .mkt .nav-burger { display:none; align-items:center; justify-content:center; width:44px; height:44px; flex:none; border-radius:999px; border:1px solid var(--line-2); background:var(--bg-2); color:var(--fg); cursor:pointer; }
 .mkt .nav-burger svg { width:18px; height:18px; }
+/* Keep Log in visible on mobile — shops sign in from the truck. Compact to fit
+   (also fits the signed-in "Dashboard" label). Must sit AFTER the burger rules. */
+@media (max-width:760px){
+  .mkt .nav-pill { padding:11px 10px 11px 14px; }
+  .mkt .nav-cta { gap:6px; }
+  .mkt .nav-cta .btn-sm { padding:8px 8px; font-size:12.5px; min-height:40px; }
+  .mkt .nav-burger { width:40px; height:40px; }
+}
 .mkt .nav-mobile { display:none; }
 @media (max-width: 860px){
   .mkt .nav-links { display:none; }
