@@ -20,6 +20,7 @@ export interface ActiveCompany {
   role: "owner" | "admin" | "member";
   subscription_status: string;
   yard_quantity: number;
+  npt_day_estimate: number;
 }
 
 /** Current signed-in user, or null. */
@@ -37,14 +38,14 @@ export async function getFirstActiveCompany(userId: string): Promise<ActiveCompa
   if (!sb) return null;
   const { data } = await sb
     .from("saas_memberships")
-    .select("role, company:saas_companies(id, name, subscription_status, yard_quantity)")
+    .select("role, company:saas_companies(id, name, subscription_status, yard_quantity, npt_day_estimate)")
     .eq("user_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (!data) return null;
-  type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number };
+  type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number; npt_day_estimate: number };
   const row = data as unknown as { role: ActiveCompany["role"]; company: CompanyRow | CompanyRow[] | null };
   const company = Array.isArray(row.company) ? row.company[0] : row.company;
   if (!company) return null;
@@ -54,6 +55,7 @@ export async function getFirstActiveCompany(userId: string): Promise<ActiveCompa
     role: row.role,
     subscription_status: company.subscription_status,
     yard_quantity: company.yard_quantity,
+    npt_day_estimate: company.npt_day_estimate ?? 10000,
   };
 }
 

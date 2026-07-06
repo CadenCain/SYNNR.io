@@ -4,10 +4,12 @@ import { Check, TriangleAlert, ClipboardCheck, PencilRuler } from "lucide-react"
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
+import { localToday } from "@/lib/saas/status";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { recordDispatchCheck } from "./actions";
+import JobDatePicker from "./job-date-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +28,14 @@ const RESULT_UI: Record<string, string> = {
 const RESULT_LABEL: Record<string, string> = { ok: "OK", missing: "Missing", expired: "Expired" };
 const SECTION = "text-xs font-semibold uppercase tracking-wider text-ink-faint";
 
-export default async function DispatchPage({ params }: { params: Promise<{ unitId: string }> }) {
+export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
   const { company } = await requireCompany();
   const { unitId } = await params;
+  const { job } = await searchParams;
   const db = await saasDb();
+  const today = localToday();
 
-  const comp = await computeDispatchCheck(db, company.id, unitId);
+  const comp = await computeDispatchCheck(db, company.id, unitId, job);
   if (!comp) notFound();
 
   const gear = comp.lines.filter((l) => l.source_type === "loadout_item" || l.source_type === "asset");
@@ -43,8 +47,12 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
         title={`Pre-dispatch check — ${comp.unitName}`}
-        description="Computed live from the records: required gear on the asset list, paper current, crew cards current. Nothing to tap, nothing to override."
+        description="Computed live from the records: required gear on the asset list, paper current, crew cards current for the job. Nothing to tap, nothing to override."
       />
+
+      <Card className="p-4">
+        <JobDatePicker jobDate={comp.jobDate} today={today} />
+      </Card>
 
       {/* Verdict */}
       {comp.verdict === "not_setup" ? (
@@ -64,7 +72,9 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
         <div className={`rounded-2xl border p-4 ${comp.verdict === "ready" ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
           <div className={`flex items-center gap-2 text-lg font-semibold ${comp.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
             {comp.verdict === "ready" ? <Check className="h-5 w-5" /> : <TriangleAlert className="h-5 w-5" />}
-            {comp.verdict === "ready" ? "Ready — everything on record is current" : "NOT READY"}
+            {comp.verdict === "ready"
+              ? comp.isFutureJob ? `Ready for the ${comp.jobDate} job — everything current through then` : "Ready — everything on record is current"
+              : comp.isFutureJob ? `NOT READY for the ${comp.jobDate} job` : "NOT READY"}
           </div>
           {comp.failures.length > 0 && (
             <ul className="mt-2 flex flex-col gap-1 text-sm text-red-300">
@@ -102,8 +112,9 @@ export default async function DispatchPage({ params }: { params: Promise<{ unitI
       {comp.verdict !== "not_setup" && (
         <form action={recordDispatchCheck} className="flex flex-col gap-2">
           <input type="hidden" name="unit_id" value={unitId} />
+          <input type="hidden" name="job_date" value={comp.jobDate} />
           <Button type="submit" size="lg" className="w-full">
-            <ClipboardCheck className="h-5 w-5" /> Record this check
+            <ClipboardCheck className="h-5 w-5" /> Record this check{comp.isFutureJob ? ` for ${comp.jobDate}` : ""}
           </Button>
           <p className="text-center text-xs text-ink-faint">
             Records the verdict and every line, with your name and the time. Read-only after — the record is the proof.

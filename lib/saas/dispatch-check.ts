@@ -1,14 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
+import { localToday, addDaysIso } from "./status";
 
 /**
  * The pre-dispatch check, post scope-cut: a RECORD-CURRENCY check, not a
- * possession check. It answers "is everything on record current and
- * assigned?" —
+ * possession check. It answers "will everything on record be current FOR THE
+ * JOB, and is it assigned?" —
  *   · every required loadout-template line is on the unit's asset list
  *     (and not flagged missing / out of service)
- *   · every cert/DOT item on the unit and its assets is current
- *   · every assigned hand's cards are current
+ *   · every cert/DOT item on the unit and its assets is current THROUGH the
+ *     job date (a cert that's fine today but lapses before the job FAILS —
+ *     "still active" is not "current for this job")
+ *   · every assigned hand's cards are current through the job date
  * It does NOT ask anyone to confirm they're physically holding an item —
  * check-in/check-out was deliberately cut from scope.
  *
@@ -29,10 +32,12 @@ export interface CheckLine {
 export interface DispatchComputation {
   unitName: string;
   yardId: string;
+  jobDate: string;    // the date checked against (ISO); today if not specified
+  isFutureJob: boolean;
   verdict: "ready" | "not_ready" | "not_setup";
   lines: CheckLine[];
   failures: string[]; // named failing lines for banners/alerts
-  warnings: string[]; // due-soon lines
+  warnings: string[]; // heads-up (expires shortly after the job)
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -41,7 +46,14 @@ export async function computeDispatchCheck(
   db: SupabaseClient,
   companyId: string,
   unitId: string,
+  jobDateArg?: string | null,
 ): Promise<DispatchComputation | null> {
+  const today = localToday();
+  // Clamp: a job date in the past is meaningless for a pre-dispatch check —
+  // fall back to today. Anything today-or-later is honored.
+  const jobDate = jobDateArg && jobDateArg >= today ? jobDateArg : today;
+  const isFutureJob = jobDate > today;
+  const warnHorizon = addDaysIso(jobDate, 21); // "renew soon" heads-up window
   const { data: unitData } = await db
     .from("saas_units").select("id, name, type, yard_id")
     .eq("id", unitId).eq("company_id", companyId).maybeSingle();
@@ -122,17 +134,28 @@ export async function computeDispatchCheck(
     }
   }
 
-  // 3) Paper — unit + asset certs
+  // 3) Paper — unit + asset certs, evaluated against the JOB DATE.
+  //    A cert that's unexpired today but lapses before the job FAILS: "still
+  //    active" is not "current for this job" (the whole point of Q1).
   const pushCert = (c: Cert, label: string, sourceType: "cert" | "crew_cert") => {
-    if (c.status === "expired") {
-      lines.push({ source_type: sourceType, source_id: c.id, label, result: "expired", detail: c.expiration_date ? `expired ${c.expiration_date}` : "expired" });
-      failures.push(`${label} — expired`);
-    } else if (c.status === "none") {
+    if (c.expiration_date === null) {
       lines.push({ source_type: sourceType, source_id: c.id, label, result: "missing", detail: "no expiration on file" });
       failures.push(`${label} — no expiration on file`);
+    } else if (c.expiration_date < jobDate) {
+      // lapsed by the job. Word it by whether the job is today or future.
+      const detail = isFutureJob
+        ? `expires ${c.expiration_date} — before the ${jobDate} job`
+        : `expired ${c.expiration_date}`;
+      lines.push({ source_type: sourceType, source_id: c.id, label, result: "expired", detail });
+      failures.push(isFutureJob ? `${label} — expires ${c.expiration_date}, before the job` : `${label} — expired`);
     } else {
-      lines.push({ source_type: sourceType, source_id: c.id, label, result: "ok", detail: c.expiration_date ? `good to ${c.expiration_date}` : undefined });
-      if (c.status === "expiring") warnings.push(`${label} — due soon (${c.expiration_date})`);
+      // current through the job. Heads-up if it lapses shortly after.
+      lines.push({ source_type: sourceType, source_id: c.id, label, result: "ok", detail: `good to ${c.expiration_date}` });
+      if (c.expiration_date <= warnHorizon) {
+        warnings.push(isFutureJob
+          ? `${label} — expires ${c.expiration_date}, just after the job. Renew soon.`
+          : `${label} — due soon (${c.expiration_date})`);
+      }
     }
   };
   for (const c of (unitCerts ?? []) as Cert[]) pushCert(c, c.title, "cert");
@@ -143,5 +166,5 @@ export async function computeDispatchCheck(
   const configured = lines.length > 0;
   const verdict: DispatchComputation["verdict"] = !configured ? "not_setup" : failures.length > 0 ? "not_ready" : "ready";
 
-  return { unitName: unit.name, yardId: unit.yard_id, verdict, lines, failures, warnings };
+  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings };
 }

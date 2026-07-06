@@ -28,13 +28,13 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
   const { data: checkData } = await db
     .from("saas_dispatch_checks")
-    .select("id, unit_id, type, status, performed_by_name, cosigner_name, cosigned_at, job_ref, override_reason, started_at, completed_at, saas_units(name)")
+    .select("id, unit_id, type, status, performed_by_name, cosigner_name, cosigned_at, job_ref, job_date, override_reason, started_at, completed_at, saas_units(name)")
     .eq("id", checkId).eq("company_id", company.id).maybeSingle();
   if (!checkData) notFound();
   const c = checkData as {
     id: string; unit_id: string; type: string; status: string;
     performed_by_name: string | null; cosigner_name: string | null; cosigned_at: string | null;
-    job_ref: string | null; override_reason: string | null; started_at: string; completed_at: string | null;
+    job_ref: string | null; job_date: string | null; override_reason: string | null; started_at: string; completed_at: string | null;
     saas_units: { name: string } | { name: string }[] | null;
   };
   const unitName = (Array.isArray(c.saas_units) ? c.saas_units[0]?.name : c.saas_units?.name) ?? "unit";
@@ -75,7 +75,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
         title={`Dispatch record — ${unitName}`}
-        description={`${c.type === "checkin" ? "Check-in" : "Check-out"} · ${new Date(c.started_at).toLocaleString()}${c.job_ref ? ` · ${c.job_ref}` : ""}`}
+        description={`Pre-dispatch check · run ${new Date(c.started_at).toLocaleString()}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
       />
 
       <div className={`flex items-center gap-3 rounded-2xl border p-4 ${verdict.cls}`}>

@@ -38,6 +38,7 @@ export default async function Dashboard() {
   const { company, user } = await requireCompany();
   const db = await saasDb();
   const first = ((user.user_metadata?.full_name as string | undefined)?.trim().split(" ")[0]) || user.email?.split("@")[0] || "there";
+  const nptDay = company.npt_day_estimate;
 
   const monthStart = new Date();
   monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
@@ -254,12 +255,19 @@ export default async function Dashboard() {
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">What SYNNR caught — this month</h2>
                 <Card className="p-5">
                   {missesCaught === 0 && warningsMonth === 0 ? (
-                    <p className="text-sm text-ink-dim">Start rolling trucks to see your saves. Every miss caught before it hits a location shows up here.</p>
+                    <p className="text-sm text-ink-dim">Run your first pre-dispatch check to see your saves. Every miss caught before it hits a location shows up here.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
                       <p className="text-lg font-semibold">
                         SYNNR caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.
                       </p>
+                      {missesCaught > 0 ? (
+                        <p className="text-sm text-ink-dim">
+                          At an estimated <span className="text-ink">${nptDay.toLocaleString()}</span>/day of NPT per miss, that&apos;s roughly{" "}
+                          <span className="font-medium text-emerald-400">${(missesCaught * nptDay).toLocaleString()}</span> in avoided downtime this month — against a $500 subscription.
+                          <span className="mt-0.5 block text-xs text-ink-faint">Estimate, not a measured figure. <Link href="/app/settings/billing" className="underline hover:text-ink">Set your own NPT day-rate.</Link></span>
+                        </p>
+                      ) : null}
                       <p className="text-sm text-ink-dim">
                         {warningsMonth} expiry warning{warningsMonth === 1 ? "" : "s"} delivered · {notReadyMonth === 0 ? "no NOT-ready checks recorded" : `${notReadyMonth} NOT-ready check${notReadyMonth === 1 ? "" : "s"} recorded — see the feed`}
                       </p>

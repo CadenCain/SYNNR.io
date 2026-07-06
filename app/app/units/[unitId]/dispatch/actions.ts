@@ -17,9 +17,12 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   const { company, user } = await requireCompany();
   const unitId = String(fd.get("unit_id") ?? "");
   if (!unitId) return;
+  const jobDate = String(fd.get("job_date") ?? "") || null;
   const db = await saasDb();
 
-  const comp = await computeDispatchCheck(db, company.id, unitId);
+  // Recompute server-side against the SAME job date the button carried — the
+  // client's shown verdict is never trusted.
+  const comp = await computeDispatchCheck(db, company.id, unitId, jobDate);
   if (!comp) return;
   if (comp.verdict === "not_setup") return; // nothing to check — refuse a fake trail
 
@@ -34,6 +37,7 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
       performed_by: user.id,
       performed_by_name: actor,
       status: comp.verdict, // 'ready' | 'not_ready' — computed, never chosen
+      job_date: comp.jobDate,
       completed_at: new Date().toISOString(),
     })
     .select("id")
@@ -55,13 +59,14 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
     );
   }
 
+  const forJob = comp.isFutureJob ? ` (for the ${comp.jobDate} job)` : "";
   const failLine = comp.failures.slice(0, 3).join("; ");
   if (comp.verdict === "ready") {
-    void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} passed its pre-dispatch check` });
+    void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} passed its pre-dispatch check${forJob}` });
   } else {
-    void logEvent({ companyId: company.id, kind: "check_not_ready", unitId, actor, message: `${comp.unitName} NOT ready — ${failLine}` });
-    void logEvent({ companyId: company.id, kind: "miss_caught", unitId, actor, message: `Caught before rollout on ${comp.unitName}: ${failLine}` });
-    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message: `${comp.unitName} NOT ready — ${failLine}` });
+    void logEvent({ companyId: company.id, kind: "check_not_ready", unitId, actor, message: `${comp.unitName} NOT ready${forJob} — ${failLine}` });
+    void logEvent({ companyId: company.id, kind: "miss_caught", unitId, actor, message: `Caught before rollout on ${comp.unitName}${forJob}: ${failLine}` });
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message: `${comp.unitName} NOT ready${forJob} — ${failLine}` });
   }
 
   revalidatePath(`/app/units/${unitId}`);
