@@ -1,194 +1,116 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Check, TriangleAlert, ClipboardCheck, PencilRuler } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
-import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
+import { saasDb } from "@/lib/saas/db";
+import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import DispatchClient, { type ToggleRow, type FactRow, type CrewOption } from "./dispatch-client";
+import { recordDispatchCheck } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Pre-dispatch check — a computed record-currency check, not a possession
+ * checklist. The verdict comes straight from the live data (template vs
+ * asset list, cert/DOT currency, assigned crew cards); nobody taps lines,
+ * nothing can be overridden. One button records the result as an immutable
+ * check with every line and reason.
+ */
+const RESULT_UI: Record<string, string> = {
+  ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  missing: "border-red-500/40 bg-red-500/10 text-red-400",
+  expired: "border-red-500/40 bg-red-500/10 text-red-400",
+};
+const RESULT_LABEL: Record<string, string> = { ok: "OK", missing: "Missing", expired: "Expired" };
+const SECTION = "text-xs font-semibold uppercase tracking-wider text-ink-faint";
+
 export default async function DispatchPage({ params }: { params: Promise<{ unitId: string }> }) {
-  const { company, user } = await requireCompany();
+  const { company } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
 
-  const { data: unitData } = await db
-    .from("saas_units").select("id, name, type, yard_id")
-    .eq("id", unitId).eq("company_id", company.id).maybeSingle();
-  if (!unitData) notFound();
-  const unit = unitData as { id: string; name: string; type: string; yard_id: string };
+  const comp = await computeDispatchCheck(db, company.id, unitId);
+  if (!comp) notFound();
 
-  const { data: enfData } = await db
-    .from("saas_enforcement_settings")
-    .select("photo_mode, require_pin, require_cosign, cosign_pin")
-    .eq("company_id", company.id).maybeSingle();
-  const enfRow = enfData as { photo_mode: string; require_pin: boolean; require_cosign: boolean; cosign_pin: string | null } | null;
-  const enforcement = {
-    // Sensible defaults when never configured: photo on flagged, PIN on
-    // (bites only once a PIN is set), co-sign off (spec #1).
-    photoMode: (enfRow?.photo_mode ?? "flagged") as "off" | "flagged" | "all",
-    requireCosign: enfRow?.require_cosign ?? false,
-    requirePin: enfRow?.require_pin ?? true,
-    pinConfigured: Boolean(enfRow?.cosign_pin),
-    defaultCheckerName: (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "",
-  };
-
-  // Open checkout = latest checkout with no linked check-in → we're in check-in mode.
-  const { data: lastCheckout } = await db
-    .from("saas_dispatch_checks").select("id, started_at, job_ref")
-    .eq("unit_id", unitId).eq("type", "checkout")
-    .order("started_at", { ascending: false }).limit(1).maybeSingle();
-  let openCheckout: { id: string; started_at: string; job_ref: string | null } | null = null;
-  if (lastCheckout) {
-    const co = lastCheckout as { id: string; started_at: string; job_ref: string | null };
-    const { count } = await db
-      .from("saas_dispatch_checks").select("id", { count: "exact", head: true })
-      .eq("checkout_id", co.id).eq("type", "checkin");
-    if ((count ?? 0) === 0) openCheckout = co;
-  }
-
-  /* ── CHECK-IN mode: reverse checklist of what went out ── */
-  if (openCheckout) {
-    const { data: outItems } = await db
-      .from("saas_dispatch_check_items")
-      .select("id, source_type, source_id, label")
-      .eq("check_id", openCheckout.id)
-      .in("source_type", ["asset", "loadout_item"])
-      .eq("result", "ok");
-    const toggles: ToggleRow[] = ((outItems ?? []) as { id: string; source_type: "asset" | "loadout_item"; source_id: string | null; label: string }[])
-      .map((i) => ({
-        key: i.id,
-        source_type: i.source_type,
-        source_id: i.source_id,
-        label: i.label,
-        required: true, // everything that went out is expected back
-      }));
-
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader
-          back={{ href: `/app/units/${unitId}`, label: unit.name }}
-          title={`Check in — ${unit.name}`}
-          description={`Out since ${new Date(openCheckout.started_at).toLocaleString()}${openCheckout.job_ref ? ` · ${openCheckout.job_ref}` : ""}. Flip anything that didn't come back.`}
-        />
-        <DispatchClient mode="checkin" unitId={unitId} unitName={unit.name} companyId={company.id} checkoutId={openCheckout.id}
-          toggles={toggles} facts={[]} crew={[]} enforcement={enforcement} />
-      </div>
-    );
-  }
-
-  /* ── CHECK-OUT mode: template ▸ assets ▸ certs ▸ crew ── */
-  // Template resolution: company unit-specific → company type default → global type default.
-  const { data: templates } = await db
-    .from("saas_loadout_templates")
-    .select("id, company_id, unit_id, unit_type")
-    .or(`unit_id.eq.${unitId},unit_type.eq.${unit.type}`);
-  type Tpl = { id: string; company_id: string | null; unit_id: string | null; unit_type: string | null };
-  const tpls = (templates ?? []) as Tpl[];
-  const template =
-    tpls.find((t) => t.unit_id === unitId) ??
-    tpls.find((t) => t.company_id === company.id && t.unit_type === unit.type) ??
-    tpls.find((t) => t.company_id === null && t.unit_type === unit.type) ??
-    null;
-
-  let loadoutRows: ToggleRow[] = [];
-  if (template) {
-    const { data: items } = await db
-      .from("saas_loadout_items").select("id, label, category, required, sort")
-      .eq("template_id", template.id).order("sort");
-    loadoutRows = ((items ?? []) as { id: string; label: string; category: string | null; required: boolean; sort: number }[])
-      .map((i) => ({
-        key: `li-${i.id}`,
-        source_type: "loadout_item" as const,
-        source_id: i.id,
-        label: i.label,
-        sub: i.category ?? undefined,
-        required: i.required,
-      }));
-  }
-
-  const { data: assetData } = await db
-    .from("saas_assets").select("id, name, category, status")
-    .eq("unit_id", unitId).order("name");
-  const assetRows: ToggleRow[] = ((assetData ?? []) as { id: string; name: string; category: string; status: string }[])
-    .map((a) => ({
-      key: `as-${a.id}`,
-      source_type: "asset" as const,
-      source_id: a.id,
-      label: a.name,
-      sub: a.category.replace(/_/g, " "),
-      required: true,
-      initialMissing: a.status === "missing",
-    }));
-
-  // Paper facts: the unit's certs PLUS its assets' certs (a BOP test on the
-  // BOP is exactly the kind of miss this screen exists to catch).
-  const assetIds = ((assetData ?? []) as { id: string }[]).map((a) => a.id);
-  const assetNameById = new Map(((assetData ?? []) as { id: string; name: string }[]).map((a) => [a.id, a.name]));
-  const [{ data: unitCertData }, { data: assetCertData }] = await Promise.all([
-    db.from("saas_compliance_items_with_status")
-      .select("id, title, kind, expiration_date, status, parent_id")
-      .eq("parent_type", "unit").eq("parent_id", unitId),
-    assetIds.length
-      ? db.from("saas_compliance_items_with_status")
-          .select("id, title, kind, expiration_date, status, parent_id")
-          .eq("parent_type", "asset").in("parent_id", assetIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-  type CertRow = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_id: string };
-  const facts: FactRow[] = [
-    ...((unitCertData ?? []) as CertRow[]).map((c) => ({
-      key: `ce-${c.id}`,
-      source_type: "cert" as const,
-      source_id: c.id,
-      label: c.title,
-      sub: c.expiration_date ? `expires ${c.expiration_date}` : "no expiration set",
-      status: c.status,
-    })),
-    ...((assetCertData ?? []) as CertRow[]).map((c) => ({
-      key: `ce-${c.id}`,
-      source_type: "cert" as const,
-      source_id: c.id,
-      label: `${c.title} (${assetNameById.get(c.parent_id) ?? "asset"})`,
-      sub: c.expiration_date ? `expires ${c.expiration_date}` : "no expiration set",
-      status: c.status,
-    })),
-  ];
-
-  // Crew + their certs (crew certs live in the same compliance table, parent_type='crew').
-  // Standing unit assignments pre-select so the ready call includes the real crew by default.
-  const [{ data: crewData }, { data: assignedData }] = await Promise.all([
-    db.from("saas_crew_members").select("id, name, role")
-      .eq("company_id", company.id).eq("status", "active").order("name"),
-    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
-  ]);
-  const assignedCrewIds = ((assignedData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id);
-  const crewRows = (crewData ?? []) as { id: string; name: string; role: string | null }[];
-  let crew: CrewOption[] = [];
-  if (crewRows.length) {
-    const { data: crewCertData } = await db
-      .from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, parent_id")
-      .eq("parent_type", "crew")
-      .in("parent_id", crewRows.map((c) => c.id));
-    const byCrew = new Map<string, CrewOption["certs"]>();
-    for (const cc of (crewCertData ?? []) as { id: string; title: string; status: ComplianceStatus; expiration_date: string | null; parent_id: string }[]) {
-      const arr = byCrew.get(cc.parent_id) ?? [];
-      arr.push({ id: cc.id, title: cc.title, status: cc.status, expiration_date: cc.expiration_date });
-      byCrew.set(cc.parent_id, arr);
-    }
-    crew = crewRows.map((c) => ({ id: c.id, name: c.name, role: c.role, certs: byCrew.get(c.id) ?? [] }));
-  }
+  const gear = comp.lines.filter((l) => l.source_type === "loadout_item" || l.source_type === "asset");
+  const paper = comp.lines.filter((l) => l.source_type === "cert");
+  const crew = comp.lines.filter((l) => l.source_type === "crew_cert");
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        back={{ href: `/app/units/${unitId}`, label: unit.name }}
-        title={`Roll ${unit.name}`}
-        description="Flip anything that's missing. Paper and crew cards are pulled live — they don't lie."
+        back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
+        title={`Pre-dispatch check — ${comp.unitName}`}
+        description="Computed live from the records: required gear on the asset list, paper current, crew cards current. Nothing to tap, nothing to override."
       />
-      <DispatchClient mode="checkout" unitId={unitId} unitName={unit.name} companyId={company.id}
-        toggles={[...loadoutRows, ...assetRows]} facts={facts} crew={crew}
-        initialCrewIds={assignedCrewIds} enforcement={enforcement} />
+
+      {/* Verdict */}
+      {comp.verdict === "not_setup" ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <TriangleAlert className="h-7 w-7 text-ink-faint" />
+          <p className="font-semibold">Nothing set up to check.</p>
+          <p className="mx-auto max-w-md text-sm text-ink-dim">
+            This unit has no loadout template, no assets, no certs, and no assigned crew — a check with nothing
+            to verify can&apos;t pass. Set it up first.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href={`/app/units/${unitId}/loadout`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-coal"><PencilRuler className="h-4 w-4" /> Edit loadout</Link>
+            <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm text-ink">Add certs &amp; assets</Link>
+          </div>
+        </Card>
+      ) : (
+        <div className={`rounded-2xl border p-4 ${comp.verdict === "ready" ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+          <div className={`flex items-center gap-2 text-lg font-semibold ${comp.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
+            {comp.verdict === "ready" ? <Check className="h-5 w-5" /> : <TriangleAlert className="h-5 w-5" />}
+            {comp.verdict === "ready" ? "Ready — everything on record is current" : "NOT READY"}
+          </div>
+          {comp.failures.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1 text-sm text-red-300">
+              {comp.failures.map((f) => <li key={f}>• {f}</li>)}
+            </ul>
+          )}
+          {comp.warnings.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-400">
+              {comp.warnings.map((w) => <li key={w}>• {w}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Lines */}
+      {[{ title: "Loadout & gear — on the asset list?", rows: gear },
+        { title: "Paper — certs, inspections & DOT", rows: paper },
+        { title: "Assigned crew cards", rows: crew }].map(({ title, rows }) =>
+        rows.length === 0 ? null : (
+          <section key={title} className="flex flex-col gap-2">
+            <h2 className={SECTION}>{title}</h2>
+            {rows.map((l, i) => (
+              <Card key={`${l.source_type}-${l.source_id ?? i}`} className="flex items-center gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{l.label}</div>
+                  {l.detail ? <div className="truncate text-sm text-ink-dim">{l.detail}</div> : null}
+                </div>
+                <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${RESULT_UI[l.result]}`}>{RESULT_LABEL[l.result]}</span>
+              </Card>
+            ))}
+          </section>
+        ),
+      )}
+
+      {comp.verdict !== "not_setup" && (
+        <form action={recordDispatchCheck} className="flex flex-col gap-2">
+          <input type="hidden" name="unit_id" value={unitId} />
+          <Button type="submit" size="lg" className="w-full">
+            <ClipboardCheck className="h-5 w-5" /> Record this check
+          </Button>
+          <p className="text-center text-xs text-ink-faint">
+            Records the verdict and every line, with your name and the time. Read-only after — the record is the proof.
+            {comp.verdict === "not_ready" ? " A NOT-ready result records as NOT ready. There is no override — fix the items and re-run." : ""}
+          </p>
+        </form>
+      )}
     </div>
   );
 }

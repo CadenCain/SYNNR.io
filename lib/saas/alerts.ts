@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendSms, sendEmail } from "./notify";
+import { localToday, addDaysIso } from "./status";
 
 /**
  * Expiration-alert sweep. For each company: find compliance items (gear AND
@@ -19,10 +20,6 @@ export interface AlertSweepResult {
   errors: string[];
 }
 
-function isoDay(d: Date): string {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString().slice(0, 10);
-}
-
 interface DueItem { id: string; title: string; kind: string; expiration_date: string | null; parent_type: string; parent_id: string; yard_id: string | null }
 interface Recip { name: string; email: string | null; phone: string | null; channels: string[]; yard_ids: string[] | null }
 
@@ -32,8 +29,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
   const { data: companies, error: cErr } = await admin.from("saas_companies").select("id, name");
   if (cErr) { res.errors.push(`companies: ${cErr.message}`); return res; }
 
-  const today = new Date();
-  const todayIso = isoDay(today);
+  const todayIso = localToday(); // customers' local day (America/Chicago), matching the status view
   const appUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io"}/app`;
 
   for (const company of (companies ?? []) as { id: string; name: string }[]) {
@@ -47,9 +43,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     if (s && s.email_enabled === false) continue;
     const leadDays = s?.lead_days ?? 30;
 
-    const horizon = new Date(today);
-    horizon.setUTCDate(horizon.getUTCDate() + leadDays);
-    const horizonIso = isoDay(horizon);
+    const horizonIso = addDaysIso(todayIso, leadDays);
 
     // Due = expiring inside the window, already expired, OR no date on file
     // ("Missing" — unverifiable is failing; it alerts too).
@@ -128,14 +122,20 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
           `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen SYNNR to renew: ${appUrl}</pre>`,
         );
         if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
-        else res.errors.push(`email ${company.id} → ${r.name}`);
+        else {
+          res.errors.push(`email ${company.id} → ${r.name}`);
+          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert email to ${r.name} FAILED — ${sorted.length} item(s) not delivered. Will retry tomorrow.` });
+        }
       }
       if (r.channels.includes("sms") && r.phone) {
         const worst = sorted[0];
         const body = `SYNNR: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} —${company.name}`;
         const ok = await sendSms(r.phone, body);
         if (ok) { res.sms_sent++; sorted.forEach((i) => smsedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
-        else res.errors.push(`sms ${company.id} → ${r.name}`);
+        else {
+          res.errors.push(`sms ${company.id} → ${r.name}`);
+          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert TEXT to ${r.name} FAILED — check the phone number in Settings → Notifications. Will retry tomorrow.` });
+        }
       }
     }
 

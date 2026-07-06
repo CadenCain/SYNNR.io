@@ -30,10 +30,9 @@ const STATE_UI = {
   ready: { chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Ready" },
   due_soon: { chip: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Due soon" },
   not_ready: { chip: "border-red-500/40 bg-red-500/10 text-red-400", label: "Not ready" },
-  out: { chip: "border-line-2 bg-elevated text-ink-dim", label: "Out" },
   not_setup: { chip: "border-line-2 bg-elevated text-ink-faint", label: "Not set up" },
 } as const;
-const STATE_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, out: 2, ready: 3, not_setup: 4 };
+const STATE_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, ready: 2, not_setup: 3 };
 
 export default async function Dashboard() {
   const { company, user } = await requireCompany();
@@ -75,27 +74,24 @@ export default async function Dashboard() {
     const { count } = await q;
     return count ?? 0;
   };
-  const [missThisWk, missLastWk, ovrThisWk, ovrLastWk, { data: snapData }] = await Promise.all([
+  const [missThisWk, missLastWk, { data: snapData }] = await Promise.all([
     countEvents("miss_caught", weekAgo),
     countEvents("miss_caught", twoWeeksAgo, weekAgo),
-    countEvents("rolled_out_override", weekAgo),
-    countEvents("rolled_out_override", twoWeeksAgo, weekAgo),
     db.from("saas_readiness_snapshots")
-      .select("day, readiness, rolling, misses_caught")
+      .select("day, readiness, misses_caught")
       .eq("company_id", company.id)
       .order("day", { ascending: true })
       .limit(14),
   ]);
-  type Snap = { day: string; readiness: number | null; rolling: number; misses_caught: number };
+  type Snap = { day: string; readiness: number | null; misses_caught: number };
   const snaps = (snapData ?? []) as Snap[];
   const spark = {
     readiness: snaps.map((s) => s.readiness),
-    rolling: snaps.map((s) => s.rolling as number | null),
     misses: snaps.map((s) => s.misses_caught as number | null),
   };
   const delta = (now: number, prev: number) =>
     now === prev ? "even with last week" : now > prev ? `+${now - prev} vs last week` : `${now - prev} vs last week`;
-  const overridesMonth = checksMonth.filter((c) => c.type === "checkout" && c.status === "not_ready_override").length;
+  const notReadyMonth = checksMonth.filter((c) => c.type === "checkout" && (c.status === "not_ready" || c.status === "not_ready_override")).length;
   const warningsMonth = (alertsMonth ?? []).length;
   const hasSample = Boolean(sampleYard);
 
@@ -108,21 +104,16 @@ export default async function Dashboard() {
     .slice(0, 12);
   const hrefFor = (i: Item) => i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`;
 
-  // Daily flow lanes
-  const rolledToday = checksMonth.filter((c) => c.type === "checkout" && new Date(c.started_at) >= todayStart);
-  const checkedInToday = checksMonth.filter((c) => c.type === "checkin" && new Date(c.started_at) >= todayStart);
-  const unitName = new Map(rd.units.map((u) => [u.id, u.name]));
-  const outUnits = rd.units.filter((u) => u.state === "out");
-  const dueToRoll = rd.units.filter((u) => u.state !== "out");
+  const notReadyUnits = rd.units.filter((u) => u.state === "not_ready").length;
 
   const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
     rd.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
-    { icon: Truck, label: "Rolling now", value: rd.rollingNow, accent: "text-ink", href: "/app/dispatch", sub: rd.rollingNow ? "out on jobs" : "all in the yard", spark: spark.rolling, sparkColor: "#9a9aa2" },
+    { icon: Truck, label: "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-ink-dim", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now" : "every unit current" },
     { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month", spark: spark.misses, sparkColor: "#34d399" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
-    { icon: AlertTriangle, label: "Overrides", value: overridesMonth, accent: overridesMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: overridesMonth > 0 ? `rolled out NOT ready · ${delta(ovrThisWk, ovrLastWk)}` : "rolled out NOT ready" },
+    { icon: AlertTriangle, label: "NOT-ready checks", value: notReadyMonth, accent: notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
   ];
 
   return (
@@ -135,7 +126,7 @@ export default async function Dashboard() {
         <div className="flex flex-wrap items-center gap-2">
           <ShareProof scope="company" />
           <Link href="/app/dispatch" className={buttonClass("default")}>
-            <Truck className="h-[18px] w-[18px]" /> Roll a truck
+            <Truck className="h-[18px] w-[18px]" /> Run a check
           </Link>
         </div>
       </div>
@@ -226,49 +217,20 @@ export default async function Dashboard() {
             </section>
           )}
 
-          {/* Daily flow lane */}
-          <section className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Today&apos;s flow</h2>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-              {[
-                { label: "In the yard", count: dueToRoll.length, chips: dueToRoll.slice(0, 4).map((u) => u.name), action: { href: "/app/dispatch", label: "Roll a truck" } },
-                { label: "Rolled out today", count: rolledToday.length, chips: rolledToday.slice(0, 4).map((c) => unitName.get(c.unit_id) ?? "unit"), action: null },
-                { label: "Out on job", count: outUnits.length, chips: outUnits.slice(0, 4).map((u) => u.name), action: outUnits[0] ? { href: `/app/units/${outUnits[0].id}/dispatch`, label: "Check in" } : null },
-                { label: "Checked in today", count: checkedInToday.length, chips: checkedInToday.slice(0, 4).map((c) => unitName.get(c.unit_id) ?? "unit"), action: null },
-              ].map((lane) => (
-                <Card key={lane.label} className="flex flex-col gap-2 p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-ink-dim">{lane.label}</span>
-                    <span className="text-lg font-semibold tabular-nums">{lane.count}</span>
-                  </div>
-                  <div className="flex min-h-6 flex-wrap gap-1">
-                    {lane.chips.map((c, i) => (
-                      <span key={i} className="rounded-md border border-line bg-coal px-1.5 py-0.5 text-xs text-ink-dim">{c}</span>
-                    ))}
-                    {lane.count > 4 && <span className="text-xs text-ink-faint">+{lane.count - 4}</span>}
-                  </div>
-                  {lane.action ? (
-                    <Link href={lane.action.href} className="text-xs font-medium text-bone hover:underline">{lane.action.label} →</Link>
-                  ) : <span className="text-xs">&nbsp;</span>}
-                </Card>
-              ))}
-            </div>
-          </section>
-
           <div className="grid grid-cols-1 gap-7 xl:grid-cols-2">
             {/* Activity feed */}
             <section id="activity" className="flex flex-col gap-3">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Activity</h2>
               {events.length === 0 ? (
                 <Card className="px-6 py-10 text-center text-sm text-ink-dim">
-                  Nothing yet — roll your first truck and the feed starts here.
+                  Nothing yet — run your first pre-dispatch check and the feed starts here.
                 </Card>
               ) : (
                 <Card className="flex max-h-[420px] flex-col gap-0 overflow-y-auto p-2">
                   {events.map((e, i) => (
                     <div key={i} className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-white/[0.02]">
                       <span className="mt-1 shrink-0">
-                        {e.kind === "rolled_out_override" || e.kind === "checkin_partial" ? <AlertTriangle className="h-4 w-4 text-red-400" />
+                        {e.kind === "rolled_out_override" || e.kind === "checkin_partial" || e.kind === "check_not_ready" ? <AlertTriangle className="h-4 w-4 text-red-400" />
                           : e.kind === "miss_caught" ? <Flame className="h-4 w-4 text-emerald-400" />
                           : e.kind === "renewed" ? <ShieldCheck className="h-4 w-4 text-emerald-400" />
                           : e.kind === "alert_sent" ? <Activity className="h-4 w-4 text-amber-400" />
@@ -299,7 +261,7 @@ export default async function Dashboard() {
                         SYNNR caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.
                       </p>
                       <p className="text-sm text-ink-dim">
-                        {warningsMonth} expiry warning{warningsMonth === 1 ? "" : "s"} delivered · {overridesMonth === 0 ? "zero overrides — nothing rolled out NOT ready" : `${overridesMonth} override${overridesMonth === 1 ? "" : "s"} — check the feed`}
+                        {warningsMonth} expiry warning{warningsMonth === 1 ? "" : "s"} delivered · {notReadyMonth === 0 ? "no NOT-ready checks recorded" : `${notReadyMonth} NOT-ready check${notReadyMonth === 1 ? "" : "s"} recorded — see the feed`}
                       </p>
                     </div>
                   )}

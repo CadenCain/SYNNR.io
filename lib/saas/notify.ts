@@ -125,10 +125,12 @@ export async function notifyEvent(args: {
       const ok = await sendEmail(emails, `SYNNR alert — ${args.message}`,
         `<p style="font:14px/1.5 -apple-system,sans-serif">${args.message}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${args.companyName} · <a href="https://www.synnr.io/app">open SYNNR</a></p>`);
       if (ok) sends.push({ channel: "email", recipient: emailNames.join(", ") });
+      else await admin.from("saas_events").insert({ company_id: args.companyId, kind: "alert_failed", message: `Instant alert email FAILED (${emailNames.join(", ")}): ${args.message}` });
     }
     for (const r of smsRecips) {
       const ok = await sendSms(r.phone as string, sms);
       if (ok) sends.push({ channel: "sms", recipient: r.name });
+      else if (smsConfigured()) await admin.from("saas_events").insert({ company_id: args.companyId, kind: "alert_failed", message: `Instant alert TEXT to ${r.name} FAILED — check the phone number. ${args.message}` });
     }
     if (sends.length) {
       await admin.from("saas_alerts_sent").insert(

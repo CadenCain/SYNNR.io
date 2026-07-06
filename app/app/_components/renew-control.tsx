@@ -46,6 +46,13 @@ export default function RenewControl({
   async function onPick(file: File | undefined) {
     setFileName(file?.name ?? "");
     if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      setErr("That photo is over 15 MB — take a normal-quality shot and try again.");
+      setFileName("");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setErr("");
     setOcr("reading");
     const read = await extractExpirationDate(file);
     if (read) {
@@ -143,6 +150,9 @@ export default function RenewControl({
           )}
         />
       </label>
+      {expiration && expiration < new Date().toISOString().slice(0, 10) ? (
+        <p className="text-xs text-amber-400">That date is already past — this item will show Expired the moment you save.</p>
+      ) : null}
       {ocr === "reading" ? (
         <p className="flex items-center gap-1.5 text-xs text-ink-dim"><ScanLine className="h-3.5 w-3.5 animate-pulse" /> Reading the photo…</p>
       ) : ocr === "unconfirmed" ? (

@@ -62,8 +62,10 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       ? c.status === "partial" ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Checked in — items not returned" }
         : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Checked in — all accounted for" }
       : isOverride
-        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled out NOT READY — override" }
-        : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Rolled out Ready" };
+        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled out NOT READY — override (historical)" }
+        : c.status === "not_ready"
+          ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Pre-dispatch check — NOT READY" }
+          : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Pre-dispatch check — Ready" };
 
   const gearLines = items.filter((i) => i.source_type === "loadout_item" || i.source_type === "asset");
   const paperLines = items.filter((i) => i.source_type === "cert" || i.source_type === "crew_cert");

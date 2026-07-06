@@ -59,7 +59,7 @@ export default function ReadinessAuditForm() {
       </div>
       <label>
         What's your biggest asset or cert headache right now?
-        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Missing tools? Certs lapsing? Check-out chaos? Tell us." />
+        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Certs lapsing? DOT surprises? Whiteboard chaos? Tell us." />
       </label>
       <div className="svc-form-row">
         <label>Best email<input name="email" type="email" required autoComplete="email" placeholder="you@shop.com" /></label>

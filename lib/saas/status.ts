@@ -4,25 +4,37 @@ import type { ComplianceStatus } from "./db";
  * Shared status + readiness math.
  *
  * SOURCE OF TRUTH for per-item status is the SQL view
- * `saas_compliance_items_with_status`:
- *   expired  → expiration_date <  current_date
- *   expiring → expiration_date <= current_date + reminder_days
+ * `saas_compliance_items_with_status`, computed against the CUSTOMER's local
+ * day (America/Chicago — all current customers are West Texas), not UTC:
+ *   expired  → expiration_date <  chicago_today
+ *   expiring → expiration_date <= chicago_today + reminder_days
  *   valid    → otherwise
  *   none     → no expiration_date
- * computeStatus() below is the TS twin of that definition — used only where a
- * live client-side calc is needed (the dispatch Ready banner). If you change
- * one, change both.
+ * An item expiring today stays valid ("Due soon") through the END of that day
+ * local time — under UTC it flipped to expired around 6-7pm in the yard.
+ * computeStatus() below is the TS twin. If you change one, change both.
  */
+
+/** Today's date (YYYY-MM-DD) in the customers' timezone. */
+export function localToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(now);
+}
+
+/** ISO date + n days, pure string math on UTC-noon to dodge DST edges. */
+export function addDaysIso(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function computeStatus(
   expirationDate: string | null,
   reminderDays = 30,
-  today: Date = new Date(),
+  today: string = localToday(),
 ): ComplianceStatus {
   if (!expirationDate) return "none";
-  const exp = new Date(expirationDate + "T00:00:00Z").getTime();
-  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  if (exp < now) return "expired";
-  if (exp <= now + reminderDays * 86400e3) return "expiring";
+  if (expirationDate < today) return "expired";
+  if (expirationDate <= addDaysIso(today, reminderDays)) return "expiring";
   return "valid";
 }
 
@@ -62,9 +74,10 @@ export function computeReadiness(inputs: {
   return Math.max(0, Math.min(100, pct));
 }
 
-/** The one status vocabulary (spec §2.3): Ready / Due soon / Not ready / Out /
- *  Not set up (nothing tracked — never green). */
-export type UnitState = "ready" | "due_soon" | "not_ready" | "out" | "not_setup";
+/** The one status vocabulary: Ready / Due soon / Not ready / Not set up
+ *  (nothing tracked — never green). "Out" was removed with check-in/check-out:
+ *  SYNNR tracks record currency, not physical possession. */
+export type UnitState = "ready" | "due_soon" | "not_ready" | "not_setup";
 
 /**
  * THE one "worst status" — every surface (crew chips, unit tiles, checkout)

@@ -104,7 +104,9 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
 
   const missingAssets = assets.filter((a) => a.status === "missing");
   const failingCount = items.filter((i) => i.status === "expired" || i.status === "none").length;
-  const ready = failingCount === 0 && missingAssets.length === 0;
+  // Nothing tracked = nothing proven. An empty scope must never read "Ready".
+  const configured = items.length > 0 || assets.length > 0;
+  const ready = configured && failingCount === 0 && missingAssets.length === 0;
   const generatedAt = new Date().toLocaleString();
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
@@ -157,12 +159,15 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
 
         {/* Verdict */}
         <div className={`rounded-2xl border p-6 ${ready ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
-          <div className={`flex items-center gap-3 text-2xl font-semibold ${ready ? "text-emerald-400" : "text-red-400"}`}>
+          <div className={`flex items-center gap-3 text-2xl font-semibold ${ready ? "text-emerald-400" : configured ? "text-red-400" : "text-ink-dim"}`}>
             {ready ? <ShieldCheck className="h-7 w-7" /> : <TriangleAlert className="h-7 w-7" />}
-            {ready ? "Ready" : "Not ready"}
+            {ready ? "Ready" : configured ? "Not ready" : "Not set up"}
           </div>
           <p className="mt-1 text-sm text-ink-dim">{scopeName}</p>
-          {!ready ? (
+          {!configured ? (
+            <p className="mt-2 text-sm text-ink-dim">Nothing is being tracked in this scope yet — there&apos;s nothing to prove.</p>
+          ) : null}
+          {!ready && configured ? (
             <p className="mt-2 text-sm text-red-300">
               {failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : ""}
               {failingCount > 0 && missingAssets.length > 0 ? " · " : ""}

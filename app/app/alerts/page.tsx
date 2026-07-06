@@ -16,7 +16,7 @@ export default async function AlertsPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
 
-  const [{ data: settingsData }, { data: itemData }, { data: sentData }, { data: recipData }, { data: unitData }, { data: assetData }, { data: crewData }] = await Promise.all([
+  const [{ data: settingsData }, { data: itemData }, { data: sentData }, { data: recipData }, { data: unitData }, { data: assetData }, { data: crewData }, { data: failedData }] = await Promise.all([
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_compliance_items_with_status")
       .select("id, title, kind, expiration_date, status, parent_type, parent_id")
@@ -30,6 +30,9 @@ export default async function AlertsPage() {
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_assets").select("id, name").eq("company_id", company.id),
     db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
+    db.from("saas_events").select("message, created_at").eq("company_id", company.id).eq("kind", "alert_failed")
+      .gte("created_at", new Date(Date.now() - 7 * 86400e3).toISOString())
+      .order("created_at", { ascending: false }).limit(5),
   ]);
 
   const s = settingsData as { email_enabled: boolean; lead_days: number; recipients: string[] } | null;
@@ -41,6 +44,7 @@ export default async function AlertsPage() {
     : legacy.length ? legacy.join(", ") : null;
 
   type Row = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_type: string; parent_id: string };
+  const failedAlerts = (failedData ?? []) as { message: string; created_at: string }[];
   const itemCustomers = await getItemCustomers(db, company.id, ((itemData ?? []) as { id: string }[]).map((i) => i.id));
   const nameOf = (rows: unknown, id: string) =>
     (((rows ?? []) as { id: string; name: string }[]).find((r) => r.id === id)?.name) ?? "";
@@ -93,6 +97,17 @@ export default async function AlertsPage() {
           To: {recipientLine ?? "company owner (default)"} · <Link href="/app/settings/notifications" className="text-bone hover:underline">manage recipients</Link>
         </div>
       </Card>
+
+      {failedAlerts.length > 0 && (
+        <Card className="border-red-500/40 bg-red-500/10 p-4">
+          <p className="text-sm font-semibold text-red-400">Some alerts failed to deliver in the last 7 days</p>
+          <ul className="mt-1.5 flex flex-col gap-1 text-sm text-red-300">
+            {failedAlerts.map((f, i) => (
+              <li key={i}>• {f.message} <span className="text-ink-faint">({new Date(f.created_at).toLocaleDateString()})</span></li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold">In the alert window now</h2>

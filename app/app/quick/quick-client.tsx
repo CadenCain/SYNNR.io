@@ -64,6 +64,13 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
   async function onPickPhoto(file: File | undefined) {
     setFileName(file?.name ?? "");
     if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      setErr("That photo is over 15 MB — take a normal-quality shot and try again.");
+      setFileName("");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setErr("");
     setOcr("reading");
     const read = await extractExpirationDate(file);
     if (read) { setExpiration(read); setOcr("unconfirmed"); }
