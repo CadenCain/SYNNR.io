@@ -5,8 +5,11 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasAdmin } from "@/lib/saas/db";
 
-/** Create a per-yard subscription Checkout session (quantity = active yards). */
-export async function POST() {
+/** Create a per-yard subscription Checkout session. Quantity = the number of
+ *  yards the shop says it runs (picked at subscribe time; defaults to the
+ *  yards already in SYNNR). Adjustable again on the Stripe page itself, and
+ *  it follows active yards after that. */
+export async function POST(req: Request) {
   const { company } = await requireCompany();
   const stripe = getStripe();
   const price = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
@@ -18,10 +21,15 @@ export async function POST() {
   const sb = (await getServerSupabase()) as unknown as SupabaseClient;
   const admin = saasAdmin();
 
-  // Active yard count = subscription quantity (min 1).
+  // Requested yard count (from the stepper), else active yards in SYNNR. 1-50.
+  let requested = 0;
+  try {
+    const body = await req.json();
+    requested = Math.floor(Number(body?.quantity) || 0);
+  } catch { /* no body — fall back to yard count */ }
   const { count: yardCount } = await sb
     .from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id);
-  const quantity = Math.max(1, yardCount ?? 1);
+  const quantity = Math.min(50, Math.max(1, requested || yardCount || 1));
 
   // Ensure a Stripe customer.
   const { data: companyRow } = await sb
@@ -36,7 +44,7 @@ export async function POST() {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    line_items: [{ price, quantity }],
+    line_items: [{ price, quantity, adjustable_quantity: { enabled: true, minimum: 1, maximum: 50 } }],
     // No trial — card charged immediately, billed monthly.
     subscription_data: { metadata: { company_id: company.id } },
     payment_method_collection: "always",

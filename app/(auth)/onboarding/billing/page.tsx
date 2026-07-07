@@ -2,13 +2,11 @@ import { redirect } from "next/navigation";
 import { getStripe } from "@/lib/stripe";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasAdmin } from "@/lib/saas/db";
-import { Card } from "@/components/ui/card";
-import BillingActions from "@/app/app/settings/billing/billing-actions";
+import { saasDb } from "@/lib/saas/db";
+import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Subscribe · SYNNR" };
-
-const PER_YARD = 500;
 
 export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
   const { company } = await requireCompany();
@@ -36,26 +34,17 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
     }
   }
 
+  const db = await saasDb();
+  const { count: yardCount } = await db
+    .from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Start your subscription</h1>
         <p className="mt-1 text-sm text-ink-dim">One more step — add a card to activate {company.name}.</p>
       </div>
-      <Card className="flex flex-col gap-4 p-5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-semibold tracking-tight">${PER_YARD}</span>
-          <span className="text-sm text-ink-dim">per yard / month</span>
-        </div>
-        <ul className="flex flex-col gap-2 text-sm text-ink-dim">
-          <li>• Unlimited assets &amp; crew</li>
-          <li>• Photo + proof storage</li>
-          <li>• Expiration alerts before anything lapses</li>
-          <li>• The full renewal loop, every yard</li>
-        </ul>
-        <BillingActions subscribed={false} />
-        <p className="text-xs text-ink-faint">Billed monthly, per active yard. Cancel anytime — your data stays exportable.</p>
-      </Card>
+      <SubscribeCard initialYards={Math.max(1, yardCount ?? 1)} />
     </div>
   );
 }
