@@ -4,6 +4,7 @@ import { HardHat, Plus, ChevronRight } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { worstStatus } from "@/lib/saas/status";
+import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -21,6 +22,10 @@ async function createCrewMember(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim() || null;
   if (!name) return;
   const db = await saasDb();
+  if (await isRecentDuplicate(db, "saas_crew_members", { company_id: company.id, name })) {
+    revalidatePath("/app/crew");
+    return; // double-tap echo, not a second hire
+  }
   const { error } = await db.from("saas_crew_members").insert({ company_id: company.id, name, role, phone });
   if (error) throw new Error(error.message);
   revalidatePath("/app/crew");

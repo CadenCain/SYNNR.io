@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
+import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { syncYardQuantity } from "@/lib/saas/billing";
 import { Card } from "@/components/ui/card";
@@ -16,6 +17,10 @@ async function createYard(formData: FormData) {
   const location = String(formData.get("location") ?? "").trim() || null;
   if (!name) return;
   const db = await saasDb();
+  if (await isRecentDuplicate(db, "saas_yards", { company_id: company.id, name })) {
+    revalidatePath("/app/yards");
+    return; // double-tap echo
+  }
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
   if (error) throw new Error(error.message);
   await syncYardQuantity(company.id); // per-yard billing follows the yard count

@@ -34,8 +34,9 @@ const STATE_UI = {
 } as const;
 const STATE_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, ready: 2, not_setup: 3 };
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ yard?: string }> }) {
   const { company, user } = await requireCompany();
+  const { yard: yardParam } = await searchParams;
   const db = await saasDb();
   const first = ((user.user_metadata?.full_name as string | undefined)?.trim().split(" ")[0]) || user.email?.split("@")[0] || "there";
   const nptDay = company.npt_day_estimate;
@@ -45,9 +46,9 @@ export default async function Dashboard() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [rd, { count: yardCount }, { data: itemData }, { data: eventData }, { data: monthChecks }, { data: alertsMonth }, { data: sampleYard }] = await Promise.all([
+  const [rd, { data: yardData }, { data: itemData }, { data: eventData }, { data: monthChecks }, { data: alertsMonth }, { data: sampleYard }] = await Promise.all([
     getCompanyReadiness(db, company.id),
-    db.from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id),
+    db.from("saas_yards").select("id, name").eq("company_id", company.id).order("name"),
     db.from("saas_compliance_items_with_status").select("id, title, kind, expiration_date, status, parent_type, parent_id").eq("company_id", company.id),
     db.from("saas_events").select("kind, message, actor, created_at").eq("company_id", company.id)
       .neq("kind", "miss_caught") // KPI counter only — its message duplicates check_not_ready in the feed
@@ -97,7 +98,28 @@ export default async function Dashboard() {
   const warningsMonth = (alertsMonth ?? []).length;
   const hasSample = Boolean(sampleYard);
 
+  const yards = (yardData ?? []) as { id: string; name: string }[];
+  const yardCount = yards.length;
+  // Yard filter: ?yard=<id> scopes the board, the Not-ready KPI, and the
+  // needs-attention list to one yard. Crew cards are company-wide and stay.
+  const activeYard = yards.find((y) => y.id === yardParam) ?? null;
+  const boardUnits = activeYard ? rd.units.filter((u) => u.yardId === activeYard.id) : rd.units;
+  const unitYardById = new Map(rd.units.map((u) => [u.id, u.yardId]));
+  const notReadyUnits = boardUnits.filter((u) => u.state === "not_ready").length;
+
+  let assetYardById = new Map<string, string | null>();
+  if (activeYard) {
+    const { data: assetRows } = await db.from("saas_assets").select("id, yard_id, unit_id").eq("company_id", company.id);
+    assetYardById = new Map(((assetRows ?? []) as { id: string; yard_id: string | null; unit_id: string | null }[])
+      .map((a) => [a.id, a.yard_id ?? (a.unit_id ? unitYardById.get(a.unit_id) ?? null : null)]));
+  }
+  const inYard = (i: Item) =>
+    !activeYard ? true
+    : i.parent_type === "unit" ? unitYardById.get(i.parent_id) === activeYard.id
+    : i.parent_type === "asset" ? assetYardById.get(i.parent_id) === activeYard.id
+    : true; // crew cards are company-wide — they roll with any yard's trucks
   const actionList = items
+    .filter(inYard)
     .filter((i) => i.status === "expired" || i.status === "expiring" || i.status === "none")
     .sort((a, b) => {
       const rank = (s: string) => (s === "expired" ? 0 : s === "none" ? 1 : 2);
@@ -106,13 +128,11 @@ export default async function Dashboard() {
     .slice(0, 12);
   const hrefFor = (i: Item) => i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`;
 
-  const notReadyUnits = rd.units.filter((u) => u.state === "not_ready").length;
-
   const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
     rd.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
-    { icon: Truck, label: "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-ink-dim", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now" : "every unit current" },
+    { icon: Truck, label: activeYard ? `Not ready — ${activeYard.name}` : "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-ink-dim", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now" : "every unit current" },
     { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month", spark: spark.misses, sparkColor: "#34d399" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
     { icon: AlertTriangle, label: "NOT-ready checks", value: notReadyMonth, accent: notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
@@ -184,7 +204,7 @@ export default async function Dashboard() {
           {rd.units.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Fleet readiness board</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Fleet readiness board{activeYard ? ` — ${activeYard.name}` : ""}</h2>
                 {hasSample && (
                   <form action={clearSampleYard}>
                     <button type="submit" className="flex items-center gap-1.5 text-xs text-ink-faint hover:text-red-400">
@@ -193,8 +213,22 @@ export default async function Dashboard() {
                   </form>
                 )}
               </div>
+              {yardCount > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <Link href="/app"
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${!activeYard ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                    All yards
+                  </Link>
+                  {yards.map((y) => (
+                    <Link key={y.id} href={`/app?yard=${y.id}`}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${activeYard?.id === y.id ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                      {y.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {[...rd.units].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]).map((u) => (
+                {[...boardUnits].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]).map((u) => (
                   <Link key={u.id} href={`/app/units/${u.id}`}>
                     <Card className={`h-full p-4 transition-colors hover:border-line-2 ${u.state === "not_ready" ? "border-red-500/40" : ""}`}>
                       <div className="flex items-start justify-between gap-2">

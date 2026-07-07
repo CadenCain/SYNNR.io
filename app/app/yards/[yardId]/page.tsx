@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Truck, Plus, ChevronRight, Settings2, Trash2 } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
+import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, unitTypeLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,10 @@ async function createUnit(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? "").trim() || null;
   if (!yard_id || !name) return;
   const db = await saasDb();
+  if (await isRecentDuplicate(db, "saas_units", { company_id: company.id, yard_id, name })) {
+    revalidatePath(`/app/yards/${yard_id}`);
+    return; // double-tap echo
+  }
   const { error } = await db.from("saas_units").insert({ company_id: company.id, yard_id, name, type, identifier });
   if (error) throw new Error(error.message);
   revalidatePath(`/app/yards/${yard_id}`);

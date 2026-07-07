@@ -17,6 +17,7 @@ import { computeReadiness, worstStatus, localToday, type UnitState } from "./sta
  *   not_setup — nothing tracked at all; never reads green
  */
 export interface UnitTile {
+  yardId: string;
   id: string;
   name: string;
   type: string;
@@ -42,7 +43,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }, { data: coData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select("id, title, status, expiration_date, parent_type, parent_id").eq("company_id", companyId),
-    db.from("saas_units").select("id, name, type, saas_yards(name)").eq("company_id", companyId).order("name"),
+    db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
     db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId),
     db.from("saas_unit_crew").select("unit_id, crew_member_id").eq("company_id", companyId),
     db.from("saas_dispatch_checks").select("id, unit_id").eq("company_id", companyId)
@@ -54,7 +55,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   const counts = { expired: 0, expiring: 0, valid: 0, none: 0 } as Record<ComplianceStatus, number>;
   for (const i of items) counts[i.status]++;
 
-  type UnitRow = { id: string; name: string; type: string; saas_yards: { name: string } | { name: string }[] | null };
+  type UnitRow = { id: string; name: string; type: string; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
   const assets = (assetData ?? []) as { id: string; name: string; unit_id: string | null; status: string }[];
   const unitCrew = (ucData ?? []) as { unit_id: string; crew_member_id: string }[];
@@ -112,7 +113,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
     } else {
       state = "ready"; why = "All current";
     }
-    return { id: u.id, name: u.name, type: u.type, yardName, state, why, crewWorst };
+    return { id: u.id, yardId: u.yard_id, name: u.name, type: u.type, yardName, state, why, crewWorst };
   });
 
   // Blended company score (formula in lib/saas/status.ts). Currency counts

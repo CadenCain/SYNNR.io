@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
+import { isRecentDuplicate } from "@/lib/saas/dedupe";
 
 export async function addComplianceItem(formData: FormData) {
   const { company } = await requireCompany();
@@ -18,6 +19,10 @@ export async function addComplianceItem(formData: FormData) {
   if (!parent_id || !title) return;
 
   const db = await saasDb();
+  if (await isRecentDuplicate(db, "saas_compliance_items", { company_id: company.id, parent_id, title, kind })) {
+    if (redirectPath) revalidatePath(redirectPath);
+    return; // double-tap echo
+  }
   const { error } = await db.from("saas_compliance_items").insert({
     company_id: company.id, parent_type, parent_id, kind, title,
     issued_date, expiration_date, responsible_person,
@@ -88,6 +93,10 @@ export async function addAsset(formData: FormData) {
   if (!name) return;
 
   const db = await saasDb();
+  if (await isRecentDuplicate(db, "saas_assets", { company_id: company.id, name, unit_id })) {
+    if (redirectPath) revalidatePath(redirectPath);
+    return; // double-tap echo
+  }
   const { error } = await db.from("saas_assets").insert({
     company_id: company.id, yard_id, unit_id, name, category, identifier,
   });
