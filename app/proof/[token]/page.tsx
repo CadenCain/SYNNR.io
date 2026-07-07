@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
+import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import type { ComplianceStatus } from "@/lib/saas/db";
 
 /**
@@ -109,6 +110,15 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   const ready = configured && failingCount === 0 && missingAssets.length === 0;
   const generatedAt = new Date().toLocaleString();
 
+  // Unit scope: a "Ready" must carry what it did NOT check. The operator sees
+  // the same caveats the shop sees — an all-optional loadout or an unmanned
+  // unit can't hide behind a green banner. (Same engine as the in-app check.)
+  let notChecked: string[] = [];
+  if (proof.scope === "unit" && proof.unit_id) {
+    const comp = await computeDispatchCheck(admin, proof.company_id, proof.unit_id);
+    notChecked = comp?.notChecked ?? [];
+  }
+
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
   // who checked it, the verdict, and photo proof.
   let record: {
@@ -173,6 +183,14 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               {failingCount > 0 && missingAssets.length > 0 ? " · " : ""}
               {missingAssets.length > 0 ? `${missingAssets.length} asset${missingAssets.length === 1 ? "" : "s"} unaccounted for` : ""}
             </p>
+          ) : null}
+          {notChecked.length > 0 ? (
+            <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Not covered by this proof</p>
+              <ul className="mt-1 flex flex-col gap-1 text-sm text-amber-300">
+                {notChecked.map((w) => <li key={w}>• {w}</li>)}
+              </ul>
+            </div>
           ) : null}
         </div>
 

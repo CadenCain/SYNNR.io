@@ -36,8 +36,9 @@ export interface DispatchComputation {
   isFutureJob: boolean;
   verdict: "ready" | "not_ready" | "not_setup";
   lines: CheckLine[];
-  failures: string[]; // named failing lines for banners/alerts
-  warnings: string[]; // heads-up (expires shortly after the job)
+  failures: string[];   // named failing lines for banners/alerts
+  warnings: string[];   // heads-up (expires shortly after the job) + skipped-scope caveats
+  notChecked: string[]; // what this check did NOT verify — shown on the public proof too
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -172,11 +173,20 @@ export async function computeDispatchCheck(
     (unitCerts ?? []).length > 0 || (assetCerts ?? []).length > 0;
   const verdict: DispatchComputation["verdict"] = !configured ? "not_setup" : failures.length > 0 ? "not_ready" : "ready";
 
-  // An all-optional template can never fail on gear — say so instead of
-  // letting the gear section read permanently green unexplained.
+  // A "Ready" must never quietly mean "nothing was actually checked."
+  // Anything this check skipped gets said out loud — on the app page AND on
+  // the public proof link (both render these warnings).
+  const notChecked: string[] = [];
   if (configured && loadout.length > 0 && loadout.every((li) => !li.required)) {
-    warnings.push("Loadout template has no required lines — gear can't fail this check. Mark lines required in the template editor if they should.");
+    notChecked.push("Loadout template has no required lines — gear can't fail this check. Mark lines required in the template editor if they should.");
   }
+  if (configured && loadout.length === 0) {
+    notChecked.push("No loadout template — gear wasn't checked against a required list.");
+  }
+  if (configured && crewIds.length === 0) {
+    notChecked.push("No crew assigned to this unit — crew cards weren't part of this check. Assign crew so their cards get checked.");
+  }
+  warnings.push(...notChecked);
 
-  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings };
+  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked };
 }
