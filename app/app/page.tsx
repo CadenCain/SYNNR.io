@@ -50,6 +50,7 @@ export default async function Dashboard() {
     db.from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id),
     db.from("saas_compliance_items_with_status").select("id, title, kind, expiration_date, status, parent_type, parent_id").eq("company_id", company.id),
     db.from("saas_events").select("kind, message, actor, created_at").eq("company_id", company.id)
+      .neq("kind", "miss_caught") // KPI counter only — its message duplicates check_not_ready in the feed
       .order("created_at", { ascending: false }).limit(20),
     db.from("saas_dispatch_checks").select("id, unit_id, type, status, started_at")
       .eq("company_id", company.id).gte("started_at", monthStart.toISOString()),

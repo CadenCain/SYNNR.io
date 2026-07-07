@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, TriangleAlert, ClipboardCheck, PencilRuler } from "lucide-react";
+import { Check, TriangleAlert, PencilRuler } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { localToday } from "@/lib/saas/status";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { recordDispatchCheck } from "./actions";
 import JobDatePicker from "./job-date-picker";
+import RecordButton from "./record-button";
 
 export const dynamic = "force-dynamic";
 
@@ -113,9 +113,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
         <form action={recordDispatchCheck} className="flex flex-col gap-2">
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="job_date" value={comp.jobDate} />
-          <Button type="submit" size="lg" className="w-full">
-            <ClipboardCheck className="h-5 w-5" /> Record this check{comp.isFutureJob ? ` for ${comp.jobDate}` : ""}
-          </Button>
+          <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${comp.jobDate}` : ""}`} />
           <p className="text-center text-xs text-ink-faint">
             Records the verdict and every line, with your name and the time. Read-only after — the record is the proof.
             {comp.verdict === "not_ready" ? " A NOT-ready result records as NOT ready. There is no override — fix the items and re-run." : ""}

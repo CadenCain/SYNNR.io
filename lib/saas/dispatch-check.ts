@@ -162,9 +162,21 @@ export async function computeDispatchCheck(
   for (const c of (assetCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${assetName.get(c.parent_id) ?? "asset"})`, "cert");
   for (const c of (crewCerts ?? []) as Cert[]) pushCert(c, `${c.title} — ${crewName.get(c.parent_id) ?? "crew"}`, "crew_cert");
 
-  // NO Ready on empty config: a check with nothing to check is not a pass.
-  const configured = lines.length > 0;
+  // NO verdict on empty config — and "configured" means the SHOP put data in
+  // (assets, certs, or assigned crew), not merely that a global seed template
+  // exists for this unit type. A bare unit + seed template used to read
+  // NOT ready and log miss_caught — inflating the misses/dollar counters with
+  // value SYNNR never delivered. Nothing of the shop's on record = not_setup.
+  const configured =
+    assets.length > 0 || crewIds.length > 0 ||
+    (unitCerts ?? []).length > 0 || (assetCerts ?? []).length > 0;
   const verdict: DispatchComputation["verdict"] = !configured ? "not_setup" : failures.length > 0 ? "not_ready" : "ready";
+
+  // An all-optional template can never fail on gear — say so instead of
+  // letting the gear section read permanently green unexplained.
+  if (configured && loadout.length > 0 && loadout.every((li) => !li.required)) {
+    warnings.push("Loadout template has no required lines — gear can't fail this check. Mark lines required in the template editor if they should.");
+  }
 
   return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings };
 }
