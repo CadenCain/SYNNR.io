@@ -144,7 +144,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     <div className="flex flex-col gap-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[26px] font-semibold tracking-tight">Hello, {first} <span className="align-middle">👋</span></h1>
+          <h1 className="text-[26px] font-semibold tracking-tight">Hello, {first}</h1>
           <p className="mt-1 text-sm text-ink-dim">Here&apos;s where {company.name} stands right now.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

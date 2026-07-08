@@ -11,14 +11,14 @@ export function Table({ children, className }: { children: React.ReactNode; clas
 
 export function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
-    <th className={cn("whitespace-nowrap border-b border-line px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint", className)}>
+    <th className={cn("whitespace-nowrap border-b border-line px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-4", className)}>
       {children}
     </th>
   );
 }
 
 export function Td({ children, className }: { children?: React.ReactNode; className?: string }) {
-  return <td className={cn("border-b border-line/60 px-4 py-3 align-middle", className)}>{children}</td>;
+  return <td className={cn("border-b border-line/60 px-3 py-3 align-middle sm:px-4", className)}>{children}</td>;
 }
 
 export function Tr({ children, className }: { children: React.ReactNode; className?: string }) {
