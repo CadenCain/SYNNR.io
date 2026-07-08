@@ -111,7 +111,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
                   {i.parentLabel}
                   {i.customers.length > 0 ? <span className="ml-2 text-[11px] text-ink-faint">({i.customers.join(", ")})</span> : null}
                 </Td>
-                <Td className="tabular-nums text-ink-dim">{i.expiration_date ?? "—"}</Td>
+                <Td className="whitespace-nowrap tabular-nums text-ink-dim">{i.expiration_date ?? "—"}</Td>
                 <Td className="text-right"><StatusBadge status={i.status} /></Td>
               </Tr>
             ))}

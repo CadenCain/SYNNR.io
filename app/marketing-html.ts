@@ -50,9 +50,9 @@ export const MARKETING_HTML = `
 
 <section class="hero section">
   <div class="container">
-    <span class="pill-badge reveal"><span class="d"></span>The rolling-ready system for oilfield service shops</span>
-    <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling <span class="grad">ready</span></h1>
-    <p class="lede reveal" data-d="2">Every asset, cert, DOT item, and crew card in one place — with a pre-dispatch check that catches the miss <b>before the truck leaves the yard</b>. Get the heads-up before anything expires, and hand the operator a readiness-proof link instead of a binder. Import your list and load a whole yard in minutes.</p>
+    <span class="kicker reveal">For oilfield service shops</span>
+    <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling ready</h1>
+    <p class="lede reveal" data-d="2">Every asset, cert, DOT item, and crew card in one place — with a pre-dispatch check that catches the miss <b>before the truck leaves the yard</b>. You get the heads-up before anything expires. The operator gets a proof link instead of a binder.</p>
     <div class="hero-cta reveal" data-d="3">
       <a href="/signup" class="btn btn-primary">Get started
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -128,7 +128,7 @@ export const MARKETING_HTML = `
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Inside SYNNR</span>
     <h2 class="h2" data-fx="words">Watch it catch the miss.</h2>
-    <p class="lede" style="margin-inline:0;max-width:64ch">This is the command center a shop leaves open all day. Every tile is a truck. Scroll — and watch Truck 12 get stopped at the gate.</p>
+    <p class="lede" style="margin-inline:0;max-width:64ch">The command center a shop leaves open all day. Every tile is a truck — watch Truck 12 get stopped at the gate.</p>
   </div>
 
   <div class="show-stage" aria-hidden="false">
@@ -210,9 +210,9 @@ export const MARKETING_HTML = `
 <section class="section container" id="proof" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
     <span class="eyebrow">Proof</span>
-    <h2 class="h2" data-fx="words">Built by someone who's lived the 5am scramble.</h2>
+    <h2 class="h2" data-fx="words">No fake logos. No made-up numbers.</h2>
     <p class="lede" style="margin-inline:0;max-width:72ch">
-      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. Sign up, load a yard, and run your first check the same afternoon: see exactly what's expired, expiring, and missing across your gear and crew, and stop the next not-ready truck at the gate.
+      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. Sign up, load a yard, and run your first check the same afternoon: see exactly what's expired, expiring, and missing, and stop the next not-ready truck at the gate.
     </p>
     <p class="lede" style="margin-inline:0;max-width:72ch;color:var(--fg-dim);font-size:16px">
       We're onboarding our first shops now. Real numbers go here the day they're real — we don't make them up.

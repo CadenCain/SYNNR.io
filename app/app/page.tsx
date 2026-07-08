@@ -128,11 +128,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .slice(0, 12);
   const hrefFor = (i: Item) => i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`;
 
+  // The actionable number leads: which trucks are down RIGHT NOW. The blended
+  // readiness % is context, not the headline — a foreman acts on counts.
   const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
+    { icon: Truck, label: activeYard ? `Not ready — ${activeYard.name}` : "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now — fix these first" : "every unit current" },
     rd.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
-      : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 70 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
-    { icon: Truck, label: activeYard ? `Not ready — ${activeYard.name}` : "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-ink-dim", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now" : "every unit current" },
+      : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
     { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month", spark: spark.misses, sparkColor: "#34d399" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
     { icon: AlertTriangle, label: "NOT-ready checks", value: notReadyMonth, accent: notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },

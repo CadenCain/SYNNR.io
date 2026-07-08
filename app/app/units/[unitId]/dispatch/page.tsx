@@ -42,6 +42,15 @@ export default async function DispatchPage({ params, searchParams }: { params: P
   const paper = comp.lines.filter((l) => l.source_type === "cert");
   const crew = comp.lines.filter((l) => l.source_type === "crew_cert");
 
+  // Verdict banner groups failures by kind — eight identical red bullets read
+  // as noise; three labeled clusters read as a fix-list.
+  const failing = (rows: typeof comp.lines) => rows.filter((l) => l.result !== "ok");
+  const failureGroups = [
+    { label: "Gear", rows: failing(gear) },
+    { label: "Paper", rows: failing(paper) },
+    { label: "Crew", rows: failing(crew) },
+  ].filter((g) => g.rows.length > 0);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -76,13 +85,24 @@ export default async function DispatchPage({ params, searchParams }: { params: P
               ? comp.isFutureJob ? `Ready for the ${comp.jobDate} job — everything current through then` : "Ready — everything on record is current"
               : comp.isFutureJob ? `NOT READY for the ${comp.jobDate} job` : "NOT READY"}
           </div>
-          {comp.failures.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-1 text-sm text-red-300">
-              {comp.failures.map((f) => <li key={f}>• {f}</li>)}
-            </ul>
+          {failureGroups.length > 0 && (
+            <div className="mt-3 flex flex-col gap-3">
+              {failureGroups.map((g) => (
+                <div key={g.label}>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-red-400/80">
+                    {g.label} · {g.rows.length}
+                  </div>
+                  <ul className="mt-1 flex flex-col gap-1 text-sm text-red-300">
+                    {g.rows.map((l, i) => (
+                      <li key={`${l.source_id ?? i}`}>• {l.label}{l.detail ? <span className="text-red-300/70"> — {l.detail}</span> : null}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           )}
           {comp.warnings.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-400">
+            <ul className="mt-3 flex flex-col gap-1 border-t border-red-500/20 pt-3 text-sm text-amber-400">
               {comp.warnings.map((w) => <li key={w}>• {w}</li>)}
             </ul>
           )}
