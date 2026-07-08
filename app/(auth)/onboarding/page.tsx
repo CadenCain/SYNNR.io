@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getSaasUser, getFirstActiveCompany } from "@/lib/saas/auth";
@@ -12,7 +13,8 @@ async function createCompany(formData: FormData) {
   const user = await getSaasUser();
   if (!user) redirect("/login");
   const name = String(formData.get("name") ?? "").trim();
-  const ref = String(formData.get("ref") ?? "").trim().slice(0, 60) || null;
+  const cookieRef = (await cookies()).get("synnr_ref")?.value ?? "";
+  const ref = (String(formData.get("ref") ?? "").trim() || cookieRef).slice(0, 60) || null;
   if (!name) return;
 
   const sb = (await getServerSupabase()) as unknown as SupabaseClient | null;

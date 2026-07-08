@@ -27,6 +27,7 @@ export const MARKETING_HTML = `
       <a href="#track">What we track</a>
       <a href="#pricing">Pricing</a>
       <a href="/readiness-audit">Free audit</a>
+      <a href="/partners">Partners</a>
     </nav>
     <div class="nav-cta">
       <a href="/login" class="btn btn-ghost btn-sm nav-login">Log in</a>

@@ -52,7 +52,7 @@ export function SiteFooter() {
             <p className="blurb">Equipment &amp; cert readiness tracking for oilfield service shops, done for you. Never miss an expiration or asset again.</p>
           </div>
           <div><h5>SYNNR</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#track">What we track</a></li><li><a href="/#why">Why SYNNR</a></li><li><a href="/readiness-audit">Free readiness audit</a></li></ul></div>
-          <div><h5>Company</h5><ul><li><a href="/readiness-audit">Free readiness audit</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+          <div><h5>Company</h5><ul><li><a href="/partners">Partner program</a></li><li><a href="/readiness-audit">Free readiness audit</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 SYNNR</span>

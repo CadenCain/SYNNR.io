@@ -1,0 +1,45 @@
+/* Partner program page — flat/industrial, same language as the rest of .mkt */
+.mkt #partners.section { padding-top: clamp(120px, 18vw, 160px); }
+.mkt .pt-wrap { display: flex; flex-direction: column; gap: 48px; }
+
+.mkt .pt-terms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 720px) { .mkt .pt-terms { grid-template-columns: 1fr; } }
+.mkt .pt-term { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 26px; }
+.mkt .pt-term h3 { font-size: 20px; margin: 12px 0 8px; }
+.mkt .pt-term p { color: var(--fg-dim); font-size: 15px; line-height: 1.6; }
+.mkt .pt-badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--accent-soft); border: 1px solid rgba(var(--accent-rgb), .35);
+  border-radius: 6px; padding: 4px 9px;
+}
+.mkt .pt-badge.alt { color: var(--fg-dim); border-color: var(--line-2); }
+
+.mkt .pt-steps ol { margin: 18px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 12px; }
+.mkt .pt-steps li { color: var(--fg-dim); font-size: 15.5px; line-height: 1.6; }
+.mkt .pt-steps li b { color: var(--fg); }
+.mkt .pt-note { margin-top: 16px; font-size: 14px; max-width: 68ch; }
+
+.mkt .pt-cta-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 780px) { .mkt .pt-cta-row { grid-template-columns: 1fr; } }
+.mkt .pt-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 26px; }
+.mkt .pt-card h2 { margin-bottom: 16px; }
+
+.mkt .pt-form { display: flex; flex-direction: column; gap: 14px; }
+.mkt .pt-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--fg-dim); }
+.mkt .pt-form input, .mkt .pt-form textarea {
+  background: var(--bg); border: 1px solid var(--line-2); border-radius: 10px;
+  color: var(--fg); font-size: 16px; padding: 12px 14px; outline: none; width: 100%;
+}
+.mkt .pt-form input:focus, .mkt .pt-form textarea:focus { border-color: var(--accent-soft); }
+.mkt .pt-form button { margin-top: 4px; }
+.mkt .pt-err { color: #f2b8b5; font-size: 14px; }
+.mkt .pt-fine { font-size: 12.5px; }
+.mkt .pt-done { padding: 10px 0; font-size: 16px; line-height: 1.6; }
+.mkt .pt-done .muted { margin-top: 8px; font-size: 14px; }
+
+.mkt .pt-contact { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 26px; display: flex; flex-direction: column; gap: 8px; }
+.mkt .pt-contact h3 { font-size: 18px; }
+.mkt .pt-contact p { color: var(--fg-dim); font-size: 14.5px; }
+.mkt .pt-phone { font-family: var(--font-mono); font-size: 22px; color: var(--fg); margin-top: 6px; }
+.mkt .pt-mail { color: var(--fg-dim); font-size: 14.5px; text-decoration: underline; text-underline-offset: 3px; }
+.mkt .pt-phone:hover, .mkt .pt-mail:hover { color: var(--accent-soft); }

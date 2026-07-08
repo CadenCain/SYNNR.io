@@ -9,6 +9,16 @@ import { createServerClient } from "@supabase/ssr";
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Referral attribution: a partner link (?ref=cody) can land ANYWHERE on the
+  // site — persist it 30 days so it survives browsing until signup. First
+  // touch wins (don't let a later plain visit overwrite the referrer).
+  const ref = request.nextUrl.searchParams.get("ref");
+  if (ref && !request.cookies.get("synnr_ref")) {
+    response.cookies.set("synnr_ref", ref.slice(0, 60), {
+      maxAge: 60 * 60 * 24 * 30, path: "/", sameSite: "lax",
+    });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return response;

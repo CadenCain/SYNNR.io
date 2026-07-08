@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 export default function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const ref = (params.get("ref") ?? "").slice(0, 60); // referral source, e.g. ?ref=cody
+  const cookieRef = typeof document !== "undefined"
+    ? (document.cookie.match(/(?:^|; )synnr_ref=([^;]*)/)?.[1] ?? "")
+    : "";
+  const ref = (params.get("ref") || decodeURIComponent(cookieRef) || "").slice(0, 60); // referral source, e.g. ?ref=cody
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
