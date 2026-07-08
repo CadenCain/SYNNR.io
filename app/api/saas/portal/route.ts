@@ -16,9 +16,19 @@ export async function POST() {
   const customerId = (data as { stripe_customer_id: string | null } | null)?.stripe_customer_id;
   if (!customerId) return NextResponse.json({ ok: false, error: "No subscription yet." }, { status: 400 });
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${origin}/app/settings/billing`,
-  });
-  return NextResponse.json({ ok: true, url: session.url });
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${origin}/app/settings/billing`,
+    });
+    return NextResponse.json({ ok: true, url: session.url });
+  } catch (e) {
+    // Most common cause: the Customer Portal isn't enabled in the Stripe
+    // dashboard (Billing → Customer portal). Say so instead of a raw 500.
+    const msg = e instanceof Error ? e.message : "";
+    const hint = /portal|configuration/i.test(msg)
+      ? "Billing portal isn't set up yet — enable it in the Stripe dashboard (Billing → Customer portal)."
+      : "Couldn't open billing. Try again.";
+    return NextResponse.json({ ok: false, error: hint }, { status: 502 });
+  }
 }
