@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export default function SignupForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const ref = (params.get("ref") ?? "").slice(0, 60); // referral source, e.g. ?ref=cody
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -45,7 +47,7 @@ export default function SignupForm() {
       router.replace("/login");
       return;
     }
-    router.replace("/onboarding");
+    router.replace(ref ? `/onboarding?ref=${encodeURIComponent(ref)}` : "/onboarding");
     router.refresh();
   }
 

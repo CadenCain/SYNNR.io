@@ -12,6 +12,7 @@ async function createCompany(formData: FormData) {
   const user = await getSaasUser();
   if (!user) redirect("/login");
   const name = String(formData.get("name") ?? "").trim();
+  const ref = String(formData.get("ref") ?? "").trim().slice(0, 60) || null;
   if (!name) return;
 
   const sb = (await getServerSupabase()) as unknown as SupabaseClient | null;
@@ -19,14 +20,28 @@ async function createCompany(formData: FormData) {
   // Atomic company + owner membership (SECURITY DEFINER rpc).
   const { error } = await sb.rpc("saas_create_company", { p_name: name });
   if (error) throw new Error(error.message);
+  // Referral attribution (?ref=cody → signup → here). Free-text tag for
+  // payout math; best-effort, never blocks onboarding.
+  if (ref) {
+    const { saasAdmin } = await import("@/lib/saas/db");
+    const admin = saasAdmin();
+    if (admin) {
+      const { data: co } = await admin
+        .from("saas_companies").select("id").eq("name", name)
+        .is("referred_by", null)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (co) await admin.from("saas_companies").update({ referred_by: ref }).eq("id", (co as { id: string }).id);
+    }
+  }
   redirect("/onboarding/billing");
 }
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const user = await getSaasUser();
   if (!user) redirect("/login");
   // Already set up? Go straight in.
   if (await getFirstActiveCompany(user.id)) redirect("/app");
+  const { ref } = await searchParams;
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,6 +52,7 @@ export default async function OnboardingPage() {
         </p>
       </div>
       <form action={createCompany} className="flex flex-col gap-4">
+        <input type="hidden" name="ref" value={ref ?? ""} />
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-ink">Company name</span>
           <input

@@ -41,5 +41,14 @@ export async function syncYardQuantity(companyId: string): Promise<void> {
     await admin.from("saas_companies").update({ yard_quantity: quantity }).eq("id", companyId);
   } catch (e) {
     console.error("[billing] yard quantity sync failed:", e instanceof Error ? e.message : e);
+    // Visible, not just console: the shop's feed shows billing drifted from
+    // the yard count instead of silently under/over-billing.
+    const admin = saasAdmin();
+    if (admin) {
+      await admin.from("saas_events").insert({
+        company_id: companyId, kind: "billing_sync_failed",
+        message: "Couldn't update the subscription to match your yard count — billing may not match your yards. It'll retry on the next yard change.",
+      });
+    }
   }
 }
