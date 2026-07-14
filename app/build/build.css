@@ -1,0 +1,8 @@
+/* Custom-builds (agency) page — reuses .pt-* from partners.css, adds a grid */
+.mkt #build-page.section { padding-top: clamp(120px, 18vw, 160px); }
+.mkt .build-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { .mkt .build-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 560px) { .mkt .build-grid { grid-template-columns: 1fr; } }
+.mkt .build-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 22px; }
+.mkt .build-card h3 { font-size: 16.5px; margin-bottom: 6px; }
+.mkt .build-card p { color: var(--fg-dim); font-size: 14px; line-height: 1.55; }

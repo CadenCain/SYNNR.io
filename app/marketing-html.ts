@@ -1,4 +1,4 @@
-// SYNNR marketing page — the rolling-ready system for oilfield service shops:
+// RollReady marketing page (product by SYNNR) — the rolling-ready system for oilfield service shops:
 // pre-dispatch loadout checks, certs/DOT/crew-card tracking with alerts before
 // anything lapses, and shareable readiness-proof links. Self-serve ($500/yard/mo,
 // card required). Operator voice. CTAs → /signup. Rendered via
@@ -12,13 +12,13 @@ export const MARKETING_HTML = `
 
 <header class="nav" id="nav">
   <div class="nav-pill">
-    <a class="brand" href="/" aria-label="SYNNR">
+    <a class="brand" href="/" aria-label="RollReady by SYNNR">
       <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="url(#bm)"/>
         <circle cx="16" cy="16" r="2.4" fill="#060608"/>
         <defs><linearGradient id="bm" x1="2" y1="2" x2="30" y2="30"><stop stop-color="#f3ecdb"/><stop offset="1" stop-color="#ccbe9d"/></linearGradient></defs>
       </svg>
-      <span class="wordmark">SYNNR</span>
+      <span class="wordmark">RollReady</span><span class="by-synnr">by SYNNR</span>
     </a>
     <nav class="nav-links">
       <a href="#problem">The problem</a>
@@ -51,7 +51,7 @@ export const MARKETING_HTML = `
 
 <section class="hero section">
   <div class="container">
-    <span class="kicker reveal">For oilfield service shops</span>
+    <span class="kicker reveal">RollReady · yard readiness for oilfield service shops</span>
     <h1 class="display reveal" data-d="1">Keep your crews<br/>rolling ready</h1>
     <p class="lede reveal" data-d="2">Every asset, cert, DOT item, and crew card in one place — with a pre-dispatch check that catches the miss <b>before the truck leaves the yard</b>. You get the heads-up before anything expires. The operator gets a proof link instead of a binder.</p>
     <div class="hero-cta reveal" data-d="3">
@@ -86,7 +86,7 @@ export const MARKETING_HTML = `
   </div>
   <p class="lede" style="margin-inline:0;max-width:72ch">
     The last thing you've got time for is walking the yard checking what's expired, what's out, or what's even here —
-    so you don't, until it bites you. SYNNR takes it off your plate: one live view of every asset, cert, and crew card,
+    so you don't, until it bites you. RollReady takes it off your plate: one live view of every asset, cert, and crew card,
     a heads-up before anything goes down, and a pre-dispatch check that flags the not-ready truck before it
     rolls. And when procurement comes hunting for paperwork, you send one link instead of building a binder. You stop checking. You stop wondering. You stop getting surprised.
   </p>
@@ -112,7 +112,7 @@ export const MARKETING_HTML = `
     <p class="lede" style="margin-inline:0;max-width:72ch">
       A cert tracker tells you what expired last week. That's not the problem. The problem is the truck that rolls out at 5am
       missing a BOP, with an expired DOT sticker, or the wrong hand whose H2S card lapsed yesterday — and nobody caught it until
-      it cost a day on location. SYNNR runs a <b>pre-dispatch loadout check</b> right on the phone: every required asset, every
+      it cost a day on location. RollReady runs a <b>pre-dispatch loadout check</b> right on the phone: every required asset, every
       cert and DOT item, every assigned crew card — pulled live. If anything's off, the truck reads <b>Not ready</b> and names every item.
       There's no override button — you fix it or it stays red. The record shows exactly who checked and what they found.
     </p>
@@ -127,7 +127,7 @@ export const MARKETING_HTML = `
 
 <section class="section container showcase" id="showcase" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
-    <span class="eyebrow">Inside SYNNR</span>
+    <span class="eyebrow">Inside RollReady</span>
     <h2 class="h2" data-fx="words">Watch it catch the miss.</h2>
     <p class="lede" style="margin-inline:0;max-width:64ch">The command center a shop leaves open all day. Every tile is a truck — watch Truck 12 get stopped at the gate.</p>
   </div>
@@ -135,8 +135,8 @@ export const MARKETING_HTML = `
   <div class="show-stage" aria-hidden="false">
     <div class="show-glow" aria-hidden="true"></div>
 
-    <div class="show-frame" role="img" aria-label="SYNNR command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 missing from the asset list">
-      <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
+    <div class="show-frame" role="img" aria-label="RollReady command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 missing from the asset list">
+      <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>RollReady — command center</span></div>
       <div class="show-body" aria-hidden="true">
         <div class="show-kpis">
           <div class="show-kpi k1"><span class="lbl">Readiness</span><span class="val amber" data-n="74" data-suffix="%">74%</span><span class="bar"><i></i></span></div>
@@ -166,7 +166,7 @@ export const MARKETING_HTML = `
 
     <div class="show-chip c1" aria-hidden="true">
       <span class="cico">▮</span>
-      <span><b>SYNNR:</b> Truck 12 NOT ready — BOP missing. —your shop</span>
+      <span><b>RollReady:</b> Truck 12 NOT ready — BOP missing. —your shop</span>
     </div>
     <div class="show-chip c2" aria-hidden="true">
       <span class="cok">✓</span>
@@ -197,12 +197,12 @@ export const MARKETING_HTML = `
 
 <section class="section container" id="why" data-fx-atmos>
   <div class="head" style="text-align:left;margin-inline:0">
-    <span class="eyebrow">Why SYNNR</span>
+    <span class="eyebrow">Why RollReady</span>
     <h2 class="h2" data-fx="words">Built by someone who's lived it.</h2>
   </div>
   <div class="whygrid">
     <div class="whyc"><h3>Stops the miss at the gate</h3><p>Not a tracker that reports failures after the fact — a check that catches them before the truck rolls.</p></div>
-    <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble and built SYNNR to kill it.</p></div>
+    <div class="whyc"><h3>Built by an operator</h3><p>5 years on Permian wireline. I've lived the 5am scramble and built RollReady to kill it.</p></div>
     <div class="whyc"><h3>Proactive, not reactive</h3><p>&ldquo;BOP #3 expires in 10 days&rdquo; — you hear about it before it costs you, not after.</p></div>
     <div class="whyc"><h3>Proof on demand</h3><p>One link shows the operator you&rsquo;re current — every cert, asset, and crew card, live. No binder.</p></div>
   </div>
@@ -213,7 +213,7 @@ export const MARKETING_HTML = `
     <span class="eyebrow">Proof</span>
     <h2 class="h2" data-fx="words">No fake logos. No made-up numbers.</h2>
     <p class="lede" style="margin-inline:0;max-width:72ch">
-      SYNNR is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. Sign up, load a yard, and run your first check the same afternoon: see exactly what's expired, expiring, and missing, and stop the next not-ready truck at the gate.
+      RollReady is built and run by an operator with 5 years on Permian wireline — not a software vendor guessing at your yard. Sign up, load a yard, and run your first check the same afternoon: see exactly what's expired, expiring, and missing, and stop the next not-ready truck at the gate.
     </p>
     <p class="lede" style="margin-inline:0;max-width:72ch;color:var(--fg-dim);font-size:16px">
       We're onboarding our first shops now. Real numbers go here the day they're real — we don't make them up.
@@ -234,7 +234,7 @@ export const MARKETING_HTML = `
     <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">Fines, shutdowns, paperwork hell</span></li>
     <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">The whole account</span></li>
   </ul>
-  <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of SYNNR for a yard.</b> Everything after that is pure protection.</p>
+  <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of RollReady for a yard.</b> Everything after that is pure protection.</p>
   <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
 </section>
 
@@ -272,6 +272,25 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
+<section class="section container" id="build" data-fx-atmos>
+  <div class="build-strip">
+    <div>
+      <span class="eyebrow">Custom builds · SYNNR</span>
+      <h2 class="h2" data-fx="words">Got a paper problem RollReady doesn't cover?</h2>
+      <p class="lede" style="margin-inline:0;max-width:64ch">
+        RollReady is our product. SYNNR — the shop behind it — also builds custom software for oilfield and
+        blue-collar operations: field tickets, invoicing, rental tracking, dispatch boards, digital forms.
+        Built by a hand who's run the yard, not an agency guessing at it.
+      </p>
+      <div class="hero-cta" style="margin-top:22px">
+        <a href="/build" class="btn btn-primary">See custom builds
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="section final" id="cta">
   <div class="container">
     <div class="final-card">
@@ -295,7 +314,7 @@ export const MARKETING_HTML = `
 <footer class="footer">
   <div class="container">
     <div class="footer-bottom" style="border:0;padding-top:0">
-      <a class="brand" href="/" aria-label="SYNNR">
+      <a class="brand" href="/" aria-label="RollReady by SYNNR">
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>

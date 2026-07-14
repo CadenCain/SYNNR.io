@@ -1069,3 +1069,15 @@
 .mkt .setup-card li b { color: var(--fg); }
 .mkt .setup-note { margin-top: 14px !important; }
 .mkt .setup-note a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- RollReady/SYNNR brand lockup + custom-builds strip ---- */
+.mkt .wordmark + .by-synnr {
+  display: inline-block; margin-left: 8px; font-family: var(--font-mono);
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--fg-faint); vertical-align: middle;
+}
+.mkt .build-strip {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+  padding: clamp(28px, 5vw, 48px);
+}
+.mkt .build-strip .h2 { margin-top: 8px; }
