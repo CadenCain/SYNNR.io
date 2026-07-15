@@ -21,13 +21,10 @@ export const MARKETING_HTML = `
       <span class="wordmark">RollReady</span><span class="by-synnr">by SYNNR</span>
     </a>
     <nav class="nav-links">
-      <a href="#problem">The problem</a>
       <a href="#how">How it works</a>
-      <a href="#dispatch">The 5am check</a>
-      <a href="#track">What we track</a>
       <a href="#pricing">Pricing</a>
-      <a href="/readiness-audit">Free audit</a>
       <a href="/partners">Partners</a>
+      <a href="/build">Custom builds</a>
     </nav>
     <div class="nav-cta">
       <a href="/login" class="btn btn-ghost btn-sm nav-login">Log in</a>
@@ -36,11 +33,11 @@ export const MARKETING_HTML = `
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
     <nav class="nav-mobile">
-      <a href="#problem">The problem</a>
-      <a href="#dispatch">The 5am check</a>
-      <a href="#track">What we track</a>
+      <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a href="/readiness-audit">Free audit</a>
+      <a href="/partners">Partners</a>
+      <a href="/build">Custom builds</a>
+      <a href="/readiness-audit">Free readiness map</a>
       <a href="/login">Log in</a>
       <a href="/signup">Get started</a>
     </nav>

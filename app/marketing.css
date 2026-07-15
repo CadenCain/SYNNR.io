@@ -1074,7 +1074,7 @@
 
 /* ---- RollReady/SYNNR brand lockup + custom-builds strip ---- */
 .mkt .wordmark + .by-synnr {
-  display: inline-block; margin-left: 8px; font-family: var(--font-mono);
+  display: inline-block; margin-left: 8px; white-space: nowrap; font-family: var(--font-mono);
   font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--fg-faint); vertical-align: middle;
 }
