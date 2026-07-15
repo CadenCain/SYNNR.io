@@ -174,10 +174,12 @@
 /* Keep Log in visible on mobile — shops sign in from the truck. Compact to fit
    (also fits the signed-in "Dashboard" label). Must sit AFTER the burger rules. */
 @media (max-width:760px){
-  .mkt .nav-pill { padding:11px 10px 11px 14px; }
-  .mkt .nav-cta { gap:6px; }
-  .mkt .nav-cta .btn-sm { padding:8px 8px; font-size:12.5px; min-height:40px; }
+  .mkt .nav-pill { padding:11px 12px; }
+  .mkt .nav-cta { gap:8px; }
+  .mkt .nav-cta .btn-sm { padding:9px 14px; font-size:13px; min-height:40px; }
   .mkt .nav-burger { width:40px; height:40px; }
+  /* declutter: company tag + inline login live elsewhere on mobile */
+  .mkt .nav-login { display:none; }
 }
 .mkt .nav-mobile { display:none; }
 @media (max-width: 860px){
@@ -1084,3 +1086,6 @@
 
 /* price fairness anchor — sits right under the $500 */
 .mkt .price-why { color: var(--fg-dim); font-size: 14.5px; line-height: 1.6; max-width: 60ch; margin: 14px 0 18px; }
+
+/* keep the by-SYNNR tag off the cramped mobile header (source-order authoritative) */
+@media (max-width:760px){ .mkt .wordmark + .by-synnr { display:none; } }
