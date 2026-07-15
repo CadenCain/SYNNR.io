@@ -246,6 +246,7 @@ export const MARKETING_HTML = `
   </div>
   <div class="price-hero">
     <div class="price-big">$500<span>per yard / month</span></div>
+    <p class="price-why">That's about half a day of one hand's wages. One miss it catches, one expired DOT, one BOP that lapsed, costs you a truck for a day and $10,000+ in NPT. If it stops that once a year, it paid for itself twenty times over. Everything after is protection.</p>
     <ul class="tier-features price-hero-features">
       <li>Pre-dispatch loadout checks with enforcement</li>
       <li>Certs, DOT, gear &amp; crew cards — alerts before they lapse</li>

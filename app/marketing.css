@@ -1081,3 +1081,6 @@
   padding: clamp(28px, 5vw, 48px);
 }
 .mkt .build-strip .h2 { margin-top: 8px; }
+
+/* price fairness anchor — sits right under the $500 */
+.mkt .price-why { color: var(--fg-dim); font-size: 14.5px; line-height: 1.6; max-width: 60ch; margin: 14px 0 18px; }
