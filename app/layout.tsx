@@ -24,29 +24,30 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://synnr.io"),
   title: {
-    default: "SYNNR — the rolling-ready system for oilfield service shops",
+    default: "RollReady by SYNNR — yard readiness for oilfield service shops",
     template: "%s",
   },
   description:
-    "Keep your crews rolling ready. Track every asset, cert, DOT item, and crew card — and run a pre-dispatch check that catches the miss before the truck leaves the yard. Get the text before anything expires.",
+    "RollReady tracks every asset, cert, DOT item, and crew card and runs a pre-dispatch check that catches the miss before the truck leaves the yard. Get the text before anything expires. $500 per yard, per month. Built by SYNNR.",
   keywords: [
-    "equipment readiness", "cert tracking", "pre-dispatch check", "loadout check", "oilfield service", "wireline",
-    "coil tubing", "cementing", "BOP testing", "crew certs", "H2S certification", "well control", "DOT inspection",
-    "Permian", "service shop operations",
+    "RollReady", "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "pre-dispatch check",
+    "loadout check", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",
+    "BOP recertification", "crew certs", "H2S certification", "well control", "DOT inspection",
+    "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR — the rolling-ready system for oilfield service shops",
+    title: "RollReady — catch the miss before the truck leaves the yard",
     description:
-      "Catch the miss before the truck leaves the yard. Pre-dispatch loadout checks, cert/DOT/crew-card tracking with alerts, and shareable readiness-proof links.",
+      "Yard readiness for oilfield service shops. Pre-dispatch checks, cert/DOT/crew-card tracking with alerts, and shareable readiness-proof links. $500 per yard. By SYNNR.",
     url: "https://synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR — the rolling-ready system for oilfield service shops",
+    title: "RollReady — catch the miss before the truck leaves the yard",
     description:
-      "Catch the miss before the truck leaves the yard. Loadout checks, cert & crew-card tracking, alerts before anything expires, and readiness-proof links.",
+      "Yard readiness for oilfield service shops. Loadout checks, cert & crew-card tracking, alerts before anything expires, readiness-proof links. $500 per yard. By SYNNR.",
   },
 };
 
@@ -58,6 +59,30 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
+        {/* Structured data — helps Google understand the product + company on a
+            "RollReady" or "SYNNR" brand search. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "RollReady",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: "https://synnr.io",
+              description:
+                "Yard readiness for oilfield service shops. Tracks every cert, DOT item, and crew card and runs a pre-dispatch check that catches the miss before the truck leaves the yard.",
+              offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
+              publisher: {
+                "@type": "Organization",
+                name: "SYNNR",
+                url: "https://synnr.io",
+                areaServed: "Permian Basin, West Texas",
+              },
+            }),
+          }}
+        />
         {children}
         <Analytics />
         <SwRegister />
