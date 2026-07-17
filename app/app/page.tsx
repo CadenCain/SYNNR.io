@@ -156,8 +156,84 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
-      {/* KPI strip — every number clickable, every number honest */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+      {/* ── MOBILE VERDICT — the fleet's state in one glance, one thumb.
+          The phone opens on "can everything roll?" and the single action that
+          fixes it — not a widget grid. Desktop keeps the full KPI strip. ── */}
+      {yardCount > 0 && boardUnits.length > 0 && (() => {
+        const sorted = [...boardUnits].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]);
+        const worst = sorted[0];
+        const dueSoon = boardUnits.filter((u) => u.state === "due_soon");
+        if (notReadyUnits > 0) {
+          return (
+            <section className="md:hidden">
+              <Card className="border-red-500/40 bg-red-500/[0.06] p-5">
+                <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-red-400">Not ready</div>
+                <p className="mt-2 text-2xl font-semibold leading-snug">
+                  {notReadyUnits === 1 ? `${worst.name} can't roll.` : `${notReadyUnits} units can't roll.`}
+                </p>
+                <p className="mt-1 truncate text-sm text-red-300">{worst.why}</p>
+                <div className="mt-4 flex gap-2">
+                  <Link href={`/app/units/${worst.id}`} className="flex min-h-12 flex-1 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
+                    Fix {worst.name}
+                  </Link>
+                  {notReadyUnits > 1 && (
+                    <a href="#fleet" className="flex min-h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-sm text-ink">
+                      All {notReadyUnits}
+                    </a>
+                  )}
+                </div>
+              </Card>
+            </section>
+          );
+        }
+        if (dueSoon.length > 0) {
+          return (
+            <section className="md:hidden">
+              <Card className="border-amber-500/30 bg-amber-500/[0.05] p-5">
+                <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-400">Rolling ready · {dueSoon.length} due soon</div>
+                <p className="mt-2 text-2xl font-semibold leading-snug">Nothing blocks a truck today.</p>
+                <p className="mt-1 truncate text-sm text-ink-dim">{dueSoon[0].name}: {dueSoon[0].why}</p>
+                <Link href={`/app/units/${dueSoon[0].id}`} className="mt-4 flex min-h-12 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
+                  Renew before it bites
+                </Link>
+              </Card>
+            </section>
+          );
+        }
+        return (
+          <section className="md:hidden">
+            <Card className="border-emerald-500/30 bg-emerald-500/[0.05] p-5">
+              <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-400">Rolling ready</div>
+              <p className="mt-2 text-2xl font-semibold leading-snug">
+                {boardUnits.length === 1 ? "Your unit is ready to roll." : `All ${boardUnits.length} units ready to roll.`}
+              </p>
+              {rd.readiness !== null && <p className="mt-1 text-sm text-ink-dim">Readiness {rd.readiness}%</p>}
+              <Link href="/app/dispatch" className="mt-4 flex min-h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-sm font-medium text-ink">
+                <Truck className="mr-2 h-4 w-4" /> Run a pre-dispatch check
+              </Link>
+            </Card>
+          </section>
+        );
+      })()}
+
+      {/* Mobile: the three numbers that matter, quiet. Desktop: full KPI strip. */}
+      {yardCount > 0 && (
+        <div className="flex items-stretch divide-x divide-line rounded-lg border border-line md:hidden">
+          {[
+            { k: "Readiness", v: rd.readiness === null ? "—" : `${rd.readiness}%`, href: "/app/compliance" },
+            { k: "Expiring 30d", v: rd.counts.expiring, href: "/app/alerts" },
+            { k: "Caught", v: missesCaught, href: "#activity" },
+          ].map((s) => (
+            <Link key={s.k} href={s.href} className="flex flex-1 flex-col items-center gap-0.5 py-3">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">{s.k}</span>
+              <span className="text-lg font-semibold tabular-nums">{s.v}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* KPI strip — every number clickable, every number honest (desktop) */}
+      <div className="hidden gap-3 md:grid md:grid-cols-3 xl:grid-cols-5">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (

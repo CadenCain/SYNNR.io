@@ -246,6 +246,10 @@
 .mkt .dt-row:first-child { border-top:1px solid var(--line); }
 .mkt .dt-row .k { color: var(--fg-dim); }
 .mkt .dt-row .v { color: var(--fg); text-align:right; white-space:nowrap; }
+/* Narrow screens: long values (the what-we-track lists) must wrap, not clip */
+@media (max-width:560px){
+  .mkt .dt-row .v { white-space:normal; max-width:60%; }
+}
 .mkt .dt-row .v.bad { color: var(--danger); }
 .mkt .hero-foot .dt { flex: 0 1 440px; }
 .mkt .dt-note { margin-top:10px; font-family:var(--font-mono); font-size:11px; color:var(--fg-ghost); }
