@@ -19,13 +19,13 @@ export default function ReadinessAuditForm() {
       const r = await fetch("/api/readiness-audit", { method: "POST", body: fd });
       const d = await r.json();
       if (!r.ok || !d.ok) {
-        setErr(d.error || "Something went wrong — email cadencain@darkstarops.com.");
+        setErr(d.error || "Something went wrong — email cadencain@synnr.io.");
         setBusy(false);
         return;
       }
       setDone(true);
     } catch {
-      setErr("Couldn't reach us — try again, or email cadencain@darkstarops.com.");
+      setErr("Couldn't reach us — try again, or email cadencain@synnr.io.");
       setBusy(false);
     }
   }

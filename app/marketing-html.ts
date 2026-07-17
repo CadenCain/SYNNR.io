@@ -266,7 +266,7 @@ export const MARKETING_HTML = `
       <li><b>Remote setup — $750 first yard, +$250 each additional.</b> Send your lists and spreadsheets; we load the yard and hand it back running.</li>
       <li><b>Onsite setup — $1,500 first yard, +$400 each additional.</b> In person, anywhere in the Permian Basin / West Texas. Outside the region: same rate plus travel at cost.</li>
     </ul>
-    <p class="setup-note">3+ yards, or need something custom? <a href="mailto:cadencain@darkstarops.com">Talk to us</a> — fleet deals are negotiated, not discounted by formula.</p>
+    <p class="setup-note">3+ yards, or need something custom? <a href="mailto:cadencain@synnr.io">Talk to us</a> — fleet deals are negotiated, not discounted by formula.</p>
   </div>
 </section>
 
@@ -302,7 +302,7 @@ export const MARKETING_HTML = `
         </a>
         <a href="/login" class="btn btn-ghost">Log in</a>
       </div>
-      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">Billed monthly · cancel anytime · or email <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></p>
+      <p class="mono" style="margin-top:18px;font-size:13px;color:var(--fg-faint)">Billed monthly · cancel anytime · or email <a href="mailto:cadencain@synnr.io" style="color:var(--accent-ink)">cadencain@synnr.io</a></p>
     </div>
   </div>
 </section>
@@ -316,7 +316,7 @@ export const MARKETING_HTML = `
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
-      <span style="color:var(--fg-faint)">The rolling-ready system for oilfield service shops · <a href="mailto:cadencain@darkstarops.com" style="color:var(--accent-ink)">cadencain@darkstarops.com</a></span>
+      <span style="color:var(--fg-faint)">The rolling-ready system for oilfield service shops · <a href="mailto:cadencain@synnr.io" style="color:var(--accent-ink)">cadencain@synnr.io</a></span>
     </div>
   </div>
 </footer>

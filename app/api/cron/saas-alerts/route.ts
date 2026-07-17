@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   // so a batch failure is loud, not a silent morning where no shop got its
   // heads-up. (A cron that never RUNS can't self-report: that's covered by
   // Vercel's cron-failure notifications, not this.)
-  const OPERATOR = "cadencain@darkstarops.com";
+  const OPERATOR = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
   try {
     const result = await sweepAlerts(admin);
     const snapshot = await snapshotAllCompanies(admin); // daily KPI history (real sparklines)

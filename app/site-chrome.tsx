@@ -53,7 +53,7 @@ export function SiteFooter() {
             <p className="blurb">Yard readiness for oilfield service shops — certs, DOT, gear &amp; crew cards, with the check that stops the not-ready truck at the gate. A product by SYNNR.</p>
           </div>
           <div><h5>RollReady</h5><ul><li><a href="/#how">How it works</a></li><li><a href="/#track">What we track</a></li><li><a href="/#pricing">Pricing</a></li><li><a href="/readiness-audit">Free readiness map</a></li></ul></div>
-          <div><h5>SYNNR</h5><ul><li><a href="/build">Custom builds</a></li><li><a href="/partners">Partner program</a></li><li><a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
+          <div><h5>SYNNR</h5><ul><li><a href="/build">Custom builds</a></li><li><a href="/partners">Partner program</a></li><li><a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a></li><li><a href="/legal/terms">Terms</a></li><li><a href="/legal/privacy">Privacy</a></li></ul></div>
         </div>
         <div className="footer-bottom">
           <span>© 2026 SYNNR</span>

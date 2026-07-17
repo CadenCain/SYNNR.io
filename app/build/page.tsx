@@ -79,7 +79,7 @@ export default function BuildPage() {
               <h3>Rather just talk?</h3>
               <p>Call or text Caden — he answers.</p>
               <a className="pt-phone" href="tel:4322500715">432-250-0715</a>
-              <a className="pt-mail" href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a>
+              <a className="pt-mail" href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>
             </div>
           </div>
 

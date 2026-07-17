@@ -23,7 +23,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           <h1 className="h2" style={{ marginTop: 8 }}>That didn&apos;t go through.</h1>
           <p className="lede" style={{ marginInline: "auto" }}>
             We hit an error on our end — your data is safe. Try again, and if it keeps happening, email{" "}
-            <a href="mailto:support@synnr.io">support@synnr.io</a>.
+            <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>.
           </p>
           {error?.digest ? (
             <p className="mono" style={{ fontSize: 12, color: "var(--fg-faint)", marginTop: 6 }}>ref: {error.digest}</p>

@@ -6,7 +6,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
  * Stores the lead in Supabase (audit_requests) and emails to founder via Resend.
  * Email is best-effort — the lead is always stored.
  */
-const TO = "cadencain@darkstarops.com";
+const TO = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
 const FROM = "SYNNR <noreply@synnr.io>";
 const MAX_FIELD = 4_000; // per-field char cap — leaves room for any legitimate "tell us about your shop" payload while killing 5MB bot pastes.
 
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
   // Never break the funnel: as long as we stored OR emailed, it's a success.
   if (!stored && !emailed) {
-    return NextResponse.json({ ok: false, error: "Couldn't reach us — email cadencain@darkstarops.com." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Couldn't reach us — email cadencain@synnr.io." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

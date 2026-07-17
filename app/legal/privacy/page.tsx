@@ -48,7 +48,7 @@ export default function PrivacyPage() {
       </p>
 
       <h2>6. Contact</h2>
-      <p>Privacy questions or requests: cadencain@darkstarops.com.</p>
+      <p>Privacy questions or requests: cadencain@synnr.io.</p>
     </LegalShell>
   );
 }

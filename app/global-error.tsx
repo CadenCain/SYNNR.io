@@ -16,7 +16,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <div style={{ maxWidth: 440 }}>
             <h1 style={{ fontSize: 22, fontWeight: 600 }}>Something broke.</h1>
             <p style={{ color: "#9b958a", lineHeight: 1.6 }}>
-              We hit an error on our end — your data is safe. Try again, or email support@synnr.io.
+              We hit an error on our end — your data is safe. Try again, or email cadencain@synnr.io.
             </p>
             <button
               onClick={() => reset()}

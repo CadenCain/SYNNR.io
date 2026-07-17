@@ -6,7 +6,7 @@ import { saasAdmin } from "@/lib/saas/db";
  * the founder via Resend. Email is best-effort — the lead is always stored.
  * Same hardening as the readiness-audit funnel: field caps, anchored email.
  */
-const TO = "cadencain@darkstarops.com";
+const TO = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
 const FROM = "SYNNR <noreply@synnr.io>";
 const MAX_FIELD = 2_000;
 const EMAIL_RE = /^\S+@\S+\.\S+$/;

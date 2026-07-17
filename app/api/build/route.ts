@@ -6,7 +6,7 @@ import { saasAdmin } from "@/lib/saas/db";
  * both funnels share one table; emailed to the founder. Same hardening as the
  * partners funnel.
  */
-const TO = "cadencain@darkstarops.com";
+const TO = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
 const FROM = "SYNNR <noreply@synnr.io>";
 const MAX_FIELD = 2_000;
 const EMAIL_RE = /^\S+@\S+\.\S+$/;

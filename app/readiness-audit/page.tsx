@@ -21,7 +21,7 @@ export default function ReadinessAuditPage() {
             <p className="lede" style={{ marginInline: 0 }}>
               Send us one cert list or loadout sheet — a spreadsheet, a photo of the whiteboard, whatever you&apos;ve got.
               We&apos;ll map what&apos;s expired, expiring, and missing in your yard and send it back. Free, no card, no pitch.
-              Or just email <a href="mailto:cadencain@darkstarops.com">cadencain@darkstarops.com</a> with the list attached.
+              Or just email <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> with the list attached.
             </p>
           </div>
 

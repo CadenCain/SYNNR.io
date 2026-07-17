@@ -78,7 +78,7 @@ export default function TermsPage() {
       </p>
 
       <h2>9. Contact</h2>
-      <p>Questions about these terms: cadencain@darkstarops.com.</p>
+      <p>Questions about these terms: cadencain@synnr.io.</p>
     </LegalShell>
   );
 }
