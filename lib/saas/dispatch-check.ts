@@ -43,6 +43,55 @@ export interface DispatchComputation {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+/* ── Shared pure pieces ──────────────────────────────────────────────────
+ * The fleet-board tile (lib/saas/readiness.ts) and this check MUST agree —
+ * a green tile that fails the check seconds later reads as a broken product.
+ * Both surfaces call these; there is no second implementation to drift. */
+
+export interface LoadoutLine { label: string; required: boolean }
+export interface AssetLite { name: string; status: string }
+
+/** Fuzzy record-match of a template line against the unit's asset list.
+ *  Tiers: exact/substring first ("BOP #3" ↔ "BOP"), then distinctive-token
+ *  overlap — hands name gear "BOP stack — 15k dual ram" while templates say
+ *  "Pressure control package (BOP)", and that must still match. Generic
+ *  filler words don't count as a match on their own. */
+const GENERIC_TOKENS = new Set(["package", "kit", "set", "assembly", "unit", "equipment", "gear", "item", "spare", "misc", "the", "and", "for", "with"]);
+const tokens = (s: string) => norm(s).split(" ").filter((t) => t.length >= 3 && !GENERIC_TOKENS.has(t) && !/^\d+$/.test(t));
+export function matchAssetForLine<A extends AssetLite>(label: string, assets: A[]): A | null {
+  const n = norm(label);
+  const bySubstring = assets.find((a) => { const an = norm(a.name); return an === n || an.includes(n) || n.includes(an); });
+  if (bySubstring) return bySubstring;
+  const lineToks = new Set(tokens(label));
+  if (lineToks.size === 0) return null;
+  return assets.find((a) => tokens(a.name).some((t) => lineToks.has(t))) ?? null;
+}
+
+/** Required template lines this unit CANNOT satisfy from its asset list —
+ *  absent, or present but flagged missing / out of service. */
+export function requiredLoadoutGaps(loadout: LoadoutLine[], assets: AssetLite[]): { label: string; detail: string }[] {
+  const gaps: { label: string; detail: string }[] = [];
+  for (const li of loadout) {
+    if (!li.required) continue;
+    const match = matchAssetForLine(li.label, assets);
+    if (!match) gaps.push({ label: li.label, detail: "not on the asset list" });
+    else if (match.status !== "in_service") gaps.push({ label: li.label, detail: `${match.name} flagged ${match.status.replace(/_/g, " ")}` });
+  }
+  return gaps;
+}
+
+export interface TplLite { id: string; company_id: string | null; unit_id: string | null; unit_type: string | null }
+
+/** Template precedence: unit-specific → company type default → global seed. */
+export function resolveLoadoutTemplate<T extends TplLite>(tpls: T[], companyId: string, unitId: string, unitType: string): T | null {
+  return (
+    tpls.find((t) => t.unit_id === unitId) ??
+    tpls.find((t) => t.company_id === companyId && t.unit_type === unitType) ??
+    tpls.find((t) => t.company_id === null && t.unit_type === unitType) ??
+    null
+  );
+}
+
 export async function computeDispatchCheck(
   db: SupabaseClient,
   companyId: string,
@@ -66,13 +115,8 @@ export async function computeDispatchCheck(
     .from("saas_loadout_templates")
     .select("id, company_id, unit_id, unit_type")
     .or(`unit_id.eq.${unitId},unit_type.eq.${unit.type}`);
-  type Tpl = { id: string; company_id: string | null; unit_id: string | null; unit_type: string | null };
-  const tpls = (templates ?? []) as Tpl[];
-  const template =
-    tpls.find((t) => t.unit_id === unitId) ??
-    tpls.find((t) => t.company_id === companyId && t.unit_type === unit.type) ??
-    tpls.find((t) => t.company_id === null && t.unit_type === unit.type) ??
-    null;
+  const tpls = (templates ?? []) as TplLite[];
+  const template = resolveLoadoutTemplate(tpls, companyId, unitId, unit.type);
 
   const [{ data: tplItems }, { data: assetData }, { data: ucData }] = await Promise.all([
     template
@@ -111,10 +155,9 @@ export async function computeDispatchCheck(
   const warnings: string[] = [];
 
   // 1) Required loadout lines vs the asset list (record match, not possession)
-  const normAssets = assets.map((a) => ({ ...a, n: norm(a.name) }));
+  //    — the SAME matcher the fleet-board tile uses, so they can't disagree.
   for (const li of loadout) {
-    const n = norm(li.label);
-    const match = normAssets.find((a) => a.n === n || a.n.includes(n) || n.includes(a.n));
+    const match = matchAssetForLine(li.label, assets);
     if (!match) {
       const result = li.required ? "missing" : "ok";
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result, detail: li.required ? "not on the asset list" : "optional — not on the asset list" });
