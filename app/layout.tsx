@@ -22,7 +22,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://synnr.io"),
+  // www is the primary host in Vercel (apex 308s to it) — canonical URLs must
+  // point at the serving host so search engines get one consistent signal.
+  metadataBase: new URL("https://www.synnr.io"),
   title: {
     default: "RollReady by SYNNR — yard readiness for oilfield service shops",
     template: "%s",
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     title: "RollReady — catch the miss before the truck leaves the yard",
     description:
       "Yard readiness for oilfield service shops. Pre-dispatch checks, cert/DOT/crew-card tracking with alerts, and shareable readiness-proof links. $500 per yard. By SYNNR.",
-    url: "https://synnr.io",
+    url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
@@ -70,14 +72,14 @@ export default function RootLayout({
               name: "RollReady",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
-              url: "https://synnr.io",
+              url: "https://www.synnr.io",
               description:
                 "Yard readiness for oilfield service shops. Tracks every cert, DOT item, and crew card and runs a pre-dispatch check that catches the miss before the truck leaves the yard.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",
                 name: "SYNNR",
-                url: "https://synnr.io",
+                url: "https://www.synnr.io",
                 areaServed: "Permian Basin, West Texas",
               },
             }),

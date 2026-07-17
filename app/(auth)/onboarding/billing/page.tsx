@@ -17,21 +17,32 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
   if (sp.session_id) {
     const stripe = getStripe();
     const admin = saasAdmin();
+    // NOTE: redirect() throws NEXT_REDIRECT, so it must live OUTSIDE the try —
+    // a bare catch would swallow it and re-render the subscribe card to a
+    // customer who just paid.
+    let confirmed = false;
     if (stripe && admin) {
       try {
-        const session = await stripe.checkout.sessions.retrieve(sp.session_id);
-        if (session.payment_status === "paid" || session.status === "complete") {
+        const session = await stripe.checkout.sessions.retrieve(sp.session_id, { expand: ["subscription"] });
+        // Ownership check: only a session created FOR this company may activate
+        // it — otherwise any authenticated user replaying someone else's paid
+        // session id could flip their own company active (and cross-wire the
+        // two companies' Stripe customer ids).
+        const sub = session.subscription && typeof session.subscription !== "string" ? session.subscription : null;
+        const owned = session.client_reference_id === company.id || sub?.metadata?.company_id === company.id;
+        if (owned && (session.payment_status === "paid" || session.status === "complete")) {
           await admin.from("saas_companies").update({
             subscription_status: "active",
-            stripe_subscription_id: session.subscription ? String(session.subscription) : null,
+            stripe_subscription_id: session.subscription ? (sub ? sub.id : String(session.subscription)) : null,
             stripe_customer_id: session.customer ? String(session.customer) : null,
           }).eq("id", company.id);
-          redirect("/app");
+          confirmed = true;
         }
       } catch {
-        // fall through to the subscribe card
+        // fall through to the subscribe card (webhook remains source of truth)
       }
     }
+    if (confirmed) redirect("/app");
   }
 
   const db = await saasDb();

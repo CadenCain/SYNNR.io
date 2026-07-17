@@ -10,7 +10,15 @@ import { saasAdmin } from "@/lib/saas/db";
  *  yards already in SYNNR). Adjustable again on the Stripe page itself, and
  *  it follows active yards after that. */
 export async function POST(req: Request) {
-  const { company } = await requireCompany();
+  const { user, company } = await requireCompany();
+  // Already paying? Don't open a second Checkout — that creates a DUPLICATE
+  // subscription (double billing). Manage yard count from Settings instead.
+  if (company.subscription_status === "active" || company.subscription_status === "past_due") {
+    return NextResponse.json(
+      { ok: false, error: "You're already subscribed. Manage yards and billing from Settings." },
+      { status: 409 },
+    );
+  }
   const stripe = getStripe();
   const price = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
@@ -36,7 +44,13 @@ export async function POST(req: Request) {
     .from("saas_companies").select("stripe_customer_id").eq("id", company.id).maybeSingle();
   let customerId = (companyRow as { stripe_customer_id: string | null } | null)?.stripe_customer_id ?? null;
   if (!customerId) {
-    const customer = await stripe.customers.create({ name: company.name, metadata: { company_id: company.id } });
+    const customer = await stripe.customers.create({
+      name: company.name,
+      // Email on the customer means Stripe receipts + dunning emails work even
+      // if Checkout doesn't back-fill it.
+      ...(user.email ? { email: user.email } : {}),
+      metadata: { company_id: company.id },
+    });
     customerId = customer.id;
     if (admin) await admin.from("saas_companies").update({ stripe_customer_id: customerId }).eq("id", company.id);
   }
@@ -44,6 +58,9 @@ export async function POST(req: Request) {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
+    // Lets the success page verify the session was created FOR this company
+    // before activating it.
+    client_reference_id: company.id,
     line_items: [{ price, quantity, adjustable_quantity: { enabled: true, minimum: 1, maximum: 50 } }],
     // No trial — card charged immediately, billed monthly.
     subscription_data: { metadata: { company_id: company.id } },

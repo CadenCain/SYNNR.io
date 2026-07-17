@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { GLOSSARY } from "@/lib/content/glossary";
 
-const BASE = "https://synnr.io";
+// www is the primary host in Vercel (apex 308s to it) — sitemap must list the
+// canonical serving host, not a redirect.
+const BASE = "https://www.synnr.io";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const pages = ["/", "/partners", "/build", "/readiness-audit", "/legal/terms", "/legal/privacy", "/glossary"];

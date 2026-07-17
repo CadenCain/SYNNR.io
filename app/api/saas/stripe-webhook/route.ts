@@ -34,8 +34,14 @@ export async function POST(req: Request) {
   // without an idempotency table. (Add one before wiring any NON-idempotent
   // side effect here — welcome emails, dunning, provisioning.)
   async function syncByCustomer(customerId: string, fields: Record<string, unknown>) {
-    const { error } = await admin!.from("saas_companies").update(fields).eq("stripe_customer_id", customerId);
+    const { data, error } = await admin!
+      .from("saas_companies").update(fields).eq("stripe_customer_id", customerId).select("id");
     if (error) throw new Error(`db sync failed for ${customerId}: ${error.message}`);
+    // Zero rows matched = a paying customer we can't find. Returning 200 here
+    // would tell Stripe "handled" and the customer stays unpaid FOREVER with no
+    // trace. Throw → 500 → Stripe retries and (after ~3 days of failures)
+    // emails the account owner, so it can't rot silently.
+    if (!data || data.length === 0) throw new Error(`no company matched stripe customer ${customerId}`);
   }
 
   try {
