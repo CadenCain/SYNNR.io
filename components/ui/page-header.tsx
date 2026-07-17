@@ -24,7 +24,7 @@ export function PageHeader({
         <h1 className="truncate text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
         {description ? <p className="mt-1 text-sm text-ink-dim">{description}</p> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }

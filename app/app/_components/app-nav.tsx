@@ -128,10 +128,12 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
 
         {userName ? (
           <div className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
-              {userName.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-sm text-ink" title={userName}>{userName}</span>
+            <Link href="/app/settings" title="Settings" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-0.5 hover:bg-white/[0.03]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
+                {userName.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink">{userName}</span>
+            </Link>
             <button onClick={signOut} title="Sign out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-white/[0.03] hover:text-ink">
               <LogOut className="h-4 w-4" />
             </button>
@@ -149,9 +151,12 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
           <Search className="h-[18px] w-[18px]" />
         </Link>
         {userName ? (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal" title={userName}>
-            {userName.slice(0, 1).toUpperCase()}
-          </span>
+          <Link href="/app/settings" aria-label="Settings" title={userName}
+            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/[0.04]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+          </Link>
         ) : null}
       </header>
 

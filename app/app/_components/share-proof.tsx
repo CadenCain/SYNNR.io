@@ -38,8 +38,8 @@ export default function ShareProof({
           className="h-9 w-56 rounded-lg border border-line-2 bg-coal px-2 text-xs text-ink-dim outline-none" />
       ) : null}
       <button onClick={go} disabled={state === "busy"}
-        className="flex h-9 items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink disabled:opacity-50">
-        {state === "copied" ? <><Check className="h-4 w-4 text-emerald-400" /> Link copied</> : <><Share2 className="h-4 w-4" /> {state === "busy" ? "Creating…" : "Share readiness proof"}</>}
+        className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink disabled:opacity-50">
+        {state === "copied" ? <><Check className="h-4 w-4 text-emerald-400" /> Link copied</> : <><Share2 className="h-4 w-4" /> {state === "busy" ? "Creating…" : "Share proof"}</>}
       </button>
     </div>
   );

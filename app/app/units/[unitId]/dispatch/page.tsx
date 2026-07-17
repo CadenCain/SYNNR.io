@@ -55,8 +55,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
-        title={`Pre-dispatch check — ${comp.unitName}`}
-        description="Computed live from the records: required gear on the asset list, paper current, crew cards current for the job. Nothing to tap, nothing to override."
+        title={`Readiness check — ${comp.unitName}`}
+        description="Where this truck's records stand right now: paper current, crew cards current for the job, gear accounted for. Nothing to tap, nothing to override."
       />
 
       <Card className="p-4">
@@ -69,11 +69,11 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <TriangleAlert className="h-7 w-7 text-ink-faint" />
           <p className="font-semibold">Nothing set up to check.</p>
           <p className="mx-auto max-w-md text-sm text-ink-dim">
-            This unit has no loadout template, no assets, no certs, and no assigned crew — a check with nothing
+            This unit has no gear list, no assets, no certs, and no assigned crew — a check with nothing
             to verify can&apos;t pass. Set it up first.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Link href={`/app/units/${unitId}/loadout`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-coal"><PencilRuler className="h-4 w-4" /> Edit loadout</Link>
+            <Link href={`/app/units/${unitId}/loadout`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-coal"><PencilRuler className="h-4 w-4" /> Edit gear list</Link>
             <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm text-ink">Add certs &amp; assets</Link>
           </div>
         </Card>
@@ -120,7 +120,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       )}
 
       {/* Lines */}
-      {[{ title: "Loadout & gear — on the asset list?", rows: gear },
+      {[{ title: "Gear — in the asset book?", rows: gear },
         { title: "Paper — certs, inspections & DOT", rows: paper },
         { title: "Assigned crew cards", rows: crew }].map(({ title, rows }) =>
         rows.length === 0 ? null : (

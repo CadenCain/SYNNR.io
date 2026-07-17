@@ -1,21 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
 import { computeReadiness, worstStatus, localToday, type UnitState } from "./status";
-import { requiredLoadoutGaps, resolveLoadoutTemplate, type TplLite } from "./dispatch-check";
 
 /**
  * One readiness engine for the whole app ("one source of truth"): the
  * dashboard KPIs, the fleet board tiles, and the sidebar pill all read this.
  * Unit state vocabulary: Ready / Due soon / Not ready / Not set up.
  *
- * RollReady tracks RECORD CURRENCY, not physical possession — check-in/check-
- * out was deliberately cut from scope. A unit is:
+ * RollReady KEEPS UP WITH EVERYBODY'S RECORDS — certs, cards, gear status —
+ * it is not a dispatch checklist. The gear list is reference only (it warns,
+ * it never gates), so the tile and the readiness check agree by design:
+ * both fail a unit only on real record problems. A unit is:
  *   not_ready — an expired OR no-date ("Missing") cert on the unit, its
- *               assets, or assigned crew — an asset flagged missing — OR a
- *               required loadout line the asset list can't satisfy. The tile
- *               uses the SAME loadout matcher as the pre-dispatch check
- *               (lib/saas/dispatch-check.ts), so a green tile can never fail
- *               the check seconds later.
+ *               assets, or assigned crew — or an asset flagged missing.
+ *               An item we can't prove is an item that fails.
  *   due_soon  — anything expiring inside its reminder window
  *   ready     — everything current
  *   not_setup — nothing of the shop's tracked at all; never reads green
@@ -54,22 +52,6 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
       .eq("type", "checkout").order("started_at", { ascending: false }).limit(300),
   ]);
 
-  // Loadout templates (company's + global seeds) so the tile can flag a
-  // required line the asset list can't satisfy — same rule as the check.
-  const { data: tplData } = await db
-    .from("saas_loadout_templates").select("id, company_id, unit_id, unit_type")
-    .or(`company_id.eq.${companyId},company_id.is.null`);
-  const tpls = (tplData ?? []) as TplLite[];
-  const tplIds = tpls.map((t) => t.id);
-  const { data: tplItemData } = tplIds.length
-    ? await db.from("saas_loadout_items").select("template_id, label, required").in("template_id", tplIds)
-    : { data: [] };
-  const linesByTpl = new Map<string, { label: string; required: boolean }[]>();
-  for (const li of (tplItemData ?? []) as { template_id: string; label: string; required: boolean }[]) {
-    const arr = linesByTpl.get(li.template_id) ?? [];
-    arr.push({ label: li.label, required: li.required });
-    linesByTpl.set(li.template_id, arr);
-  }
 
   type Item = { id: string; title: string; status: ComplianceStatus; expiration_date: string | null; parent_type: string; parent_id: string };
   const items = (itemData ?? []) as Item[];
@@ -118,18 +100,9 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
     const noDate = scope.find((i) => i.status === "none");
     const expiring = scope.filter((i) => i.status === "expiring").sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))[0];
 
-    // Required-loadout gap, ONLY for configured units (a bare unit + a global
-    // seed template must stay "not_setup" — the hu-179 rule; never punish a
-    // unit the shop hasn't touched).
-    const configured = unitAssets.length > 0 || (crewByUnit.get(u.id) ?? []).length > 0 || scope.length > 0;
-    const tpl = resolveLoadoutTemplate(tpls, companyId, u.id, u.type);
-    const gap = configured && tpl ? requiredLoadoutGaps(linesByTpl.get(tpl.id) ?? [], unitAssets)[0] : undefined;
-
     let state: UnitState; let why: string;
     if (missingAsset) {
       state = "not_ready"; why = `${missingAsset.name} — missing`;
-    } else if (gap) {
-      state = "not_ready"; why = `${gap.label} — ${gap.detail}`;
     } else if (expired) {
       const d = expired.expiration_date ? Math.abs(daysUntil(expired.expiration_date)) : 0;
       state = "not_ready"; why = `${expired.title} — expired${d ? ` ${d}d ago` : ""}`;

@@ -47,7 +47,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: unit.name }}
-        title={`Loadout — ${unit.name}`}
+        title={`Gear list — ${unit.name}`}
         description={`What this ${unitTypeLabel(unit.type).toLowerCase()} is supposed to leave the yard with. Required items block the green light on the pre-dispatch check.`}
       />
 

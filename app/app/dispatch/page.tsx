@@ -24,7 +24,7 @@ export default async function DispatchPicker() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Run a check" description="Pick the unit — you'll get its computed pre-dispatch check." />
+      <PageHeader title="Check readiness" description="Pick the unit — you&apos;ll get its live readiness: paper, cards, and gear records." />
       {units.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
           No units yet. <Link href="/app/yards" className="text-bone hover:underline">Add a truck or rig</Link> first.

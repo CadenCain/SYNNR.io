@@ -151,7 +151,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="flex flex-wrap items-center gap-2">
           <ShareProof scope="company" />
           <Link href="/app/dispatch" className={buttonClass("default")}>
-            <Truck className="h-[18px] w-[18px]" /> Run a check
+            <Truck className="h-[18px] w-[18px]" /> Check readiness
           </Link>
         </div>
       </div>
@@ -209,7 +209,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </p>
               {rd.readiness !== null && <p className="mt-1 text-sm text-ink-dim">Readiness {rd.readiness}%</p>}
               <Link href="/app/dispatch" className="mt-4 flex min-h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-sm font-medium text-ink">
-                <Truck className="mr-2 h-4 w-4" /> Run a pre-dispatch check
+                <Truck className="mr-2 h-4 w-4" /> Check readiness
               </Link>
             </Card>
           </section>
@@ -267,7 +267,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <Warehouse className="h-8 w-8 text-ink-faint" />
           <div>
             <p className="font-medium">Your yard isn&apos;t set up yet.</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add a yard and a truck, or load a sample yard to see the whole system working — trucks, certs, crew, and the pre-dispatch check.</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add a yard and a truck, or load a sample yard to see the whole system working — trucks, certs, crew, and the readiness check.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/app/yards" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add your yard</Link>
@@ -338,7 +338,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Activity</h2>
               {events.length === 0 ? (
                 <Card className="px-6 py-10 text-center text-sm text-ink-dim">
-                  Nothing yet — run your first pre-dispatch check and the feed starts here.
+                  Nothing yet — run your first readiness check and the feed starts here.
                 </Card>
               ) : (
                 <Card className="flex max-h-[420px] flex-col gap-0 overflow-y-auto p-2">
@@ -369,11 +369,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">What RollReady caught — this month</h2>
                 <Card className="p-5">
                   {missesCaught === 0 && warningsMonth === 0 ? (
-                    <p className="text-sm text-ink-dim">Run your first pre-dispatch check to see your saves. Every miss caught before it hits a location shows up here.</p>
+                    <p className="text-sm text-ink-dim">Run your first readiness check to see your saves. Every miss caught before it hits a location shows up here.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
                       <p className="text-lg font-semibold">
-                        RollReady caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.
+                        {missesCaught === 0
+                          ? "Nothing's slipped through this month."
+                          : <>RollReady caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.</>}
                       </p>
                       {missesCaught > 0 ? (
                         <p className="text-sm text-ink-dim">

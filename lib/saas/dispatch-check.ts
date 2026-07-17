@@ -154,14 +154,16 @@ export async function computeDispatchCheck(
   const failures: string[] = [];
   const warnings: string[] = [];
 
-  // 1) Required loadout lines vs the asset list (record match, not possession)
-  //    — the SAME matcher the fleet-board tile uses, so they can't disagree.
+  // 1) Gear list vs the asset book. The gear list is a REFERENCE, not a gate:
+  //    a line that simply isn't in the book yet is a heads-up (warning), never
+  //    a failure — RollReady keeps up with everybody's records; it doesn't run
+  //    a checklist. A matched asset FLAGGED missing/out-of-service is a real
+  //    problem and still fails.
   for (const li of loadout) {
     const match = matchAssetForLine(li.label, assets);
     if (!match) {
-      const result = li.required ? "missing" : "ok";
-      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result, detail: li.required ? "not on the asset list" : "optional — not on the asset list" });
-      if (li.required) failures.push(`${li.label} — not on the asset list`);
+      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "ok", detail: li.required ? "not in the asset book yet — heads-up" : "optional — not in the asset book" });
+      if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet — add it so it's tracked.`);
     } else if (match.status !== "in_service") {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "missing" : "ok", detail: `${match.name} is flagged ${match.status.replace(/_/g, " ")}` });
       if (li.required) failures.push(`${li.label} — ${match.name} flagged ${match.status.replace(/_/g, " ")}`);
@@ -220,12 +222,6 @@ export async function computeDispatchCheck(
   // Anything this check skipped gets said out loud — on the app page AND on
   // the public proof link (both render these warnings).
   const notChecked: string[] = [];
-  if (configured && loadout.length > 0 && loadout.every((li) => !li.required)) {
-    notChecked.push("Loadout template has no required lines — gear can't fail this check. Mark lines required in the template editor if they should.");
-  }
-  if (configured && loadout.length === 0) {
-    notChecked.push("No loadout template — gear wasn't checked against a required list.");
-  }
   if (configured && crewIds.length === 0) {
     notChecked.push("No crew assigned to this unit — crew cards weren't part of this check. Assign crew so their cards get checked.");
   }

@@ -82,8 +82,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <>
           <ShareProof scope="unit" unitId={u.id} />
           <Link href={`/app/units/${unitId}/dispatch`}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">
-            <Truck className="h-4 w-4" /> Pre-dispatch check
+            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">
+            <Truck className="h-4 w-4" /> Check readiness
           </Link>
           <details className="group relative">
             <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
@@ -142,13 +142,13 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         </Card>
       </section>
 
-      {/* Loadout checklist — the template behind the pre-dispatch check */}
+      {/* Gear list — the standing reference of what rides on this unit */}
       <Link href={`/app/units/${unitId}/loadout`}>
         <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Loadout checklist</div>
-            <div className="truncate text-sm text-ink-dim">What this truck leaves the yard with — edit items, required vs optional</div>
+            <div className="font-medium">Gear list</div>
+            <div className="truncate text-sm text-ink-dim">What rides on this truck — edit items, required vs optional</div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
@@ -165,7 +165,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">
-                      {h.type === "checkin" ? "Checked in" : "Pre-dispatch check"} · {new Date(h.started_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      {h.type === "checkin" ? "Checked in" : "Readiness check"} · {new Date(h.started_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                     </div>
                     <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
                   </div>
