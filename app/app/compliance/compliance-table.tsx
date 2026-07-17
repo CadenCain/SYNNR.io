@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
+import { fmtDate } from "@/lib/saas/format";
 
 /** Sortable, filterable compliance table (walkthrough M3). */
 export interface CompItem {
@@ -60,7 +61,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
   }, [items, status, kind, customer, sort]);
 
   const chip = (active: boolean) =>
-    cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+    cn("rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors",
       active ? "border-bone/60 bg-bone/10 text-bone" : "border-line-2 text-ink-dim hover:text-ink");
 
   return (
@@ -111,7 +112,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
                   {i.parentLabel}
                   {i.customers.length > 0 ? <span className="ml-2 text-[11px] text-ink-faint">({i.customers.join(", ")})</span> : null}
                 </Td>
-                <Td className="whitespace-nowrap tabular-nums text-ink-dim">{i.expiration_date ?? "—"}</Td>
+                <Td className="whitespace-nowrap tabular-nums text-ink-dim">{fmtDate(i.expiration_date)}</Td>
                 <Td className="text-right"><StatusBadge status={i.status} /></Td>
               </Tr>
             ))}

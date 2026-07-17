@@ -73,10 +73,10 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
         <div className="flex items-center gap-2.5 px-2 pb-4">
           {MARK}
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="font-semibold tracking-tight">SYNNR</div>
+            <div className="font-semibold tracking-tight">RollReady</div>
             {companyName ? <div className="truncate text-xs text-ink-faint" title={companyName}>{companyName}</div> : null}
           </div>
-          {pill ? <span title="Overall readiness" className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
+          {pill ? <span title="Overall readiness" className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         </div>
 
         {/* Search (jump to compliance list) */}
@@ -96,7 +96,7 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
           {GROUPS.map((g) => (
             <div key={g.label} className="flex flex-col gap-1">
-              <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-ink-faint">{g.label}</div>
+              <div className="px-3 pb-1 font-mono text-[11px] font-medium uppercase tracking-wider text-ink-faint">{g.label}</div>
               {g.items.map((item) => {
                 const active = isActive(path, item.href, item.exact);
                 const Icon = item.icon;
@@ -143,10 +143,13 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
           wordmark doesn't jam the top edge on a real phone. */}
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
-        <span className="font-semibold tracking-tight">SYNNR</span>
-        {pill ? <span className={`ml-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
+        <span className="font-semibold tracking-tight">RollReady</span>
+        {pill ? <span className={`ml-1 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
+        <Link href="/app/search" aria-label="Search" className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
+          <Search className="h-[18px] w-[18px]" />
+        </Link>
         {userName ? (
-          <span className="ml-auto flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal" title={userName}>
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal" title={userName}>
             {userName.slice(0, 1).toUpperCase()}
           </span>
         ) : null}

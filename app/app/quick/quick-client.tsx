@@ -8,6 +8,7 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import { extractExpirationDate } from "@/lib/ocr-date";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { fmtDate } from "@/lib/saas/format";
 import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { quickAddCert } from "./actions";
 
@@ -161,14 +162,19 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
         <div className="flex flex-col gap-3">
           <BackBar onBack={() => reset()} label="What are you renewing?" />
           {items.length === 0 ? (
-            <p className="rounded-xl border border-line bg-surface p-6 text-center text-ink-dim">Nothing tracked yet — add a cert first.</p>
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
+              <p className="text-ink-dim">Nothing tracked yet — add your first cert and it&apos;ll show up here to renew.</p>
+              <button onClick={() => setMode("add")} className="flex min-h-12 items-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal">
+                <Plus className="h-5 w-5" /> Add a cert
+              </button>
+            </div>
           ) : (
             items.map((it) => (
               <button key={it.id} onClick={() => setPicked(it)}
                 className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left active:bg-elevated">
                 <span className="min-w-0">
                   <span className="block truncate text-base font-medium">{it.title}</span>
-                  <span className="block truncate text-sm text-ink-dim">{it.parentLabel}{it.expiration_date ? ` · ${it.expiration_date}` : ""}</span>
+                  <span className="block truncate text-sm text-ink-dim">{it.parentLabel}{it.expiration_date ? ` · ${fmtDate(it.expiration_date)}` : ""}</span>
                 </span>
                 <StatusBadge status={it.status} />
               </button>

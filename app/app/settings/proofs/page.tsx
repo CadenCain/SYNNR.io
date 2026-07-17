@@ -60,7 +60,7 @@ export default async function ProofsSettings() {
                 </Td>
                 <Td className="text-right">
                   {p.revoked_at ? (
-                    <span className="rounded-full border border-line-2 bg-elevated px-2.5 py-0.5 text-xs text-ink-faint">Revoked</span>
+                    <span className="rounded-sm border border-line-2 bg-elevated px-2.5 py-0.5 text-xs text-ink-faint">Revoked</span>
                   ) : (
                     <form action={revokeReadinessProof} className="inline">
                       <input type="hidden" name="id" value={p.id} />

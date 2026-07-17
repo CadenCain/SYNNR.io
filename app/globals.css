@@ -11,20 +11,43 @@
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  /* SYNNR app palette — crisp neutral near-black (Kravio-style) with a warm
-     bone brand accent. Used by the /app + auth surface. Generates utilities:
+  /* RollReady app palette — the SAME warm ink + bone system as the marketing
+     site, so site → app feels like one company. Generates utilities:
      bg-coal, bg-surface, bg-elevated, text-ink/-dim/-faint, border-line/-2,
-     bg-bone, etc. (Marketing keeps its own warm palette.) */
-  --color-coal:      #0a0a0b;
-  --color-surface:   #141416;
-  --color-elevated:  #1c1c20;
-  --color-ink:       #ededee;
-  --color-ink-dim:   #9a9aa2;
-  --color-ink-faint: #6a6a72;
-  --color-line:      #232327;
-  --color-line-2:    #2f2f36;
+     bg-bone, etc. */
+  --color-coal:      #121110;
+  --color-surface:   #1a1714;
+  --color-elevated:  #211d19;
+  --color-ink:       #ece5d7;
+  --color-ink-dim:   #a59d8c;
+  --color-ink-faint: #756c5b;
+  --color-line:      #2a2521;
+  --color-line-2:    #37312a;
   --color-bone:      #e7ddc7;
   --color-bone-soft: #f3ecdb;
+
+  /* Status colors, warmed to match the marketing demo exactly: sage / amber /
+     terracotta instead of Tailwind's cool defaults. Same utilities everywhere
+     (text-emerald-400, bg-red-500/10, ...) — only the values change. */
+  --color-emerald-300: #b6cfa9;
+  --color-emerald-400: #9dbb8e;
+  --color-emerald-500: #86a877;
+  --color-amber-300:   #eed29a;
+  --color-amber-400:   #e6c46a;
+  --color-amber-500:   #d9b34f;
+  --color-red-300:     #eda49b;
+  --color-red-400:     #e0756a;
+  --color-red-500:     #d55f53;
+
+  /* Square the world: editorial hairline language matching the site.
+     rounded-full is untouched (dots, avatars). */
+  --radius-xs:  2px;
+  --radius-sm:  2px;
+  --radius-md:  3px;
+  --radius-lg:  4px;
+  --radius-xl:  5px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
 }
 
 *,

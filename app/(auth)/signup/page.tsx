@@ -4,7 +4,7 @@ import { getSaasUser } from "@/lib/saas/auth";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Get started · SYNNR" };
+export const metadata = { title: "Get started · RollReady" };
 
 export default async function SignupPage() {
   if (await getSaasUser()) redirect("/app");

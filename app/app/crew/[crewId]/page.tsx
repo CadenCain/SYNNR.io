@@ -73,7 +73,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
       />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Crew book — cards &amp; certs</h2>
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew book — cards &amp; certs</h2>
         {certs.length > 0 && (
           <div className="flex flex-col gap-2">
             {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} />)}

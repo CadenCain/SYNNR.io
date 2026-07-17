@@ -57,7 +57,7 @@ export default async function TeamSettings() {
         {members.map((m) => (
           <Card key={m.user_id} className="flex items-center justify-between gap-3 p-4">
             <span className="truncate">{emails.get(m.user_id) ?? m.user_id}{m.user_id === user.id ? " (you)" : ""}</span>
-            <span className="rounded-full border border-line px-2.5 py-0.5 text-xs capitalize text-ink-dim">{m.role}</span>
+            <span className="rounded-sm border border-line px-2.5 py-0.5 text-xs capitalize text-ink-dim">{m.role}</span>
           </Card>
         ))}
       </section>

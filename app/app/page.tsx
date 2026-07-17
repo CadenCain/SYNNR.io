@@ -14,6 +14,7 @@ import { Table, Th, Td, Tr } from "@/components/ui/table";
 import ShareProof from "./_components/share-proof";
 import { loadSampleYard, clearSampleYard } from "./_actions";
 import { Sparkline } from "@/components/ui/sparkline";
+import { fmtDate } from "@/lib/saas/format";
 
 export const dynamic = "force-dynamic";
 
@@ -131,13 +132,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // The actionable number leads: which trucks are down RIGHT NOW. The blended
   // readiness % is context, not the headline — a foreman acts on counts.
   const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
-    { icon: Truck, label: activeYard ? `Not ready — ${activeYard.name}` : "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "/app/dispatch", sub: notReadyUnits > 0 ? "units failing right now — fix these first" : "every unit current" },
+    { icon: Truck, label: activeYard ? `Not ready — ${activeYard.name}` : "Not ready", value: notReadyUnits, accent: notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "#fleet", sub: notReadyUnits > 0 ? "units failing right now — fix these first" : "every unit current" },
     rd.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${rd.readiness}%`, accent: rd.readiness >= 90 ? "text-emerald-400" : rd.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: rd.readiness, href: "/app/compliance", spark: spark.readiness, sparkColor: "#e7ddc7" },
     { icon: Flame, label: "Misses caught", value: missesCaught, accent: missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: missesCaught > 0 ? `before rollout · ${delta(missThisWk, missLastWk)}` : "before rollout, this month", spark: spark.misses, sparkColor: "#34d399" },
     { icon: Clock, label: "Expiring in 30d", value: rd.counts.expiring, accent: "text-amber-400", href: "/app/alerts" },
-    { icon: AlertTriangle, label: "NOT-ready checks", value: notReadyMonth, accent: notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
+    { icon: AlertTriangle, label: "Failed checks", value: notReadyMonth, accent: notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
   ];
 
   return (
@@ -204,9 +205,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <>
           {/* Fleet Readiness Board */}
           {rd.units.length > 0 && (
-            <section className="flex flex-col gap-3">
+            <section id="fleet" className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Fleet readiness board{activeYard ? ` — ${activeYard.name}` : ""}</h2>
+                <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Fleet readiness board{activeYard ? ` — ${activeYard.name}` : ""}</h2>
                 {hasSample && (
                   <form action={clearSampleYard}>
                     <button type="submit" className="flex items-center gap-1.5 text-xs text-ink-faint hover:text-red-400">
@@ -218,12 +219,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               {yardCount > 1 && (
                 <div className="flex flex-wrap gap-1.5">
                   <Link href="/app"
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${!activeYard ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                    className={`rounded-sm border px-3 py-1 text-xs font-medium ${!activeYard ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
                     All yards
                   </Link>
                   {yards.map((y) => (
                     <Link key={y.id} href={`/app?yard=${y.id}`}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${activeYard?.id === y.id ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                      className={`rounded-sm border px-3 py-1 text-xs font-medium ${activeYard?.id === y.id ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
                       {y.name}
                     </Link>
                   ))}
@@ -238,7 +239,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                           <div className="truncate font-medium">{u.name}</div>
                           <div className="truncate text-xs text-ink-faint">{u.yardName}</div>
                         </div>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${STATE_UI[u.state].chip}`}>{STATE_UI[u.state].label}</span>
+                        <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${STATE_UI[u.state].chip}`}>{STATE_UI[u.state].label}</span>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className={`truncate text-sm ${u.state === "not_ready" ? "text-red-300" : "text-ink-dim"}`}>{u.why}</span>
@@ -258,7 +259,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="grid grid-cols-1 gap-7 xl:grid-cols-2">
             {/* Activity feed */}
             <section id="activity" className="flex flex-col gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Activity</h2>
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Activity</h2>
               {events.length === 0 ? (
                 <Card className="px-6 py-10 text-center text-sm text-ink-dim">
                   Nothing yet — run your first pre-dispatch check and the feed starts here.
@@ -289,19 +290,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             {/* Proof panel + needs attention */}
             <div className="flex flex-col gap-7">
               <section className="flex flex-col gap-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">What SYNNR caught — this month</h2>
+                <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">What RollReady caught — this month</h2>
                 <Card className="p-5">
                   {missesCaught === 0 && warningsMonth === 0 ? (
                     <p className="text-sm text-ink-dim">Run your first pre-dispatch check to see your saves. Every miss caught before it hits a location shows up here.</p>
                   ) : (
                     <div className="flex flex-col gap-2">
                       <p className="text-lg font-semibold">
-                        SYNNR caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.
+                        RollReady caught <span className="text-emerald-400">{missesCaught}</span> miss{missesCaught === 1 ? "" : "es"} before {missesCaught === 1 ? "it" : "they"} hit a location.
                       </p>
                       {missesCaught > 0 ? (
                         <p className="text-sm text-ink-dim">
                           At an estimated <span className="text-ink">${nptDay.toLocaleString()}</span>/day of NPT per miss, that&apos;s roughly{" "}
-                          <span className="font-medium text-emerald-400">${(missesCaught * nptDay).toLocaleString()}</span> in avoided downtime this month — against a $500 subscription.
+                          <span className="font-medium text-emerald-400">${(missesCaught * nptDay).toLocaleString()}</span> in avoided downtime this month — against a $500-a-yard subscription.
                           <span className="mt-0.5 block text-xs text-ink-faint">Estimate, not a measured figure. <Link href="/app/settings/billing" className="underline hover:text-ink">Set your own NPT day-rate.</Link></span>
                         </p>
                       ) : null}
@@ -315,7 +316,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
               <section className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Needs attention</h2>
+                  <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Needs attention</h2>
                   <Link href="/app/compliance" className="text-sm text-ink-dim hover:text-ink">View all →</Link>
                 </div>
                 {actionList.length === 0 ? (
@@ -333,7 +334,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                             <Link href={hrefFor(i)} className="font-medium hover:underline">{i.title}</Link>
                             <span className="ml-2 text-xs text-ink-faint">{kindLabel(i.kind)}{i.parent_type === "crew" ? " · crew" : ""}</span>
                           </Td>
-                          <Td className="tabular-nums text-ink-dim">{i.expiration_date ?? "—"}</Td>
+                          <Td className="tabular-nums text-ink-dim">{fmtDate(i.expiration_date)}</Td>
                           <Td className="text-right"><StatusBadge status={i.status} /></Td>
                         </Tr>
                       ))}

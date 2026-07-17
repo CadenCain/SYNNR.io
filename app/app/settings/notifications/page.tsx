@@ -111,12 +111,12 @@ export default async function NotificationsSettings() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {r.channels.includes("email") && <span className="flex items-center gap-1 rounded-full border border-line-2 px-2 py-0.5 text-xs text-ink-dim"><Mail className="h-3 w-3" /> email</span>}
-                  {r.channels.includes("sms") && <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"><MessageSquareText className="h-3 w-3" /> text</span>}
+                  {r.channels.includes("email") && <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-dim"><Mail className="h-3 w-3" /> email</span>}
+                  {r.channels.includes("sms") && <span className="flex items-center gap-1 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"><MessageSquareText className="h-3 w-3" /> text</span>}
                 </div>
                 <form action={removeRecipient}>
                   <input type="hidden" name="id" value={r.id} />
-                  <button type="submit" title="Remove" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
+                  <button type="submit" title="Remove" className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </form>

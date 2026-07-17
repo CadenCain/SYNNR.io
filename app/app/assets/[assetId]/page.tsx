@@ -86,7 +86,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
 
       <Card className="flex flex-col gap-3 p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Photo</h2>
+          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Photo</h2>
           <PhotoUpload assetId={a.id} companyId={company.id} hasPhoto={!!photoUrl} />
         </div>
         {photoUrl ? (
@@ -100,7 +100,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
       </Card>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Certs, tests &amp; inspections</h2>
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Certs, tests &amp; inspections</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} />)}

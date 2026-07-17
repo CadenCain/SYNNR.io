@@ -26,7 +26,7 @@ const RESULT_UI: Record<string, string> = {
   expired: "border-red-500/40 bg-red-500/10 text-red-400",
 };
 const RESULT_LABEL: Record<string, string> = { ok: "OK", missing: "Missing", expired: "Expired" };
-const SECTION = "text-xs font-semibold uppercase tracking-wider text-ink-faint";
+const SECTION = "text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint";
 
 export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
   const { company } = await requireCompany();
@@ -89,7 +89,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
             <div className="mt-3 flex flex-col gap-3">
               {failureGroups.map((g) => (
                 <div key={g.label}>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-red-400/80">
+                  <div className="text-xs font-mono font-semibold uppercase tracking-wider text-red-400/80">
                     {g.label} · {g.rows.length}
                   </div>
                   <ul className="mt-1 flex flex-col gap-1 text-sm text-red-300">
@@ -99,6 +99,16 @@ export default async function DispatchPage({ params, searchParams }: { params: P
                   </ul>
                 </div>
               ))}
+              {/* The verdict names the failures — these take you straight to
+                  where each kind gets fixed, instead of leaving you to hunt. */}
+              <div className="flex flex-wrap gap-2 border-t border-red-500/20 pt-3">
+                {failureGroups.some((g) => g.label !== "Crew") && (
+                  <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-sm bg-bone px-4 text-sm font-semibold text-coal">Fix gear &amp; renew paper</Link>
+                )}
+                {failureGroups.some((g) => g.label === "Crew") && (
+                  <Link href="/app/crew" className="inline-flex h-10 items-center rounded-sm border border-line-2 px-4 text-sm text-ink">Fix crew cards</Link>
+                )}
+              </div>
             </div>
           )}
           {comp.warnings.length > 0 && (
@@ -122,7 +132,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
                   <div className="truncate font-medium">{l.label}</div>
                   {l.detail ? <div className="truncate text-sm text-ink-dim">{l.detail}</div> : null}
                 </div>
-                <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${RESULT_UI[l.result]}`}>{RESULT_LABEL[l.result]}</span>
+                <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${RESULT_UI[l.result]}`}>{RESULT_LABEL[l.result]}</span>
               </Card>
             ))}
           </section>

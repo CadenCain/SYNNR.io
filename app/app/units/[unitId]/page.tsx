@@ -115,7 +115,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
       {/* Truck book */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Truck book — certs, inspections &amp; DOT</h2>
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Truck book — certs, inspections &amp; DOT</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} />)}
@@ -157,7 +157,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       {/* Dispatch history — the immutable records (spec #1d) */}
       {history.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Dispatch history</h2>
+          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Dispatch history</h2>
           <div className="flex flex-col gap-2">
             {history.map((h) => (
               <Link key={h.id} href={`/app/records/${h.id}`}>
@@ -170,11 +170,11 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                     <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
                   </div>
                   {h.status === "not_ready" || h.status === "not_ready_override" ? (
-                    <span className="shrink-0 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>
+                    <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>
                   ) : h.status === "partial" ? (
-                    <span className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Items not returned</span>
+                    <span className="shrink-0 rounded-sm border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Items not returned</span>
                   ) : (
-                    <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">{h.type === "checkin" ? "All back" : "Ready"}</span>
+                    <span className="shrink-0 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">{h.type === "checkin" ? "All back" : "Ready"}</span>
                   )}
                   <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
                 </Card>
@@ -187,7 +187,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       {/* Crew on this unit — standing assignment; their cards decide this
           truck's ready call and pre-select on the pre-dispatch check. */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
         {assignedCrew.length > 0 && (
           <div className="flex flex-col gap-2">
             {assignedCrew.map((c) => (
@@ -201,7 +201,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                 <form action={unassignCrewFromUnit}>
                   <input type="hidden" name="unit_id" value={u.id} />
                   <input type="hidden" name="crew_member_id" value={c.id} />
-                  <button type="submit" title="Unassign" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
+                  <button type="submit" title="Unassign" className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
                     <X className="h-4 w-4" />
                   </button>
                 </form>
@@ -230,7 +230,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
       {/* Assets */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Assets on this unit</h2>
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Assets on this unit</h2>
         {assets.length > 0 && (
           <div className="flex flex-col gap-2">
             {assets.map((a) => (

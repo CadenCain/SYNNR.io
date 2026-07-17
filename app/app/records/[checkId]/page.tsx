@@ -75,7 +75,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
         title={`Dispatch record — ${unitName}`}
-        description={`Pre-dispatch check · run ${new Date(c.started_at).toLocaleString()}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
+        description={`${c.type === "checkin" ? "Check-in" : "Pre-dispatch check"} · run ${new Date(c.started_at).toLocaleString()}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
       />
 
       <div className={`flex items-center gap-3 rounded-2xl border p-4 ${verdict.cls}`}>
@@ -96,7 +96,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {gearLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Loadout &amp; assets</h2>
+          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Loadout &amp; assets</h2>
           {gearLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             const url = photoUrls.get(i.id);
@@ -114,7 +114,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
                 ) : i.photo_path ? (
                   <span className="flex items-center gap-1 text-xs text-ink-faint"><Camera className="h-3.5 w-3.5" /> photo</span>
                 ) : null}
-                <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${ui.cls}`}>{ui.label}</span>
+                <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${ui.cls}`}>{ui.label}</span>
               </Card>
             );
           })}
@@ -123,13 +123,13 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {paperLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Paper &amp; crew cards at roll-out</h2>
+          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Paper &amp; crew cards at roll-out</h2>
           {paperLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             return (
               <Card key={i.id} className="flex items-center gap-3 p-4">
                 <span className="min-w-0 flex-1 truncate font-medium">{i.label}</span>
-                <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${ui.cls}`}>{ui.label}</span>
+                <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${ui.cls}`}>{ui.label}</span>
               </Card>
             );
           })}

@@ -6,7 +6,7 @@ import { saasDb } from "@/lib/saas/db";
 import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Subscribe · SYNNR" };
+export const metadata = { title: "Subscribe · RollReady" };
 
 export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
   const { company } = await requireCompany();

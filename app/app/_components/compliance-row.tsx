@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS, kindLabel } from "@/lib/saas/taxonomy";
+import { fmtDate } from "@/lib/saas/format";
 import type { ComplianceStatus } from "@/lib/saas/db";
 import RenewControl from "./renew-control";
 import { updateComplianceItem, deleteComplianceItem } from "../_actions";
@@ -27,12 +28,12 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
             <StatusBadge status={item.status} />
           </div>
           <div className="mt-0.5 text-sm text-ink-dim">
-            {kindLabel(item.kind)}{item.expiration_date ? ` · expires ${item.expiration_date}` : " · no expiration set"}
+            {kindLabel(item.kind)}{item.expiration_date ? ` · expires ${fmtDate(item.expiration_date)}` : " · no expiration set"}
           </div>
           {item.customers && item.customers.length > 0 ? (
             <div className="mt-1 flex flex-wrap gap-1">
               {item.customers.map((c) => (
-                <span key={c} className="rounded-full border border-line-2 bg-coal px-2 py-0.5 text-[11px] text-ink-dim">{c}</span>
+                <span key={c} className="rounded-sm border border-line-2 bg-coal px-2 py-0.5 text-[11px] text-ink-dim">{c}</span>
               ))}
             </div>
           ) : null}
@@ -40,7 +41,7 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
         <div className="flex items-center gap-2">
           <RenewControl itemId={item.id} companyId={companyId} redirectPath={redirectPath} />
           <details className="group relative">
-            <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
               <Pencil className="h-3.5 w-3.5" />
             </summary>
             <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">

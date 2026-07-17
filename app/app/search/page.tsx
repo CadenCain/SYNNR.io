@@ -5,6 +5,8 @@ import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { unitTypeLabel } from "@/lib/saas/taxonomy";
+import { fmtDate } from "@/lib/saas/format";
 
 export const dynamic = "force-dynamic";
 
@@ -71,28 +73,28 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <div className="flex flex-col gap-5">
           {units.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Units</h2>
-              {units.map((u) => <Row key={u.id} href={`/app/units/${u.id}`} icon={Truck} title={u.name} sub={u.type.replace(/_/g, " ")} />)}
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Units</h2>
+              {units.map((u) => <Row key={u.id} href={`/app/units/${u.id}`} icon={Truck} title={u.name} sub={unitTypeLabel(u.type)} />)}
             </section>
           )}
           {crew.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Crew</h2>
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew</h2>
               {crew.map((c) => <Row key={c.id} href={`/app/crew/${c.id}`} icon={HardHat} title={c.name} sub={c.role ?? "crew"} />)}
             </section>
           )}
           {assets.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Assets</h2>
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Assets</h2>
               {assets.map((a) => <Row key={a.id} href={`/app/assets/${a.id}`} icon={Box} title={a.name} sub={a.category.replace(/_/g, " ")} />)}
             </section>
           )}
           {certs.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Certs &amp; cards</h2>
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Certs &amp; cards</h2>
               {certs.map((i) => (
                 <Row key={i.id} href={certHref(i)} icon={ShieldCheck} title={i.title}
-                  sub={i.expiration_date ? `expires ${i.expiration_date}` : "no date on file"}
+                  sub={i.expiration_date ? `expires ${fmtDate(i.expiration_date)}` : "no date on file"}
                   right={<StatusBadge status={i.status} />} />
               ))}
             </section>

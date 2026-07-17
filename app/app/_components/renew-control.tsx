@@ -108,7 +108,7 @@ export default function RenewControl({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-elevated"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3.5 py-2.5 text-[13px] font-medium text-ink hover:bg-elevated"
       >
         <Camera className="h-4 w-4" /> Renew
       </button>
@@ -171,11 +171,11 @@ export default function RenewControl({
       {err ? <p className="text-xs text-amber-400">{err}</p> : null}
       <div className="flex gap-2">
         <button type="submit" disabled={saveBlocked}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#e7ddc7] px-3 py-1.5 text-[13px] font-medium text-coal disabled:opacity-50">
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#e7ddc7] px-3.5 py-2.5 text-[13px] font-medium text-coal disabled:opacity-50">
           <Check className="h-4 w-4" /> {busy ? "Saving…" : "Save"}
         </button>
         <button type="button" onClick={() => { setOpen(false); setOcr("idle"); setFileName(""); }}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3 py-1.5 text-[13px] text-ink hover:bg-elevated">
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line-2 px-3.5 py-2.5 text-[13px] text-ink hover:bg-elevated">
           <X className="h-4 w-4" /> Cancel
         </button>
       </div>

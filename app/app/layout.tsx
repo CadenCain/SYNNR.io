@@ -8,7 +8,7 @@ import { getCompanyReadiness } from "@/lib/saas/readiness";
 // The signed-in SaaS surface. Gated: authenticated + belongs to a company +
 // has an active subscription (no free trial). noindex always.
 export const metadata: Metadata = {
-  title: "SYNNR",
+  title: "RollReady",
   robots: { index: false, follow: false },
 };
 

@@ -48,7 +48,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: unit.name }}
         title={`Loadout — ${unit.name}`}
-        description={`What this ${unitTypeLabel(unit.type).toLowerCase()} is supposed to leave the yard with. Required items block the green light at checkout.`}
+        description={`What this ${unitTypeLabel(unit.type).toLowerCase()} is supposed to leave the yard with. Required items block the green light on the pre-dispatch check.`}
       />
 
       {!editable && (
@@ -80,16 +80,16 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
                     <input type="hidden" name="id" value={it.id} />
                     <input type="hidden" name="required" value={String(it.required)} />
                     <button type="submit"
-                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${it.required ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-line-2 text-ink-faint"}`}
+                      className={`rounded-sm border px-2.5 py-0.5 text-xs font-medium ${it.required ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-line-2 text-ink-faint"}`}
                       title="Toggle required">
                       {it.required ? "Required" : "Optional"}
                     </button>
                   </form>
                   <div className="flex flex-col">
                     <form action={moveLoadoutItem}><input type="hidden" name="unit_id" value={unitId} /><input type="hidden" name="id" value={it.id} /><input type="hidden" name="dir" value="up" />
-                      <button type="submit" disabled={idx === 0} className="flex h-5 w-7 items-center justify-center text-ink-faint hover:text-ink disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button></form>
+                      <button type="submit" disabled={idx === 0} className="flex h-9 w-9 items-center justify-center text-ink-faint hover:text-ink disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button></form>
                     <form action={moveLoadoutItem}><input type="hidden" name="unit_id" value={unitId} /><input type="hidden" name="id" value={it.id} /><input type="hidden" name="dir" value="down" />
-                      <button type="submit" disabled={idx === items.length - 1} className="flex h-5 w-7 items-center justify-center text-ink-faint hover:text-ink disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button></form>
+                      <button type="submit" disabled={idx === items.length - 1} className="flex h-9 w-9 items-center justify-center text-ink-faint hover:text-ink disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button></form>
                   </div>
                   <form action={deleteLoadoutItem}>
                     <input type="hidden" name="unit_id" value={unitId} />
@@ -98,7 +98,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
                   </form>
                 </>
               ) : (
-                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${it.required ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-line-2 text-ink-faint"}`}>
+                <span className={`rounded-sm border px-2.5 py-0.5 text-xs font-medium ${it.required ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-line-2 text-ink-faint"}`}>
                   {it.required ? "Required" : "Optional"}
                 </span>
               )}

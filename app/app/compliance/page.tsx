@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireCompany } from "@/lib/saas/auth";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
@@ -55,9 +56,9 @@ export default async function CompliancePage() {
 
       {items.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-line-2 px-2.5 py-1 text-ink-dim">{gearCount} gear cert{gearCount === 1 ? "" : "s"} &amp; inspections</span>
-          <span className="rounded-full border border-line-2 px-2.5 py-1 text-ink-dim">{crewCount} crew card{crewCount === 1 ? "" : "s"}</span>
-          <span className={`rounded-full border px-2.5 py-1 ${failing > 0 ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>
+          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{gearCount} gear cert{gearCount === 1 ? "" : "s"} &amp; inspections</span>
+          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{crewCount} crew card{crewCount === 1 ? "" : "s"}</span>
+          <span className={`rounded-sm border px-2.5 py-1 ${failing > 0 ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>
             {failing > 0 ? `${failing} failing (expired or missing date)` : "nothing failing"}
           </span>
         </div>
@@ -65,7 +66,9 @@ export default async function CompliancePage() {
 
       {items.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
-          No compliance items yet. Add certs and inspections from a unit, asset, or crew member.
+          No compliance items yet. Add certs and inspections from a{" "}
+          <Link href="/app/yards" className="text-ink underline underline-offset-2 hover:text-bone">unit or asset</Link>, or from a{" "}
+          <Link href="/app/crew" className="text-ink underline underline-offset-2 hover:text-bone">crew member</Link>.
         </Card>
       ) : (
         <ComplianceTable items={rows} />

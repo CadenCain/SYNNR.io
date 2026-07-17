@@ -2,7 +2,7 @@ import Link from "next/link";
 import ForgotForm from "./forgot-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Reset password · SYNNR" };
+export const metadata = { title: "Reset password · RollReady" };
 
 export default function ForgotPage() {
   return (

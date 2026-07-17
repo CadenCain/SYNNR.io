@@ -52,7 +52,7 @@ export async function sendEmail(to: string[], subject: string, html: string): Pr
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({
-        from: process.env.ALERTS_FROM_EMAIL || "SYNNR Alerts <alerts@synnr.io>",
+        from: process.env.ALERTS_FROM_EMAIL || "RollReady Alerts <alerts@synnr.io>",
         to,
         subject,
         html,
@@ -114,7 +114,7 @@ export async function notifyEvent(args: {
     const recips = await resolveRecipients(args.companyId, args.yardId);
     if (recips.length === 0) return;
 
-    const sms = `SYNNR: ${args.message}. —${args.companyName}`;
+    const sms = `RollReady: ${args.message}. —${args.companyName}`;
     const emails = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.email as string);
     const phones = recips.filter((r) => r.channels.includes("sms") && r.phone).map((r) => r.phone as string);
 
@@ -122,8 +122,8 @@ export async function notifyEvent(args: {
     const smsRecips = recips.filter((r) => r.channels.includes("sms") && r.phone);
     const sends: { channel: string; recipient: string }[] = [];
     if (emails.length) {
-      const ok = await sendEmail(emails, `SYNNR alert — ${args.message}`,
-        `<p style="font:14px/1.5 -apple-system,sans-serif">${args.message}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${args.companyName} · <a href="https://www.synnr.io/app">open SYNNR</a></p>`);
+      const ok = await sendEmail(emails, `RollReady alert — ${args.message}`,
+        `<p style="font:14px/1.5 -apple-system,sans-serif">${args.message}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${args.companyName} · <a href="https://www.synnr.io/app">open RollReady</a></p>`);
       if (ok) sends.push({ channel: "email", recipient: emailNames.join(", ") });
       else await admin.from("saas_events").insert({ company_id: args.companyId, kind: "alert_failed", message: `Instant alert email FAILED (${emailNames.join(", ")}): ${args.message}` });
     }

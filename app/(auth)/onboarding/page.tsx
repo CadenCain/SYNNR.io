@@ -6,7 +6,7 @@ import { getSaasUser, getFirstActiveCompany } from "@/lib/saas/auth";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Set up your company · SYNNR" };
+export const metadata = { title: "Set up your company · RollReady" };
 
 async function createCompany(formData: FormData) {
   "use server";
