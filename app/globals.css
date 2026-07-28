@@ -20,7 +20,10 @@
   --color-elevated:  #211d19;
   --color-ink:       #ece5d7;
   --color-ink-dim:   #a59d8c;
-  --color-ink-faint: #756c5b;
+  /* 4.86:1 on coal / 4.60:1 on surface — passes readable-text contrast.
+     Was #756c5b (3.64:1), which is fine indoors and unreadable in a truck
+     at noon. Used 120+ times for section labels, timestamps, and sub-text. */
+  --color-ink-faint: #8a8071;
   --color-line:      #2a2521;
   --color-line-2:    #37312a;
   --color-bone:      #e7ddc7;

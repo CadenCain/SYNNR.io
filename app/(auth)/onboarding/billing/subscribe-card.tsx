@@ -13,7 +13,7 @@ const PER_YARD = 500;
 const FEATURES = [
   "Every asset, cert, DOT item & crew card — one place",
   "Alerts before anything lapses",
-  "Job-date pre-dispatch check, no override",
+  "Job-date readiness check, no override",
   "Readiness-proof links instead of binders",
 ];
 

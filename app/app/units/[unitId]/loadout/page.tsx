@@ -48,7 +48,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: unit.name }}
         title={`Gear list — ${unit.name}`}
-        description={`What this ${unitTypeLabel(unit.type).toLowerCase()} is supposed to leave the yard with. Required items block the green light on the pre-dispatch check.`}
+        description={`The standing list of what rides on this ${unitTypeLabel(unit.type).toLowerCase()}. Anything marked required that isn't in the asset book yet shows as a heads-up on the readiness check — this list is a reference, not a gate.`}
       />
 
       {!editable && (

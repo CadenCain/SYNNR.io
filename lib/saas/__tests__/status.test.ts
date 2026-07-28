@@ -64,28 +64,45 @@ describe("timezone semantics — America/Chicago local day, matching the SQL vie
 
 describe("computeReadiness — enforcement invariants", () => {
   it("ZERO configured requirements → null, never 100 (no Ready on empty)", () => {
-    expect(computeReadiness({ certCurrency: null, loadoutCompleteness: null, crewCurrency: null, hardFail: false })).toBeNull();
+    expect(computeReadiness({ certCurrency: null, crewCurrency: null, hardFail: false })).toBeNull();
   });
 
   it("perfect data with no hard fails → 100", () => {
-    expect(computeReadiness({ certCurrency: 1, loadoutCompleteness: 1, crewCurrency: 1, hardFail: false })).toBe(100);
+    expect(computeReadiness({ certCurrency: 1, crewCurrency: 1, hardFail: false })).toBe(100);
   });
 
   it("hard fail caps the score at 74 even when currency is perfect", () => {
-    expect(computeReadiness({ certCurrency: 1, loadoutCompleteness: 1, crewCurrency: 1, hardFail: true })).toBe(74);
+    expect(computeReadiness({ certCurrency: 1, crewCurrency: 1, hardFail: true })).toBe(74);
   });
 
   it("weights renormalize when an input is absent (certs-only shop isn't punished)", () => {
-    expect(computeReadiness({ certCurrency: 1, loadoutCompleteness: null, crewCurrency: null, hardFail: false })).toBe(100);
+    expect(computeReadiness({ certCurrency: 1, crewCurrency: null, hardFail: false })).toBe(100);
   });
 
-  it("documented blend: 0.5·certs + 0.3·loadout + 0.2·crew", () => {
-    // 0.5·1 + 0.3·0.667 + 0.2·0 = 0.7 → 70
-    expect(computeReadiness({ certCurrency: 1, loadoutCompleteness: 2 / 3, crewCurrency: 0, hardFail: false })).toBe(70);
+  it("documented blend: 0.7·certs + 0.3·crew", () => {
+    // 0.7·1 + 0.3·0 = 0.7 → 70
+    expect(computeReadiness({ certCurrency: 1, crewCurrency: 0, hardFail: false })).toBe(70);
+    // 0.7·0 + 0.3·1 = 0.3 → 30
+    expect(computeReadiness({ certCurrency: 0, crewCurrency: 1, hardFail: false })).toBe(30);
   });
 
   it("all-unverifiable data → 0", () => {
-    expect(computeReadiness({ certCurrency: 0, loadoutCompleteness: null, crewCurrency: 0, hardFail: true })).toBe(0);
+    expect(computeReadiness({ certCurrency: 0, crewCurrency: 0, hardFail: true })).toBe(0);
+  });
+
+  /**
+   * REGRESSION — the score must never move because a check was RECORDED.
+   * The gear list is reference-only, so its lines record "ok" for anything
+   * simply not in the asset book yet. Feeding that into the blend used to
+   * hand a shop ~30 free points for pressing a button while its paperwork
+   * was still behind. Only live record currency counts now.
+   */
+  it("a shop whose paperwork is all behind reads low, and recording a check can't raise it", () => {
+    const before = computeReadiness({ certCurrency: 0, crewCurrency: 0, hardFail: false });
+    expect(before).toBe(0);
+    // Same records, after the shop runs a readiness check: identical inputs,
+    // because check results are not an input at all.
+    expect(computeReadiness({ certCurrency: 0, crewCurrency: 0, hardFail: false })).toBe(before);
   });
 });
 

@@ -14,11 +14,11 @@ import RecordButton from "./record-button";
 export const dynamic = "force-dynamic";
 
 /**
- * Pre-dispatch check — a computed record-currency check, not a possession
- * checklist. The verdict comes straight from the live data (template vs
- * asset list, cert/DOT currency, assigned crew cards); nobody taps lines,
- * nothing can be overridden. One button records the result as an immutable
- * check with every line and reason.
+ * Readiness check — a computed record-currency check, not a possession
+ * checklist. The verdict comes straight from the live records (cert/DOT
+ * currency, assigned crew cards, flagged gear); the gear list only warns.
+ * Nobody taps lines, nothing can be overridden. One button records the
+ * result as an immutable check with every line and reason.
  */
 const RESULT_UI: Record<string, string> = {
   ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",

@@ -185,7 +185,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       )}
 
       {/* Crew on this unit — standing assignment; their cards decide this
-          truck's ready call and pre-select on the pre-dispatch check. */}
+          truck's ready call and pre-select on the readiness check. */}
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
         {assignedCrew.length > 0 && (

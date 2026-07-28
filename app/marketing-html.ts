@@ -45,7 +45,7 @@ export const MARKETING_HTML = `
     <div class="hero-main">
       <span class="eyebrow reveal">Yard readiness · oilfield service shops</span>
       <h1 class="display reveal" data-d="1"><span class="lt">The truck rolls</span> ready.<br/><span class="dim">Or it doesn't roll.</span></h1>
-      <p class="lede reveal" data-d="2">RollReady runs the pre-dispatch check that catches the missing BOP, the lapsed cert, and the expired crew card before the truck leaves the yard. Built by a Permian wireline hand, not a software vendor.</p>
+      <p class="lede reveal" data-d="2">RollReady keeps up with every cert, DOT item, and crew card in your yard, and tells you what's dead or dying before the truck leaves with it. Built by a Permian wireline hand, not a software vendor.</p>
       <div class="hero-cta reveal" data-d="3">
         <a href="/signup" class="btn btn-primary">Get started
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -101,7 +101,7 @@ export const MARKETING_HTML = `
               <span class="tname">Truck 12</span>
               <span class="chip scan">Checking…</span>
               <span class="chip bad">Not ready</span>
-              <span class="twhy why-ok">Running loadout check…</span>
+              <span class="twhy why-ok">Checking records…</span>
               <span class="twhy why-bad">BOP #3 — missing</span>
             </div>
           </div>
@@ -140,10 +140,10 @@ export const MARKETING_HTML = `
     <div class="shead">
       <span class="eyebrow">The 5am check</span>
       <h2 class="h2">No override button.<br/><span class="dim">You fix it or it stays red.</span></h2>
-      <p class="lede">A cert tracker tells you what expired last week. RollReady runs the loadout check on the phone before the truck rolls: every required asset, every cert and DOT item, every assigned crew card, pulled live. Anything off and the truck reads <b style="color:var(--fg)">Not ready</b> — and names every item.</p>
+      <p class="lede">A cert tracker tells you what expired last week. RollReady answers it on the phone before the truck rolls: every cert and DOT item, every assigned hand's cards, every flagged piece of gear, pulled live. Anything off and the truck reads <b style="color:var(--fg)">Not ready</b> — and names every item.</p>
     </div>
     <div class="hairgrid">
-      <div class="cell"><span class="num">01</span><h3>Loadout check</h3><p>Right gear, right paper, right crew. A green light or an itemized &ldquo;here&rsquo;s what&rsquo;s wrong.&rdquo;</p></div>
+      <div class="cell"><span class="num">01</span><h3>Readiness check</h3><p>Right paper, right crew, gear accounted for. A green light or an itemized &ldquo;here&rsquo;s what&rsquo;s wrong.&rdquo;</p></div>
       <div class="cell"><span class="num">02</span><h3>Immutable records</h3><p>Every check is recorded: who ran it, what it found, when. Read-only after. That record is your proof.</p></div>
       <div class="cell"><span class="num">03</span><h3>Crew cards count</h3><p>The assigned hand&rsquo;s H2S, well control, and medical count toward ready. An expired card blocks the green light.</p></div>
       <div class="cell"><span class="num">04</span><h3>Proof on demand</h3><p>One tap sends the operator a live, read-only proof page. No more building a binder every quarter.</p></div>
@@ -160,7 +160,7 @@ export const MARKETING_HTML = `
     </div>
     <div class="hairgrid cols3">
       <div class="cell"><span class="num">01</span><h3>Load your yard</h3><p>Add a yard, trucks, gear, and crew. Import your existing list in minutes, or add as you go from your phone.</p></div>
-      <div class="cell"><span class="num">02</span><h3>Run the check</h3><p>Before a truck leaves, run the loadout check: right gear, right paper, right crew, all current. Not ready? The screen says exactly what's wrong.</p></div>
+      <div class="cell"><span class="num">02</span><h3>Run the check</h3><p>Before a truck leaves, run the readiness check: right paper, right crew, gear accounted for, all current. Not ready? The screen says exactly what's wrong.</p></div>
       <div class="cell"><span class="num">03</span><h3>Get the heads-up</h3><p>We watch every date across every yard and crew. You get the text before it lapses, and hand the operator a proof link on demand.</p></div>
     </div>
     <div class="dt" style="margin-top:56px" role="table" aria-label="What we track">
@@ -203,7 +203,7 @@ export const MARKETING_HTML = `
       <div class="price-big">$500<span>per yard / month</span></div>
       <p class="price-why">That's about half a day of one hand's wages. One miss it catches — one expired DOT, one lapsed BOP — costs you a truck for a day and $10,000+ in NPT. If it stops that once a year, it paid for itself twenty times over.</p>
       <ul class="price-hero-features">
-        <li>Pre-dispatch loadout checks with enforcement</li>
+        <li>Readiness checks with no override button</li>
         <li>Certs, DOT, gear &amp; crew cards — alerts before they lapse</li>
         <li>Readiness proof links + immutable dispatch records</li>
         <li>Unlimited assets, crew &amp; users. Every yard costs the same.</li>

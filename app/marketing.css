@@ -20,8 +20,8 @@
 
   --fg:        #ece5d7;
   --fg-dim:    #a59d8c;
-  --fg-faint:  #756c5b;
-  --fg-ghost:  #4a4338;
+  --fg-faint:  #8a8071;  /* 4.86:1 on --bg — fine print stays readable on a phone outdoors */
+  --fg-ghost:  #5f5749;
 
   --accent:      #e7ddc7;
   --accent-soft: #f3ecdb;

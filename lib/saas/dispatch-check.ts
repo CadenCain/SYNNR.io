@@ -3,17 +3,18 @@ import type { ComplianceStatus } from "./db";
 import { localToday, addDaysIso } from "./status";
 
 /**
- * The pre-dispatch check, post scope-cut: a RECORD-CURRENCY check, not a
- * possession check. It answers "will everything on record be current FOR THE
- * JOB, and is it assigned?" —
- *   · every required loadout-template line is on the unit's asset list
- *     (and not flagged missing / out of service)
+ * The readiness check: a RECORD-CURRENCY check, not a dispatch checklist.
+ * It answers "will everything on record be current FOR THE JOB, and is it
+ * assigned?" —
  *   · every cert/DOT item on the unit and its assets is current THROUGH the
  *     job date (a cert that's fine today but lapses before the job FAILS —
  *     "still active" is not "current for this job")
  *   · every assigned hand's cards are current through the job date
- * It does NOT ask anyone to confirm they're physically holding an item —
- * check-in/check-out was deliberately cut from scope.
+ *   · any asset the shop has FLAGGED missing / out of service fails
+ * The gear list is a REFERENCE, not a gate: a line that isn't in the asset
+ * book yet warns, it never fails a truck. And nobody is asked to confirm
+ * they're physically holding an item — possession tracking was cut from
+ * scope. RollReady keeps up with records.
  *
  * Computed entirely server-side and used by both the page (display) and the
  * record action, so a client can never influence the verdict. No overrides:
@@ -43,12 +44,11 @@ export interface DispatchComputation {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-/* ── Shared pure pieces ──────────────────────────────────────────────────
- * The fleet-board tile (lib/saas/readiness.ts) and this check MUST agree —
- * a green tile that fails the check seconds later reads as a broken product.
- * Both surfaces call these; there is no second implementation to drift. */
+/* ── Pure helpers ────────────────────────────────────────────────────────
+ * The fleet-board tile (lib/saas/readiness.ts) and this check agree by
+ * DESIGN, not by sharing a gate: both judge a truck on live records only.
+ * These helpers exist to read the gear list for reference + warnings. */
 
-export interface LoadoutLine { label: string; required: boolean }
 export interface AssetLite { name: string; status: string }
 
 /** Fuzzy record-match of a template line against the unit's asset list.
@@ -65,19 +65,6 @@ export function matchAssetForLine<A extends AssetLite>(label: string, assets: A[
   const lineToks = new Set(tokens(label));
   if (lineToks.size === 0) return null;
   return assets.find((a) => tokens(a.name).some((t) => lineToks.has(t))) ?? null;
-}
-
-/** Required template lines this unit CANNOT satisfy from its asset list —
- *  absent, or present but flagged missing / out of service. */
-export function requiredLoadoutGaps(loadout: LoadoutLine[], assets: AssetLite[]): { label: string; detail: string }[] {
-  const gaps: { label: string; detail: string }[] = [];
-  for (const li of loadout) {
-    if (!li.required) continue;
-    const match = matchAssetForLine(li.label, assets);
-    if (!match) gaps.push({ label: li.label, detail: "not on the asset list" });
-    else if (match.status !== "in_service") gaps.push({ label: li.label, detail: `${match.name} flagged ${match.status.replace(/_/g, " ")}` });
-  }
-  return gaps;
 }
 
 export interface TplLite { id: string; company_id: string | null; unit_id: string | null; unit_type: string | null }
@@ -99,7 +86,7 @@ export async function computeDispatchCheck(
   jobDateArg?: string | null,
 ): Promise<DispatchComputation | null> {
   const today = localToday();
-  // Clamp: a job date in the past is meaningless for a pre-dispatch check —
+  // Clamp: a job date in the past is meaningless for a readiness check —
   // fall back to today. Anything today-or-later is honored.
   const jobDate = jobDateArg && jobDateArg >= today ? jobDateArg : today;
   const isFutureJob = jobDate > today;

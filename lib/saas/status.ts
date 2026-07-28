@@ -39,34 +39,37 @@ export function computeStatus(
 }
 
 /**
- * READINESS FORMULA (documented per spec §8):
- *   readiness = 0.5·certCurrency + 0.3·loadoutCompleteness + 0.2·crewCurrency
+ * READINESS FORMULA — live records only:
+ *   readiness = 0.7·certCurrency + 0.3·crewCurrency
  * where each input ∈ [0,1]:
- *   certCurrency        = valid / (valid+expiring+expired) across unit+asset certs
- *   loadoutCompleteness = required-ok / required-total on each unit's latest
- *                         check-out, averaged across units that have one
- *   crewCurrency        = valid / (valid+expiring+expired) across crew certs
+ *   certCurrency = valid / (valid+expiring+expired+none) across unit+asset certs
+ *   crewCurrency = valid / (valid+expiring+expired+none) across crew cards
  * Inputs with no data are EXCLUDED from the blend (weights renormalize) —
- * a shop that hasn't run a check-out yet isn't punished or flattered.
+ * a shop with no crew cards on file yet isn't punished or flattered.
  *
- * HARD CAP: if anything required is hard-failing (an expired cert anywhere, a
- * required loadout item missing on a latest check-out, or an asset flagged
- * missing), readiness is capped at 74% — the amber band. 100% never lies.
+ * The gear list is deliberately NOT an input. It's a reference, not a
+ * judgment (see dispatch-check.ts), so scoring it would hand out free points
+ * for pressing a button: every gear line records "ok" unless an asset is
+ * flagged, which would inject a constant into the blend and inflate the
+ * score for a shop whose paperwork is actually behind. Everything the score
+ * counts is something a tile can also show as red — no invisible inputs.
  *
- * UNCONFIGURED: with no inputs at all (no certs, no checks, no crew cards)
- * the honest answer is "we don't know yet", never 100 — returns null and the
- * UI renders "Not set up yet".
+ * HARD CAP: if anything is unprovable (an expired cert anywhere, a cert with
+ * no date on file, or an asset flagged missing), readiness is capped at 74% —
+ * the amber band. 100% never lies, and the cap always has a visible cause.
+ *
+ * UNCONFIGURED: with no inputs at all (no certs, no crew cards) the honest
+ * answer is "we don't know yet", never 100 — returns null and the UI renders
+ * "Not set up yet".
  */
 export function computeReadiness(inputs: {
   certCurrency: number | null;
-  loadoutCompleteness: number | null;
   crewCurrency: number | null;
   hardFail: boolean;
 }): number | null {
   const parts: { w: number; v: number }[] = [];
-  if (inputs.certCurrency != null) parts.push({ w: 0.5, v: inputs.certCurrency });
-  if (inputs.loadoutCompleteness != null) parts.push({ w: 0.3, v: inputs.loadoutCompleteness });
-  if (inputs.crewCurrency != null) parts.push({ w: 0.2, v: inputs.crewCurrency });
+  if (inputs.certCurrency != null) parts.push({ w: 0.7, v: inputs.certCurrency });
+  if (inputs.crewCurrency != null) parts.push({ w: 0.3, v: inputs.crewCurrency });
   if (parts.length === 0) return null;
   const wSum = parts.reduce((s, p) => s + p.w, 0);
   let pct = Math.round((parts.reduce((s, p) => s + p.w * p.v, 0) / wSum) * 100);

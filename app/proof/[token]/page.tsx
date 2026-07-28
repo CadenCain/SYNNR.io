@@ -198,7 +198,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         {record ? (
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">Last pre-dispatch check</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">Last readiness check</h2>
               <span className="text-xs text-ink-faint">{new Date(record.started_at).toLocaleString()}</span>
             </div>
             <p className="mt-2 text-sm">

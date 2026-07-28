@@ -42,14 +42,12 @@ const daysUntil = (iso: string) => {
 };
 
 export async function getCompanyReadiness(db: SupabaseClient, companyId: string): Promise<CompanyReadiness> {
-  const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }, { data: coData }] = await Promise.all([
+  const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select("id, title, status, expiration_date, parent_type, parent_id").eq("company_id", companyId),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
     db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId),
     db.from("saas_unit_crew").select("unit_id, crew_member_id").eq("company_id", companyId),
-    db.from("saas_dispatch_checks").select("id, unit_id").eq("company_id", companyId)
-      .eq("type", "checkout").order("started_at", { ascending: false }).limit(300),
   ]);
 
 
@@ -130,32 +128,18 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   const gear = split((i) => i.parent_type !== "crew");
   const crew = split((i) => i.parent_type === "crew");
 
-  // Loadout completeness from each unit's latest recorded pre-dispatch check
-  // (computed record-currency lines — not possession confirmations).
-  const latestByUnit = new Map<string, string>();
-  for (const co of (coData ?? []) as { id: string; unit_id: string }[]) {
-    if (!latestByUnit.has(co.unit_id)) latestByUnit.set(co.unit_id, co.id);
-  }
-  let loadoutOk = 0, loadoutTotal = 0, loadoutMissing = 0;
-  if (latestByUnit.size > 0) {
-    const { data: rows } = await db
-      .from("saas_dispatch_check_items").select("result")
-      .in("check_id", [...latestByUnit.values()])
-      .in("source_type", ["loadout_item", "asset"]);
-    for (const r of (rows ?? []) as { result: string }[]) {
-      if (r.result === "ok") { loadoutOk++; loadoutTotal++; }
-      else if (r.result === "missing") { loadoutMissing++; loadoutTotal++; }
-      else if (r.result === "unconfirmed") { loadoutTotal++; } // historical rows
-    }
-  }
-
+  // Score = LIVE records only. Recorded checks deliberately don't feed it:
+  // a past check can't make today's paperwork current, and gear lines are
+  // reference-only now, so scoring them would just hand out points for
+  // pressing a button (and a stale check would cap the score with nothing
+  // on screen to explain it).
   const anyAssetMissing = assets.some((a) => a.status === "missing");
-  // Hard cap when anything is unprovable: expired, no-date, missing asset,
-  // or a required loadout line missing on the latest recorded check.
-  const hardFail = counts.expired > 0 || counts.none > 0 || anyAssetMissing || loadoutMissing > 0;
+  // Hard cap when anything is unprovable: expired, no date on file, or an
+  // asset flagged missing. Each of these also shows up as a red tile, so the
+  // cap is never a mystery.
+  const hardFail = counts.expired > 0 || counts.none > 0 || anyAssetMissing;
   const readiness = computeReadiness({
     certCurrency: gear.total > 0 ? gear.valid / gear.total : null,
-    loadoutCompleteness: loadoutTotal > 0 ? loadoutOk / loadoutTotal : null,
     crewCurrency: crew.total > 0 ? crew.valid / crew.total : null,
     hardFail,
   });

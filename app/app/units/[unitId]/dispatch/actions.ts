@@ -7,7 +7,7 @@ import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { notifyEvent, logEvent } from "@/lib/saas/notify";
 
 /**
- * Record a pre-dispatch check. The verdict and every line are RECOMPUTED
+ * Record a readiness check. The verdict and every line are RECOMPUTED
  * server-side at record time — nothing from the client is trusted, there is
  * no override, and a Not-ready result records as exactly that. A check with
  * nothing configured refuses to record (an empty pass is not a pass).
@@ -75,7 +75,7 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   const forJob = comp.isFutureJob ? ` (for the ${comp.jobDate} job)` : "";
   const failLine = comp.failures.slice(0, 3).join("; ");
   if (comp.verdict === "ready") {
-    void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} passed its pre-dispatch check${forJob}` });
+    void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} passed its readiness check${forJob}` });
   } else {
     void logEvent({ companyId: company.id, kind: "check_not_ready", unitId, actor, message: `${comp.unitName} NOT ready${forJob} — ${failLine}` });
     void logEvent({ companyId: company.id, kind: "miss_caught", unitId, actor, message: `Caught before rollout on ${comp.unitName}${forJob}: ${failLine}` });

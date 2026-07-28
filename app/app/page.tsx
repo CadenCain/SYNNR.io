@@ -173,8 +173,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 </p>
                 <p className="mt-1 truncate text-sm text-red-300">{worst.why}</p>
                 <div className="mt-4 flex gap-2">
-                  <Link href={`/app/units/${worst.id}`} className="flex min-h-12 flex-1 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
-                    Fix {worst.name}
+                  <Link href={`/app/units/${worst.id}`} className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
+                    <span className="truncate">Fix {worst.name}</span>
                   </Link>
                   {notReadyUnits > 1 && (
                     <a href="#fleet" className="flex min-h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-sm text-ink">

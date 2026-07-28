@@ -8,7 +8,7 @@ import { unitTypeLabel } from "@/lib/saas/taxonomy";
 
 export const dynamic = "force-dynamic";
 
-/** "Run a check" — pick the unit, land on its pre-dispatch check. */
+/** "Check readiness" — pick the unit, land on its readiness check. */
 export default async function DispatchPicker() {
   const { company } = await requireCompany();
   const db = await saasDb();

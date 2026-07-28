@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { addDaysIso } from "../status";
-import { matchAssetForLine, requiredLoadoutGaps, resolveLoadoutTemplate } from "../dispatch-check";
+import { matchAssetForLine, resolveLoadoutTemplate, type AssetLite } from "../dispatch-check";
 
 /**
  * The job-date rule (Q1): a cert unexpired TODAY but lapsing before the job
@@ -54,44 +54,73 @@ describe("cert currency evaluated against the JOB DATE", () => {
 });
 
 /**
- * The tile/check agreement contract: the fleet-board tile and the pre-dispatch
- * check share ONE loadout matcher (these exports). A green tile that fails the
- * check seconds later is the product lying — these tests pin the shared rule.
+ * THE GEAR RULE (post-reframe): RollReady keeps up with records, it does not
+ * run a dispatch checklist. A gear-list line that simply isn't in the asset
+ * book yet is a heads-up, never a failure. Only a matched asset the shop has
+ * FLAGGED (missing / out of service) fails a truck. These pin that rule so a
+ * future change can't quietly turn the gear list back into a gate.
  */
-describe("requiredLoadoutGaps — shared by the fleet tile AND the check", () => {
+type GearResult = "ok" | "fail";
+function gearLine(label: string, required: boolean, assets: AssetLite[]): GearResult {
+  const match = matchAssetForLine(label, assets);
+  if (!match) return "ok";                                   // not in the book yet = warning, not a gate
+  return match.status === "in_service" || !required ? "ok" : "fail";
+}
+
+describe("gear list is a reference, not a gate", () => {
   const assets = [
     { name: "BOP #3", status: "in_service" },
     { name: "Lubricator", status: "in_service" },
     { name: "Crane line", status: "out_of_service" },
   ];
 
-  it("required line matched by an in-service asset → no gap", () => {
-    expect(requiredLoadoutGaps([{ label: "Lubricator", required: true }], assets)).toEqual([]);
+  it("required line NOT in the asset book → does NOT fail the truck (it warns)", () => {
+    expect(gearLine("Grease injector", true, assets)).toBe("ok");
   });
 
-  it("fuzzy match works both directions (template 'BOP' ↔ asset 'BOP #3')", () => {
-    expect(requiredLoadoutGaps([{ label: "BOP", required: true }], assets)).toEqual([]);
-    expect(matchAssetForLine("bop", assets)?.name).toBe("BOP #3");
+  it("required line matched by an in-service asset → ok", () => {
+    expect(gearLine("Lubricator", true, assets)).toBe("ok");
   });
 
-  it("required line absent from the asset list → gap", () => {
-    const gaps = requiredLoadoutGaps([{ label: "Grease injector", required: true }], assets);
-    expect(gaps).toHaveLength(1);
-    expect(gaps[0]).toEqual({ label: "Grease injector", detail: "not on the asset list" });
+  it("required line matched by a FLAGGED asset → fails (that is a real problem)", () => {
+    expect(gearLine("Crane line", true, assets)).toBe("fail");
   });
 
-  it("required line matched by an OUT-OF-SERVICE asset → gap (present ≠ usable)", () => {
-    const gaps = requiredLoadoutGaps([{ label: "Crane line", required: true }], assets);
-    expect(gaps).toHaveLength(1);
-    expect(gaps[0].detail).toContain("flagged out of service");
+  it("optional lines never fail, flagged or not", () => {
+    expect(gearLine("Crane line", false, assets)).toBe("ok");
+    expect(gearLine("Spare sheave", false, assets)).toBe("ok");
   });
 
-  it("OPTIONAL lines never gap — only required lines can block the green light", () => {
-    expect(requiredLoadoutGaps([{ label: "Spare sheave", required: false }], assets)).toEqual([]);
+  it("an empty asset book never fails a truck on gear alone", () => {
+    expect(gearLine("Pressure control package (BOP)", true, [])).toBe("ok");
+  });
+});
+
+describe("matchAssetForLine — how hands actually name gear", () => {
+  it("fuzzy match works both directions (template 'BOP' <-> asset 'BOP #3')", () => {
+    const a = [{ name: "BOP #3", status: "in_service" }];
+    expect(matchAssetForLine("BOP", a)?.name).toBe("BOP #3");
+    expect(matchAssetForLine("bop", a)?.name).toBe("BOP #3");
   });
 
-  it("empty template → no gaps (nothing required, nothing to fail)", () => {
-    expect(requiredLoadoutGaps([], assets)).toEqual([]);
+  it("template 'Pressure control package (BOP)' matches asset 'BOP stack — 15k dual ram'", () => {
+    const a = [{ name: "BOP stack — 15k dual ram", status: "in_service" }];
+    expect(matchAssetForLine("Pressure control package (BOP)", a)?.name).toBe("BOP stack — 15k dual ram");
+  });
+
+  it("'Slings & rigging (inspected)' matches 'Wire rope slings — inspected'", () => {
+    const a = [{ name: "Wire rope slings — inspected", status: "in_service" }];
+    expect(matchAssetForLine("Slings & rigging (inspected)", a)).not.toBeNull();
+  });
+
+  it("generic filler words alone never match ('Crane package' vs 'Spare kit')", () => {
+    const a = [{ name: "Spare kit", status: "in_service" }];
+    expect(matchAssetForLine("Crane package", a)).toBeNull();
+  });
+
+  it("a shared NUMBER alone never matches ('Hose 3000 psi' vs 'Pump 3000')", () => {
+    const a = [{ name: "Pump 3000", status: "in_service" }];
+    expect(matchAssetForLine("Hose 3000 psi rated", a)).toBeNull();
   });
 });
 
@@ -115,27 +144,5 @@ describe("resolveLoadoutTemplate — precedence is unit > company default > glob
 
   it("no template for this type → null (check runs, gear section just absent)", () => {
     expect(resolveLoadoutTemplate([seed], CO, "u-2", "pump_truck")).toBeNull();
-  });
-});
-
-describe("matchAssetForLine — token tier (how hands actually name gear)", () => {
-  it("template 'Pressure control package (BOP)' matches asset 'BOP stack — 15k dual ram'", () => {
-    const a = [{ name: "BOP stack — 15k dual ram", status: "in_service" }];
-    expect(matchAssetForLine("Pressure control package (BOP)", a)?.name).toBe("BOP stack — 15k dual ram");
-  });
-
-  it("'Slings & rigging (inspected)' matches 'Wire rope slings — inspected'", () => {
-    const a = [{ name: "Wire rope slings — inspected", status: "in_service" }];
-    expect(matchAssetForLine("Slings & rigging (inspected)", a)).not.toBeNull();
-  });
-
-  it("generic filler words alone never match ('Spare kit' vs 'First-aid kit')", () => {
-    const a = [{ name: "Spare kit", status: "in_service" }];
-    expect(matchAssetForLine("Crane package", a)).toBeNull();
-  });
-
-  it("a shared NUMBER alone never matches ('Hose 3000 psi' vs 'Pump 3000')", () => {
-    const a = [{ name: "Pump 3000", status: "in_service" }];
-    expect(matchAssetForLine("Hose 3000 psi rated", a)).toBeNull();
   });
 });
