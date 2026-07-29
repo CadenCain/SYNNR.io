@@ -31,10 +31,18 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
         const sub = session.subscription && typeof session.subscription !== "string" ? session.subscription : null;
         const owned = session.client_reference_id === company.id || sub?.metadata?.company_id === company.id;
         if (owned && (session.payment_status === "paid" || session.status === "complete")) {
+          // Record the yards they actually PAID for. Don't rely on the
+          // subscription.created webhook for this: if that event isn't enabled
+          // on the endpoint, nothing else writes yard_quantity on a first
+          // purchase (syncYardQuantity early-returns when Stripe already
+          // matches), so a 3-yard shop would sit at 0 — and partner payouts in
+          // /op/referrals are computed from this column.
+          const paidQty = sub?.items?.data?.[0]?.quantity ?? null;
           await admin.from("saas_companies").update({
             subscription_status: "active",
             stripe_subscription_id: session.subscription ? (sub ? sub.id : String(session.subscription)) : null,
             stripe_customer_id: session.customer ? String(session.customer) : null,
+            ...(paidQty != null ? { yard_quantity: paidQty } : {}),
           }).eq("id", company.id);
           confirmed = true;
         }
