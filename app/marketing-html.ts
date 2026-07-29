@@ -86,7 +86,7 @@ export const MARKETING_HTML = `
     </div>
 
     <div class="show-stage">
-      <div class="show-frame" role="img" aria-label="RollReady command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 missing from the asset list">
+      <div class="show-frame" role="img" aria-label="RollReady command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 flagged missing and its annual DOT expired">
         <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>RollReady — command center</span></div>
         <div class="show-body" aria-hidden="true">
           <div class="show-kpis">
@@ -102,22 +102,22 @@ export const MARKETING_HTML = `
               <span class="chip scan">Checking…</span>
               <span class="chip bad">Not ready</span>
               <span class="twhy why-ok">Checking records…</span>
-              <span class="twhy why-bad">BOP #3 — missing</span>
+              <span class="twhy why-bad">BOP #3 — flagged missing</span>
             </div>
           </div>
           <div class="show-banner">
             <span class="bang">!</span>
-            <span class="btext"><b>NOT READY — Truck 12.</b> BOP #3 missing from the asset list · fix it or it stays red</span>
+            <span class="btext"><b>NOT READY — Truck 12.</b> BOP #3 flagged missing · annual DOT expired · fix it or it stays red</span>
           </div>
           <div class="show-feed">
-            <span class="dotline"></span>Caught before rollout on Truck 12: BOP #3 — missing <span class="ftime">4:58 AM</span>
+            <span class="dotline"></span>Caught before rollout on Truck 12: BOP #3 flagged missing <span class="ftime">4:58 AM</span>
           </div>
         </div>
       </div>
 
       <div class="show-chip c1" aria-hidden="true">
         <span class="cico">▮</span>
-        <span><b>RollReady:</b> Truck 12 NOT ready — BOP missing. —your shop</span>
+        <span><b>RollReady:</b> Truck 12 NOT ready — BOP flagged missing. —your shop</span>
       </div>
       <div class="show-chip c2" aria-hidden="true">
         <span class="cok">✓</span>
