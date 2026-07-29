@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { clearAlertLog } from "@/lib/saas/alert-log";
+import { syncYardQuantity } from "@/lib/saas/billing";
 
 /**
  * Hardened import: dry-run preview → commit. Idempotent — re-importing the
@@ -113,13 +115,23 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
 
   // Resolve/create the yard
   let resolvedYard = yardId;
+  // Guard against a forged yardId from the client: it must be this company's.
+  if (resolvedYard) {
+    const { data: ownYard } = await db.from("saas_yards").select("id")
+      .eq("id", resolvedYard).eq("company_id", company.id).maybeSingle();
+    if (!ownYard) {
+      return { ok: false, error: "That yard isn't in your account.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    }
+  }
   let yardOp: string | null = null;
+  let createdYard = false;
   if (!resolvedYard && newYard.trim()) {
     yardOp = `create yard "${newYard.trim()}"`;
     if (commit) {
       const { data, error } = await db.from("saas_yards").insert({ company_id: company.id, name: newYard.trim() }).select("id").single();
       if (error) return { ok: false, error: error.message, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
       resolvedYard = (data as { id: string }).id;
+      createdYard = true;
     }
   }
   if (!resolvedYard && !newYard.trim()) {
@@ -151,6 +163,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   const ctx = await loadCtx(db, company.id, resolvedYard || "preview", commit);
   const get = (r: string[], i: number) => (i >= 0 && i < r.length ? r[i].trim() : "");
   let creates = 0, updates = 0, errors = 0;
+  const renewedItemIds: string[] = []; // items whose dates this import refreshed
   const rows: PlanRow[] = [];
   if (yardOp) { rows.push({ line: 0, ops: [yardOp], error: null }); creates++; }
   let fakeId = 0;
@@ -216,6 +229,9 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
           .update({ issued_date: issued, expiration_date: expires })
           .eq("id", existing).eq("company_id", ctx.companyId);
         if (error) throw new Error(error.message);
+        // New dates = new cycle. Without this the sweep's per-item dedupe
+        // mutes every item a re-import touches, forever.
+        renewedItemIds.push(existing);
       }
       return;
     }
@@ -269,6 +285,16 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
       rows.push({ line: li + 1, ops, error: e instanceof Error ? e.message : String(e) });
       // commit mode: keep going — partial success with an error report (spec §7)
     }
+  }
+
+  if (commit) {
+    // Items whose dates this import refreshed must be un-muted, or the sweep
+    // never alerts on them again (dedupe is per item, not per cycle).
+    await clearAlertLog(company.id, renewedItemIds);
+    // A yard created by the importer is a billable yard — every other create
+    // path syncs Stripe, this one didn't, so import-onboarded shops were
+    // under-billed until someone touched a yard in the UI.
+    if (createdYard) await syncYardQuantity(company.id);
   }
 
   return { ok: true, rows, creates, updates, errors, committed: commit };

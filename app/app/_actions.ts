@@ -6,8 +6,36 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { syncYardQuantity } from "@/lib/saas/billing";
 import { logEvent } from "@/lib/saas/notify";
+import { clearAlertLog } from "@/lib/saas/alert-log";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
+
+/**
+ * Delete the compliance items hanging off a parent that's being removed.
+ *
+ * saas_compliance_items.parent_id is polymorphic (parent_type + parent_id) so
+ * there is no foreign key to cascade. Without this, deleting a truck leaves
+ * its certs behind forever: the sweep queries items by company_id alone, so
+ * the shop keeps getting alerts for a truck it SOLD, and readiness counts the
+ * ghost item — pinning the score at 74% with no page left in the UI to reach
+ * it and fix it.
+ */
+async function purgeItemsFor(
+  db: Awaited<ReturnType<typeof saasDb>>,
+  companyId: string,
+  parentType: "unit" | "asset" | "crew",
+  parentIds: string[],
+) {
+  const ids = parentIds.filter(Boolean);
+  if (ids.length === 0) return;
+  const { data } = await db.from("saas_compliance_items").select("id")
+    .eq("company_id", companyId).eq("parent_type", parentType).in("parent_id", ids);
+  const itemIds = ((data ?? []) as { id: string }[]).map((r) => r.id);
+  if (itemIds.length === 0) return;
+  await db.from("saas_compliance_items").delete().eq("company_id", companyId).in("id", itemIds);
+  // Their alert-log rows go too, so a recycled id can never inherit a mute.
+  await clearAlertLog(companyId, itemIds);
+}
 
 // ── YARD ──
 export async function updateYard(fd: FormData) {
@@ -25,6 +53,20 @@ export async function deleteYard(fd: FormData) {
   const { company } = await requireCompany();
   const id = str(fd, "id");
   const db = await saasDb();
+  // Same cascade problem one level up: units in this yard, their assets, and
+  // every cert hanging off either. Do it before the yard goes.
+  const { data: unitRows } = await db.from("saas_units").select("id")
+    .eq("company_id", company.id).eq("yard_id", id);
+  const unitIds = ((unitRows ?? []) as { id: string }[]).map((u) => u.id);
+  if (unitIds.length) {
+    const { data: assetRows } = await db.from("saas_assets").select("id")
+      .eq("company_id", company.id).in("unit_id", unitIds);
+    const assetIds = ((assetRows ?? []) as { id: string }[]).map((a) => a.id);
+    await purgeItemsFor(db, company.id, "unit", unitIds);
+    await purgeItemsFor(db, company.id, "asset", assetIds);
+    if (assetIds.length) await db.from("saas_assets").delete().eq("company_id", company.id).in("id", assetIds);
+    await db.from("saas_units").delete().eq("company_id", company.id).in("id", unitIds);
+  }
   await db.from("saas_yards").delete().eq("id", id).eq("company_id", company.id);
   await syncYardQuantity(company.id); // per-yard billing follows the yard count
   redirect("/app/yards");
@@ -48,6 +90,14 @@ export async function deleteUnit(fd: FormData) {
   const id = str(fd, "id");
   const yard_id = str(fd, "yard_id");
   const db = await saasDb();
+  // Clean up what the DB can't cascade: the unit's own certs, then each of
+  // its assets' certs, then the assets. Otherwise they alert forever.
+  const { data: assetRows } = await db.from("saas_assets").select("id")
+    .eq("company_id", company.id).eq("unit_id", id);
+  const assetIds = ((assetRows ?? []) as { id: string }[]).map((a) => a.id);
+  await purgeItemsFor(db, company.id, "unit", [id]);
+  await purgeItemsFor(db, company.id, "asset", assetIds);
+  if (assetIds.length) await db.from("saas_assets").delete().eq("company_id", company.id).in("id", assetIds);
   await db.from("saas_units").delete().eq("id", id).eq("company_id", company.id);
   redirect(yard_id ? `/app/yards/${yard_id}` : "/app/yards");
 }
@@ -110,6 +160,7 @@ export async function deleteAsset(fd: FormData) {
   const id = str(fd, "id");
   const unit_id = str(fd, "unit_id");
   const db = await saasDb();
+  await purgeItemsFor(db, company.id, "asset", [id]); // its certs would alert forever
   await db.from("saas_assets").delete().eq("id", id).eq("company_id", company.id);
   redirect(unit_id ? `/app/units/${unit_id}` : "/app/yards");
 }
@@ -249,6 +300,12 @@ export async function updateComplianceItem(fd: FormData) {
   const { error } = await db.from("saas_compliance_items")
     .update({ title, kind, issued_date, expiration_date }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+
+  // A new date means a new cycle — clear the alert log or the sweep's
+  // per-item dedupe mutes this item forever (the camera-renew path has always
+  // done this; typing the date in this form did not, so hand-edited items
+  // silently stopped alerting).
+  await clearAlertLog(company.id, id);
 
   // Customer relevance tags: comma-separated names → ensure each customer
   // exists, then replace this item's joins. Blank = applies to all jobs.

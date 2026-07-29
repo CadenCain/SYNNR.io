@@ -5,7 +5,14 @@ import { getServerSupabase } from "@/lib/supabase/server";
  * Single-operator auth gate. The operator console at /op is for ONE person —
  * Caden. There's no roles/teams system; access is "is this session's email in
  * the allowlist." Allowlist is the OPERATOR_EMAILS env var (comma-separated,
- * lower-cased), with a sane fallback for local dev.
+ * lower-cased).
+ *
+ * FAILS CLOSED. There is deliberately no fallback address: this used to
+ * default to an address on a domain that later EXPIRED, and OPERATOR_EMAILS is
+ * only set on Production — so every Preview deploy (pointed at the production
+ * database) would have handed the console to whoever re-registered that
+ * domain. An unset env var now means nobody gets in, which is the only safe
+ * direction for a console that can read every customer's data.
  *
  * Usage in a Server Component:
  *   const { email } = await requireOperator();
@@ -16,7 +23,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
  */
 
 function allowedEmails(): Set<string> {
-  const raw = process.env.OPERATOR_EMAILS || "cadencain@darkstarops.com";
+  const raw = process.env.OPERATOR_EMAILS ?? "";
   return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
 }
 

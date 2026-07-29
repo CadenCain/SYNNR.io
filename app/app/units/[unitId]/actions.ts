@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
+import { clearAlertLog } from "@/lib/saas/alert-log";
 import { logEvent } from "@/lib/saas/notify";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 
@@ -67,10 +68,7 @@ export async function renewComplianceItem(args: {
   // Renewed = a fresh cycle: clear its alert-log rows so the NEXT expiry
   // alerts again (the dedup is per-item, not per-cycle). Service role — the
   // alert log is cron-owned and has no member delete policy.
-  const adminForLog = saasAdmin();
-  if (adminForLog) {
-    await adminForLog.from("saas_alerts_sent").delete().eq("company_id", company.id).eq("compliance_item_id", args.itemId);
-  }
+  await clearAlertLog(company.id, args.itemId);
 
   const { data: itemRow } = await db.from("saas_compliance_items").select("title").eq("id", args.itemId).maybeSingle();
   void logEvent({

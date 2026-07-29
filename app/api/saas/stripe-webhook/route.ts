@@ -33,15 +33,36 @@ export async function POST(req: Request) {
   // event produces the same row, so Stripe's at-least-once retries are safe
   // without an idempotency table. (Add one before wiring any NON-idempotent
   // side effect here — welcome emails, dunning, provisioning.)
-  async function syncByCustomer(customerId: string, fields: Record<string, unknown>) {
+  /**
+   * Sync by Stripe customer id, falling back to the company_id we stamp into
+   * subscription metadata at checkout.
+   *
+   * The fallback matters: if two checkout sessions race (double-tap on a slow
+   * yard connection), Stripe ends up with two customers for one company and we
+   * only stored the last one. If the OTHER one is what gets paid, matching on
+   * customer id alone finds nothing — and the deliberate throw below would then
+   * fail this event forever, disabling the endpoint for every customer. The
+   * metadata is the identity we control, so we trust it and repair the stored
+   * customer id on the way through.
+   */
+  async function syncByCustomer(customerId: string, fields: Record<string, unknown>, companyIdHint?: string | null) {
     const { data, error } = await admin!
       .from("saas_companies").update(fields).eq("stripe_customer_id", customerId).select("id");
     if (error) throw new Error(`db sync failed for ${customerId}: ${error.message}`);
-    // Zero rows matched = a paying customer we can't find. Returning 200 here
-    // would tell Stripe "handled" and the customer stays unpaid FOREVER with no
-    // trace. Throw → 500 → Stripe retries and (after ~3 days of failures)
-    // emails the account owner, so it can't rot silently.
-    if (!data || data.length === 0) throw new Error(`no company matched stripe customer ${customerId}`);
+    if (data && data.length > 0) return;
+
+    if (companyIdHint) {
+      const { data: byId, error: e2 } = await admin!
+        .from("saas_companies")
+        .update({ ...fields, stripe_customer_id: customerId }) // repair the drift
+        .eq("id", companyIdHint).select("id");
+      if (e2) throw new Error(`db sync failed for company ${companyIdHint}: ${e2.message}`);
+      if (byId && byId.length > 0) return;
+    }
+    // Genuinely unknown customer. Returning 200 would tell Stripe "handled" and
+    // the paying shop stays locked out FOREVER with no trace. Throw → 500 →
+    // Stripe retries and eventually emails the account owner.
+    throw new Error(`no company matched stripe customer ${customerId}`);
   }
 
   try {
@@ -52,7 +73,7 @@ export async function POST(req: Request) {
           await syncByCustomer(String(s.customer), {
             stripe_subscription_id: String(s.subscription),
             subscription_status: "active",
-          });
+          }, s.client_reference_id ?? s.metadata?.company_id ?? null);
         }
         break;
       }
@@ -64,12 +85,12 @@ export async function POST(req: Request) {
           subscription_status: sub.status,
           stripe_subscription_id: sub.id,
           ...(qty != null ? { yard_quantity: qty } : {}),
-        });
+        }, sub.metadata?.company_id ?? null);
         break;
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        await syncByCustomer(String(sub.customer), { subscription_status: "canceled" });
+        await syncByCustomer(String(sub.customer), { subscription_status: "canceled" }, sub.metadata?.company_id ?? null);
         break;
       }
       case "invoice.payment_failed": {

@@ -40,8 +40,11 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
           const paidQty = sub?.items?.data?.[0]?.quantity ?? null;
           await admin.from("saas_companies").update({
             subscription_status: "active",
-            stripe_subscription_id: session.subscription ? (sub ? sub.id : String(session.subscription)) : null,
-            stripe_customer_id: session.customer ? String(session.customer) : null,
+            // Spread only what's present: writing null here would wipe a
+            // working id, breaking the billing portal and every future webhook
+            // match for that customer.
+            ...(session.subscription ? { stripe_subscription_id: sub ? sub.id : String(session.subscription) } : {}),
+            ...(session.customer ? { stripe_customer_id: String(session.customer) } : {}),
             ...(paidQty != null ? { yard_quantity: paidQty } : {}),
           }).eq("id", company.id);
           confirmed = true;
