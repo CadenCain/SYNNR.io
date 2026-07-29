@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeStatus, computeReadiness, worstStatus, localToday, addDaysIso } from "../status";
+import { seenAge } from "../format";
 
 /**
  * Pre-launch pressure tests: date boundaries, timezone semantics, and the
@@ -118,5 +119,43 @@ describe("worstStatus — one ranking everywhere (no contradictory chips)", () =
   });
   it("empty input → null (renders 'no certs', not a fake status)", () => {
     expect(worstStatus([])).toBeNull();
+  });
+});
+
+/**
+ * Freshness decay — the rule that keeps a location note honest. Every yard
+ * tracker dies when stale data is presented as fact; this makes the note
+ * advertise its own age so nobody drives across town on a 6-week-old guess.
+ */
+describe("seenAge — a location note must advertise its own age", () => {
+  const NOW = new Date("2026-07-30T12:00:00Z");
+  const ago = (d: number) => new Date(NOW.getTime() - d * 86400e3).toISOString();
+
+  it("no timestamp → nothing to show", () => {
+    expect(seenAge(null, NOW)).toBeNull();
+    expect(seenAge(undefined, NOW)).toBeNull();
+  });
+
+  it("today and yesterday read as fresh, in words", () => {
+    expect(seenAge(ago(0), NOW)).toEqual({ label: "today", tone: "fresh" });
+    expect(seenAge(ago(1), NOW)).toEqual({ label: "yesterday", tone: "fresh" });
+  });
+
+  it("2 days is still fresh, 3 starts aging", () => {
+    expect(seenAge(ago(2), NOW)?.tone).toBe("fresh");
+    expect(seenAge(ago(3), NOW)?.tone).toBe("aging");
+  });
+
+  it("13 days aging, 14 flips to stale — the trust boundary", () => {
+    expect(seenAge(ago(13), NOW)?.tone).toBe("aging");
+    expect(seenAge(ago(14), NOW)?.tone).toBe("stale");
+  });
+
+  it("months are summarized, never dressed up as precise", () => {
+    expect(seenAge(ago(90), NOW)).toEqual({ label: "3mo ago", tone: "stale" });
+  });
+
+  it("a garbage timestamp degrades to nothing, never to a false 'today'", () => {
+    expect(seenAge("not-a-date", NOW)).toBeNull();
   });
 });

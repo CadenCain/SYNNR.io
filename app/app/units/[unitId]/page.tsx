@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, HardHat, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
+import { seenAge } from "@/lib/saas/format";
 import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,8 +43,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
 
   const { data: assetData } = await db
-    .from("saas_assets").select("id, name, category, status, last_seen_where").eq("unit_id", unitId).order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null }[];
+    .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at").eq("unit_id", unitId).order("name");
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null }[];
 
   // Crew: standing assignments + everyone else, with worst-card status chips.
   const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
@@ -239,9 +240,15 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Box className="h-4 w-4 text-ink-dim" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{a.name}</span>
-                    {a.last_seen_where ? (
-                      <span className="block truncate text-xs text-ink-faint">Last seen: {a.last_seen_where}</span>
-                    ) : null}
+                    {a.last_seen_where ? (() => {
+                      const age = seenAge(a.last_seen_at);
+                      return (
+                        <span className="block truncate text-xs text-ink-faint">
+                          Last seen: {a.last_seen_where}
+                          {age ? <span className={age.tone === "stale" ? "text-ink-faint" : age.tone === "aging" ? "text-amber-400" : "text-emerald-400"}> · {age.label}</span> : null}
+                        </span>
+                      );
+                    })() : null}
                   </span>
                   <span className="shrink-0 text-sm text-ink-dim">{categoryLabel(a.category)}</span>
                   <ChevronRight className="h-4 w-4 text-ink-faint" />

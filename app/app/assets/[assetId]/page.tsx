@@ -11,7 +11,7 @@ import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-ro
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateAsset, deleteAsset, updateAssetLastSeen } from "@/app/app/_actions";
-import { fmtDate } from "@/lib/saas/format";
+import { fmtDate, seenAge } from "@/lib/saas/format";
 import PhotoUpload from "./photo-upload";
 
 export const dynamic = "force-dynamic";
@@ -94,8 +94,18 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
               <span className="font-medium">{a.last_seen_where}</span>
               <span className="text-ink-dim">
                 {a.last_seen_by ? ` · per ${a.last_seen_by}` : ""}
-                {a.last_seen_at ? ` · ${fmtDate(a.last_seen_at.slice(0, 10))}` : ""}
               </span>
+              {(() => {
+                const age = seenAge(a.last_seen_at);
+                if (!age) return null;
+                const tone = age.tone === "fresh" ? "text-emerald-400"
+                  : age.tone === "aging" ? "text-amber-400" : "text-ink-faint";
+                return (
+                  <span className={`ml-2 font-mono text-xs ${tone}`}>
+                    {age.label}{age.tone === "stale" ? " · may have moved" : ""}
+                  </span>
+                );
+              })()}
             </>
           ) : (
             <span className="text-ink-dim">Not recorded yet.</span>
