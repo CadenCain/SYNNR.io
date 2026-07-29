@@ -5,6 +5,75 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 
 /**
+ * Quick Action: put a truck/rig on the books from the phone.
+ *
+ * This exists because every other "add" path dead-ended for a shop on day one:
+ * you can't add a cert without a unit, and you couldn't make a unit without
+ * sitting down at a desktop. If there's no yard yet we make one, so a guy
+ * standing in the yard can get his first truck in without any setup.
+ */
+export async function quickAddUnit(args: { name: string; type?: string }):
+  Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string } }> {
+  const { company } = await requireCompany();
+  const name = args.name.trim();
+  if (!name) return { ok: false, error: "Name the truck or rig." };
+
+  const db = await saasDb();
+  const { data: yardRow } = await db.from("saas_yards")
+    .select("id, name").eq("company_id", company.id).order("created_at").limit(1).maybeSingle();
+  let yard = yardRow as { id: string; name: string } | null;
+
+  if (!yard) {
+    const { data: made, error: yardErr } = await db.from("saas_yards")
+      .insert({ company_id: company.id, name: "Main yard" }).select("id, name").single();
+    if (yardErr) return { ok: false, error: yardErr.message };
+    yard = made as { id: string; name: string };
+  }
+
+  const { data, error } = await db.from("saas_units")
+    .insert({ company_id: company.id, yard_id: yard.id, name, type: args.type || "truck" })
+    .select("id, name").single();
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/app/quick");
+  revalidatePath("/app/yards");
+  revalidatePath("/app");
+  const u = data as { id: string; name: string };
+  return { ok: true, unit: { id: u.id, name: u.name, yardName: yard.name } };
+}
+
+/** Quick Action: put a piece of gear on a truck from the phone. */
+export async function quickAddAsset(args: { unit_id: string; name: string; category?: string; where?: string }):
+  Promise<{ ok: boolean; error?: string }> {
+  const { company, user } = await requireCompany();
+  const name = args.name.trim();
+  if (!args.unit_id || !name) return { ok: false, error: "Pick a truck and name the gear." };
+
+  const db = await saasDb();
+  const where = (args.where ?? "").trim();
+  const { error } = await db.from("saas_assets").insert({
+    company_id: company.id,
+    unit_id: args.unit_id,
+    name,
+    category: args.category || "other",
+    status: "in_service",
+    // If they told us where it is while adding it, record that as the first
+    // sighting rather than making them do a second trip through the app.
+    ...(where ? {
+      last_seen_where: where,
+      last_seen_by: (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "someone",
+      last_seen_at: new Date().toISOString(),
+    } : {}),
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/app/quick");
+  revalidatePath("/app/yards");
+  revalidatePath("/app");
+  return { ok: true };
+}
+
+/**
  * Quick Action: add a cert/inspection to a unit from the field, optionally
  * with a proof photo (already uploaded client-side to the proofs bucket).
  */

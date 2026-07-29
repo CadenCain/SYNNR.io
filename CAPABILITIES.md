@@ -34,6 +34,15 @@ month. Setup is optional: $750 remote / $1,500 onsite for the first yard.
 - Crew members and their cards (H2S, well control, CDL, medical), tracked
   the same way as gear paper.
 
+**Getting your stuff in doesn't take a week.** (shipped 2026-07-29)
+- Bulk: drop a CSV file on the import page, or paste it. Dry-run preview shows
+  every row and every error before anything is written. Re-importing updates
+  dates instead of duplicating.
+- One at a time from the phone (Quick action): add a truck or rig, add gear to
+  a truck, add a cert. First truck also starts the yard, so a guy standing in
+  the yard on day one can get going without a desktop.
+- Everything is exportable back out as CSV any time, from Settings.
+
 **Tells you before something lapses.**
 - Daily sweep, 6:30am Central. Emails the recipients you choose — routed by
   yard, so the foreman who rolls that truck gets it, not just the owner.

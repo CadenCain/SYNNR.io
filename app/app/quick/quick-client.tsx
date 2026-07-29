@@ -2,16 +2,16 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, ChevronLeft, MapPin, Plus, RefreshCw } from "lucide-react";
+import { Box, Camera, Check, ChevronLeft, MapPin, Plus, RefreshCw, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { extractExpirationDate } from "@/lib/ocr-date";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
-import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { updateAssetLastSeen } from "../_actions";
 import { fmtDate } from "@/lib/saas/format";
 import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
-import { quickAddCert } from "./actions";
+import { quickAddCert, quickAddUnit, quickAddAsset } from "./actions";
 
 /**
  * The 2-tap field workflow. Built for gloved hands in sunlight:
@@ -19,6 +19,11 @@ import { quickAddCert } from "./actions";
  *
  * Renew: tap the item → shoot the new cert → confirm date → done.
  * Add:   pick the truck → name it → shoot it → done.
+ *
+ * Everything a shop needs to PUT ON THE BOOKS lives here too — trucks and
+ * gear, not just paper. Before this, a new customer standing in his own yard
+ * could open the app and do nothing at all: adding a cert needed a truck, and
+ * adding a truck needed a desktop. Nobody buys software they can't start.
  */
 
 export interface QuickItem {
@@ -59,7 +64,12 @@ async function uploadProof(companyId: string, entityId: string, file: File): Pro
 
 export default function QuickClient({ items, units, assets, companyId }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"home" | "renew" | "add" | "seen" | "done">("home");
+  const [mode, setMode] = useState<"home" | "renew" | "add" | "seen" | "unit" | "gear" | "done">("home");
+  /** Kept locally so a truck added a second ago is selectable immediately,
+   *  without waiting on a server round-trip to re-render the page. */
+  const [unitList, setUnitList] = useState<QuickUnit[]>(units);
+  const [addForUnit, setAddForUnit] = useState<QuickUnit | null>(null);
+  const [justMade, setJustMade] = useState<QuickUnit | null>(null);
   const [pickedAsset, setPickedAsset] = useState<QuickAsset | null>(null);
   const [whereText, setWhereText] = useState("");
   const [picked, setPicked] = useState<QuickItem | null>(null);
@@ -90,6 +100,8 @@ export default function QuickClient({ items, units, assets, companyId }: { items
   function reset(toHome = true) {
     setPicked(null);
     setPickedAsset(null);
+    setAddForUnit(null);
+    setJustMade(null);
     setWhereText("");
     setErr("");
     setFileName("");
@@ -123,6 +135,40 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveUnit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErr("");
+    setBusy(true);
+    const fd = new FormData(e.currentTarget);
+    const res = await quickAddUnit({ name: String(fd.get("name") ?? ""), type: String(fd.get("type") ?? "truck") });
+    setBusy(false);
+    if (!res.ok || !res.unit) { setErr(res.error ?? "Couldn't save."); return; }
+    setUnitList((prev) => [...prev, res.unit!].sort((a, b) => a.name.localeCompare(b.name)));
+    setJustMade(res.unit);
+    setDoneMsg(`${res.unit.name} is on the books ✓`);
+    setMode("done");
+    router.refresh();
+  }
+
+  async function saveGear(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErr("");
+    setBusy(true);
+    const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name") ?? "").trim();
+    const res = await quickAddAsset({
+      unit_id: String(fd.get("unit_id") ?? ""),
+      name,
+      category: String(fd.get("category") ?? "other"),
+      where: String(fd.get("where") ?? ""),
+    });
+    setBusy(false);
+    if (!res.ok) { setErr(res.error ?? "Couldn't save."); return; }
+    setDoneMsg(`${name} added ✓`);
+    setMode("done");
+    router.refresh();
   }
 
   async function saveAdd(e: React.FormEvent<HTMLFormElement>) {
@@ -159,7 +205,18 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         </span>
         <p className="text-xl font-semibold">{doneMsg}</p>
         <div className="flex w-full max-w-sm flex-col gap-2">
-          <button onClick={() => reset()} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal">Do another</button>
+          {/* A truck with nothing on it is worth nothing — hand them the next
+              step instead of dropping them back at the menu. */}
+          {justMade ? (
+            <>
+              <button onClick={() => { const u = justMade; reset(false); setAddForUnit(u); setMode("add"); }}
+                className="h-14 rounded-xl bg-bone text-base font-semibold text-coal">Add a cert to {justMade.name}</button>
+              <button onClick={() => { const u = justMade; reset(false); setAddForUnit(u); setMode("gear"); }}
+                className="h-14 rounded-xl border border-line-2 text-base text-ink">Add gear to {justMade.name}</button>
+            </>
+          ) : (
+            <button onClick={() => reset()} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal">Do another</button>
+          )}
           <button onClick={() => router.push("/app")} className="h-14 rounded-xl border border-line-2 text-base text-ink">Back to dashboard</button>
         </div>
       </div>
@@ -230,14 +287,30 @@ export default function QuickClient({ items, units, assets, companyId }: { items
 
   /* ── ADD ── */
   if (mode === "add") {
+    // No trucks yet means this form can't be submitted at all. Send them to
+    // the one screen that unblocks it instead of showing a dead dropdown.
+    if (unitList.length === 0) {
+      return (
+        <div className="flex flex-col gap-4">
+          <BackBar onBack={() => reset()} label="Add a cert or inspection" />
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
+            <p className="text-ink-dim">Certs hang off a truck, rig, or shop. Put your first one on the books and this takes 20 seconds.</p>
+            <button onClick={() => { setErr(""); setMode("unit"); }}
+              className="flex min-h-12 items-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal">
+              <Truck className="h-5 w-5" /> Add a truck or rig
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <form onSubmit={saveAdd} className="flex flex-col gap-4">
-        <BackBar onBack={() => reset()} label="Add a cert or inspection" />
+        <BackBar onBack={() => reset()} label="Add a cert or inspection" sub={addForUnit?.name} />
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           Which truck / rig / shop?
-          <select name="unit_id" required className={FIELD} defaultValue="">
+          <select name="unit_id" required className={FIELD} defaultValue={addForUnit?.id ?? ""}>
             <option value="" disabled>Pick one…</option>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name} — {u.yardName}</option>)}
+            {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
@@ -265,6 +338,82 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     );
   }
 
+  /* ── ADD A TRUCK / RIG ── */
+  if (mode === "unit") {
+    return (
+      <form onSubmit={saveUnit} className="flex flex-col gap-4">
+        <BackBar onBack={() => reset()} label="Add a truck or rig" />
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          What do you call it?
+          <input name="name" required autoFocus placeholder="e.g. Truck 12, Rig 4" className={FIELD} />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          What is it?
+          <select name="type" defaultValue="truck" className={FIELD}>
+            {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </label>
+        {err ? <p className="text-sm text-amber-400">{err}</p> : null}
+        <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
+          {busy ? "Saving…" : "Put it on the books"}
+        </button>
+        <p className="text-center text-xs text-ink-faint">
+          {unitList.length === 0
+            ? "First one — we'll start a yard called Main yard. Rename it any time in Yards."
+            : "Goes in your first yard. Move it any time in Yards."}
+        </p>
+      </form>
+    );
+  }
+
+  /* ── ADD GEAR TO A TRUCK ── */
+  if (mode === "gear") {
+    if (unitList.length === 0) {
+      return (
+        <div className="flex flex-col gap-4">
+          <BackBar onBack={() => reset()} label="Add gear" />
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
+            <p className="text-ink-dim">Gear rides on a truck or rig. Add one first, then hang the gear off it.</p>
+            <button onClick={() => { setErr(""); setMode("unit"); }}
+              className="flex min-h-12 items-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal">
+              <Truck className="h-5 w-5" /> Add a truck or rig
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <form onSubmit={saveGear} className="flex flex-col gap-4">
+        <BackBar onBack={() => reset()} label="Add gear" sub={addForUnit?.name} />
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          On which truck / rig?
+          <select name="unit_id" required className={FIELD} defaultValue={addForUnit?.id ?? ""}>
+            <option value="" disabled>Pick one…</option>
+            {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          What is it?
+          <input name="name" required placeholder="e.g. BOP #3, PH6 crossover" className={FIELD} />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          Kind of gear
+          <select name="category" defaultValue="other" className={FIELD}>
+            {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+          Where is it right now? (optional)
+          <input name="where" placeholder="Andrews yard, on 12, shop bench" className={FIELD} />
+        </label>
+        {err ? <p className="text-sm text-amber-400">{err}</p> : null}
+        <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
+          {busy ? "Saving…" : "Put it on the books"}
+        </button>
+      </form>
+    );
+  }
+
   /* ── WHERE'S SOMETHING: pick the gear, say where it is ── */
   if (mode === "seen") {
     if (!pickedAsset) {
@@ -272,9 +421,13 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         <div className="flex flex-col gap-3">
           <BackBar onBack={() => reset()} label="What are you looking at?" />
           {assets.length === 0 ? (
-            <p className="rounded-xl border border-line bg-surface p-6 text-center text-ink-dim">
-              No gear on the books yet. Add an asset to a truck first.
-            </p>
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
+              <p className="text-ink-dim">No gear on the books yet.</p>
+              <button onClick={() => { setErr(""); setMode("gear"); }}
+                className="flex min-h-12 items-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal">
+                <Plus className="h-5 w-5" /> Add gear
+              </button>
+            </div>
           ) : (
             assets.map((a) => (
               <button key={a.id} onClick={() => { setPickedAsset(a); setWhereText(""); }}
@@ -348,6 +501,22 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           <span className="block text-sm text-ink-dim">Say where a piece of gear is right now</span>
         </span>
       </button>
+
+      {/* Setup work. Smaller on purpose — done once per truck, not daily —
+          but it lives on the phone because that's where the truck is. */}
+      <div className="mt-2 flex flex-col gap-2 border-t border-line pt-4">
+        <span className="font-mono text-xs font-semibold uppercase tracking-wider text-ink-faint">Put something new on the books</span>
+        <button onClick={() => setMode("unit")}
+          className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">
+          <Truck className="h-5 w-5 shrink-0 text-ink-dim" />
+          <span className="text-base font-medium">Add a truck or rig</span>
+        </button>
+        <button onClick={() => setMode("gear")}
+          className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">
+          <Box className="h-5 w-5 shrink-0 text-ink-dim" />
+          <span className="text-base font-medium">Add gear to a truck</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -20,15 +20,48 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
   const [newYard, setNewYard] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [err, setErr] = useState("");
+  const [drag, setDrag] = useState(false);
+
+  /** Read a dropped/picked spreadsheet export straight into the box. Most
+   *  shops have a file, not text — making them Save-As, open a text editor,
+   *  select-all and paste was the real barrier to ever getting started. */
+  async function readFile(file: File | undefined) {
+    if (!file) return;
+    setErr("");
+    if (file.size > 5 * 1024 * 1024) { setErr("That file is over 5 MB. Split it or send it to us and we'll load it."); return; }
+    if (/\.xlsx?$/i.test(file.name)) {
+      setErr("That's an Excel file. In Excel: File → Save As → CSV, then drop that here. Or email it to us and we'll load it for you.");
+      return;
+    }
+    try {
+      const text = await file.text();
+      if (!text.trim()) { setErr("That file looks empty."); return; }
+      setCsv(text);
+      setFileName(file.name);
+      setResult(null);
+    } catch {
+      setErr("Couldn't read that file. Try opening it and pasting the text instead.");
+    }
+  }
 
   async function run(commit: boolean) {
     setBusy(true);
-    const res = commit
-      ? await commitImport({ csv, yardId, newYard })
-      : await previewImport({ csv, yardId, newYard });
-    setResult(res);
-    setBusy(false);
-    if (commit && res.ok) router.refresh();
+    setErr("");
+    try {
+      const res = commit
+        ? await commitImport({ csv, yardId, newYard })
+        : await previewImport({ csv, yardId, newYard });
+      setResult(res);
+      if (commit && res.ok) router.refresh();
+    } catch {
+      // Without this the button sat on "Working…" forever and the customer
+      // had no idea whether anything landed.
+      setErr("That didn't go through. Nothing was saved — try again, or send us the file and we'll load it.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
@@ -54,12 +87,30 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
               href={`data:text/csv;charset=utf-8,${encodeURIComponent(SAMPLE)}`}
               className="text-xs text-bone hover:underline">Download template</a>
           </span>
-          <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={10}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={(e) => { e.preventDefault(); setDrag(false); void readFile(e.dataTransfer.files?.[0]); }}
+            className={`flex flex-col items-center gap-2 rounded-lg border border-dashed p-4 text-center transition-colors ${drag ? "border-bone bg-elevated" : "border-line-2"}`}
+          >
+            <Upload className="h-5 w-5 text-ink-faint" />
+            <label className="cursor-pointer text-sm">
+              <span className="font-medium text-bone underline underline-offset-2">Choose a file</span>
+              <span className="text-ink-dim"> or drag it here</span>
+              <input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" className="hidden"
+                onChange={(e) => void readFile(e.target.files?.[0] ?? undefined)} />
+            </label>
+            <span className="text-xs text-ink-faint">
+              {fileName ? `Loaded ${fileName} — check it below, then preview.` : "CSV from Excel, Sheets, or whatever you keep it in."}
+            </span>
+          </div>
+          {err ? <p className="text-sm text-amber-400">{err}</p> : null}
+          <textarea value={csv} onChange={(e) => { setCsv(e.target.value); setFileName(""); }} rows={10}
             className="rounded-lg border border-line-2 bg-coal px-3 py-2 font-mono text-xs text-ink outline-none focus:border-bone" />
           <span className="text-xs text-ink-faint">
             Columns (any order): <span className="font-mono">unit, unit_type, asset, category, crew, item, kind, issued, expires</span>.
             Crew rows: leave unit blank, fill <span className="font-mono">crew</span>. Re-importing updates dates — no duplicates.
-            Working in Excel? File → Save As → CSV, then paste here.
+            Working in Excel? File → Save As → CSV, then drop the file above.
           </span>
         </label>
 

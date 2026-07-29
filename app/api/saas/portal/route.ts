@@ -23,12 +23,15 @@ export async function POST() {
     });
     return NextResponse.json({ ok: true, url: session.url });
   } catch (e) {
-    // Most common cause: the Customer Portal isn't enabled in the Stripe
-    // dashboard (Billing → Customer portal). Say so instead of a raw 500.
-    const msg = e instanceof Error ? e.message : "";
-    const hint = /portal|configuration/i.test(msg)
-      ? "Billing portal isn't set up yet — enable it in the Stripe dashboard (Billing → Customer portal)."
-      : "Couldn't open billing. Try again.";
-    return NextResponse.json({ ok: false, error: hint }, { status: 502 });
+    // This message is read by a PAYING CUSTOMER, not by us — it must never
+    // leak internal setup instructions, and it must leave them a real way to
+    // do the thing they came here to do (change a card, get an invoice,
+    // cancel). Being unable to cancel is how a subscription earns a
+    // chargeback.
+    console.error("[portal] session create failed:", e instanceof Error ? e.message : e);
+    return NextResponse.json({
+      ok: false,
+      error: "Can't open the billing page right now. Email cadencain@synnr.io or text 432-250-0715 and we'll sort out your card, invoice, or cancellation the same day.",
+    }, { status: 502 });
   }
 }
