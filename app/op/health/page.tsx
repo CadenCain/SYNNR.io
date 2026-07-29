@@ -102,18 +102,52 @@ export default async function OpHealth() {
   });
 
   // ── Is the watchman awake? ────────────────────────────────────────────────
-  const { data: lastSent } = await admin.from("saas_alerts_sent")
-    .select("sent_at").order("sent_at", { ascending: false }).limit(1);
-  const lastSweep = (lastSent?.[0] as { sent_at: string } | undefined)?.sent_at ?? null;
-  const dueNow = allItems.filter((i) => i.expiration_date && i.expiration_date <= addDaysIso(today, 30)).length;
-  const sweepFresh = lastSweep ? (Date.now() - new Date(lastSweep).getTime()) < 26 * 3600e3 : false;
+  // Two separate questions, because conflating them made this cry wolf. Items
+  // alert ONCE and re-arm on renewal, so "last alert was 2 weeks ago" is the
+  // normal steady state — every due item already got its heads-up. Judging the
+  // cron by that timestamp reported "customers are not being warned" on a
+  // perfectly healthy system, which is how an ops page earns being ignored.
+  const { data: lastRunRows } = await admin.from("saas_cron_runs")
+    .select("ran_at, ok, alerts_sent, errors, detail")
+    .eq("job", "saas-alerts").order("ran_at", { ascending: false }).limit(1);
+  const lastRun = (lastRunRows?.[0] ?? null) as
+    { ran_at: string; ok: boolean; alerts_sent: number; errors: number; detail: string | null } | null;
+  const ranRecently = lastRun ? (Date.now() - new Date(lastRun.ran_at).getTime()) < 26 * 3600e3 : false;
+
   add({
-    name: "Expiration sweep is running",
-    ok: sweepFresh || dueNow === 0,
-    detail: lastSweep ? `last alert sent ${new Date(lastSweep).toLocaleString()}` : "no alert ever sent",
-    soWhat: dueNow === 0
-      ? "Nothing is due inside 30 days, so silence is expected — this goes green on its own once something comes due."
-      : `${dueNow} item(s) are due inside 30 days and nothing went out in the last day. Customers are not being warned.`,
+    name: "Alert cron fired in the last day",
+    ok: ranRecently,
+    detail: lastRun
+      ? `last run ${new Date(lastRun.ran_at).toLocaleString()} · ${lastRun.alerts_sent} sent · ${lastRun.errors} error(s)${lastRun.detail ? ` · ${lastRun.detail}` : ""}`
+      : "no heartbeat recorded yet — the first row lands at the next 6:30am Central run",
+    soWhat: lastRun
+      ? "If the cron isn't firing, nothing else here matters — no shop gets warned about anything, and the product silently stops doing its one job."
+      : "Not a failure yet, just unknown: the heartbeat was added today. If this is still empty after tomorrow's 6:30am run, the cron is genuinely dead.",
+    // "Never seen a run" and "ran fine yesterday, silent today" are different
+    // facts. Painting the first one red on the day the heartbeat shipped would
+    // repeat exactly the false alarm this check replaced.
+    severity: lastRun ? "critical" : "warn",
+  });
+
+  // The real failure condition: something is inside its lead window and has
+  // never been alerted on. This is what a broken sweep actually looks like.
+  const { data: leadRows } = await admin.from("saas_notification_settings").select("company_id, lead_days");
+  const leadByCompany = new Map(((leadRows ?? []) as { company_id: string; lead_days: number | null }[])
+    .map((r) => [r.company_id, r.lead_days ?? 30]));
+  const unwarned = allItems.filter((i) => {
+    if (!i.expiration_date) return false;
+    const lead = leadByCompany.get(i.company_id) ?? 30;
+    return i.expiration_date <= addDaysIso(today, lead) && !sentIds.has(i.id);
+  });
+  add({
+    name: "Nothing due is sitting un-alerted",
+    ok: unwarned.length === 0 || !ranRecently,
+    detail: unwarned.length === 0
+      ? "every item inside its lead window has been alerted"
+      : `${unwarned.length} item(s) due and never alerted`,
+    soWhat: !ranRecently
+      ? "Can't judge this until the cron is firing again — fix the check above first."
+      : "The sweep ran but these were skipped. A shop is going to get surprised by a cert it was paying us to watch.",
     severity: "critical",
   });
 

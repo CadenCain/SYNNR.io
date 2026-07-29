@@ -3,6 +3,7 @@ import { saasAdmin } from "@/lib/saas/db";
 import { sweepAlerts } from "@/lib/saas/alerts";
 import { sendEmail } from "@/lib/saas/notify";
 import { snapshotAllCompanies } from "@/lib/saas/readiness";
+import { logCronRun } from "@/lib/saas/cron-log";
 
 // Daily SaaS expiration-alert sweep. Vercel Cron sends Bearer CRON_SECRET.
 export const runtime = "nodejs";
@@ -20,12 +21,20 @@ export async function GET(req: Request) {
   // Operator alarm: at 1 company Caden reads the cron logs; at 30 nobody
   // does. Any sweep errors — or a total crash — get emailed to the operator
   // so a batch failure is loud, not a silent morning where no shop got its
-  // heads-up. (A cron that never RUNS can't self-report: that's covered by
-  // Vercel's cron-failure notifications, not this.)
+  // heads-up. Separately, every run leaves a heartbeat row so a cron that
+  // stopped firing is distinguishable from a quiet day with nothing due.
   const OPERATOR = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
   try {
     const result = await sweepAlerts(admin);
     const snapshot = await snapshotAllCompanies(admin); // daily KPI history (real sparklines)
+    await logCronRun(admin, {
+      job: "saas-alerts",
+      ok: result.errors.length === 0,
+      companies_scanned: result.companies_scanned,
+      alerts_sent: result.emails_sent + result.sms_sent,
+      errors: result.errors.length,
+      detail: result.errors.length > 0 ? result.errors.join(" | ") : null,
+    });
     if (result.errors.length > 0) {
       await sendEmail([OPERATOR], `[SYNNR ops] alert sweep: ${result.errors.length} delivery failure(s)`,
         `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">Sweep ran but some sends failed:\n\n${result.errors.map((x) => `• ${x}`).join("\n")}\n\nScanned ${result.companies_scanned} companies · ${result.emails_sent} emails · ${result.sms_sent} SMS sent.\nFailed items retry on tomorrow's sweep.</pre>`);
@@ -33,6 +42,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, ...result, snapshot });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    await logCronRun(admin, { job: "saas-alerts", ok: false, detail: msg });
     // The whole sweep died — every company's alerts skipped today. Scream.
     await sendEmail([OPERATOR], "[SYNNR ops] ALERT SWEEP CRASHED — no alerts went out",
       `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">The daily sweep threw before completing:\n\n${msg}\n\nNo company received expiration alerts today. Investigate before tomorrow's run.</pre>`).catch(() => {});
