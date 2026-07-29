@@ -45,7 +45,7 @@ export const MARKETING_HTML = `
     <div class="hero-main">
       <span class="eyebrow reveal">Yard readiness · oilfield service shops</span>
       <h1 class="display reveal" data-d="1"><span class="lt">The truck rolls</span> ready.<br/><span class="dim">Or it doesn't roll.</span></h1>
-      <p class="lede reveal" data-d="2">RollReady keeps up with every cert, DOT item, and crew card in your yard, and tells you what's dead or dying before the truck leaves with it. Built by a Permian wireline hand, not a software vendor.</p>
+      <p class="lede reveal" data-d="2">RollReady keeps up with your yard: where the gear was last seen, whose paper is current, and what's about to lapse. Your whole crew on one account, so nobody has to call the one guy who knows. Built by a Permian wireline hand, not a software vendor.</p>
       <div class="hero-cta reveal" data-d="3">
         <a href="/signup" class="btn btn-primary">Get started
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -165,6 +165,7 @@ export const MARKETING_HTML = `
     </div>
     <div class="dt" style="margin-top:56px" role="table" aria-label="What we track">
       <div class="dt-row"><span class="k">Equipment &amp; assets</span><span class="v">tools · BOPs · lubricators · trailers</span></div>
+      <div class="dt-row"><span class="k">Where the gear was last seen</span><span class="v">who touched it, when, searchable</span></div>
       <div class="dt-row"><span class="k">Certs, inspections &amp; DOT</span><span class="v">BOP tests · annual DOT · safety</span></div>
       <div class="dt-row"><span class="k">Crew &amp; crew cards</span><span class="v">H2S · well control · CDL · medical</span></div>
       <div class="dt-row"><span class="k">Every date, watched</span><span class="v">flagged before it lapses, not after</span></div>
@@ -203,10 +204,10 @@ export const MARKETING_HTML = `
       <div class="price-big">$500<span>per yard / month</span></div>
       <p class="price-why">That's about half a day of one hand's wages. One miss it catches — one expired DOT, one lapsed BOP — costs you a truck for a day and $10,000+ in NPT. If it stops that once a year, it paid for itself twenty times over.</p>
       <ul class="price-hero-features">
-        <li>Readiness checks with no override button</li>
-        <li>Certs, DOT, gear &amp; crew cards — alerts before they lapse</li>
-        <li>Readiness proof links + immutable dispatch records</li>
-        <li>Unlimited assets, crew &amp; users. Every yard costs the same.</li>
+        <li>Every hand on one account — never per-seat</li>
+        <li>Where the gear was last seen, and who touched it</li>
+        <li>Certs, DOT &amp; crew cards — alerts before they lapse</li>
+        <li>Readiness checks with no override button, plus proof links</li>
       </ul>
       <div class="hero-cta">
         <a href="/signup" class="btn btn-primary">Get started

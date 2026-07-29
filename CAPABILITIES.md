@@ -12,6 +12,20 @@ month. Setup is optional: $750 remote / $1,500 onsite for the first yard.
 
 ## DOES (safe to claim, today)
 
+**Says where the gear was last seen.** (shipped 2026-07-29)
+- A location note on any asset: where it was last seen, who said so, when.
+- Updated in ~5 seconds from the phone (Quick action -> "Where's something").
+- Searchable — "Andrews" pulls everything last seen there.
+- History lands in the activity feed automatically.
+- It is a NOTE, not a tracker. Only as good as whoever updates it, and it
+  NEVER affects a truck's ready call. Say that out loud when selling it.
+
+**Works for the whole shop, not one login.**
+- One company account; invite the crew (owner / admin / member roles).
+- A hand can update where gear is, renew a cert, and run a readiness check.
+- Only owner/admin can add or delete trucks, or bulk import.
+- Priced per YARD, never per seat — adding hands costs nothing.
+
 **Keeps one register of the stuff that expires.**
 - Assets/gear per truck and yard, with a status you set by hand
   (in service / out of service / missing).
@@ -53,9 +67,11 @@ month. Setup is optional: $750 remote / $1,500 onsite for the first yard.
 - ❌ QR or RFID scanning
 - ❌ GPS or telematics of any kind
 
-Nearest true statements: *"it records who ran the last readiness check"* and
-*"you can flag an asset missing and it fails the truck until you clear it."*
-Those are not the same claim and must not be stretched into it.
+Nearest true statements: *"it records who ran the last readiness check"*,
+*"you can flag an asset missing and it fails the truck until you clear it"*,
+and now *"it says where the gear was last seen and who touched it."*
+None of those is a sign-out system and they must not be stretched into one.
+"Last seen" is a note somebody typed, not a chain of custody.
 
 **Also not built:** SMS alerts (needs Twilio; email is the live channel),
 automatic cert reading from a photo without a human confirming the date,

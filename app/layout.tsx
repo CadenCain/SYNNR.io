@@ -30,10 +30,10 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "RollReady keeps up with every asset, cert, DOT item, and crew card in your yard, and texts you before anything lapses. Run a readiness check on the phone before a truck rolls. $500 per yard, per month. Built by SYNNR.",
+    "RollReady keeps up with your yard: where the gear was last seen, whose certs and crew cards are current, and what is about to lapse. Your whole crew on one account, never per-seat. $500 per yard, per month. Built by SYNNR.",
   keywords: [
     "RollReady", "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "cert expiration alerts",
-    "crew card tracking", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",
+    "crew card tracking", "equipment tracking", "where is my equipment", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",
     "BOP recertification", "crew certs", "H2S certification", "well control", "DOT inspection",
     "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
   ],
@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     siteName: "SYNNR",
     title: "RollReady — catch the miss before the truck leaves the yard",
     description:
-      "Yard readiness for oilfield service shops. Cert, DOT, and crew-card tracking with alerts before anything lapses, plus shareable readiness-proof links. $500 per yard. By SYNNR.",
+      "Yard readiness for oilfield service shops. Where the gear was last seen, cert/DOT/crew-card tracking with alerts before anything lapses, and shareable proof links. Whole crew on one account. $500 per yard. By SYNNR.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
     title: "RollReady — catch the miss before the truck leaves the yard",
     description:
-      "Yard readiness for oilfield service shops. Cert & crew-card tracking, alerts before anything expires, readiness checks, proof links. $500 per yard. By SYNNR.",
+      "Yard readiness for oilfield service shops. Where the gear was last seen, cert & crew-card tracking, alerts before anything expires, proof links. $500 per yard. By SYNNR.",
   },
 };
 
@@ -74,7 +74,7 @@ export default function RootLayout({
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Yard readiness for oilfield service shops. Keeps up with every cert, DOT item, and crew card, and flags what's lapsed or lapsing before a truck leaves with it.",
+                "Yard readiness for oilfield service shops. Keeps up with where the gear was last seen, every cert, DOT item, and crew card, and flags what is lapsed or lapsing before a truck leaves with it.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",
