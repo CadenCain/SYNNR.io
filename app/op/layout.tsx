@@ -43,6 +43,7 @@ function SignedInShell({ email, children }: { email: string; children: React.Rea
         <nav className="op-nav">
           <Link href="/op">Dashboard</Link>
           <Link href="/op/outbound">Today&apos;s outbound</Link>
+          <Link href="/op/health">Health</Link>
         </nav>
 
         <div className="op-side-section">Shops</div>
