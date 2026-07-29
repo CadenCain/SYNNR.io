@@ -1,7 +1,7 @@
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { PageHeader } from "@/components/ui/page-header";
-import QuickClient, { type QuickItem, type QuickUnit } from "./quick-client";
+import QuickClient, { type QuickItem, type QuickUnit, type QuickAsset } from "./quick-client";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export default async function QuickPage() {
       .select("id, title, status, expiration_date, parent_type, parent_id")
       .eq("company_id", company.id),
     db.from("saas_units").select("id, name, saas_yards(name)").eq("company_id", company.id).order("name"),
-    db.from("saas_assets").select("id, name").eq("company_id", company.id),
+    db.from("saas_assets").select("id, name, last_seen_where, unit_id").eq("company_id", company.id).order("name"),
     db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
 
@@ -29,7 +29,9 @@ export default async function QuickPage() {
   }));
 
   const unitNames = new Map(unitRows.map((u) => [u.id, u.name]));
-  const assetNames = new Map(((assetData ?? []) as { id: string; name: string }[]).map((a) => [a.id, a.name]));
+  type AssetRow = { id: string; name: string; last_seen_where: string | null; unit_id: string | null };
+  const assetRows = (assetData ?? []) as AssetRow[];
+  const assetNames = new Map(assetRows.map((a) => [a.id, a.name]));
   const crewNames = new Map(((crewData ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
   type Row = { id: string; title: string; status: ComplianceStatus; expiration_date: string | null; parent_type: string; parent_id: string };
@@ -43,10 +45,17 @@ export default async function QuickPage() {
     }))
     .sort((a, b) => ORDER[a.status] - ORDER[b.status] || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""));
 
+  const assets: QuickAsset[] = assetRows.map((a) => ({
+    id: a.id,
+    name: a.name,
+    lastSeen: a.last_seen_where,
+    unitName: a.unit_id ? unitNames.get(a.unit_id) ?? "" : "",
+  }));
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Quick action" description="Two taps. Renew what's due or add what's new." />
-      <QuickClient items={items} units={units} companyId={company.id} />
+      <PageHeader title="Quick action" description="Two taps. Renew what's due, add what's new, or say where something is." />
+      <QuickClient items={items} units={units} assets={assets} companyId={company.id} />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { unitTypeLabel } from "@/lib/saas/taxonomy";
+import { unitTypeLabel, categoryLabel } from "@/lib/saas/taxonomy";
 import { fmtDate } from "@/lib/saas/format";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   let units: { id: string; name: string; type: string }[] = [];
   let crew: { id: string; name: string; role: string | null }[] = [];
-  let assets: { id: string; name: string; category: string }[] = [];
+  let assets: { id: string; name: string; category: string; last_seen_where: string | null }[] = [];
   let certs: { id: string; title: string; status: ComplianceStatus; parent_type: string; parent_id: string; expiration_date: string | null }[] = [];
 
   if (query.length >= 2) {
@@ -27,7 +27,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     const [u, c, a, ci] = await Promise.all([
       db.from("saas_units").select("id, name, type").eq("company_id", company.id).ilike("name", like).limit(10),
       db.from("saas_crew_members").select("id, name, role").eq("company_id", company.id).ilike("name", like).limit(10),
-      db.from("saas_assets").select("id, name, category").eq("company_id", company.id).ilike("name", like).limit(10),
+      db.from("saas_assets").select("id, name, category, last_seen_where").eq("company_id", company.id)
+        .or(`name.ilike.${like},last_seen_where.ilike.${like}`).limit(10),
       db.from("saas_compliance_items_with_status")
         .select("id, title, status, parent_type, parent_id, expiration_date")
         .eq("company_id", company.id).ilike("title", like).limit(15),
@@ -86,7 +87,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           {assets.length > 0 && (
             <section className="flex flex-col gap-2">
               <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Assets</h2>
-              {assets.map((a) => <Row key={a.id} href={`/app/assets/${a.id}`} icon={Box} title={a.name} sub={a.category.replace(/_/g, " ")} />)}
+              {assets.map((a) => <Row key={a.id} href={`/app/assets/${a.id}`} icon={Box} title={a.name}
+                sub={a.last_seen_where ? `${categoryLabel(a.category)} · last seen ${a.last_seen_where}` : categoryLabel(a.category)} />)}
             </section>
           )}
           {certs.length > 0 && (

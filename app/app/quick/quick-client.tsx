@@ -2,12 +2,13 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, ChevronLeft, Plus, RefreshCw } from "lucide-react";
+import { Camera, Check, ChevronLeft, MapPin, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { extractExpirationDate } from "@/lib/ocr-date";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { updateAssetLastSeen } from "../_actions";
 import { fmtDate } from "@/lib/saas/format";
 import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { quickAddCert } from "./actions";
@@ -26,6 +27,12 @@ export interface QuickItem {
   status: ComplianceStatus;
   expiration_date: string | null;
   parentLabel: string;
+}
+export interface QuickAsset {
+  id: string;
+  name: string;
+  lastSeen: string | null;
+  unitName: string;
 }
 export interface QuickUnit {
   id: string;
@@ -50,9 +57,11 @@ async function uploadProof(companyId: string, entityId: string, file: File): Pro
   return error ? null : { path, type: file.type || null };
 }
 
-export default function QuickClient({ items, units, companyId }: { items: QuickItem[]; units: QuickUnit[]; companyId: string }) {
+export default function QuickClient({ items, units, assets, companyId }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"home" | "renew" | "add" | "done">("home");
+  const [mode, setMode] = useState<"home" | "renew" | "add" | "seen" | "done">("home");
+  const [pickedAsset, setPickedAsset] = useState<QuickAsset | null>(null);
+  const [whereText, setWhereText] = useState("");
   const [picked, setPicked] = useState<QuickItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -80,6 +89,8 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
 
   function reset(toHome = true) {
     setPicked(null);
+    setPickedAsset(null);
+    setWhereText("");
     setErr("");
     setFileName("");
     setOcr("idle");
@@ -254,7 +265,62 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
     );
   }
 
-  /* ── HOME: two giant buttons ── */
+  /* ── WHERE'S SOMETHING: pick the gear, say where it is ── */
+  if (mode === "seen") {
+    if (!pickedAsset) {
+      return (
+        <div className="flex flex-col gap-3">
+          <BackBar onBack={() => reset()} label="What are you looking at?" />
+          {assets.length === 0 ? (
+            <p className="rounded-xl border border-line bg-surface p-6 text-center text-ink-dim">
+              No gear on the books yet. Add an asset to a truck first.
+            </p>
+          ) : (
+            assets.map((a) => (
+              <button key={a.id} onClick={() => { setPickedAsset(a); setWhereText(""); }}
+                className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left active:bg-elevated">
+                <span className="min-w-0">
+                  <span className="block truncate text-base font-medium">{a.name}</span>
+                  <span className="block truncate text-sm text-ink-dim">
+                    {a.lastSeen ? `Last seen ${a.lastSeen}` : a.unitName || "not on a truck"}
+                  </span>
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      );
+    }
+    return (
+      <form
+        action={async (fd) => {
+          setBusy(true);
+          try { await updateAssetLastSeen(fd); setDoneMsg(`${pickedAsset.name} — ${whereText}`); setMode("done"); }
+          catch { setErr("Couldn't save that. Try again."); }
+          finally { setBusy(false); }
+        }}
+        className="flex flex-col gap-4"
+      >
+        <BackBar onBack={() => setPickedAsset(null)} label={pickedAsset.name} sub={pickedAsset.lastSeen ? `Last seen ${pickedAsset.lastSeen}` : "No location on file"} />
+        <input type="hidden" name="id" value={pickedAsset.id} />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm text-ink-dim">Where is it?</span>
+          <input name="last_seen_where" required autoFocus value={whereText} onChange={(e) => setWhereText(e.target.value)}
+            placeholder="Andrews yard, on 12, shop bench" className={FIELD} />
+        </label>
+        {err ? <p className="text-sm text-amber-400">{err}</p> : null}
+        <button type="submit" disabled={busy || !whereText.trim()}
+          className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
+          {busy ? "Saving…" : "Save it"}
+        </button>
+        <p className="text-center text-xs text-ink-faint">
+          Just a note for the crew. It doesn&apos;t change any truck&apos;s ready call.
+        </p>
+      </form>
+    );
+  }
+
+  /* ── HOME: three giant buttons ── */
   const needsWork = items.filter((i) => i.status === "expired" || i.status === "expiring").length;
   return (
     <div className="flex flex-col gap-3">
@@ -272,6 +338,14 @@ export default function QuickClient({ items, units, companyId }: { items: QuickI
         <span>
           <span className="block text-lg font-semibold">Add a cert</span>
           <span className="block text-sm text-ink-dim">New cert, inspection, or DOT item</span>
+        </span>
+      </button>
+      <button onClick={() => setMode("seen")}
+        className="flex min-h-24 items-center gap-4 rounded-2xl border border-line bg-surface px-5 text-left active:bg-elevated">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line-2 bg-elevated text-ink"><MapPin className="h-6 w-6" /></span>
+        <span>
+          <span className="block text-lg font-semibold">Where&apos;s something</span>
+          <span className="block text-sm text-ink-dim">Say where a piece of gear is right now</span>
         </span>
       </button>
     </div>

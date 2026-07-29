@@ -42,8 +42,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
 
   const { data: assetData } = await db
-    .from("saas_assets").select("id, name, category, status").eq("unit_id", unitId).order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string }[];
+    .from("saas_assets").select("id, name, category, status, last_seen_where").eq("unit_id", unitId).order("name");
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null }[];
 
   // Crew: standing assignments + everyone else, with worst-card status chips.
   const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
@@ -237,8 +237,13 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <Link key={a.id} href={`/app/assets/${a.id}`}>
                 <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Box className="h-4 w-4 text-ink-dim" /></span>
-                  <span className="flex-1 truncate font-medium">{a.name}</span>
-                  <span className="text-sm text-ink-dim">{categoryLabel(a.category)}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{a.name}</span>
+                    {a.last_seen_where ? (
+                      <span className="block truncate text-xs text-ink-faint">Last seen: {a.last_seen_where}</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-sm text-ink-dim">{categoryLabel(a.category)}</span>
                   <ChevronRight className="h-4 w-4 text-ink-faint" />
                 </Card>
               </Link>

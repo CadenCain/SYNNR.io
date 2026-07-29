@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { syncYardQuantity } from "@/lib/saas/billing";
+import { logEvent } from "@/lib/saas/notify";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -65,6 +66,45 @@ export async function updateAsset(fd: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);
 }
+/**
+ * "Last seen" — where a piece of gear was last spotted and who said so.
+ * A NOTE, not a tracker: this deliberately never feeds the readiness verdict
+ * or the score (docs/spec-last-seen.md). A stale note must never turn a truck
+ * red — only an explicitly flagged asset does that.
+ */
+export async function updateAssetLastSeen(fd: FormData) {
+  const { company, user } = await requireCompany();
+  const id = str(fd, "id");
+  const where = str(fd, "last_seen_where");
+  if (!id || !where) return;
+  const by =
+    str(fd, "last_seen_by") ||
+    (user.user_metadata?.full_name as string | undefined)?.trim() ||
+    user.email?.split("@")[0] ||
+    "someone";
+
+  const db = await saasDb();
+  const { data, error } = await db
+    .from("saas_assets")
+    .update({ last_seen_where: where, last_seen_by: by, last_seen_at: new Date().toISOString() })
+    .eq("id", id).eq("company_id", company.id)
+    .select("name, unit_id").maybeSingle();
+  if (error) throw new Error(error.message);
+
+  const row = data as { name: string; unit_id: string | null } | null;
+  if (row) {
+    void logEvent({
+      companyId: company.id,
+      kind: "asset_seen",
+      unitId: row.unit_id,
+      actor: by,
+      message: `${row.name} — last seen ${where}, per ${by}`,
+    });
+  }
+  revalidatePath(`/app/assets/${id}`);
+  if (row?.unit_id) revalidatePath(`/app/units/${row.unit_id}`);
+}
+
 export async function deleteAsset(fd: FormData) {
   const { company } = await requireCompany();
   const id = str(fd, "id");

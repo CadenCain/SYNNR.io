@@ -10,7 +10,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
-import { updateAsset, deleteAsset } from "@/app/app/_actions";
+import { updateAsset, deleteAsset, updateAssetLastSeen } from "@/app/app/_actions";
+import { fmtDate } from "@/lib/saas/format";
 import PhotoUpload from "./photo-upload";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +25,10 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const here = `/app/assets/${assetId}`;
 
   const { data: asset } = await db
-    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id")
+    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id, last_seen_where, last_seen_by, last_seen_at")
     .eq("id", assetId).eq("company_id", company.id).maybeSingle();
   if (!asset) notFound();
-  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null };
+  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null };
 
   let photoUrl: string | null = null;
   if (a.primary_photo_path) {
@@ -83,6 +84,33 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           </details>
         }
       />
+
+      {/* Last seen — a note, not a tracker. Never affects readiness. */}
+      <Card className="flex flex-col gap-3 p-5">
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Where is it</h2>
+        <p className="text-sm">
+          {a.last_seen_where ? (
+            <>
+              <span className="font-medium">{a.last_seen_where}</span>
+              <span className="text-ink-dim">
+                {a.last_seen_by ? ` · per ${a.last_seen_by}` : ""}
+                {a.last_seen_at ? ` · ${fmtDate(a.last_seen_at.slice(0, 10))}` : ""}
+              </span>
+            </>
+          ) : (
+            <span className="text-ink-dim">Not recorded yet.</span>
+          )}
+        </p>
+        <form action={updateAssetLastSeen} className="flex flex-col gap-2 sm:flex-row">
+          <input type="hidden" name="id" value={a.id} />
+          <input name="last_seen_where" required placeholder="Where is it? e.g. Andrews yard, on 12, shop bench"
+            defaultValue="" className={`${fld} min-w-0 flex-1`} />
+          <Button type="submit" size="sm" className="h-11 shrink-0">Update</Button>
+        </form>
+        <p className="text-xs text-ink-faint">
+          A note, not a tracker. It&apos;s only as good as whoever updates it, and it never affects a truck&apos;s ready call.
+        </p>
+      </Card>
 
       <Card className="flex flex-col gap-3 p-5">
         <div className="flex items-center justify-between">
