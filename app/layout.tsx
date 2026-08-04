@@ -26,11 +26,11 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "RollReady by SYNNR — yard readiness for oilfield service shops",
+    default: "SYNNR — yard operations software for oilfield service shops",
     template: "%s",
   },
   description:
-    "RollReady keeps up with your yard: where the gear was last seen, whose certs and crew cards are current, and what is about to lapse. Your whole crew on one account, never per-seat. $500 per yard, per month. Built by SYNNR.",
+    "SYNNR keeps up with your yard: whether the truck can roll, whose crew cards are current, where the gear was last seen, and proof you can hand a customer. Four tools, one system. Your whole crew on one account, never per-seat. $500 per yard, per month.",
   keywords: [
     "RollReady", "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "cert expiration alerts",
     "crew card tracking", "equipment tracking", "where is my equipment", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",

@@ -5,8 +5,23 @@ DMs, posts, sales calls, agent instructions.** If a claim isn't on the DOES
 list below, it can't be said in public. Verified against the code, not memory
 (engine audit 2026-07-27).
 
-RollReady is the product. SYNNR is the company. `synnr.io`. $500 per yard per
-month. Setup is optional: $750 remote / $1,500 onsite for the first yard.
+SYNNR is the company AND the brand. `synnr.io`. $500 per yard per month.
+Setup is optional: $750 remote / $1,500 onsite for the first yard.
+
+**Product line-up (renamed 2026-08-04).** One engine, sliced by who's buying —
+the model IronTrac/Entraca proved in this exact market. All four are the same
+account and the same $500/yard; they are NOT separately-priced modules, and
+there is no Stripe price behind any of them individually. Never quote a
+per-tool price.
+
+| Name | What it answers | Buyer |
+|---|---|---|
+| **SYNNR Roll** | Can this truck roll? (was RollReady) | yard managers, dispatchers |
+| **SYNNR Cards** | Are the hands' cards current? | safety/HSE managers |
+| **SYNNR Yard** | Where was the gear last seen? | shop foremen |
+| **SYNNR Proof** | Show a customer/auditor what's current | anyone bidding or audited |
+
+"RollReady" is retired as the public name. Say **SYNNR Roll**.
 
 ---
 

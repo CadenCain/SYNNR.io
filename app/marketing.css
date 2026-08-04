@@ -581,3 +581,41 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ── PRODUCT LINE-UP ──────────────────────────────────────────────────────
+   One engine, sliced by who's buying. Each card names the job and the person
+   who has that job, because a shop owner shouldn't have to work out which
+   part applies to him. Modeled on how vertical software actually sells:
+   narrow named tools, not one feature list nobody finishes reading. */
+.mkt .prod-grid {
+  display: grid; gap: 1px; margin-top: 48px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+.mkt .prod-card {
+  background: var(--bg);
+  padding: 30px 26px 26px;
+  display: flex; flex-direction: column; gap: 12px;
+  transition: background .2s ease;
+}
+.mkt .prod-card:hover { background: var(--bg-elev, rgba(255,255,255,.02)); }
+.mkt .prod-name {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--fg-faint);
+}
+.mkt .prod-name b { color: var(--fg); font-weight: 600; }
+.mkt .prod-what {
+  font-size: clamp(17px, 1.9vw, 20px); line-height: 1.4; color: var(--fg);
+  margin: 0; font-weight: 500;
+}
+.mkt .prod-desc { font-size: 15px; line-height: 1.6; color: var(--fg-dim); margin: 0; }
+.mkt .prod-who {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 13.5px; line-height: 1.5; color: var(--fg-faint);
+}
+.mkt .prod-who b { color: var(--fg-dim); font-weight: 500; }
+.mkt .prod-note {
+  margin: 26px 0 0; font-size: 14.5px; line-height: 1.65;
+  color: var(--fg-faint); max-width: 70ch;
+}

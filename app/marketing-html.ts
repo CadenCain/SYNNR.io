@@ -7,13 +7,14 @@
 export const MARKETING_HTML = `
 <header class="nav" id="nav">
   <div class="nav-pill">
-    <a class="brand" href="/" aria-label="RollReady by SYNNR">
+    <a class="brand" href="/" aria-label="SYNNR">
       <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#ece5d7"/>
       </svg>
-      <span class="wordmark">RollReady</span><span class="by-synnr">by SYNNR</span>
+      <span class="wordmark">SYNNR</span><span class="by-synnr">yard operations</span>
     </a>
     <nav class="nav-links">
+      <a href="#products">Products</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="/partners">Partners</a>
@@ -26,6 +27,7 @@ export const MARKETING_HTML = `
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
     <nav class="nav-mobile">
+      <a href="#products">Products</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="/partners">Partners</a>
@@ -43,9 +45,9 @@ export const MARKETING_HTML = `
 <section class="band hero">
   <div class="container">
     <div class="hero-main">
-      <span class="eyebrow reveal">Yard readiness · oilfield service shops</span>
-      <h1 class="display reveal" data-d="1"><span class="lt">The truck rolls</span> ready.<br/><span class="dim">Or it doesn't roll.</span></h1>
-      <p class="lede reveal" data-d="2">RollReady keeps up with your yard: where the gear was last seen, whose paper is current, and what's about to lapse. Your whole crew on one account, so nobody has to call the one guy who knows. Built by a Permian wireline hand, not a software vendor.</p>
+      <span class="eyebrow reveal">Yard operations · oilfield service shops</span>
+      <h1 class="display reveal" data-d="1"><span class="lt">Roll ready.</span><br/><span class="dim">Paper current.<br/>Gear found.</span></h1>
+      <p class="lede reveal" data-d="2">Everything in your yard that expires, walks off, or shuts you down — on one system. Four tools: whether the truck can roll Friday, whose cards are current, where the gear was last seen, and proof you can hand a customer. Start with the one that's costing you money. Built by a Permian wireline hand, not a software vendor.</p>
       <div class="hero-cta reveal" data-d="3">
         <a href="/signup" class="btn btn-primary">Get started
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -73,6 +75,49 @@ export const MARKETING_HTML = `
       <p class="lede">A crew's gotta roll and the gear's not there. Or it's the wrong one. Or the BOP cert expired and nobody knew. Your whole yard lives in somebody's head, a whiteboard, and three spreadsheets — so the failure isn't an if, it's a when. The crew rolls late or wrong, you eat the NPT, you pay the hotshot, and the operator remembers. He's got a long memory and a short vendor list.</p>
       <p class="lede" style="margin-top:18px"><b style="color:var(--fg)">Every shop deals with this. The only question is how much it's quietly costing you.</b></p>
     </div>
+  </div>
+</section>
+
+<!-- ═══ PRODUCT LINE-UP — dark, one engine sliced by buyer ═══ -->
+<section class="band band-light section" id="products">
+  <div class="container">
+    <div class="shead">
+      <span class="eyebrow">The line-up</span>
+      <h2 class="h2">One system.<br/><span class="dim">Four jobs it does.</span></h2>
+      <p class="lede">Same engine underneath, so nothing gets typed twice. Most shops start with whichever one is bleeding right now.</p>
+    </div>
+
+    <div class="prod-grid">
+      <div class="prod-card">
+        <span class="prod-name">SYNNR <b>Roll</b></span>
+        <p class="prod-what">Can this truck roll?</p>
+        <p class="prod-desc">Every cert, DOT item, and crew card on the unit, checked live. Ask it about Friday and it answers for Friday, so a cert that's fine today but dead by the job fails now instead of on location.</p>
+        <p class="prod-who"><b>For</b> yard managers and dispatchers who sign off on what leaves the gate.</p>
+      </div>
+
+      <div class="prod-card">
+        <span class="prod-name">SYNNR <b>Cards</b></span>
+        <p class="prod-what">Crew paper only.</p>
+        <p class="prod-desc">H2S, well control, CDL, medicals. One register, one email before anything lapses, routed to whoever actually rolls that crew. No asset tracking required.</p>
+        <p class="prod-who"><b>For</b> safety managers who just need the hands current.</p>
+      </div>
+
+      <div class="prod-card">
+        <span class="prod-name">SYNNR <b>Yard</b></span>
+        <p class="prod-what">Where's the gear?</p>
+        <p class="prod-desc">A register of what you own, with photos, and a note on where each piece was last seen, who said so, and how long ago. It's a note, not a tracker — and it tells you when it's gone stale instead of pretending.</p>
+        <p class="prod-who"><b>For</b> shop foremen tired of being the one guy who knows.</p>
+      </div>
+
+      <div class="prod-card">
+        <span class="prod-name">SYNNR <b>Proof</b></span>
+        <p class="prod-what">Show the customer.</p>
+        <p class="prod-desc">A live link that shows an operator or an auditor exactly what's current, right now. No packet to assemble the night before, no scanning a binder at 9pm.</p>
+        <p class="prod-who"><b>For</b> anyone bidding work or sitting through an audit.</p>
+      </div>
+    </div>
+
+    <p class="prod-note">All four come with the account. You are not buying modules and you are not getting quoted per feature — one price per yard, use what you need.</p>
   </div>
 </section>
 
@@ -287,7 +332,7 @@ export const MARKETING_HTML = `
 <footer class="footer">
   <div class="container">
     <div class="footer-bottom">
-      <a class="brand" href="/" aria-label="RollReady by SYNNR">
+      <a class="brand" href="/" aria-label="SYNNR">
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
