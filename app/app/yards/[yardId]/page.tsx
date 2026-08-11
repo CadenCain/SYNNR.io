@@ -7,7 +7,13 @@ import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, unitTypeLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+
+import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { updateYard, deleteYard } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
@@ -55,25 +61,39 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
         actions={
           <>
           <ShareProof scope="yard" yardId={y.id} />
-          <details className="group relative">
-            <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+          <Popover>
+            <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
               <Settings2 className="h-4 w-4" /> Manage
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-3">
               <form action={updateYard} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={y.id} />
                 <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={y.name} required className={`${fld} mt-1 w-full`} /></label>
                 <label className="text-xs text-ink-faint">Location<input name="location" defaultValue={y.location ?? ""} className={`${fld} mt-1 w-full`} /></label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              <form action={deleteYard} className="mt-2 border-t border-line pt-2">
-                <input type="hidden" name="id" value={y.id} />
-                <button type="submit" className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete yard &amp; everything in it
-                </button>
-              </form>
-            </div>
-          </details>
+              <div className="mt-2 border-t border-line pt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete yard &amp; everything in it
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {y.name} — and everything in it?</AlertDialogTitle>
+                      <AlertDialogDescription>Every truck, every asset, every cert and record in this yard goes with it. This is the biggest delete in the app and there is no undo.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <form action={deleteYard}>
+                        <input type="hidden" name="id" value={y.id} />
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete everything</button>
+                      </form>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </PopoverContent>
+          </Popover>
           </>
         }
       />

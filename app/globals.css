@@ -29,6 +29,29 @@
   --color-bone:      #e7ddc7;
   --color-bone-soft: #f3ecdb;
 
+  /* shadcn semantic tokens, mapped onto the existing palette — real shadcn
+     components (popover, dialog, …) drop in wearing the SYNNR skin instead
+     of shipping their own gray. Keep these pointing at the tokens above. */
+  --color-background: #121110;          /* coal */
+  --color-foreground: #ece5d7;          /* ink */
+  --color-card: #1a1714;                /* surface */
+  --color-card-foreground: #ece5d7;
+  --color-popover: #211d19;             /* elevated */
+  --color-popover-foreground: #ece5d7;
+  --color-primary: #e7ddc7;             /* bone */
+  --color-primary-foreground: #121110;
+  --color-secondary: #211d19;
+  --color-secondary-foreground: #ece5d7;
+  --color-muted: #1a1714;
+  --color-muted-foreground: #a59d8c;    /* ink-dim */
+  --color-accent: #211d19;
+  --color-accent-foreground: #ece5d7;
+  --color-destructive: #d55f53;         /* red-500 */
+  --color-destructive-foreground: #f3ecdb;
+  --color-border: #2a2521;              /* line */
+  --color-input: #37312a;               /* line-2 */
+  --color-ring: #8a8071;                /* ink-faint */
+
   /* Status colors, warmed to match the marketing demo exactly: sage / amber /
      terracotta instead of Tailwind's cool defaults. Same utilities everywhere
      (text-emerald-400, bg-red-500/10, ...) — only the values change. */

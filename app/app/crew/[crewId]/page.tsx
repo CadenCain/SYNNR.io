@@ -4,7 +4,13 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+
+import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { getItemCustomers } from "@/lib/saas/customers";
@@ -44,11 +50,11 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
         title={c.name}
         description={`${c.role ?? "crew"}${c.phone ? ` · ${c.phone}` : ""}${c.status === "inactive" ? " · inactive" : ""}`}
         actions={
-          <details className="group relative">
-            <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+          <Popover>
+            <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
               <Settings2 className="h-4 w-4" /> Manage
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-3">
               <form action={updateCrewMember} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={c.id} />
                 <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={c.name} required className={`${fld} mt-1 w-full`} /></label>
@@ -61,14 +67,28 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                   </select></label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              <form action={deleteCrewMember} className="mt-2 border-t border-line pt-2">
-                <input type="hidden" name="id" value={c.id} />
-                <button type="submit" className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                  <Trash2 className="h-3.5 w-3.5" /> Remove from crew
-                </button>
-              </form>
-            </div>
-          </details>
+              <div className="mt-2 border-t border-line pt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
+                    <Trash2 className="h-3.5 w-3.5" /> Remove from crew
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove {c.name}?</AlertDialogTitle>
+                      <AlertDialogDescription>Their cards and records go with them. There is no undo.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <form action={deleteCrewMember}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Remove</button>
+                      </form>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </PopoverContent>
+          </Popover>
         }
       />
 

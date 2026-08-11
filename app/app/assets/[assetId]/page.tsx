@@ -5,7 +5,13 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+
+import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
 import { getItemCustomers } from "@/lib/saas/customers";
@@ -52,11 +58,11 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         title={a.name}
         description={`${categoryLabel(a.category)}${a.identifier ? ` · ${a.identifier}` : ""} · ${a.status.replace(/_/g, " ")}`}
         actions={
-          <details className="group relative">
-            <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+          <Popover>
+            <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
               <Settings2 className="h-4 w-4" /> Manage
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-3">
               <form action={updateAsset} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={a.id} />
                 <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={a.name} required className={`${fld} mt-1 w-full`} /></label>
@@ -73,15 +79,29 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
                 <label className="text-xs text-ink-faint">Identifier<input name="identifier" defaultValue={a.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              <form action={deleteAsset} className="mt-2 border-t border-line pt-2">
-                <input type="hidden" name="id" value={a.id} />
-                <input type="hidden" name="unit_id" value={a.unit_id ?? ""} />
-                <button type="submit" className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete asset
-                </button>
-              </form>
-            </div>
-          </details>
+              <div className="mt-2 border-t border-line pt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete asset
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {a.name}?</AlertDialogTitle>
+                      <AlertDialogDescription>Its certs, records, and photo go with it. There is no undo.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <form action={deleteAsset}>
+                        <input type="hidden" name="id" value={a.id} />
+                        <input type="hidden" name="unit_id" value={a.unit_id ?? ""} />
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete it</button>
+                      </form>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </PopoverContent>
+          </Popover>
         }
       />
 

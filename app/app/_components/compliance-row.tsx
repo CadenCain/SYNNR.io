@@ -1,6 +1,11 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS, kindLabel } from "@/lib/saas/taxonomy";
 import { fmtDate } from "@/lib/saas/format";
@@ -40,11 +45,11 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
         </div>
         <div className="flex items-center gap-2">
           <RenewControl itemId={item.id} companyId={companyId} redirectPath={redirectPath} />
-          <details className="group relative">
-            <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink [&::-webkit-details-marker]:hidden">
+          <Popover>
+            <PopoverTrigger aria-label="Edit item" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink">
               <Pencil className="h-3.5 w-3.5" />
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-line bg-elevated p-3 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.9)]">
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-3">
               <form action={updateComplianceItem} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={item.id} />
                 <input type="hidden" name="redirect_path" value={redirectPath} />
@@ -62,15 +67,29 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
                   <input name="customers" defaultValue={(item.customers ?? []).join(", ")} placeholder="e.g. Oxy, Diamondback" className={inputCls} /></label>
                 <Button type="submit" size="sm">Save changes</Button>
               </form>
-              <form action={deleteComplianceItem} className="mt-2 border-t border-line pt-2">
-                <input type="hidden" name="id" value={item.id} />
-                <input type="hidden" name="redirect_path" value={redirectPath} />
-                <button type="submit" className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete item
-                </button>
-              </form>
-            </div>
-          </details>
+              <div className="mt-2 border-t border-line pt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete item
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {item.title}?</AlertDialogTitle>
+                      <AlertDialogDescription>Its history and any attached proof photos go with it. There is no undo.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <form action={deleteComplianceItem}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <input type="hidden" name="redirect_path" value={redirectPath} />
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete it</button>
+                      </form>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </Card>
