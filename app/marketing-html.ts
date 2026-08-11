@@ -93,6 +93,7 @@ export const MARKETING_HTML = `
         <p class="prod-what">Can this truck roll?</p>
         <p class="prod-desc">Every cert, DOT item, and crew card on the unit, checked live. Ask it about Friday and it answers for Friday, so a cert that's fine today but dead by the job fails now instead of on location.</p>
         <p class="prod-who"><b>For</b> yard managers and dispatchers who sign off on what leaves the gate.</p>
+        <a class="prod-more" href="/products/roll">More &rarr;</a>
       </div>
 
       <div class="prod-card">
@@ -100,6 +101,7 @@ export const MARKETING_HTML = `
         <p class="prod-what">Crew paper only.</p>
         <p class="prod-desc">H2S, well control, CDL, medicals. One register, one email before anything lapses, routed to whoever actually rolls that crew. No asset tracking required.</p>
         <p class="prod-who"><b>For</b> safety managers who just need the hands current.</p>
+        <a class="prod-more" href="/products/cards">More &rarr;</a>
       </div>
 
       <div class="prod-card">
@@ -107,6 +109,7 @@ export const MARKETING_HTML = `
         <p class="prod-what">Where's the gear?</p>
         <p class="prod-desc">A register of what you own, with photos, and a note on where each piece was last seen, who said so, and how long ago. It's a note, not a tracker — and it tells you when it's gone stale instead of pretending.</p>
         <p class="prod-who"><b>For</b> shop foremen tired of being the one guy who knows.</p>
+        <a class="prod-more" href="/products/yard">More &rarr;</a>
       </div>
 
       <div class="prod-card">
@@ -114,6 +117,7 @@ export const MARKETING_HTML = `
         <p class="prod-what">Show the customer.</p>
         <p class="prod-desc">A live link that shows an operator or an auditor exactly what's current, right now. No packet to assemble the night before, no scanning a binder at 9pm.</p>
         <p class="prod-who"><b>For</b> anyone bidding work or sitting through an audit.</p>
+        <a class="prod-more" href="/products/proof">More &rarr;</a>
       </div>
     </div>
 

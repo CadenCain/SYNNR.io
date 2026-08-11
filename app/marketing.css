@@ -619,3 +619,9 @@
   margin: 26px 0 0; font-size: 14.5px; line-height: 1.65;
   color: var(--fg-faint); max-width: 70ch;
 }
+.mkt .prod-more {
+  margin-top: 10px; font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: .12em; text-transform: uppercase; text-decoration: none;
+  color: var(--fg-dim);
+}
+.mkt .prod-more:hover { color: var(--fg); }
