@@ -625,3 +625,17 @@
   color: var(--fg-dim);
 }
 .mkt .prod-more:hover { color: var(--fg); }
+
+/* ── REAL SCREENSHOTS — the proof, replacing the CSS skit ─────────────────
+   The frame chrome stays; the body is now a photograph of the actual app,
+   captured from the same component customers render. The phone floats over
+   the frame's corner on wide screens, IronTrac-hero style. */
+.mkt .show-shot { display:block; width:100%; height:auto; }
+.mkt .show-phone {
+  position:absolute; right:34px; bottom:-30px; width:min(21%, 218px); height:auto;
+  border:1px solid var(--line-2, rgba(255,255,255,0.14));
+  border-radius:22px;
+  box-shadow: 0 30px 60px -24px rgba(0,0,0,0.85);
+  display:none;
+}
+@media (min-width: 860px) { .mkt .show-phone { display:block; } }

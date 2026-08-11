@@ -59,7 +59,7 @@ export const MARKETING_HTML = `
       <p class="fineprint">Billed monthly. Cancel anytime. Your data stays yours, exportable.</p>
       <div class="dt" role="table" aria-label="The math">
         <div class="dt-row"><span class="k">One miss on location, NPT</span><span class="v bad">$10,000+ / day</span></div>
-        <div class="dt-row"><span class="k">RollReady, per yard</span><span class="v">$500 / mo</span></div>
+        <div class="dt-row"><span class="k">SYNNR, per yard</span><span class="v">$500 / mo</span></div>
         <div class="dt-row"><span class="k">Setup</span><span class="v">one afternoon</span></div>
       </div>
     </div>
@@ -129,44 +129,23 @@ export const MARKETING_HTML = `
 <section class="band section showcase" id="showcase">
   <div class="container">
     <div class="shead">
-      <span class="eyebrow">Inside RollReady</span>
-      <h2 class="h2">Watch it catch the miss.</h2>
-      <p class="lede">The board a shop leaves open all day. Every tile is a truck. Watch Truck 12 get stopped at the gate.</p>
+      <span class="eyebrow">Inside SYNNR</span>
+      <h2 class="h2">This is the actual screen.</h2>
+      <p class="lede">Not a mockup — the board a shop leaves open all day, photographed as-is. Every tile is a truck. Rig 4 is red because a BOP is flagged missing and the DOT lapsed, and it stays red until somebody fixes the record.</p>
     </div>
 
     <div class="show-stage">
-      <div class="show-frame" role="img" aria-label="RollReady command center: fleet readiness board with two trucks Ready and Truck 12 flagged NOT READY — BOP number 3 flagged missing and its annual DOT expired">
-        <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>RollReady — command center</span></div>
-        <div class="show-body" aria-hidden="true">
-          <div class="show-kpis">
-            <div class="show-kpi k1"><span class="lbl">Readiness</span><span class="val amber" data-n="74" data-suffix="%">74%</span><span class="bar"><i></i></span></div>
-            <div class="show-kpi k2"><span class="lbl">Due soon</span><span class="val amber" data-n="3">3</span><span class="sub">next 30 days</span></div>
-            <div class="show-kpi k3"><span class="lbl">Misses caught</span><span class="val green" data-n="4">4</span><span class="sub">this month</span></div>
-          </div>
-          <div class="show-board">
-            <div class="show-tile t1"><span class="tname">Wireline 7</span><span class="chip ok">Ready</span><span class="twhy">All current</span></div>
-            <div class="show-tile t2"><span class="tname">Pump 3</span><span class="chip ok">Ready</span><span class="twhy">DOT good · crew current</span></div>
-            <div class="show-tile t3">
-              <span class="tname">Truck 12</span>
-              <span class="chip scan">Checking…</span>
-              <span class="chip bad">Not ready</span>
-              <span class="twhy why-ok">Checking records…</span>
-              <span class="twhy why-bad">BOP #3 — flagged missing</span>
-            </div>
-          </div>
-          <div class="show-banner">
-            <span class="bang">!</span>
-            <span class="btext"><b>NOT READY — Truck 12.</b> BOP #3 flagged missing · annual DOT expired · fix it or it stays red</span>
-          </div>
-          <div class="show-feed">
-            <span class="dotline"></span>Caught before rollout on Truck 12: BOP #3 flagged missing <span class="ftime">4:58 AM</span>
-          </div>
-        </div>
+      <div class="show-frame">
+        <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
+        <img class="show-shot" src="/screens/command-center.png" width="1360" height="860"
+          alt="SYNNR command center: KPI row, 14-day readiness chart, and the fleet board — Rig 4 flagged NOT READY because BOP #3 is flagged missing and its annual DOT expired" loading="lazy"/>
       </div>
+      <img class="show-phone" src="/screens/mobile-verdict.png" width="250" height="512"
+        alt="The same yard on a phone: NOT READY — Rig 4 can't roll, with one button to fix it" loading="lazy"/>
 
       <div class="show-chip c1" aria-hidden="true">
         <span class="cico">▮</span>
-        <span><b>RollReady:</b> Truck 12 NOT ready — BOP flagged missing. —your shop</span>
+        <span><b>SYNNR:</b> Rig 4 NOT ready — BOP #3 flagged missing. —your shop</span>
       </div>
       <div class="show-chip c2" aria-hidden="true">
         <span class="cok">✓</span>
@@ -174,7 +153,7 @@ export const MARKETING_HTML = `
       </div>
     </div>
 
-    <p class="show-caption">That red banner is the product. The miss caught in the yard at 5am, not on location at 9 with a company man watching.</p>
+    <p class="show-caption">That red tile is the product. The miss caught in the yard at 5am, not on location at 9 with a company man watching.</p>
     <div class="show-cta">
       <a href="/signup" class="btn btn-primary">Catch your first miss
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -189,7 +168,7 @@ export const MARKETING_HTML = `
     <div class="shead">
       <span class="eyebrow">The 5am check</span>
       <h2 class="h2">No override button.<br/><span class="dim">You fix it or it stays red.</span></h2>
-      <p class="lede">A cert tracker tells you what expired last week. RollReady answers it on the phone before the truck rolls: every cert and DOT item, every assigned hand's cards, every flagged piece of gear, pulled live. Anything off and the truck reads <b style="color:var(--fg)">Not ready</b> — and names every item.</p>
+      <p class="lede">A cert tracker tells you what expired last week. SYNNR answers it on the phone before the truck rolls: every cert and DOT item, every assigned hand's cards, every flagged piece of gear, pulled live. Anything off and the truck reads <b style="color:var(--fg)">Not ready</b> — and names every item.</p>
     </div>
     <div class="hairgrid">
       <div class="cell"><span class="num">01</span><h3>Readiness check</h3><p>Right paper, right crew, gear accounted for. A green light or an itemized &ldquo;here&rsquo;s what&rsquo;s wrong.&rdquo;</p></div>
@@ -236,7 +215,7 @@ export const MARKETING_HTML = `
       <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">fines &amp; shutdowns</span></li>
       <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">the whole account</span></li>
     </ul>
-    <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of RollReady.</b> Everything after that is pure protection.</p>
+    <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of SYNNR.</b> Everything after that is pure protection.</p>
     <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
   </div>
 </section>
@@ -290,8 +269,8 @@ export const MARKETING_HTML = `
 <!-- ═══ FOUNDER STATEMENT — dark ═══ -->
 <section class="band section statement" id="why">
   <div class="container">
-    <span class="eyebrow" style="margin-bottom:26px">Why RollReady exists</span>
-    <p>Five years on Permian wireline. I've eaten the 5am scramble, the hotshot bill, and the company man's long memory. <b>RollReady is the tool I needed and nobody built.</b></p>
+    <span class="eyebrow" style="margin-bottom:26px">Why SYNNR exists</span>
+    <p>Five years on Permian wireline. I've eaten the 5am scramble, the hotshot bill, and the company man's long memory. <b>SYNNR is the tool I needed and nobody built.</b></p>
     <div class="sig">Caden Cain · founder, SYNNR · Texas</div>
     <p class="mono" style="margin-top:34px;font-size:12px;color:var(--fg-ghost);max-width:52ch;line-height:1.7">No fake logos. No made-up numbers. We're onboarding our first shops now — real numbers go here the day they're real.</p>
   </div>
@@ -302,8 +281,8 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="shead">
       <span class="eyebrow">Custom builds · SYNNR</span>
-      <h2 class="h2" style="font-size:clamp(26px,3.4vw,40px)">Got a paper problem RollReady doesn't cover?</h2>
-      <p class="lede">SYNNR, the shop behind RollReady, builds custom software for oilfield and blue-collar operations: field tickets, invoicing, rental tracking, dispatch boards, digital forms. Built by a hand who's run the yard, not an agency guessing at it.</p>
+      <h2 class="h2" style="font-size:clamp(26px,3.4vw,40px)">Got a paper problem SYNNR doesn't cover?</h2>
+      <p class="lede">SYNNR also builds custom software for oilfield and blue-collar operations: field tickets, invoicing, rental tracking, dispatch boards, digital forms. Built by a hand who's run the yard, not an agency guessing at it.</p>
       <div class="hero-cta" style="margin-top:28px">
         <a href="/build" class="btn btn-ghost">See custom builds
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>

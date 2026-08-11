@@ -19,6 +19,8 @@ const PARKED = [
 ];
 
 const nextConfig: NextConfig = {
+  // Off so headless-Chrome captures of the real UI ship clean.
+  devIndicators: false,
   async redirects() {
     return [
       // Old funnel URLs land directly on the live one (single hop — no chains).
