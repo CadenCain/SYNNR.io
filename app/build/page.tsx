@@ -12,7 +12,7 @@ export const metadata = {
 
 const WORK = [
   { t: "Field tickets → invoices", d: "Kill the paper tickets and the weekend invoicing. Capture the job on a phone, bill it same day." },
-  { t: "Rental / equipment tracking", d: "Know what iron is out, who's got it, and what it's earning — with billing days that add themselves up." },
+  { t: "Rental / equipment tracking", d: "Know what iron is out and what it's earning — with billing days that add themselves up." },
   { t: "Dispatch & crew boards", d: "Stop scheduling by group text. One board, who's where, what rolls tomorrow." },
   { t: "Digital forms & inspections", d: "JSAs, DVIRs, inspection sheets — photos, signatures, searchable, out of the filing cabinet." },
   { t: "Job costing", d: "Know if a job made money the day it's done, not three months later." },

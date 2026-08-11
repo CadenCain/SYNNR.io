@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { parseCsv, norm, matchValue, parseDate } from "@/lib/saas/import-parse";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { syncYardQuantity } from "@/lib/saas/billing";
 
@@ -40,43 +41,6 @@ export interface ImportResult extends ImportPreview {
 }
 
 /* ── CSV parsing (quoted fields + escaped quotes) ── */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  for (const raw of text.split(/\r?\n/)) {
-    if (!raw.trim()) continue;
-    const out: string[] = [];
-    let cur = "", q = false;
-    for (let i = 0; i < raw.length; i++) {
-      const ch = raw[i];
-      if (q) {
-        if (ch === '"' && raw[i + 1] === '"') { cur += '"'; i++; }
-        else if (ch === '"') q = false;
-        else cur += ch;
-      } else if (ch === '"') q = true;
-      else if (ch === ",") { out.push(cur); cur = ""; }
-      else cur += ch;
-    }
-    out.push(cur);
-    rows.push(out.map((s) => s.trim()));
-  }
-  return rows;
-}
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-const matchValue = (input: string, list: { value: string; label: string }[], fallback: string) => {
-  const n = norm(input);
-  return list.find((x) => x.value === n || norm(x.label) === n)?.value ?? (input ? n : fallback);
-};
-
-/** Accept YYYY-MM-DD or M/D/YYYY (Excel default). Returns ISO or null; throws label on garbage. */
-function parseDate(s: string): string | null {
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
-  throw new Error(`bad date "${s}" (use YYYY-MM-DD or M/D/YYYY)`);
-}
-
 interface Ctx {
   db: SupabaseClient;
   companyId: string;
