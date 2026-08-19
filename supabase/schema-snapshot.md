@@ -122,6 +122,15 @@ Verified live: every row-security flag is on, including `saas_cron_runs`
 | saas_events | member | INSERT member |
 | **saas_loadout_templates / _items** | member or global seed (company_id null) | **ALL: admin AND company_id NOT NULL — global seeds are read-only for every tenant** |
 
+## Column-level grants (added 2026-08-19)
+
+RLS restricts rows, not columns — so billing truth is also protected by
+column-level GRANTs: sessions (`authenticated`) can UPDATE only
+`saas_companies.name` and `saas_companies.npt_day_estimate`, and nothing on
+`saas_memberships`. `subscription_status`, the stripe ids, `yard_quantity`,
+and membership roles are service-role-only. See
+`supabase/migrations/0003_column_level_billing_lockdown.sql`.
+
 ## Storage (bucket `proofs`, private)
 
 All four commands (SELECT/INSERT/UPDATE/DELETE) require:

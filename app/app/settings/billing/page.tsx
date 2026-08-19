@@ -37,6 +37,9 @@ export default async function BillingSettings() {
   const nptDay = c?.npt_day_estimate ?? 10000;
   const yards = Math.max(1, yardCount ?? 0);
   const subscribed = status === "active" || status === "past_due";
+  // Comped = active with no Stripe customer (the owner's own demo accounts).
+  // Real subscriptions ALWAYS have a customer id — checkout creates it.
+  const mode = subscribed ? (c?.stripe_customer_id ? "portal" : "comped") : "subscribe";
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +58,7 @@ export default async function BillingSettings() {
               <div className="mt-0.5 text-sm text-ink-faint">Trial ends {new Date(c.trial_ends_at).toLocaleDateString()}</div>
             ) : null}
           </div>
-          <BillingActions subscribed={subscribed} />
+          <BillingActions mode={mode as "portal" | "subscribe" | "comped"} />
         </div>
 
         <div className="grid grid-cols-2 gap-3 border-t border-line pt-4 sm:grid-cols-3">
