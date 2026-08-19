@@ -116,10 +116,10 @@ export async function notifyEvent(args: {
 
     const sms = `RollReady: ${args.message}. —${args.companyName}`;
     const emails = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.email as string);
-    const phones = recips.filter((r) => r.channels.includes("sms") && r.phone).map((r) => r.phone as string);
+    const phones = smsConfigured() ? recips.filter((r) => r.channels.includes("sms") && r.phone).map((r) => r.phone as string) : [];
 
     const emailNames = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.name);
-    const smsRecips = recips.filter((r) => r.channels.includes("sms") && r.phone);
+    const smsRecips = smsConfigured() ? recips.filter((r) => r.channels.includes("sms") && r.phone) : [];
     const sends: { channel: string; recipient: string }[] = [];
     if (emails.length) {
       const ok = await sendEmail(emails, `RollReady alert — ${args.message}`,

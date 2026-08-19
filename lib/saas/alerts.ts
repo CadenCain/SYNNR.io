@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendSms, sendEmail } from "./notify";
+import { sendSms, sendEmail, smsConfigured } from "./notify";
 import { localToday } from "./status";
 import { alertHorizon, isAlertDue } from "./alert-window";
 
@@ -139,7 +139,11 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
           await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert email to ${r.name} FAILED — ${sorted.length} item(s) not delivered. Will retry tomorrow.` });
         }
       }
-      if (r.channels.includes("sms") && r.phone) {
+      // Without Twilio credentials there is nothing to attempt — trying anyway
+      // logged "TEXT FAILED — check the phone number", blaming a perfectly
+      // good number for credentials that don't exist. Email is the product's
+      // channel; SMS wakes up when the env vars land.
+      if (smsConfigured() && r.channels.includes("sms") && r.phone) {
         const worst = sorted[0];
         const body = `RollReady: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} —${company.name}`;
         const ok = await sendSms(r.phone, body);

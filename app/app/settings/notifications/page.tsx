@@ -34,7 +34,7 @@ async function addRecipient(formData: FormData) {
   const yard_id = String(formData.get("yard_id") ?? "");
   const channels: string[] = [];
   if (formData.get("ch_email") === "on" && email) channels.push("email");
-  if (formData.get("ch_sms") === "on" && phone) channels.push("sms");
+  if (formData.get("ch_sms") === "on" && phone && smsConfigured()) channels.push("sms");
   if (!name || (!email && !phone) || channels.length === 0) return;
   const db = await saasDb();
   await db.from("saas_alert_recipients").insert({
@@ -112,7 +112,9 @@ export default async function NotificationsSettings() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   {r.channels.includes("email") && <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-dim"><Mail className="h-3 w-3" /> email</span>}
-                  {r.channels.includes("sms") && <span className="flex items-center gap-1 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"><MessageSquareText className="h-3 w-3" /> text</span>}
+                  {r.channels.includes("sms") && (smsReady
+                    ? <span className="flex items-center gap-1 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"><MessageSquareText className="h-3 w-3" /> text</span>
+                    : <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-faint" title="Text alerts activate once SMS credentials are connected"><MessageSquareText className="h-3 w-3" /> text — off</span>)}
                 </div>
                 <form action={removeRecipient}>
                   <input type="hidden" name="id" value={r.id} />
@@ -135,7 +137,9 @@ export default async function NotificationsSettings() {
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_email" defaultChecked className="h-4 w-4 accent-[#e7ddc7]" /> Email</label>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_sms" className="h-4 w-4 accent-[#e7ddc7]" /> Text (SMS)</label>
+              {smsReady && (
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_sms" className="h-4 w-4 accent-[#e7ddc7]" /> Text (SMS)</label>
+              )}
               {yards.length > 0 && (
                 <select name="yard_id" defaultValue="" className={`${fld} sm:w-52`}>
                   <option value="">All yards</option>

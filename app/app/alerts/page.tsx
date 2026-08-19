@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bell, Settings2 } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
+import { smsConfigured } from "@/lib/saas/notify";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
@@ -40,7 +41,7 @@ export default async function AlertsPage() {
   const routed = (recipData ?? []) as { name: string; channels: string[] }[];
   const legacy = (s?.recipients ?? []).filter(Boolean);
   const recipientLine = routed.length
-    ? routed.map((r) => `${r.name}${r.channels.includes("sms") ? " (email + text)" : ""}`).join(", ")
+    ? routed.map((r) => `${r.name}${r.channels.includes("sms") && smsConfigured() ? " (email + text)" : ""}`).join(", ")
     : legacy.length ? legacy.join(", ") : null;
 
   type Row = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_type: string; parent_id: string };
