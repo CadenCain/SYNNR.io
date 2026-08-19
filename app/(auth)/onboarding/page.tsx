@@ -25,14 +25,18 @@ async function createCompany(formData: FormData) {
   // Referral attribution (?ref=cody → signup → here). Free-text tag for
   // payout math; best-effort, never blocks onboarding.
   if (ref) {
-    const { saasAdmin } = await import("@/lib/saas/db");
-    const admin = saasAdmin();
-    if (admin) {
-      const { data: co } = await admin
-        .from("saas_companies").select("id").eq("name", name)
-        .is("referred_by", null)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (co) await admin.from("saas_companies").update({ referred_by: ref }).eq("id", (co as { id: string }).id);
+    // Anchor to the company the RPC just created FOR THIS USER — looked up
+    // via their own membership, never by name. A name lookup could collide
+    // with another tenant's identically-named company and stamp our referral
+    // (and its payout) onto their row.
+    const mine = await getFirstActiveCompany(user.id);
+    if (mine) {
+      const { saasAdmin } = await import("@/lib/saas/db");
+      const admin = saasAdmin();
+      if (admin) {
+        await admin.from("saas_companies").update({ referred_by: ref })
+          .eq("id", mine.id).is("referred_by", null);
+      }
     }
   }
   redirect("/onboarding/billing");

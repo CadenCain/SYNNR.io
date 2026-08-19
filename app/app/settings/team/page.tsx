@@ -11,7 +11,11 @@ export const dynamic = "force-dynamic";
 async function createInvite(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
-  const role = String(formData.get("role") ?? "member");
+  // Members can look but not mint invites, and NOBODY mints an owner through
+  // this form — a member could otherwise invite themselves an owner account.
+  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only owners and admins can invite.");
+  const requested = String(formData.get("role") ?? "member");
+  const role = requested === "admin" ? "admin" : "member";
   const email = String(formData.get("email") ?? "").trim() || null;
   const db = await saasDb();
   const { error } = await db.from("saas_invitations").insert({ company_id: company.id, role, email });

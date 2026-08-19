@@ -58,12 +58,12 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   let scopeName = companyName;
   if (proof.scope === "unit" && proof.unit_id) {
     unitFilter = [proof.unit_id];
-    const { data: u } = await admin.from("saas_units").select("name").eq("id", proof.unit_id).maybeSingle();
+    const { data: u } = await admin.from("saas_units").select("name").eq("id", proof.unit_id).eq("company_id", proof.company_id).maybeSingle();
     scopeName = `${companyName} — ${(u as { name: string } | null)?.name ?? "unit"}`;
   } else if (proof.scope === "yard" && proof.yard_id) {
-    const { data: us } = await admin.from("saas_units").select("id").eq("yard_id", proof.yard_id);
+    const { data: us } = await admin.from("saas_units").select("id").eq("yard_id", proof.yard_id).eq("company_id", proof.company_id);
     unitFilter = ((us ?? []) as { id: string }[]).map((x) => x.id);
-    const { data: y } = await admin.from("saas_yards").select("name").eq("id", proof.yard_id).maybeSingle();
+    const { data: y } = await admin.from("saas_yards").select("name").eq("id", proof.yard_id).eq("company_id", proof.company_id).maybeSingle();
     scopeName = `${companyName} — ${(y as { name: string } | null)?.name ?? "yard"}`;
   }
 
@@ -130,7 +130,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
     const { data: chk } = await admin
       .from("saas_dispatch_checks")
       .select("id, type, status, performed_by_name, cosigner_name, started_at, override_reason")
-      .eq("unit_id", proof.unit_id).eq("type", "checkout")
+      .eq("unit_id", proof.unit_id).eq("company_id", proof.company_id).eq("type", "checkout")
       .order("started_at", { ascending: false }).limit(1).maybeSingle();
     if (chk) {
       const c = chk as { id: string; type: string; status: string; performed_by_name: string | null; cosigner_name: string | null; started_at: string; override_reason: string | null };

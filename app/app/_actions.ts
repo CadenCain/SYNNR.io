@@ -323,6 +323,13 @@ export async function assignCrewToUnit(fd: FormData) {
   const crew_member_id = str(fd, "crew_member_id");
   if (!unit_id || !crew_member_id) return;
   const db = await saasDb();
+  // Both ids ride in from the browser — an assignment pointing at another
+  // company's unit or hand must never exist, even stamped with our id.
+  const [{ data: u }, { data: c }] = await Promise.all([
+    db.from("saas_units").select("id").eq("id", unit_id).eq("company_id", company.id).maybeSingle(),
+    db.from("saas_crew_members").select("id").eq("id", crew_member_id).eq("company_id", company.id).maybeSingle(),
+  ]);
+  if (!u || !c) return;
   await db.from("saas_unit_crew").upsert({ unit_id, crew_member_id, company_id: company.id });
   revalidatePath(`/app/units/${unit_id}`);
 }

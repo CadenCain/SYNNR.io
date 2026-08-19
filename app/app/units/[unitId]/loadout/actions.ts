@@ -79,31 +79,45 @@ export async function addLoadoutItem(fd: FormData) {
   revalidatePath(`/app/units/${unitId}/loadout`);
 }
 
+/** The item's template must belong to THIS company. Global seed templates
+ *  (company_id null) are read-only for everyone — a write to one would edit
+ *  every un-customized tenant's checklist at once. */
+async function ownsLoadoutItem(db: Awaited<ReturnType<typeof saasDb>>, companyId: string, itemId: string): Promise<boolean> {
+  const { data: item } = await db.from("saas_loadout_items").select("template_id").eq("id", itemId).maybeSingle();
+  if (!item) return false;
+  const { data: tpl } = await db.from("saas_loadout_templates").select("company_id")
+    .eq("id", (item as { template_id: string }).template_id).maybeSingle();
+  return (tpl as { company_id: string | null } | null)?.company_id === companyId;
+}
+
 export async function deleteLoadoutItem(fd: FormData) {
-  await requireCompany(); // RLS enforces template ownership
+  const { company } = await requireCompany();
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const db = await saasDb();
+  if (!(await ownsLoadoutItem(db, company.id, id))) return;
   await db.from("saas_loadout_items").delete().eq("id", id);
   revalidatePath(`/app/units/${unitId}/loadout`);
 }
 
 export async function toggleLoadoutRequired(fd: FormData) {
-  await requireCompany();
+  const { company } = await requireCompany();
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const required = str(fd, "required") === "true";
   const db = await saasDb();
+  if (!(await ownsLoadoutItem(db, company.id, id))) return;
   await db.from("saas_loadout_items").update({ required: !required }).eq("id", id);
   revalidatePath(`/app/units/${unitId}/loadout`);
 }
 
 export async function moveLoadoutItem(fd: FormData) {
-  await requireCompany();
+  const { company } = await requireCompany();
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const dir = str(fd, "dir") === "up" ? -1 : 1;
   const db = await saasDb();
+  if (!(await ownsLoadoutItem(db, company.id, id))) return;
   const { data: me } = await db.from("saas_loadout_items").select("id, template_id, sort").eq("id", id).maybeSingle();
   if (!me) return;
   const m = me as { id: string; template_id: string; sort: number };

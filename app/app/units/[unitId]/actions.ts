@@ -6,6 +6,7 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { logEvent } from "@/lib/saas/notify";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
+import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 
 export async function addComplianceItem(formData: FormData) {
   const { company } = await requireCompany();
@@ -20,6 +21,9 @@ export async function addComplianceItem(formData: FormData) {
   if (!parent_id || !title) return;
 
   const db = await saasDb();
+  // parent_type and parent_id come off the wire — prove the parent is ours
+  // before hanging paper on it.
+  if (!(await ownsParent(db, company.id, parent_type, parent_id))) return;
   if (await isRecentDuplicate(db, "saas_compliance_items", { company_id: company.id, parent_id, title, kind })) {
     if (redirectPath) revalidatePath(redirectPath);
     return; // double-tap echo
@@ -54,7 +58,7 @@ export async function renewComplianceItem(args: {
     .eq("company_id", company.id);
   if (upErr) throw new Error(upErr.message);
 
-  if (args.storage_path) {
+  if (args.storage_path && ownsStoragePath(args.storage_path, company.id)) {
     await db.from("saas_attachments").insert({
       company_id: company.id,
       entity_type: "compliance_item",
@@ -91,6 +95,11 @@ export async function addAsset(formData: FormData) {
   if (!name) return;
 
   const db = await saasDb();
+  if (unit_id && !(await ownsParent(db, company.id, "unit", unit_id))) return;
+  if (yard_id) {
+    const { data: y } = await db.from("saas_yards").select("id").eq("id", yard_id).eq("company_id", company.id).maybeSingle();
+    if (!y) return;
+  }
   if (await isRecentDuplicate(db, "saas_assets", { company_id: company.id, name, unit_id })) {
     if (redirectPath) revalidatePath(redirectPath);
     return; // double-tap echo

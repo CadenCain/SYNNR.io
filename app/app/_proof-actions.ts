@@ -12,13 +12,30 @@ export async function createReadinessProof(args: {
 }): Promise<{ ok: boolean; url?: string; error?: string }> {
   const { company, user } = await requireCompany();
   const db = await saasDb();
+
+  // A proof's scope ids are queried later by the PUBLIC proof page with the
+  // service role. A forged yardId/unitId here would therefore read another
+  // company's data through that page — so both must be proven ours first.
+  if (args.scope === "unit") {
+    if (!args.unitId) return { ok: false, error: "pick a unit" };
+    const { data: own } = await db.from("saas_units").select("id")
+      .eq("id", args.unitId).eq("company_id", company.id).maybeSingle();
+    if (!own) return { ok: false, error: "unit not found" };
+  }
+  if (args.scope === "yard") {
+    if (!args.yardId) return { ok: false, error: "pick a yard" };
+    const { data: own } = await db.from("saas_yards").select("id")
+      .eq("id", args.yardId).eq("company_id", company.id).maybeSingle();
+    if (!own) return { ok: false, error: "yard not found" };
+  }
+
   const { data, error } = await db
     .from("saas_readiness_proofs")
     .insert({
       company_id: company.id,
       scope: args.scope,
-      yard_id: args.yardId ?? null,
-      unit_id: args.unitId ?? null,
+      yard_id: args.scope === "yard" ? args.yardId : null,
+      unit_id: args.scope === "unit" ? args.unitId : null,
       created_by: user.id,
     })
     .select("token")

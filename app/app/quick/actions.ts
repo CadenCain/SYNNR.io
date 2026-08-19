@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 
 /**
  * Quick Action: put a truck/rig on the books from the phone.
@@ -50,6 +51,7 @@ export async function quickAddAsset(args: { unit_id: string; name: string; categ
   if (!args.unit_id || !name) return { ok: false, error: "Pick a truck and name the gear." };
 
   const db = await saasDb();
+  if (!(await ownsParent(db, company.id, "unit", args.unit_id))) return { ok: false, error: "Pick one of your trucks." };
   const where = (args.where ?? "").trim();
   const { error } = await db.from("saas_assets").insert({
     company_id: company.id,
@@ -90,6 +92,7 @@ export async function quickAddCert(args: {
   if (!args.unit_id || !title) return { ok: false, error: "Pick a unit and name the item." };
 
   const db = await saasDb();
+  if (!(await ownsParent(db, company.id, "unit", args.unit_id))) return { ok: false, error: "Pick one of your trucks." };
   const { data, error } = await db
     .from("saas_compliance_items")
     .insert({
@@ -105,7 +108,7 @@ export async function quickAddCert(args: {
     .single();
   if (error) return { ok: false, error: error.message };
 
-  if (args.storage_path) {
+  if (args.storage_path && ownsStoragePath(args.storage_path, company.id)) {
     await db.from("saas_attachments").insert({
       company_id: company.id,
       entity_type: "compliance_item",

@@ -23,7 +23,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   let certs: { id: string; title: string; status: ComplianceStatus; parent_type: string; parent_id: string; expiration_date: string | null }[] = [];
 
   if (query.length >= 2) {
-    const like = `%${query.replace(/[%_]/g, "")}%`;
+    const like = `%${query.replace(/[%_,().]/g, "")}%`; // strip PostgREST filter syntax too
     const [u, c, a, ci] = await Promise.all([
       db.from("saas_units").select("id, name, type").eq("company_id", company.id).ilike("name", like).limit(10),
       db.from("saas_crew_members").select("id, name, role").eq("company_id", company.id).ilike("name", like).limit(10),

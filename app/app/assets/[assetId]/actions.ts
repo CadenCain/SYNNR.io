@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { ownsStoragePath } from "@/lib/saas/own";
 
 /** Set/replace an asset's primary photo (path already uploaded client-side). */
 export async function setAssetPhoto(args: {
@@ -11,6 +12,7 @@ export async function setAssetPhoto(args: {
   content_type?: string | null;
 }) {
   const { company } = await requireCompany();
+  if (!ownsStoragePath(args.storage_path, company.id)) throw new Error("bad photo path");
   const db = await saasDb();
   const { error } = await db
     .from("saas_assets")
