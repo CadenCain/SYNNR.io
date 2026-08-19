@@ -26,7 +26,7 @@ export interface CheckLine {
   source_id: string | null;
   label: string;
   sub?: string;
-  result: "ok" | "missing" | "expired";
+  result: "ok" | "warn" | "missing" | "expired";
   detail?: string; // why it failed, human words
 }
 
@@ -162,7 +162,10 @@ export async function computeDispatchCheck(
   for (const li of loadout) {
     const match = matchAssetForLine(li.label, assets);
     if (!match) {
-      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "ok", detail: li.required ? "not in the asset book yet — heads-up" : "optional — not in the asset book" });
+      // A required line that isn't in the book must not wear green — a hand
+      // scanning chips saw six OKs on a truck that wasn't ready. It still
+      // doesn't FAIL the truck (the gear list warns, never gates).
+      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "warn" : "ok", detail: li.required ? "not in the asset book yet — heads-up" : "optional — not in the asset book" });
       if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet — add it so it's tracked.`);
     } else if (match.status !== "in_service") {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "missing" : "ok", detail: `${match.name} is flagged ${match.status.replace(/_/g, " ")}` });

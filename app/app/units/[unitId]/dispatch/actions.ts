@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { localToday } from "@/lib/saas/status";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
@@ -26,17 +28,20 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   if (!comp) return;
   if (comp.verdict === "not_setup") return; // nothing to check — refuse a fake trail
 
-  // Double-tap guard: an identical check recorded seconds ago means the button
-  // fired twice, not that the yard ran two checks. One tap = one record.
+  // Idempotence: one record per (unit, job date, verdict) per day. The old
+  // 30-second guard let a re-tap a minute later write a second identical row,
+  // and one truck then counted twice in "misses caught". Re-running after a
+  // FIX still records (the verdict changed); re-tapping the same result lands
+  // on the existing record.
+  const dayStart = `${localToday()}T00:00:00Z`;
   const { data: recent } = await db
     .from("saas_dispatch_checks")
-    .select("id, status, started_at")
-    .eq("unit_id", unitId).eq("type", "checkout")
-    .gte("started_at", new Date(Date.now() - 30_000).toISOString())
+    .select("id, status")
+    .eq("unit_id", unitId).eq("type", "checkout").eq("job_date", comp.jobDate)
+    .gte("started_at", dayStart)
     .order("started_at", { ascending: false }).limit(1).maybeSingle();
   if (recent && (recent as { status: string }).status === comp.verdict) {
-    revalidatePath(`/app/units/${unitId}/dispatch`);
-    return;
+    redirect(`/app/records/${(recent as { id: string }).id}`);
   }
 
   const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
@@ -85,4 +90,7 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   revalidatePath(`/app/units/${unitId}`);
   revalidatePath(`/app/units/${unitId}/dispatch`);
   revalidatePath("/app");
+  // The tap's feedback IS the record: land on the immutable check page.
+  // Tapping and seeing nothing made testers tap again — and again.
+  redirect(`/app/records/${checkId}`);
 }

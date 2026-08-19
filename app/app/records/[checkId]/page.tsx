@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
  */
 const RESULT_UI: Record<string, { cls: string; label: string }> = {
   ok: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "OK" },
+  warn: { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Heads-up" },
   missing: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Missing" },
   expired: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Expired" },
   unconfirmed: { cls: "border-line-2 bg-elevated text-ink-faint", label: "Not checked" },

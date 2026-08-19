@@ -22,10 +22,11 @@ export const dynamic = "force-dynamic";
  */
 const RESULT_UI: Record<string, string> = {
   ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  warn: "border-amber-500/30 bg-amber-500/10 text-amber-400",
   missing: "border-red-500/40 bg-red-500/10 text-red-400",
   expired: "border-red-500/40 bg-red-500/10 text-red-400",
 };
-const RESULT_LABEL: Record<string, string> = { ok: "OK", missing: "Missing", expired: "Expired" };
+const RESULT_LABEL: Record<string, string> = { ok: "OK", warn: "Heads-up", missing: "Missing", expired: "Expired" };
 const SECTION = "text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint";
 
 export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
@@ -44,7 +45,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
 
   // Verdict banner groups failures by kind — eight identical red bullets read
   // as noise; three labeled clusters read as a fix-list.
-  const failing = (rows: typeof comp.lines) => rows.filter((l) => l.result !== "ok");
+  const failing = (rows: typeof comp.lines) => rows.filter((l) => l.result !== "ok" && l.result !== "warn");
   const failureGroups = [
     { label: "Gear", rows: failing(gear) },
     { label: "Paper", rows: failing(paper) },

@@ -18,8 +18,23 @@ async function createInvite(formData: FormData) {
   const role = requested === "admin" ? "admin" : "member";
   const email = String(formData.get("email") ?? "").trim() || null;
   const db = await saasDb();
-  const { error } = await db.from("saas_invitations").insert({ company_id: company.id, role, email });
+  // 7-day life set explicitly (DB default is 14). Acceptance already makes a
+  // link single-use — status flips to accepted and the RPC refuses it after.
+  const expires_at = new Date(Date.now() + 7 * 86400e3).toISOString();
+  const { error } = await db.from("saas_invitations").insert({ company_id: company.id, role, email, expires_at });
   if (error) throw new Error(error.message);
+  revalidatePath("/app/settings/team");
+}
+
+async function revokeInvite(formData: FormData) {
+  "use server";
+  const { company } = await requireCompany();
+  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only owners and admins can revoke invites.");
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const db = await saasDb();
+  // Any status other than 'pending' kills the link — the accept RPC checks it.
+  await db.from("saas_invitations").update({ status: "revoked" }).eq("id", id).eq("company_id", company.id);
   revalidatePath("/app/settings/team");
 }
 
@@ -69,10 +84,19 @@ export default async function TeamSettings() {
       {invites.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-medium text-ink">Pending invites</h2>
-          {invites.map((iv) => (
+          {invites.filter((iv) => iv.status === "pending" && new Date(iv.expires_at) > new Date()).map((iv) => (
             <Card key={iv.id} className="flex flex-col gap-2 p-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm text-ink-dim">{iv.email || "Anyone with the link"} · {iv.role}</span>
+                <span className="truncate text-sm text-ink-dim">
+                  {iv.email || "Anyone with the link"} · {iv.role} ·{" "}
+                  <span className="text-ink-faint">expires {new Date(iv.expires_at).toLocaleDateString()}</span>
+                </span>
+                <form action={revokeInvite}>
+                  <input type="hidden" name="id" value={iv.id} />
+                  <button type="submit" className="rounded-lg border border-line-2 px-2.5 py-1 text-xs text-ink-dim hover:bg-red-500/10 hover:text-red-400">
+                    Revoke
+                  </button>
+                </form>
               </div>
               <InviteLink url={`${origin}/invite/${iv.token}`} />
             </Card>

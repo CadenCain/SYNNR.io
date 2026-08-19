@@ -5,6 +5,7 @@ import { Truck, Plus, ChevronRight, Settings2, Trash2 , Upload} from "lucide-rea
 import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
+import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { UNIT_TYPES, unitTypeLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -51,6 +52,16 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
 
   const { data: unitsData } = await db.from("saas_units").select("id, name, type, identifier").eq("yard_id", yardId).order("name");
   const units = (unitsData ?? []) as { id: string; name: string; type: string; identifier: string | null }[];
+  // The board a dispatcher actually opens should carry the same verdict chips
+  // as the dashboard — a list of bare names hides a red truck.
+  const rd = await getCompanyReadiness(db, company.id);
+  const stateByUnit = new Map(rd.units.map((u) => [u.id, u.state]));
+  const UNIT_CHIP: Record<string, { cls: string; label: string }> = {
+    ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Ready" },
+    due_soon: { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Due soon" },
+    not_ready: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Not ready" },
+    not_setup: { cls: "border-line-2 bg-elevated text-ink-faint", label: "Not set up" },
+  };
 
   return (
     <div className="flex flex-col gap-7">
@@ -83,7 +94,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete {y.name} — and everything in it?</AlertDialogTitle>
-                      <AlertDialogDescription>Every truck, every asset, every cert and record in this yard goes with it. This is the biggest delete in the app and there is no undo.</AlertDialogDescription>
+                      <AlertDialogDescription>Every truck, every asset, every cert and record in this yard goes with it. Crew are company-wide — hands and their cards stay. This is the biggest delete in the app and there is no undo.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Keep it</AlertDialogCancel>
@@ -111,6 +122,8 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                   <div className="truncate font-medium">{u.name}</div>
                   <div className="truncate text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
                 </div>
+                {(() => { const st = stateByUnit.get(u.id); const c = st ? UNIT_CHIP[st] : null;
+                  return c ? <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${c.cls}`}>{c.label}</span> : null; })()}
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>

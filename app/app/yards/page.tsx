@@ -4,6 +4,7 @@ import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
 import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
+import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { syncYardQuantity } from "@/lib/saas/billing";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
@@ -38,6 +39,14 @@ export default async function YardsPage() {
     .order("name");
   type Row = { id: string; name: string; location: string | null; saas_units: { count: number }[]; saas_assets: { count: number }[] };
   const yards = (data ?? []) as Row[];
+  const rd = await getCompanyReadiness(db, company.id);
+  const yardTrouble = new Map<string, { notReady: number; dueSoon: number }>();
+  for (const u of rd.units) {
+    const t = yardTrouble.get(u.yardId) ?? { notReady: 0, dueSoon: 0 };
+    if (u.state === "not_ready") t.notReady++;
+    if (u.state === "due_soon") t.dueSoon++;
+    yardTrouble.set(u.yardId, t);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,6 +71,9 @@ export default async function YardsPage() {
                   <div className="truncate text-sm text-ink-dim">
                     {y.location ? y.location + " · " : ""}
                     {y.saas_units?.[0]?.count ?? 0} units · {y.saas_assets?.[0]?.count ?? 0} assets
+                    {(() => { const t = yardTrouble.get(y.id);
+                      if (!t || (t.notReady === 0 && t.dueSoon === 0)) return null;
+                      return <> · {t.notReady > 0 ? <span className="font-medium text-red-400">{t.notReady} not ready</span> : null}{t.notReady > 0 && t.dueSoon > 0 ? " · " : ""}{t.dueSoon > 0 ? <span className="text-amber-400">{t.dueSoon} due soon</span> : null}</>; })()}
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
