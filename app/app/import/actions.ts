@@ -7,6 +7,7 @@ import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxon
 import { parseCsv, norm, matchValue, parseDate } from "@/lib/saas/import-parse";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { syncYardQuantity } from "@/lib/saas/billing";
+import { canCreateBillable } from "@/lib/saas/billing-rules";
 
 /**
  * Hardened import: dry-run preview → commit. Idempotent — re-importing the
@@ -72,6 +73,11 @@ async function loadCtx(db: SupabaseClient, companyId: string, yardId: string, co
 /** Runs the whole import. commit=false → plan only (no writes). */
 async function runImport(csv: string, yardId: string, newYard: string, commit: boolean): Promise<ImportResult> {
   const { company } = await requireCompany();
+  // Preview is free (it writes nothing); committing rows needs a live
+  // subscription — the importer is the bulk version of every gated creator.
+  if (commit && !canCreateBillable(company.subscription_status)) {
+    return { ok: false, error: "Subscription needed to import — open Settings → Billing.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+  }
   if (company.role !== "owner" && company.role !== "admin") {
     return { ok: false, error: "Import is admin-only — ask an owner/admin to load the sheet.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }

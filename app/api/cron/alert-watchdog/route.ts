@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { saasAdmin } from "@/lib/saas/db";
 import { sendEmail } from "@/lib/saas/notify";
 import { logCronRun } from "@/lib/saas/cron-log";
+import { reconcileYardBilling } from "@/lib/saas/billing";
 
 /**
  * THE DEAD-MAN'S SWITCH.
@@ -71,13 +72,43 @@ export async function GET(req: Request) {
     await sendEmail([OWNER], subject, `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${body}</pre>`).catch(() => {});
   }
 
+  // ── Billing reconcile — the money version of the dead-man. The per-change
+  // Stripe sync is best-effort by design, so silent drift is possible; this
+  // compares billed quantity vs billable yards for every subscribed company
+  // once a day and screams on mismatch. Riding this cron instead of its own
+  // because Vercel caps cron jobs — and both are "compare two sources of
+  // truth, email on disagreement."
+  let billing: { drift: number; checked: number; errors: number } = { drift: 0, checked: 0, errors: 0 };
+  try {
+    const rec = await reconcileYardBilling();
+    billing = { drift: rec.drift.length, checked: rec.checked, errors: rec.errors.length };
+    if (rec.drift.length > 0 || rec.errors.length > 0) {
+      const driftLines = rec.drift.map((d) =>
+        `• ${d.companyName}: billing ${d.stripeQuantity} yard(s), has ${d.billableYards} billable (should bill ${d.expected})`);
+      await sendEmail([OWNER], `[SYNNR ops] BILLING DRIFT — ${rec.drift.length} company(ies) out of step`,
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">Nightly billed-vs-actual reconcile (${rec.checked} subscription(s) checked):
+
+${driftLines.join("\n") || "(no drift, but errors below)"}
+
+${rec.errors.length ? `Couldn't check:
+${rec.errors.map((e) => `• ${e}`).join("\n")}
+
+` : ""}Fix: open the company in Stripe and set the quantity, or add/delete the yard difference in the app — the next yard change also re-syncs.</pre>`).catch(() => {});
+    }
+  } catch (e) {
+    await sendEmail([OWNER], "[SYNNR ops] billing reconcile CRASHED",
+      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+  }
+
   await logCronRun(admin, {
     job: "alert-watchdog",
-    ok: verdict === "ok",
-    detail: verdict === "ok" ? null : verdict,
+    ok: verdict === "ok" && billing.drift === 0 && billing.errors === 0,
+    detail: [verdict !== "ok" ? verdict : null,
+      billing.drift ? `billing drift x${billing.drift}` : null,
+      billing.errors ? `reconcile errors x${billing.errors}` : null].filter(Boolean).join(", ") || null,
   });
 
-  return NextResponse.json({ ok: verdict === "ok", verdict, last_run: run?.ran_at ?? null });
+  return NextResponse.json({ ok: verdict === "ok", verdict, billing, last_run: run?.ran_at ?? null });
 }
 
 export const POST = GET;

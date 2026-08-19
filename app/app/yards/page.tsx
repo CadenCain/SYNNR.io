@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { syncYardQuantity } from "@/lib/saas/billing";
@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 async function createYard(formData: FormData) {
   "use server";
-  const { company } = await requireCompany();
+  // A yard is the billable unit — creating one requires a live subscription.
+  const { company } = await requireBillableCompany();
   const name = String(formData.get("name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim() || null;
   if (!name) return;
@@ -79,6 +80,9 @@ export default async function YardsPage() {
             className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
           <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add yard</Button>
         </form>
+        <p className="mt-2 text-xs text-ink-faint">
+          Billing follows the yard count: each yard is $500/mo, prorated from the day it&apos;s added. Delete one and the next bill drops the same way. The sample yard is free.
+        </p>
       </Card>
     </div>
   );

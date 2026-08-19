@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Truck, Plus, ChevronRight, Settings2, Trash2 , Upload} from "lucide-react";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, unitTypeLabel } from "@/lib/saas/taxonomy";
@@ -24,7 +24,7 @@ const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-
 
 async function createUnit(formData: FormData) {
   "use server";
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const yard_id = String(formData.get("yard_id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "truck");

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { logEvent } from "@/lib/saas/notify";
@@ -9,7 +9,7 @@ import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 
 export async function addComplianceItem(formData: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const parent_type = String(formData.get("parent_type") ?? "unit");
   const parent_id = String(formData.get("parent_id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
@@ -85,7 +85,7 @@ export async function renewComplianceItem(args: {
 }
 
 export async function addAsset(formData: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const yard_id = String(formData.get("yard_id") ?? "") || null;
   const unit_id = String(formData.get("unit_id") ?? "") || null;
   const name = String(formData.get("name") ?? "").trim();

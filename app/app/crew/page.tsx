@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { HardHat, Plus, ChevronRight } from "lucide-react";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { worstStatus } from "@/lib/saas/status";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
@@ -16,7 +16,7 @@ const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-
 
 async function createCrewMember(formData: FormData) {
   "use server";
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const name = String(formData.get("name") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim() || null;
   const phone = String(formData.get("phone") ?? "").trim() || null;

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
+import { canCreateBillable } from "@/lib/saas/billing-rules";
 import { saasDb } from "@/lib/saas/db";
 import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 
@@ -16,6 +17,7 @@ import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 export async function quickAddUnit(args: { name: string; type?: string }):
   Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string } }> {
   const { company } = await requireCompany();
+  if (!canCreateBillable(company.subscription_status)) return { ok: false, error: "Subscription needed to add to the yard — open Settings → Billing." };
   const name = args.name.trim();
   if (!name) return { ok: false, error: "Name the truck or rig." };
 
@@ -47,6 +49,7 @@ export async function quickAddUnit(args: { name: string; type?: string }):
 export async function quickAddAsset(args: { unit_id: string; name: string; category?: string; where?: string }):
   Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
+  if (!canCreateBillable(company.subscription_status)) return { ok: false, error: "Subscription needed to add to the yard — open Settings → Billing." };
   const name = args.name.trim();
   if (!args.unit_id || !name) return { ok: false, error: "Pick a truck and name the gear." };
 
@@ -88,6 +91,7 @@ export async function quickAddCert(args: {
   content_type?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const { company } = await requireCompany();
+  if (!canCreateBillable(company.subscription_status)) return { ok: false, error: "Subscription needed to add to the yard — open Settings → Billing." };
   const title = args.title.trim();
   if (!args.unit_id || !title) return { ok: false, error: "Pick a unit and name the item." };
 

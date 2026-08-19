@@ -1,6 +1,7 @@
 import { requireOperator } from "@/lib/op/auth";
 import { saasAdmin } from "@/lib/saas/db";
 import { localToday, addDaysIso } from "@/lib/saas/status";
+import { isBillableYard } from "@/lib/saas/billing-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -156,14 +157,15 @@ export default async function OpHealth() {
     .select("id, name, subscription_status, stripe_customer_id, stripe_subscription_id, yard_quantity");
   type Co = { id: string; name: string; subscription_status: string; stripe_customer_id: string | null; stripe_subscription_id: string | null; yard_quantity: number };
   const cos = (companies ?? []) as Co[];
-  const { data: yardRows } = await admin.from("saas_yards").select("company_id");
+  const { data: yardRows } = await admin.from("saas_yards").select("company_id, name");
   const yardCount = new Map<string, number>();
-  for (const y of (yardRows ?? []) as { company_id: string }[]) {
+  for (const y of (yardRows ?? []) as { company_id: string; name: string }[]) {
+    if (!isBillableYard(y.name)) continue; // the demo yard is free — never drift
     yardCount.set(y.company_id, (yardCount.get(y.company_id) ?? 0) + 1);
   }
   const payingMismatch = cos.filter((c) =>
     c.stripe_subscription_id && c.subscription_status === "active" &&
-    c.yard_quantity !== (yardCount.get(c.id) ?? 0));
+    c.yard_quantity !== Math.max(1, yardCount.get(c.id) ?? 0));
   add({
     name: "Billed yards match actual yards",
     ok: payingMismatch.length === 0,

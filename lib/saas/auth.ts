@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { canCreateBillable } from "./billing-rules";
 
 /**
  * Auth + tenancy helpers for the self-serve SaaS (saas_* tables).
@@ -66,4 +67,18 @@ export async function requireCompany(): Promise<{ user: User; company: ActiveCom
   const company = await getFirstActiveCompany(user.id);
   if (!company) redirect("/onboarding");
   return { user, company };
+}
+
+
+/**
+ * Gate for actions that CREATE billable records (yards, units, assets, certs,
+ * crew). The app layout already redirects unsubscribed accounts, but server
+ * actions are directly invokable endpoints — without this, a canceled account
+ * could keep writing through the API while the UI said no. Read and export
+ * stay open in every state: their data is theirs.
+ */
+export async function requireBillableCompany(): Promise<{ user: User; company: ActiveCompany }> {
+  const got = await requireCompany();
+  if (!canCreateBillable(got.company.subscription_status)) redirect("/onboarding/billing");
+  return got;
 }
