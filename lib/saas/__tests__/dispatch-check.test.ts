@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { addDaysIso } from "../status";
-import { matchAssetForLine, resolveLoadoutTemplate, type AssetLite } from "../dispatch-check";
+import { matchAssetForLine, resolveLoadoutTemplate, type AssetLite , crewWithNoCards } from "../dispatch-check";
 
 /**
  * The job-date rule (Q1): a cert unexpired TODAY but lapsing before the job
@@ -144,5 +144,35 @@ describe("resolveLoadoutTemplate — precedence is unit > company default > glob
 
   it("no template for this type → null (check runs, gear section just absent)", () => {
     expect(resolveLoadoutTemplate([seed], CO, "u-2", "pump_truck")).toBeNull();
+  });
+});
+
+/**
+ * Zero-card hands — found by an ops-manager test run: a rigger with no cards
+ * at all badged green and sailed through the readiness check, because only
+ * EXISTING items were evaluated. "Every assigned hand's cards checked" was
+ * vacuously true. Same rule as an undated cert: unverifiable is failing.
+ */
+describe("crewWithNoCards — an assigned hand with nothing on file fails", () => {
+  const names = new Map([["h1", "Braden"], ["h2", "Dale"]]);
+
+  it("hand with zero cert rows → failing entry, by name", () => {
+    expect(crewWithNoCards(["h1", "h2"], [{ parent_id: "h2" }], names)).toEqual([
+      { crewId: "h1", label: "Braden — no cards on file" },
+    ]);
+  });
+
+  it("every assigned hand has at least one card → nothing to report", () => {
+    expect(crewWithNoCards(["h1", "h2"], [{ parent_id: "h1" }, { parent_id: "h2" }], names)).toEqual([]);
+  });
+
+  it("no crew assigned → nothing to report (crew is simply not configured)", () => {
+    expect(crewWithNoCards([], [], names)).toEqual([]);
+  });
+
+  it("ALL assigned hands empty → every one fails; unknown ids still fail, unnamed", () => {
+    const out = crewWithNoCards(["h1", "hX"], [], names);
+    expect(out).toHaveLength(2);
+    expect(out[1].label).toBe("assigned hand — no cards on file");
   });
 });

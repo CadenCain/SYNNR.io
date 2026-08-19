@@ -79,6 +79,19 @@ export function resolveLoadoutTemplate<T extends TplLite>(tpls: T[], companyId: 
   );
 }
 
+/** Assigned hands with zero cert rows — each one fails the check. Pure so
+ *  the boundary is pinned by tests, not read-and-hoped. */
+export function crewWithNoCards(
+  crewIds: string[],
+  crewCerts: { parent_id: string }[],
+  names: Map<string, string>,
+): { crewId: string; label: string }[] {
+  const withCards = new Set(crewCerts.map((c) => c.parent_id));
+  return crewIds
+    .filter((id) => !withCards.has(id))
+    .map((id) => ({ crewId: id, label: `${names.get(id) ?? "assigned hand"} — no cards on file` }));
+}
+
 export async function computeDispatchCheck(
   db: SupabaseClient,
   companyId: string,
@@ -194,6 +207,15 @@ export async function computeDispatchCheck(
   for (const c of (unitCerts ?? []) as Cert[]) pushCert(c, c.title, "cert");
   for (const c of (assetCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${assetName.get(c.parent_id) ?? "asset"})`, "cert");
   for (const c of (crewCerts ?? []) as Cert[]) pushCert(c, `${c.title} — ${crewName.get(c.parent_id) ?? "crew"}`, "crew_cert");
+
+  // An assigned hand with ZERO cards on file used to pass silently — "every
+  // assigned hand's cards checked" was vacuously true. Same rule as a cert
+  // with no date: unverifiable is failing, and people are the highest-stakes
+  // paper in the yard.
+  for (const f of crewWithNoCards(crewIds, (crewCerts ?? []) as { parent_id: string }[], crewName)) {
+    lines.push({ source_type: "crew_cert", source_id: f.crewId, label: f.label, result: "missing", detail: "no cards on file" });
+    failures.push(`${f.label} — no cards on file`);
+  }
 
   // NO verdict on empty config — and "configured" means the SHOP put data in
   // (assets, certs, or assigned crew), not merely that a global seed template

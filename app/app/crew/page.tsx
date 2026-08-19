@@ -67,7 +67,16 @@ export default async function CrewPage() {
                   <div className="truncate font-medium">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs text-ink-faint">inactive</span> : null}</div>
                   <div className="truncate text-sm text-ink-dim">{c.role ?? "crew"}{c.phone ? ` · ${c.phone}` : ""}</div>
                 </div>
-                {worst.has(c.id) ? <StatusBadge status={worst.get(c.id)!} /> : <span className="text-xs text-ink-faint">no certs</span>}
+                {worst.has(c.id) ? (
+                  <span className="flex items-center gap-1.5">
+                    <StatusBadge status={worst.get(c.id)!} />
+                    {/* A green badge over one card and a green badge over five
+                        look identical — the count keeps thin records honest. */}
+                    <span className="font-mono text-[10px] text-ink-faint">{(byCrew.get(c.id) ?? []).length} card{(byCrew.get(c.id) ?? []).length === 1 ? "" : "s"}</span>
+                  </span>
+                ) : (
+                  <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">No cards on file</span>
+                )}
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>

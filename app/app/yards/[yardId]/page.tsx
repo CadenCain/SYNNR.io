@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { Truck, Plus, ChevronRight, Settings2, Trash2 } from "lucide-react";
+import { Truck, Plus, ChevronRight, Settings2, Trash2 , Upload} from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
@@ -60,6 +60,9 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
         description={y.location ?? undefined}
         actions={
           <>
+          <Link href="/app/import" className={buttonClass("outline", "sm")}>
+            <Upload className="h-4 w-4" /> Import
+          </Link>
           <ShareProof scope="yard" yardId={y.id} />
           <Popover>
             <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">

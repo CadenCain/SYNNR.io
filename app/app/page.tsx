@@ -1,6 +1,7 @@
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
+import { localToday } from "@/lib/saas/status";
 import DashboardView, { type DashItem, type DashEvent, type DashSnap } from "./_components/dashboard-view";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +63,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .order("day", { ascending: true })
       .limit(14),
   ]);
-  const snaps = (snapData ?? []) as DashSnap[];
+  // The 6:30am snapshot is stale by afternoon — the header shows live
+  // readiness while the chart's last bar shows this morning's, and the
+  // mismatch reads as a broken chart on a trust product. Today's bar is live.
+  const todayIso = localToday();
+  const rawSnaps = (snapData ?? []) as DashSnap[];
+  const todayMisses = rawSnaps.find((s) => s.day === todayIso)?.misses_caught ?? 0;
+  const snaps: DashSnap[] = [
+    ...rawSnaps.filter((s) => s.day !== todayIso),
+    { day: todayIso, readiness: rd.readiness, misses_caught: todayMisses },
+  ].slice(-14);
 
   const yards = (yardData ?? []) as { id: string; name: string }[];
   // Yard filter: ?yard=<id> scopes the board, the Not-ready KPI, and the

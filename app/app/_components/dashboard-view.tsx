@@ -201,7 +201,7 @@ export default function DashboardView(d: DashboardData) {
           <Card className="p-5 md:col-span-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Readiness — last 14 days</h2>
-              <span className="text-xs text-ink-faint">daily snapshot · 6:30am</span>
+              <span className="text-xs text-ink-faint">daily 6:30am · today live</span>
             </div>
             <div className="mt-4">
               <TrendChart snaps={d.snaps} />
