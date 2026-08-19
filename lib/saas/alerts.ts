@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendSms, sendEmail } from "./notify";
-import { localToday, addDaysIso } from "./status";
+import { localToday } from "./status";
+import { alertHorizon, isAlertDue } from "./alert-window";
 
 /**
  * Expiration-alert sweep. For each company: find compliance items (gear AND
@@ -43,24 +44,29 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     if (s && s.email_enabled === false) continue;
     const leadDays = s?.lead_days ?? 30;
 
-    const horizonIso = addDaysIso(todayIso, leadDays);
+    const horizonIso = alertHorizon(todayIso, leadDays);
 
     // Due = expiring inside the window, already expired, OR no date on file
-    // ("Missing" — unverifiable is failing; it alerts too).
-    const { data: itemsData } = await admin
+    // ("Missing" — unverifiable is failing; it alerts too). A failed READ is
+    // loud: skipping a company because a query errored is exactly the silent
+    // failure this product exists to prevent.
+    const { data: itemsData, error: itemsErr } = await admin
       .from("saas_compliance_items")
       .select("id, title, kind, expiration_date, parent_type, parent_id")
       .eq("company_id", company.id)
       .or(`expiration_date.lte.${horizonIso},expiration_date.is.null`);
+    if (itemsErr) { res.errors.push(`items query ${company.name}: ${itemsErr.message}`); continue; }
     let due: DueItem[] = ((itemsData ?? []) as Omit<DueItem, "yard_id">[]).map((i) => ({ ...i, yard_id: null }));
     if (due.length === 0) continue;
 
-    // Already-alerted (any channel) → skip.
-    const { data: sentData } = await admin
+    // Already-alerted (any channel) → skip. If this read fails we fall back to
+    // alerting everything due — a duplicate warning beats a missed one.
+    const { data: sentData, error: sentErr } = await admin
       .from("saas_alerts_sent").select("compliance_item_id")
       .eq("company_id", company.id).not("compliance_item_id", "is", null);
+    if (sentErr) res.errors.push(`sent-log query ${company.name}: ${sentErr.message} (alerting unfiltered)`);
     const sentIds = new Set(((sentData ?? []) as { compliance_item_id: string }[]).map((r) => r.compliance_item_id));
-    due = due.filter((i) => !sentIds.has(i.id));
+    due = due.filter((i) => isAlertDue(i.expiration_date, todayIso, leadDays, sentIds.has(i.id)));
     if (due.length === 0) continue;
     res.items_due += due.length;
 
@@ -97,7 +103,13 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       legacy = Array.from(new Set(legacy));
       recips = legacy.map((email) => ({ name: email, email, phone: null, channels: ["email"], yard_ids: null }));
     }
-    if (recips.length === 0) continue;
+    if (recips.length === 0) {
+      // THE silent-failure hole: items due, nobody resolvable to tell. Without
+      // this line the sweep skipped the company without a trace and the
+      // operator email said "all clear."
+      res.errors.push(`NO RECIPIENTS for ${company.name} — ${due.length} due item(s) UNDELIVERABLE`);
+      continue;
+    }
 
     const line = (i: DueItem) =>
       `${i.title}${i.parent_type === "crew" ? " (crew card)" : ""} — ${

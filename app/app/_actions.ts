@@ -201,39 +201,89 @@ export async function loadSampleYard() {
   const { data: existing } = await db.from("saas_yards").select("id").eq("company_id", company.id).eq("name", SAMPLE_YARD).maybeSingle();
   if (existing) { redirect("/app"); }
 
+  // A realistic wireline yard, not a smoke test: three trucks, pressure
+  // control with real recert dates, crew paper across H2S / well control /
+  // CDL / medical — and Wireline 7 deliberately NOT READY three different
+  // ways (expired BOP test, lubricator flagged missing, hand's well control
+  // lapsed) so a demo shows the verdict naming every reason, not one.
   const { data: yard, error } = await db.from("saas_yards")
     .insert({ company_id: company.id, name: SAMPLE_YARD, location: "Odessa, TX" }).select("id").single();
   if (error) throw new Error(error.message);
   const yardId = (yard as { id: string }).id;
 
-  const { data: unit } = await db.from("saas_units")
-    .insert({ company_id: company.id, yard_id: yardId, name: `Wireline 7${SAMPLE_TAG}`, type: "wireline_truck", identifier: "WL-007" })
-    .select("id").single();
-  const unitId = (unit as { id: string }).id;
+  const unitRows = [
+    { name: `Wireline 7${SAMPLE_TAG}`, type: "wireline_truck", identifier: "WL-007" },   // NOT READY
+    { name: `Wireline 12${SAMPLE_TAG}`, type: "wireline_truck", identifier: "WL-012" },  // due soon
+    { name: `Crane 3${SAMPLE_TAG}`, type: "crane_truck", identifier: "CR-003" },         // ready
+  ];
+  const unitIds: string[] = [];
+  for (const u of unitRows) {
+    const { data } = await db.from("saas_units")
+      .insert({ company_id: company.id, yard_id: yardId, ...u }).select("id").single();
+    unitIds.push((data as { id: string }).id);
+  }
+  const [wl7, wl12, cr3] = unitIds;
 
-  const { data: asset } = await db.from("saas_assets")
-    .insert({ company_id: company.id, yard_id: yardId, unit_id: unitId, name: `BOP #3${SAMPLE_TAG}`, category: "pressure_control" })
-    .select("id").single();
-  const assetId = (asset as { id: string }).id;
+  const assetRows = [
+    { unit_id: wl7, name: `BOP #3${SAMPLE_TAG}`, category: "pressure_control", status: "in_service" },
+    { unit_id: wl7, name: `Lubricator #2${SAMPLE_TAG}`, category: "pressure_control", status: "missing" }, // fails WL-7 until found
+    { unit_id: wl12, name: `BOP #5${SAMPLE_TAG}`, category: "pressure_control", status: "in_service" },
+    { unit_id: wl12, name: `Lubricator #4${SAMPLE_TAG}`, category: "pressure_control", status: "in_service" },
+    { unit_id: cr3, name: `Wire rope slings${SAMPLE_TAG}`, category: "lifting", status: "in_service" },
+  ];
+  const assetIds: string[] = [];
+  for (const a of assetRows) {
+    const { data } = await db.from("saas_assets")
+      .insert({ company_id: company.id, yard_id: yardId, ...a }).select("id").single();
+    assetIds.push((data as { id: string }).id);
+  }
+  const [bop3, , bop5, lub4, slings] = assetIds;
 
   await db.from("saas_compliance_items").insert([
-    { company_id: company.id, parent_type: "unit", parent_id: unitId, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-300), expiration_date: iso(65) },
-    { company_id: company.id, parent_type: "unit", parent_id: unitId, title: "DOT sticker", kind: "dot_sticker", issued_date: iso(-350), expiration_date: iso(12) },
-    { company_id: company.id, parent_type: "asset", parent_id: assetId, title: "BOP test", kind: "test", issued_date: iso(-190), expiration_date: iso(-4) },
+    // Wireline 7 — the red truck
+    { company_id: company.id, parent_type: "unit", parent_id: wl7, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-300), expiration_date: iso(65) },
+    { company_id: company.id, parent_type: "asset", parent_id: bop3, title: "BOP test", kind: "test", issued_date: iso(-190), expiration_date: iso(-4) }, // EXPIRED
+    // Wireline 12 — legal but on the clock
+    { company_id: company.id, parent_type: "unit", parent_id: wl12, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-200), expiration_date: iso(165) },
+    { company_id: company.id, parent_type: "unit", parent_id: wl12, title: "DOT sticker", kind: "dot_sticker", issued_date: iso(-353), expiration_date: iso(12) }, // due soon
+    { company_id: company.id, parent_type: "asset", parent_id: bop5, title: "BOP test", kind: "test", issued_date: iso(-60), expiration_date: iso(120) },
+    { company_id: company.id, parent_type: "asset", parent_id: lub4, title: "Pressure test — 10k", kind: "test", issued_date: iso(-45), expiration_date: iso(135) },
+    // Crane 3 — clean
+    { company_id: company.id, parent_type: "unit", parent_id: cr3, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-100), expiration_date: iso(265) },
+    { company_id: company.id, parent_type: "asset", parent_id: slings, title: "Rigging inspection", kind: "inspection", issued_date: iso(-30), expiration_date: iso(335) },
   ]);
 
-  const { data: hand1 } = await db.from("saas_crew_members")
-    .insert({ company_id: company.id, name: `Jerry Boles${SAMPLE_TAG}`, role: "operator", phone: "432-555-0101" }).select("id").single();
-  const { data: hand2 } = await db.from("saas_crew_members")
-    .insert({ company_id: company.id, name: `Manny Ortiz${SAMPLE_TAG}`, role: "driver" }).select("id").single();
-  const h1 = (hand1 as { id: string }).id, h2 = (hand2 as { id: string }).id;
+  const crewRows = [
+    { name: `Jerry Boles${SAMPLE_TAG}`, role: "operator", phone: "432-555-0101" },
+    { name: `Dale Hutto${SAMPLE_TAG}`, role: "operator" },
+    { name: `Manny Ortiz${SAMPLE_TAG}`, role: "driver" },
+    { name: `Colt Pruett${SAMPLE_TAG}`, role: "crane operator" },
+  ];
+  const crewIds: string[] = [];
+  for (const c of crewRows) {
+    const { data } = await db.from("saas_crew_members")
+      .insert({ company_id: company.id, ...c }).select("id").single();
+    crewIds.push((data as { id: string }).id);
+  }
+  const [jerry, dale, manny, colt] = crewIds;
+
   await db.from("saas_compliance_items").insert([
-    { company_id: company.id, parent_type: "crew", parent_id: h1, title: "H2S Clear", kind: "cert", issued_date: iso(-360), expiration_date: iso(6) },
-    { company_id: company.id, parent_type: "crew", parent_id: h2, title: "CDL", kind: "cert", issued_date: iso(-400), expiration_date: iso(500) },
+    { company_id: company.id, parent_type: "crew", parent_id: jerry, title: "H2S Clear", kind: "cert", issued_date: iso(-360), expiration_date: iso(6) },      // expiring
+    { company_id: company.id, parent_type: "crew", parent_id: jerry, title: "Well control — wireline", kind: "cert", issued_date: iso(-300), expiration_date: iso(430) },
+    { company_id: company.id, parent_type: "crew", parent_id: dale, title: "H2S Clear", kind: "cert", issued_date: iso(-200), expiration_date: iso(165) },
+    { company_id: company.id, parent_type: "crew", parent_id: dale, title: "Well control — wireline", kind: "cert", issued_date: iso(-800), expiration_date: iso(-70) }, // EXPIRED — blocks WL-7
+    { company_id: company.id, parent_type: "crew", parent_id: manny, title: "CDL", kind: "cert", issued_date: iso(-400), expiration_date: iso(500) },
+    { company_id: company.id, parent_type: "crew", parent_id: manny, title: "DOT medical card", kind: "cert", issued_date: iso(-300), expiration_date: iso(65) },
+    { company_id: company.id, parent_type: "crew", parent_id: colt, title: "Crane operator cert (NCCCO)", kind: "cert", issued_date: iso(-500), expiration_date: iso(230) },
+    { company_id: company.id, parent_type: "crew", parent_id: colt, title: "H2S Clear", kind: "cert", issued_date: iso(-100), expiration_date: iso(265) },
   ]);
+
   await db.from("saas_unit_crew").insert([
-    { company_id: company.id, unit_id: unitId, crew_member_id: h1 },
-    { company_id: company.id, unit_id: unitId, crew_member_id: h2 },
+    { company_id: company.id, unit_id: wl7, crew_member_id: dale },   // his lapsed well control blocks WL-7
+    { company_id: company.id, unit_id: wl7, crew_member_id: manny },
+    { company_id: company.id, unit_id: wl12, crew_member_id: jerry },
+    { company_id: company.id, unit_id: wl12, crew_member_id: manny },
+    { company_id: company.id, unit_id: cr3, crew_member_id: colt },
   ]);
 
   revalidatePath("/app");
