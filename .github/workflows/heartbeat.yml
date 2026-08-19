@@ -1,0 +1,50 @@
+# THE EXTERNAL DEAD-MAN — runs on GitHub's schedulers, not Vercel's.
+#
+# Chain of watchers, each outside the previous one's blast radius:
+#   1. The sweep emails the operator about its own errors.
+#   2. The Vercel watchdog cron (13:30 UTC) catches a sweep that never ran.
+#   3. THIS catches Vercel itself being down — site unreachable, cron
+#      scheduler dead, or heartbeat stale — from infrastructure Vercel
+#      doesn't own.
+#
+# Notification path: when this job fails, GitHub emails the repo owner
+# (default notification setting for failed scheduled workflows on your own
+# repo). Verify once: github.com → Settings → Notifications → Actions →
+# "Send notifications for failed workflows" is on.
+#
+# NOTE: GitHub disables cron workflows on repos with no pushes for 60 days —
+# a real limitation, but this repo ships far more often than that, and
+# GitHub emails a warning before disabling.
+
+name: alert-pipeline-heartbeat
+
+on:
+  schedule:
+    # Twice daily, offset from the 11:30 UTC sweep: 14:00 UTC catches this
+    # morning's run missing; 02:00 UTC catches a site that died overnight.
+    - cron: "0 14 * * *"
+    - cron: "0 2 * * *"
+  workflow_dispatch: {} # manual "test the pinger" button in the Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sweep heartbeat is fresh and site is up
+        run: |
+          set -euo pipefail
+          # Retry transient blips so a single 502 doesn't page anyone;
+          # a real outage fails all three attempts.
+          for i in 1 2 3; do
+            code=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 30 \
+              https://www.synnr.io/api/health || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "OK: $(cat /tmp/health.json)"
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code — $(cat /tmp/health.json 2>/dev/null || echo 'no body')"
+            sleep 30
+          done
+          echo "::error::Alert pipeline unhealthy — the daily sweep heartbeat is stale or synnr.io is down. Customers may not be getting expiration warnings. Check Vercel crons and /op/health."
+          exit 1

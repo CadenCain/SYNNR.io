@@ -58,14 +58,17 @@ export async function deleteYard(fd: FormData) {
   const { data: unitRows } = await db.from("saas_units").select("id")
     .eq("company_id", company.id).eq("yard_id", id);
   const unitIds = ((unitRows ?? []) as { id: string }[]).map((u) => u.id);
-  if (unitIds.length) {
+  {
+    // Assets hang off units OR directly off the yard; both orphan on a yard
+    // delete (unit_id/yard_id are SET NULL, not CASCADE) — collect both.
     const { data: assetRows } = await db.from("saas_assets").select("id")
-      .eq("company_id", company.id).in("unit_id", unitIds);
+      .eq("company_id", company.id)
+      .or(`yard_id.eq.${id}${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
     const assetIds = ((assetRows ?? []) as { id: string }[]).map((a) => a.id);
     await purgeItemsFor(db, company.id, "unit", unitIds);
     await purgeItemsFor(db, company.id, "asset", assetIds);
     if (assetIds.length) await db.from("saas_assets").delete().eq("company_id", company.id).in("id", assetIds);
-    await db.from("saas_units").delete().eq("company_id", company.id).in("id", unitIds);
+    if (unitIds.length) await db.from("saas_units").delete().eq("company_id", company.id).in("id", unitIds);
   }
   await db.from("saas_yards").delete().eq("id", id).eq("company_id", company.id);
   await syncYardQuantity(company.id); // per-yard billing follows the yard count
@@ -293,17 +296,23 @@ export async function loadSampleYard() {
 export async function clearSampleYard() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  // Yard cascade removes units/assets; their compliance rows + crew are cleaned by tag.
+  // Deleting the yard cascades UNITS but NOT assets — saas_assets.unit_id and
+  // yard_id are ON DELETE SET NULL, proven live in the 2026-08-18 audit when
+  // this function left five orphaned "(demo)" assets floating with no yard.
+  // So assets get deleted explicitly, same as deleteYard does.
   const { data: yard } = await db.from("saas_yards").select("id").eq("company_id", company.id).eq("name", SAMPLE_YARD).maybeSingle();
   if (yard) {
     const yardId = (yard as { id: string }).id;
     const { data: units } = await db.from("saas_units").select("id").eq("yard_id", yardId);
     const unitIds = ((units ?? []) as { id: string }[]).map((x) => x.id);
-    if (unitIds.length) {
-      const { data: assets } = await db.from("saas_assets").select("id").in("unit_id", unitIds);
-      const assetIds = ((assets ?? []) as { id: string }[]).map((x) => x.id);
-      await db.from("saas_compliance_items").delete().eq("company_id", company.id).in("parent_id", [...unitIds, ...assetIds]);
+    const { data: assets } = await db.from("saas_assets").select("id")
+      .eq("company_id", company.id).or(`yard_id.eq.${yardId}${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
+    const assetIds = ((assets ?? []) as { id: string }[]).map((x) => x.id);
+    const parentIds = [...unitIds, ...assetIds];
+    if (parentIds.length) {
+      await db.from("saas_compliance_items").delete().eq("company_id", company.id).in("parent_id", parentIds);
     }
+    if (assetIds.length) await db.from("saas_assets").delete().eq("company_id", company.id).in("id", assetIds);
     await db.from("saas_yards").delete().eq("id", yardId);
   }
   const { data: crew } = await db.from("saas_crew_members").select("id").eq("company_id", company.id).like("name", `%${SAMPLE_TAG}`);
