@@ -90,6 +90,11 @@ export default function SignupForm() {
         />
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
+      <p className="text-xs text-ink-faint">
+        By creating an account you agree to the{" "}
+        <a href="/legal/terms" className="underline hover:text-ink" target="_blank">Terms of Service</a> and{" "}
+        <a href="/legal/privacy" className="underline hover:text-ink" target="_blank">Privacy Policy</a>.
+      </p>
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating account…" : "Create account"}
       </Button>

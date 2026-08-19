@@ -1,54 +1,69 @@
 import { LegalShell } from "../LegalShell";
 
-// NOTE: marketing-site legal pages ONLY — plain-language privacy notice for the
-// public website + the free Readiness Call. The data-handling and confidentiality
-// terms for a paid engagement live in the client service agreement, which MUST be
-// reviewed by an attorney before the first paid deal.
+// Plain-language privacy policy covering the self-serve product (not just the
+// marketing site). Rewritten 2026-08-19. Lawyer flags: retention windows,
+// whether Texas/CCPA-style rights language is needed as customers grow.
 
 export const metadata = { title: "SYNNR — Privacy Policy" };
 
 export default function PrivacyPage() {
   return (
-    <LegalShell eyebrow="Legal" title="Privacy Policy" updated="June 23, 2026">
+    <LegalShell eyebrow="Legal" title="Privacy Policy" updated="August 19, 2026">
       <h2>1. What we collect</h2>
-      <ul>
-        <li><b>Contact details</b> — the name, shop, role, email, phone, and notes you give us when you request a Readiness Call.</li>
-        <li><b>Operational data (clients only)</b> — if you engage us, the job packets, tallies, loadout lists, rate sheets, certs, and similar records we need to build and run your system.</li>
-        <li><b>Basic website analytics</b> — privacy-friendly usage data to understand how the site is used.</li>
-      </ul>
-
-      <h2>2. How we use it</h2>
       <p>
-        We use your contact details to follow up about the Readiness Call and possible
-        work. For clients, we use operational data only to deliver the service to you — to
-        build and run your operations system and report on what it caught. We don&apos;t sell
-        your data, and we don&apos;t use it to train shared or third-party models. A person
-        reviews outputs before anything is treated as final.
+        <strong>Account data:</strong> your email, name, and company name when you sign up.{" "}
+        <strong>Yard data:</strong> whatever your team enters — equipment, certification and
+        inspection dates, crew names and credential dates, phone numbers you add for alert
+        routing, photos you upload. <strong>Usage basics:</strong> standard server logs
+        (IP, timestamps, pages) needed to run and secure the service.
       </p>
 
-      <h2>3. Storage &amp; security</h2>
+      <h2>2. What we use it for</h2>
       <p>
-        Data is encrypted in transit and at rest and stored with reputable infrastructure
-        providers. We limit access to what&apos;s needed to deliver your service. Specific
-        security and confidentiality commitments for a paid engagement are set out in the
-        client service agreement.
+        To run the product: showing your yard its own records, computing readiness, and sending
+        the expiration alerts you configured. We email you about your account and the service.
+        We do not sell your data, rent it, or use your yard records for advertising. Crew
+        information you enter is used only to show it back to your company and to route alerts
+        you set up.
       </p>
 
-      <h2>4. Sharing</h2>
+      <h2>3. Where it lives</h2>
       <p>
-        We share data only with the service providers we rely on to operate (such as
-        hosting, storage, and email), under contract, and where required by law. We do not
-        share your operational data with other clients.
+        Data is stored with Supabase (Postgres, US region) with row-level security separating
+        each company&apos;s records. The app runs on Vercel. Payments are processed by Stripe —
+        we never see or store card numbers. Alert emails are delivered by Resend. Each of these
+        processors handles data under their own security and privacy commitments.
       </p>
 
-      <h2>5. Your choices</h2>
+      <h2>4. Who can see it</h2>
       <p>
-        You can ask us to access, correct, or delete your information at any time. When an
-        engagement ends, we return or remove your operational data on an agreed schedule.
+        Your company&apos;s data is visible to your company&apos;s users, per the roles you
+        assign. If you create a shareable proof link, anyone with that link can see the
+        read-only status page it points to until you revoke it. The operator (us) can access
+        data for support and reliability work — the daily alert sweep, for example, reads
+        records to send your warnings.
       </p>
 
-      <h2>6. Contact</h2>
-      <p>Privacy questions or requests: cadencain@synnr.io.</p>
+      <h2>5. Export and deletion</h2>
+      <p>
+        Export everything as CSV from Settings at any time, in any subscription state. To
+        delete your account and company data, email{" "}
+        <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> — we delete from the live
+        system and residual copies age out of encrypted backups on the backup schedule.
+      </p>
+
+      <h2>6. Cookies</h2>
+      <p>
+        We use the cookies required to keep you signed in (Supabase auth session) and a
+        30-day referral cookie if you arrived through a partner link. No third-party ad
+        trackers.
+      </p>
+
+      <h2>7. Changes &amp; contact</h2>
+      <p>
+        Material changes get dated here and emailed to subscribed customers. Questions:&nbsp;
+        <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>.
+      </p>
     </LegalShell>
   );
 }

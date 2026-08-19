@@ -319,7 +319,7 @@ export const MARKETING_HTML = `
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
-      <span>Yard readiness for oilfield service shops · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a></span>
+      <span>Yard readiness for oilfield service shops · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a></span>
     </div>
   </div>
 </footer>

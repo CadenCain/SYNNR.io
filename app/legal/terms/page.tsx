@@ -1,84 +1,113 @@
 import { LegalShell } from "../LegalShell";
 
-// NOTE: marketing-site legal pages ONLY — plain-language terms for the public
-// website + the free Readiness Call. The actual client service agreement (scope,
-// fees, data handling, liability for a paid engagement) is a separate document
-// and MUST be reviewed by an attorney before the first paid deal.
+// Plain-language SaaS terms for the self-serve product. Rewritten 2026-08-19 —
+// the prior version described the dead "done-for-you service, no self-serve
+// login" pivot, the opposite of what customers now sign up for.
+//
+// LAWYER FLAGS (get real counsel before serious revenue):
+//  - Entity name: confirm "Darkstar Dynamics LLC" is still the operating
+//    entity behind the business bank account, or update it.
+//  - Liability cap + disclaimer wording (§6–7) — the compliance disclaimer is
+//    the load-bearing wall of this document.
+//  - Governing law / venue (§10) and whether Texas arbitration is preferred.
+//  - Data-retention window after cancellation (§4).
 
 export const metadata = { title: "SYNNR — Terms of Service" };
 
 export default function TermsPage() {
   return (
-    <LegalShell eyebrow="Legal" title="Terms of Service" updated="June 23, 2026">
-      <h2>1. About these terms</h2>
+    <LegalShell eyebrow="Legal" title="Terms of Service" updated="August 19, 2026">
+      <h2>1. Who we are, what this covers</h2>
       <p>
-        These terms cover your use of this website and the free Readiness Call you can
-        request through it. SYNNR (&ldquo;SYNNR,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;)
-        is operated by Darkstar Dynamics LLC. Any paid work is governed by a separate
-        written service agreement — these website terms do not create one.
+        SYNNR (&ldquo;SYNNR,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is software for oilfield
+        service yards, operated by Darkstar Dynamics LLC. These terms govern your use of the
+        SYNNR website and application at synnr.io. By creating an account or using the service
+        you agree to them.
       </p>
 
-      <h2>2. What SYNNR is</h2>
+      <h2>2. What the service is — and is not</h2>
       <p>
-        SYNNR is a <strong>done-for-you operations service</strong> for oilfield and
-        blue-collar service shops. We find where a shop&apos;s jobs leak money, build a
-        system that stops it — tied to that shop&apos;s real jobs, specs, and rate sheets —
-        and then <strong>run that system for them on an ongoing basis</strong>. We sell an
-        operations outcome and a managed service, not a software product or a self-serve
-        login.
+        SYNNR keeps a register of your yard&apos;s equipment, certifications, inspections, and
+        crew credentials, and warns you before recorded items lapse. It is an
+        <strong> informational record-keeping tool</strong>. It is not a regulatory authority,
+        a certification body, an inspection service, or legal advice.
+      </p>
+      <p>
+        <strong>You remain solely responsible for your own regulatory compliance.</strong>{" "}
+        SYNNR works from the dates and records your team enters. If a record is missing, wrong,
+        or stale, the software&apos;s output will be too. A green status in SYNNR does not mean a
+        truck, tool, or person is compliant with DOT, OSHA, operator requirements, or any other
+        rule — it means the records you gave us are current. Verify against source documents
+        before relying on anything for a safety or regulatory decision.
       </p>
 
-      <h2>3. The Readiness Call</h2>
+      <h2>3. Subscriptions and billing</h2>
       <p>
-        The Readiness Call is a free, no-obligation conversation. We&apos;ll talk through how
-        your shop runs and point to your biggest operational money leak. It is not advice
-        you should rely on without your own judgment, and it does not obligate either side
-        to anything. We&apos;ll quote any paid work separately, in writing, only if it&apos;s a fit.
+        The service is billed monthly through Stripe at the published per-yard price. Your
+        subscription quantity follows your count of active yards: adding a yard increases the
+        next charge (prorated from the day you add it), deleting a yard decreases it the same
+        way. The built-in sample/demo yard is never billed. Minimum subscription is one yard.
+      </p>
+      <p>
+        You can cancel anytime from Settings → Billing. Cancellation stops future charges at
+        the end of the current billing period; we don&apos;t issue partial-month refunds. If a
+        payment fails, Stripe retries and we keep your access open for a grace period before
+        the account becomes read-only.
       </p>
 
-      <h2>4. Your operational data</h2>
-      <ul>
-        <li>If you engage us, you may share operational data — job packets, tallies, loadout lists, rate sheets, certs, and similar records.</li>
-        <li>You keep all rights to that data. You grant us a limited license to use it solely to deliver the service to you.</li>
-        <li>A human reviews outputs; nothing is treated as final until it&apos;s checked.</li>
-        <li>We do not sell your data and do not use it to train shared or third-party models.</li>
-        <li>You confirm you have the right to share the records you give us.</li>
-        <li>Detailed handling, confidentiality, and security commitments live in the written service agreement.</li>
-      </ul>
-
-      <h2>5. Engagements &amp; fees</h2>
+      <h2>4. Your data stays yours</h2>
       <p>
-        No pricing is offered on this website and nothing here is a purchase. Build and
-        monthly run-and-support fees are scoped per shop and set out in the written
-        service agreement after the Readiness Call. That agreement controls payment,
-        term, and cancellation for any paid work.
+        Everything you put into SYNNR — yards, equipment, certs, crew records, photos — is
+        yours. You can export it as CSV at any time from Settings, in any subscription state,
+        including after cancellation. A canceled account keeps read and export access. If you
+        ask us to delete your account, we delete your company&apos;s data from the live system;
+        residual copies in encrypted backups age out on the backup schedule.
       </p>
 
-      <h2>6. Our work &amp; your responsibility</h2>
+      <h2>5. Acceptable use</h2>
       <p>
-        We provide operations support and outputs to help your shop catch misses before
-        they cost money. You remain responsible for your own business decisions —
-        including dispatch, billing, and what you send to a customer. Outputs are a tool
-        for your team, not a substitute for your judgment.
+        Don&apos;t attempt to access another company&apos;s data, probe or overload the service,
+        resell access, or use the service for anything unlawful. Accounts doing so can be
+        suspended or terminated.
       </p>
 
-      <h2>7. Acceptable use of this site</h2>
+      <h2>6. No warranty</h2>
       <p>
-        Don&apos;t misuse this website, attempt to break it, or submit information you
-        aren&apos;t authorized to share. We may decline or end any engagement at our
-        discretion.
+        The service is provided <strong>&ldquo;as is&rdquo; and &ldquo;as available,&rdquo;</strong>{" "}
+        without warranties of any kind, express or implied, including fitness for a particular
+        purpose. We do not warrant that alerts will always be delivered (email systems fail),
+        that the service will be uninterrupted, or that any compliance, safety, or business
+        outcome will result from its use.
       </p>
 
-      <h2>8. Disclaimers &amp; liability</h2>
+      <h2>7. Limitation of liability</h2>
       <p>
-        This website and the free Readiness Call are provided &ldquo;as is.&rdquo; To the
-        maximum extent permitted by law, SYNNR is not liable for decisions you make based
-        on the website or the call. Liability for any paid engagement is addressed in the
-        written service agreement.
+        To the maximum extent the law allows, SYNNR&apos;s total liability for any claim arising
+        from the service is limited to the amount you paid us in the twelve months before the
+        claim. We are not liable for indirect, incidental, or consequential damages — including
+        lost profits, non-productive time, regulatory fines, or losses caused by a missed or
+        undelivered alert.
       </p>
 
-      <h2>9. Contact</h2>
-      <p>Questions about these terms: cadencain@synnr.io.</p>
+      <h2>8. Termination</h2>
+      <p>
+        You can stop using the service and cancel at any time. We can suspend or terminate
+        accounts that violate these terms, with export access preserved per §4 except where
+        the violation involves abuse of the service itself.
+      </p>
+
+      <h2>9. Changes</h2>
+      <p>
+        We may update these terms as the product evolves. Material changes will be dated at the
+        top of this page and, for subscribed customers, announced by email before they take
+        effect. Continued use after the effective date is acceptance.
+      </p>
+
+      <h2>10. Governing law &amp; contact</h2>
+      <p>
+        These terms are governed by the laws of the State of Texas. Questions:&nbsp;
+        <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>.
+      </p>
     </LegalShell>
   );
 }
