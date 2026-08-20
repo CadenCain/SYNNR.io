@@ -68,7 +68,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {company.is_demo ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
             <span className="font-semibold">Demo yard</span> — this is fake data, click anything.{" "}
-            <Link href="/signup" className="font-medium underline underline-offset-2">Get your own yard →</Link>
+            {/* /demo/exit signs the throwaway session out first — a plain
+                /signup link boomerangs signed-in users straight back here. */}
+            <a href="/demo/exit" className="font-medium underline underline-offset-2">Get your own yard →</a>
           </div>
         ) : !writable && company.subscription_status === "none" ? (
           <div className="border-b border-line-2 bg-elevated px-4 py-2.5 text-sm text-ink-dim">

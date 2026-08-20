@@ -131,21 +131,21 @@ export const MARKETING_HTML = `
     <div class="shead">
       <span class="eyebrow">Inside SYNNR</span>
       <h2 class="h2">This is the actual screen.</h2>
-      <p class="lede">Not a mockup — the board a shop leaves open all day, photographed as-is. Every tile is a truck. Rig 4 is red because a BOP is flagged missing and the DOT lapsed, and it stays red until somebody fixes the record.</p>
+      <p class="lede">Not a mockup — the board a shop leaves open all day, photographed as-is. Every tile is a truck. CT-03 is red because its BOP pressure test expired six days ago, and it stays red until somebody fixes the record.</p>
     </div>
 
     <div class="show-stage">
       <div class="show-frame">
         <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
         <img class="show-shot" src="/screens/command-center.png" width="1360" height="860"
-          alt="SYNNR command center: KPI row, 14-day readiness chart, and the fleet board — Rig 4 flagged NOT READY because BOP #3 is flagged missing and its annual DOT expired" loading="lazy"/>
+          alt="SYNNR command center: KPI row, 14-day readiness chart, and the fleet board — CT-03 flagged NOT READY because its BOP pressure test expired" loading="lazy"/>
       </div>
       <img class="show-phone" src="/screens/mobile-verdict.png" width="250" height="512"
-        alt="The same yard on a phone: NOT READY — Rig 4 can't roll, with one button to fix it" loading="lazy"/>
+        alt="The same yard on a phone: NOT READY — CT-03 can't roll, with one button to fix it" loading="lazy"/>
 
       <div class="show-chip c1" aria-hidden="true">
         <span class="cico">▮</span>
-        <span><b>SYNNR:</b> Rig 4 NOT ready — BOP #3 flagged missing. —your shop</span>
+        <span><b>SYNNR:</b> CT-03 NOT ready — BOP pressure test expired. —your shop</span>
       </div>
       <div class="show-chip c2" aria-hidden="true">
         <span class="cok">✓</span>
