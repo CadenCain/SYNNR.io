@@ -17,7 +17,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const query = (q ?? "").trim();
   const db = await saasDb();
 
-  let units: { id: string; name: string; type: string }[] = [];
+  let units: { id: string; name: string; type: string; identifier: string | null }[] = [];
   let crew: { id: string; name: string; role: string | null }[] = [];
   let assets: { id: string; name: string; category: string; last_seen_where: string | null }[] = [];
   let certs: { id: string; title: string; status: ComplianceStatus; parent_type: string; parent_id: string; expiration_date: string | null }[] = [];
@@ -25,7 +25,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   if (query.length >= 2) {
     const like = `%${query.replace(/[%_,().]/g, "")}%`; // strip PostgREST filter syntax too
     const [u, c, a, ci] = await Promise.all([
-      db.from("saas_units").select("id, name, type").eq("company_id", company.id).ilike("name", like).limit(10),
+      // Name OR identifier — a dispatcher hunting "1482" means the truck
+      // number painted on the door, not what the office named it.
+      db.from("saas_units").select("id, name, type, identifier").eq("company_id", company.id)
+        .or(`name.ilike.${like},identifier.ilike.${like}`).limit(10),
       db.from("saas_crew_members").select("id, name, role").eq("company_id", company.id).ilike("name", like).limit(10),
       db.from("saas_assets").select("id, name, category, last_seen_where").eq("company_id", company.id)
         .or(`name.ilike.${like},last_seen_where.ilike.${like}`).limit(10),
@@ -62,7 +65,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
       <form action="/app/search" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 focus-within:border-line-2">
         <Search className="h-4 w-4 text-ink-faint" />
-        <input name="q" defaultValue={query} autoFocus placeholder="Search anything…"
+        <input name="q" defaultValue={query} autoFocus placeholder="Trucks, gear, crew, certs…"
           className="h-10 w-full bg-transparent text-ink placeholder:text-ink-faint outline-none" />
       </form>
 
@@ -75,7 +78,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           {units.length > 0 && (
             <section className="flex flex-col gap-2">
               <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Units</h2>
-              {units.map((u) => <Row key={u.id} href={`/app/units/${u.id}`} icon={Truck} title={u.name} sub={unitTypeLabel(u.type)} />)}
+              {units.map((u) => <Row key={u.id} href={`/app/units/${u.id}`} icon={Truck} title={u.name} sub={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`} />)}
             </section>
           )}
           {crew.length > 0 && (

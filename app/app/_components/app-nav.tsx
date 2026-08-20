@@ -107,7 +107,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
           <Search className="h-4 w-4" />
           <input
             name="q"
-            placeholder="Search trucks, crew, certs…"
+            placeholder="Search trucks, gear, crew…"
             className="w-full bg-transparent text-ink placeholder:text-ink-faint outline-none"
           />
           <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-ink-faint lg:inline">⌘K</kbd>

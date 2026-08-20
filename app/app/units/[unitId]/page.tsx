@@ -54,6 +54,20 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at").eq("unit_id", unitId).order("name");
   const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null }[];
 
+  // Worst-cert chip per asset — the child card carries its own verdict, same
+  // treatment the crew cards already get.
+  const assetIds = assets.map((a) => a.id);
+  const { data: assetCertData } = assetIds.length
+    ? await db.from("saas_compliance_items_with_status").select("parent_id, status")
+        .eq("company_id", company.id).eq("parent_type", "asset").in("parent_id", assetIds)
+    : { data: [] };
+  const certsByAsset = new Map<string, ComplianceStatus[]>();
+  for (const r of (assetCertData ?? []) as { parent_id: string; status: ComplianceStatus }[]) {
+    certsByAsset.set(r.parent_id, [...(certsByAsset.get(r.parent_id) ?? []), r.status]);
+  }
+  const worstByAsset = new Map<string, ComplianceStatus>();
+  for (const [aid, list] of certsByAsset) { const w = worstStatus(list); if (w) worstByAsset.set(aid, w); }
+
   // Crew: standing assignments + everyone else, with worst-card status chips.
   const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
     db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
@@ -321,7 +335,10 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                       );
                     })() : null}
                   </span>
-                  <span className="shrink-0 text-sm text-ink-dim">{categoryLabel(a.category)}</span>
+                  {worstByAsset.has(a.id)
+                    ? <StatusBadge status={worstByAsset.get(a.id)!} />
+                    : <span className="shrink-0 text-xs text-ink-faint">no certs</span>}
+                  <span className="hidden shrink-0 text-sm text-ink-dim sm:inline">{categoryLabel(a.category)}</span>
                   <ChevronRight className="h-4 w-4 text-ink-faint" />
                 </Card>
               </Link>
