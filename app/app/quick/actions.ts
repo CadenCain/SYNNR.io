@@ -90,7 +90,7 @@ export async function quickAddCert(args: {
   storage_path?: string | null;
   content_type?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { company } = await requireCompany();
+  const { company, user } = await requireCompany();
   if (!canCreateBillable(company.subscription_status)) return { ok: false, error: "Subscription needed to add to the yard — open Settings → Billing." };
   const title = args.title.trim();
   if (!args.unit_id || !title) return { ok: false, error: "Pick a unit and name the item." };
@@ -123,6 +123,12 @@ export async function quickAddCert(args: {
     });
   }
 
+  {
+    const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
+    const { logEvent } = await import("@/lib/saas/notify");
+    void logEvent({ companyId: company.id, kind: "cert_added", actor, unitId: args.unit_id,
+      message: `${title} added${actor ? ` by ${actor}` : ""}${args.expiration_date ? ` — expires ${args.expiration_date}` : ""}` });
+  }
   revalidatePath("/app/quick");
   revalidatePath("/app");
   return { ok: true };

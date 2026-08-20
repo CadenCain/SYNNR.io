@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export default function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -29,7 +30,8 @@ export default function LoginForm() {
       return;
     }
     // The /app gate routes to /onboarding if they have no company yet.
-    router.replace("/app");
+    const nextPath = (() => { const n = params.get("next") ?? ""; return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+    router.replace(nextPath || "/app");
     router.refresh();
   }
 

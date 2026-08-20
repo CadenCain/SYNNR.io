@@ -45,7 +45,7 @@ export async function renewComplianceItem(args: {
   content_type?: string | null;
   redirectPath?: string;
 }) {
-  const { company } = await requireCompany();
+  const { company, user } = await requireCompany();
   const db = await saasDb();
 
   const { error: upErr } = await db
@@ -75,10 +75,12 @@ export async function renewComplianceItem(args: {
   await clearAlertLog(company.id, args.itemId);
 
   const { data: itemRow } = await db.from("saas_compliance_items").select("title").eq("id", args.itemId).maybeSingle();
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
   void logEvent({
     companyId: company.id,
     kind: "renewed",
-    message: `${(itemRow as { title: string } | null)?.title ?? "Item"} renewed — good to ${args.expiration_date}`,
+    actor,
+    message: `${(itemRow as { title: string } | null)?.title ?? "Item"} renewed — good to ${args.expiration_date}${actor ? `, by ${actor}` : ""}`,
   });
 
   if (args.redirectPath) revalidatePath(args.redirectPath);

@@ -63,6 +63,7 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <a href="/" className="mb-2 inline-block text-sm text-ink-dim hover:text-ink">← Back</a>
         <h1 className="text-xl font-semibold tracking-tight">Start your subscription</h1>
         <p className="mt-1 text-sm text-ink-dim">One more step — add a card to activate {company.name}.</p>
       </div>

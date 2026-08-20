@@ -6,8 +6,10 @@ import SignupForm from "./signup-form";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Get started · RollReady" };
 
-export default async function SignupPage() {
-  if (await getSaasUser()) redirect("/app");
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
+  const nextPath = next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+  if (await getSaasUser()) redirect(nextPath);
   return (
     <div className="flex flex-col gap-6">
       <div>

@@ -317,6 +317,7 @@ export default function DashboardView(d: DashboardData) {
                         <p className="text-sm">{e.message}</p>
                         <p className="text-xs text-ink-faint">
                           {new Date(e.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                          {e.actor && !e.message.includes(e.actor) ? <> · {e.actor}</> : null}
                         </p>
                       </div>
                     </div>

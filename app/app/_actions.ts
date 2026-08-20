@@ -6,6 +6,12 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { syncYardQuantity } from "@/lib/saas/billing";
 import { logEvent } from "@/lib/saas/notify";
+
+// Every record change is logged under the hand who made it — "who renewed
+// this" is half the point of a compliance trail.
+function actorName(user: { user_metadata?: { full_name?: string }; email?: string | null }): string | null {
+  return user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || null;
+}
 import { clearAlertLog } from "@/lib/saas/alert-log";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -354,7 +360,7 @@ export async function unassignCrewFromUnit(fd: FormData) {
 
 // ── COMPLIANCE ITEM ──
 export async function updateComplianceItem(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company, user } = await requireCompany();
   const id = str(fd, "id");
   const title = str(fd, "title");
   const kind = str(fd, "kind") || "cert";
@@ -392,13 +398,25 @@ export async function updateComplianceItem(fd: FormData) {
       }
     }
   }
+  {
+    const { data: t } = await db.from("saas_compliance_items").select("title").eq("id", id).eq("company_id", company.id).maybeSingle();
+    const actor = actorName(user);
+    void logEvent({ companyId: company.id, kind: "edited", actor,
+      message: `${(t as { title: string } | null)?.title ?? "Item"} edited${actor ? ` by ${actor}` : ""}` });
+  }
   if (redirectPath) revalidatePath(redirectPath);
 }
 export async function deleteComplianceItem(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company, user } = await requireCompany();
   const id = str(fd, "id");
   const redirectPath = str(fd, "redirect_path");
   const db = await saasDb();
+  const { data: t } = await db.from("saas_compliance_items").select("title").eq("id", id).eq("company_id", company.id).maybeSingle();
   await db.from("saas_compliance_items").delete().eq("id", id).eq("company_id", company.id);
+  {
+    const actor = actorName(user);
+    void logEvent({ companyId: company.id, kind: "deleted", actor,
+      message: `${(t as { title: string } | null)?.title ?? "Item"} deleted${actor ? ` by ${actor}` : ""}` });
+  }
   if (redirectPath) revalidatePath(redirectPath);
 }
