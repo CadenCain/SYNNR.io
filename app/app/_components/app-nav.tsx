@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Bell, Settings, Plus, LogOut, Search, HardHat } from "lucide-react";
+import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -11,7 +11,7 @@ const GROUPS: { label: string; items: { href: string; label: string; icon: typeo
     label: "Overview",
     items: [
       { href: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
-      { href: "/app/compliance", label: "Compliance", icon: ShieldCheck },
+      { href: "/app/compliance", label: "Compliance & Logs", icon: ShieldCheck },
     ],
   },
   {
@@ -19,7 +19,6 @@ const GROUPS: { label: string; items: { href: string; label: string; icon: typeo
     items: [
       { href: "/app/yards", label: "Yards", icon: Warehouse },
       { href: "/app/crew", label: "Crew", icon: HardHat },
-      { href: "/app/alerts", label: "Alerts", icon: Bell },
     ],
   },
   {
@@ -33,7 +32,7 @@ const TABS_LEFT = [
   { href: "/app/yards", label: "Yards", icon: Warehouse },
 ];
 const TABS_RIGHT = [
-  { href: "/app/alerts", label: "Alerts", icon: Bell },
+  { href: "/app/compliance", label: "Compliance", icon: ShieldCheck },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 

@@ -70,7 +70,7 @@ export default function DashboardView(d: DashboardData) {
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${d.readiness}%`, accent: d.readiness >= 90 ? "text-emerald-400" : d.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: d.readiness, href: "/app/compliance", spark: d.spark.readiness, sparkColor: "#e7ddc7" },
     { icon: Flame, label: "Misses caught", value: d.missesCaught, accent: d.missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: d.missesCaught > 0 ? `before rollout · ${delta(d.missThisWk, d.missLastWk)}` : "before rollout, this month", spark: d.spark.misses, sparkColor: "#34d399" },
-    { icon: Clock, label: "Expiring in 30d", value: d.expiring30, accent: "text-amber-400", href: "/app/alerts" },
+    { icon: Clock, label: "Expiring in 30d", value: d.expiring30, accent: "text-amber-400", href: "/app/compliance" },
     { icon: AlertTriangle, label: "Failed checks", value: d.notReadyMonth, accent: d.notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
   ];
 
@@ -152,7 +152,7 @@ export default function DashboardView(d: DashboardData) {
         <div className="flex items-stretch divide-x divide-line rounded-lg border border-line md:hidden">
           {[
             { k: "Readiness", v: d.readiness === null ? "—" : `${d.readiness}%`, href: "/app/compliance" },
-            { k: "Expiring 30d", v: d.expiring30, href: "/app/alerts" },
+            { k: "Expiring 30d", v: d.expiring30, href: "/app/compliance" },
             { k: "Caught", v: d.missesCaught, href: "#activity" },
           ].map((s) => (
             <Link key={s.k} href={s.href} className="flex flex-1 flex-col items-center gap-0.5 py-3">
