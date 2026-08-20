@@ -329,35 +329,11 @@ export default function DashboardView(d: DashboardData) {
               )}
             </section>
 
-            {/* Proof panel + needs attention */}
+            {/* Needs attention. (The "What SYNNR caught" pitch card lived here
+                until 2026-08-20 — the owner cut it: the KPI tile and month tape
+                already carry the number, and a shop staring at its own
+                dashboard doesn't need to be sold the subscription it pays for.) */}
             <div className="flex flex-col gap-7">
-              <section className="flex flex-col gap-3">
-                <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">What SYNNR caught — this month</h2>
-                <Card className="p-5">
-                  {d.missesCaught === 0 && d.warningsMonth === 0 ? (
-                    <p className="text-sm text-ink-dim">Run your first readiness check to see your saves. Every miss caught before it hits a location shows up here.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <p className="text-lg font-semibold">
-                        {d.missesCaught === 0
-                          ? "Nothing's slipped through this month."
-                          : <>SYNNR caught <span className="text-emerald-400">{d.missesCaught}</span> miss{d.missesCaught === 1 ? "" : "es"} before {d.missesCaught === 1 ? "it" : "they"} hit a location.</>}
-                      </p>
-                      {d.missesCaught > 0 ? (
-                        <p className="text-sm text-ink-dim">
-                          At an estimated <span className="text-ink">${d.nptDay.toLocaleString()}</span>/day of NPT per miss, that&apos;s roughly{" "}
-                          <span className="font-medium text-emerald-400">${(d.missesCaught * d.nptDay).toLocaleString()}</span> in avoided downtime this month — against a $500-a-yard subscription.
-                          <span className="mt-0.5 block text-xs text-ink-faint">Estimate, not a measured figure. <Link href="/app/settings/billing" className="underline hover:text-ink">Set your own NPT day-rate.</Link></span>
-                        </p>
-                      ) : null}
-                      <p className="text-sm text-ink-dim">
-                        {d.warningsMonth} expiry warning{d.warningsMonth === 1 ? "" : "s"} delivered · {d.notReadyMonth === 0 ? "no NOT-ready checks recorded" : `${d.notReadyMonth} NOT-ready check${d.notReadyMonth === 1 ? "" : "s"} recorded — see the feed`}
-                      </p>
-                    </div>
-                  )}
-                </Card>
-              </section>
-
               <section className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Needs attention</h2>
