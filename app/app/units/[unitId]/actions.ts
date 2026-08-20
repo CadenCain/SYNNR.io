@@ -7,6 +7,7 @@ import { clearAlertLog } from "@/lib/saas/alert-log";
 import { logEvent } from "@/lib/saas/notify";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
+import { normalizeDateField } from "@/lib/saas/import-parse";
 
 export async function addComplianceItem(formData: FormData) {
   const { company } = await requireBillableCompany();
@@ -14,8 +15,10 @@ export async function addComplianceItem(formData: FormData) {
   const parent_id = String(formData.get("parent_id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const kind = String(formData.get("kind") ?? "cert");
-  const expiration_date = String(formData.get("expiration_date") ?? "").trim() || null;
-  const issued_date = String(formData.get("issued_date") ?? "").trim() || null;
+  // Impossible dates die here with the field named — past dates are LEGAL
+  // (expired paper is the product's whole subject).
+  const expiration_date = normalizeDateField(String(formData.get("expiration_date") ?? ""), "Expires");
+  const issued_date = normalizeDateField(String(formData.get("issued_date") ?? ""), "Issued");
   const responsible_person = String(formData.get("responsible_person") ?? "").trim() || null;
   const redirectPath = String(formData.get("redirect_path") ?? "");
   if (!parent_id || !title) return;
@@ -48,11 +51,13 @@ export async function renewComplianceItem(args: {
   const { company, user } = await requireCompany();
   const db = await saasDb();
 
+  const expiration = normalizeDateField(args.expiration_date, "New expiration date");
+  if (!expiration) throw new Error("New expiration date: set the date off the new cert.");
   const { error: upErr } = await db
     .from("saas_compliance_items")
     .update({
-      expiration_date: args.expiration_date,
-      issued_date: args.issued_date ?? new Date().toISOString().slice(0, 10),
+      expiration_date: expiration,
+      issued_date: normalizeDateField(args.issued_date, "Issued") ?? new Date().toISOString().slice(0, 10),
     })
     .eq("id", args.itemId)
     .eq("company_id", company.id);

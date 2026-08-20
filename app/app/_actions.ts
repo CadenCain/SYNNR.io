@@ -12,6 +12,7 @@ function actorName(user: { user_metadata?: { full_name?: string }; email?: strin
   return user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || null;
 }
 import { clearAlertLog } from "@/lib/saas/alert-log";
+import { normalizeDateField } from "@/lib/saas/import-parse";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
@@ -369,8 +370,10 @@ export async function updateComplianceItem(fd: FormData) {
   const id = str(fd, "id");
   const title = str(fd, "title");
   const kind = str(fd, "kind") || "cert";
-  const issued_date = str(fd, "issued_date") || null;
-  const expiration_date = str(fd, "expiration_date") || null;
+  // Impossible calendar dates die with the field named; past dates are LEGAL
+  // (recording lapsed paper is the product). Same contract as the importer.
+  const issued_date = normalizeDateField(str(fd, "issued_date"), "Issued");
+  const expiration_date = normalizeDateField(str(fd, "expiration_date"), "Expires");
   const redirectPath = str(fd, "redirect_path");
   if (!id || !title) return;
   const db = await saasDb();

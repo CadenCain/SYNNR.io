@@ -42,6 +42,10 @@ class QueryBuilder {
     if (op === "is" && val === null) this.rows = this.rows.filter((r) => r[col] !== null && r[col] !== undefined);
     return this;
   }
+  gte(col: string, val: unknown) {
+    this.rows = this.rows.filter((r) => String(r[col] ?? "") >= String(val));
+    return this;
+  }
   maybeSingle() { this.singleMode = true; return this; }
   single() { this.singleMode = true; return this; }
 

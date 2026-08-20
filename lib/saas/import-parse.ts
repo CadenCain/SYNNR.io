@@ -80,6 +80,23 @@ export const matchValue = (input: string, list: { value: string; label: string }
  * passed preview clean and then blew up halfway through commit — breaking the
  * promise that preview shows every error before anything is written.
  */
+/**
+ * Server-action date guard, built on parseDate. PAST DATES ARE LEGAL — an
+ * expired cert is real data and the product's whole job is to flag it red;
+ * so is 2050 (tank certs run ten years, MTRs don't expire). What dies here
+ * is what can't be a calendar day at all: "banana", "2026-02-30" — with the
+ * field named in plain English instead of a raw Postgres error.
+ */
+export function normalizeDateField(value: string | null | undefined, field: string): string | null {
+  const s = (value ?? "").trim();
+  if (!s) return null;
+  try {
+    return parseDate(s);
+  } catch (e) {
+    throw new Error(`${field}: ${e instanceof Error ? e.message : "bad date"}`);
+  }
+}
+
 export function parseDate(s: string): string | null {
   if (!s) return null;
   let iso: string | null = null;
