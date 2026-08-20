@@ -116,7 +116,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
                   <MapPin className="h-5 w-5 text-ink-dim" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{y.name}</div>
+                  <div className="truncate font-semibold text-ink">{y.name}</div>
                   <div className="truncate text-sm text-ink-dim">
                     {y.location ? y.location + " · " : ""}
                     {y.saas_units?.[0]?.count ?? 0} units · {y.saas_assets?.[0]?.count ?? 0} assets

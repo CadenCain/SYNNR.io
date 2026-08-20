@@ -15,6 +15,7 @@ import {
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import { AddDisclosure } from "@/components/ui/disclosure";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem, addAsset } from "./actions";
 import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
@@ -194,8 +195,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
           </div>
         )}
-        <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{items.length ? "Add another item" : "Add a cert, inspection, or DOT item"}</h3>
+        <AddDisclosure label={items.length ? "Add another item" : "Add a cert, inspection, or DOT item"} defaultOpen={items.length === 0}>
           <form action={addComplianceItem} className="flex flex-col gap-3">
             <input type="hidden" name="parent_type" value="unit" />
             <input type="hidden" name="parent_id" value={u.id} />
@@ -212,7 +212,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
           </form>
-        </Card>
+        </AddDisclosure>
       </section>
 
       {/* Gear list — the standing reference of what rides on this unit */}
@@ -283,8 +283,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           </div>
         )}
         {unassignedCrew.length > 0 ? (
-          <Card className="p-5">
-            <h3 className="mb-3 text-sm font-medium text-ink">{assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"}</h3>
+          <AddDisclosure label={assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"} defaultOpen={assignedCrew.length === 0}>
             <form action={assignCrewToUnit} className="flex flex-col gap-3 sm:flex-row">
               <input type="hidden" name="unit_id" value={u.id} />
               <select name="crew_member_id" required defaultValue="" className={`${fld} flex-1`}>
@@ -293,7 +292,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               </select>
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Assign</Button>
             </form>
-          </Card>
+          </AddDisclosure>
         ) : assignedCrew.length === 0 ? (
           <Card className="px-6 py-8 text-center text-sm text-ink-dim">
             No crew yet. <Link href="/app/crew" className="text-bone hover:underline">Add your hands</Link> first, then assign them here.
@@ -329,8 +328,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             ))}
           </div>
         )}
-        <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">Add an asset to this unit</h3>
+        <AddDisclosure label="Add an asset to this unit" defaultOpen={assets.length === 0}>
           <form action={addAsset} className="flex flex-col gap-3 sm:flex-row">
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />
@@ -341,7 +339,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             </select>
             <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
           </form>
-        </Card>
+        </AddDisclosure>
       </section>
     </div>
   );

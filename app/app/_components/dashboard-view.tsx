@@ -300,7 +300,7 @@ export default function DashboardView(d: DashboardData) {
           <div className="grid grid-cols-1 gap-7 xl:grid-cols-2">
             {/* Activity feed */}
             <section id="activity" className="flex flex-col gap-3">
-              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Activity</h2>
+              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Yard timeline</h2>
               {d.events.length === 0 ? (
                 <Card className="px-6 py-10 text-center text-sm text-ink-dim">
                   Nothing yet — run your first readiness check and the feed starts here.

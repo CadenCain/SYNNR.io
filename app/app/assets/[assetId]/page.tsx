@@ -14,6 +14,7 @@ import {
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import { AddDisclosure } from "@/components/ui/disclosure";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateAsset, deleteAsset, updateAssetLastSeen } from "@/app/app/_actions";
@@ -166,8 +167,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
           </div>
         )}
-        <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{items.length ? "Add another" : "Add a test, cert, or inspection"}</h3>
+        <AddDisclosure label={items.length ? "Add another" : "Add a test, cert, or inspection"} defaultOpen={items.length === 0}>
           <form action={addComplianceItem} className="flex flex-col gap-3">
             <input type="hidden" name="parent_type" value="asset" />
             <input type="hidden" name="parent_id" value={a.id} />
@@ -184,7 +184,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
           </form>
-        </Card>
+        </AddDisclosure>
       </section>
     </div>
   );

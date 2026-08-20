@@ -81,7 +81,7 @@ export default async function CrewPage() {
                   <HardHat className="h-5 w-5 text-ink-dim" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs text-ink-faint">inactive</span> : null}</div>
+                  <div className="truncate font-semibold text-ink">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs font-normal text-ink-faint">inactive</span> : null}</div>
                   <div className="truncate text-sm text-ink-dim">{c.role ?? "crew"}{c.phone ? ` · ${c.phone}` : ""}</div>
                 </div>
                 {submittedByCrew.has(c.id) && (

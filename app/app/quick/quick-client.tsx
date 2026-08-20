@@ -473,10 +473,14 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     );
   }
 
-  /* ── HOME: three giant buttons ── */
+  /* ── HOME: three giant buttons.
+     Phone keeps the full-width glove-sized stack (that's the product);
+     tablet/desktop tile the same cards into a row so the whole screen
+     fits without scrolling. ── */
   const needsWork = items.filter((i) => i.status === "expired" || i.status === "expiring").length;
   return (
     <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-3">
       <button onClick={() => setMode("renew")}
         className="flex min-h-24 items-center gap-4 rounded-2xl border border-line bg-surface px-5 text-left active:bg-elevated">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bone text-coal"><RefreshCw className="h-6 w-6" /></span>
@@ -501,11 +505,13 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           <span className="block text-sm text-ink-dim">Say where a piece of gear is right now</span>
         </span>
       </button>
+      </div>
 
       {/* Setup work. Smaller on purpose — done once per truck, not daily —
           but it lives on the phone because that's where the truck is. */}
       <div className="mt-2 flex flex-col gap-2 border-t border-line pt-4">
         <span className="font-mono text-xs font-semibold uppercase tracking-wider text-ink-faint">Put something new on the books</span>
+        <div className="grid gap-2 sm:grid-cols-2">
         <button onClick={() => setMode("unit")}
           className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">
           <Truck className="h-5 w-5 shrink-0 text-ink-dim" />
@@ -516,6 +522,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           <Box className="h-5 w-5 shrink-0 text-ink-dim" />
           <span className="text-base font-medium">Add gear to a truck</span>
         </button>
+        </div>
       </div>
     </div>
   );

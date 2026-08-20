@@ -105,7 +105,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
             {filtered.map((i) => (
               <Tr key={i.id}>
                 <Td>
-                  <Link href={i.href} className="font-medium hover:underline">{i.title}</Link>
+                  <Link href={i.href} className="font-semibold text-ink hover:underline">{i.title}</Link>
                   <span className="ml-2 text-xs text-ink-faint">{i.kindLabel}</span>
                 </Td>
                 <Td className="text-ink-dim">
