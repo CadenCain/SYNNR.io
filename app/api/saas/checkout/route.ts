@@ -11,6 +11,12 @@ import { saasAdmin } from "@/lib/saas/db";
  *  it follows active yards after that. */
 export async function POST(req: Request) {
   const { user, company } = await requireCompany();
+  if (company.is_demo) {
+    return NextResponse.json(
+      { ok: false, error: "This is the demo yard — nothing here can be billed. Create your real account at synnr.io/signup." },
+      { status: 403 },
+    );
+  }
   // Already paying? Don't open a second Checkout — that creates a DUPLICATE
   // subscription (double billing). Manage yard count from Settings instead.
   if (company.subscription_status === "active" || company.subscription_status === "past_due") {

@@ -65,7 +65,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             situations — telling a brand-new signup their subscription "paused"
             describes something that never happened and points at the wrong
             door. */}
-        {!writable && company.subscription_status === "none" ? (
+        {company.is_demo ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+            <span className="font-semibold">Demo yard</span> — this is fake data, click anything.{" "}
+            <Link href="/signup" className="font-medium underline underline-offset-2">Get your own yard →</Link>
+          </div>
+        ) : !writable && company.subscription_status === "none" ? (
           <div className="border-b border-line-2 bg-elevated px-4 py-2.5 text-sm text-ink-dim">
             You&apos;re on the free view — look around all you like.{" "}
             {company.role === "owner" ? (

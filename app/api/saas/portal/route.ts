@@ -7,6 +7,9 @@ import { requireCompany } from "@/lib/saas/auth";
 /** Stripe Customer Portal — manage card / plan / cancel. */
 export async function POST() {
   const { company } = await requireCompany();
+  if (company.is_demo) {
+    return NextResponse.json({ ok: false, error: "This is the demo yard — there's no billing here. Create your real account at synnr.io/signup." }, { status: 403 });
+  }
   const stripe = getStripe();
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
   if (!stripe) return NextResponse.json({ ok: false, error: "Billing not configured." }, { status: 500 });

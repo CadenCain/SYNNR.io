@@ -111,6 +111,10 @@ export async function notifyEvent(args: {
   try {
     const admin = saasAdmin();
     if (!admin) return;
+    // Demo yards never send real email/SMS — the visitor sees everything
+    // in-app; the throwaway owner address must never reach Resend.
+    const { data: co } = await admin.from("saas_companies").select("is_demo").eq("id", args.companyId).maybeSingle();
+    if ((co as { is_demo: boolean } | null)?.is_demo) return;
     const recips = await resolveRecipients(args.companyId, args.yardId);
     if (recips.length === 0) return;
 

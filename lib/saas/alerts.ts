@@ -28,13 +28,16 @@ interface Recip { name: string; email: string | null; phone: string | null; chan
 export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResult> {
   const res: AlertSweepResult = { companies_scanned: 0, items_due: 0, emails_sent: 0, sms_sent: 0, items_logged: 0, errors: [] };
 
-  const { data: companies, error: cErr } = await admin.from("saas_companies").select("id, name, subscription_status, comped");
+  const { data: companies, error: cErr } = await admin.from("saas_companies").select("id, name, subscription_status, comped, is_demo");
   if (cErr) { res.errors.push(`companies: ${cErr.message}`); return res; }
 
   const todayIso = localToday(); // customers' local day (America/Chicago), matching the status view
   const appUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io"}/app`;
 
-  for (const company of (companies ?? []) as { id: string; name: string; subscription_status: string; comped: boolean }[]) {
+  for (const company of (companies ?? []) as { id: string; name: string; subscription_status: string; comped: boolean; is_demo: boolean }[]) {
+    // Demo yards never email or text anyone — their "alerts" are seeded
+    // stage dressing, and their owner address is a throwaway.
+    if (company.is_demo) continue;
     // Lapsed = alerts pause (spec §3). Their records sit safe and readable;
     // a daily nag on a paused account is just salt. Comped always runs.
     if (!isWritable(company.subscription_status, company.comped)) continue;

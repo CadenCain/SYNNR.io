@@ -99,12 +99,30 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
       `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
   }
 
+  // ── Demo reaper — throwaway demo yards (and their users) live 24h. Rides
+  // this cron for the same reason billing does: housekeeping, once a day.
+  // A reaper failure emails the operator but never flips the watchdog red —
+  // stale demo data is untidy, not an outage.
+  let demo = { deleted: 0, errors: [] as string[] };
+  try {
+    const { cleanupDemoCompanies } = await import("@/lib/saas/demo-seed");
+    demo = await cleanupDemoCompanies(admin);
+    if (demo.errors.length) {
+      await sendEmail([OWNER], "[SYNNR ops] demo reaper hit errors",
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${demo.errors.join("\n")}</pre>`).catch(() => {});
+    }
+  } catch (e) {
+    await sendEmail([OWNER], "[SYNNR ops] demo reaper CRASHED",
+      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+  }
+
   await logCronRun(admin, {
     job: "alert-watchdog",
     ok: verdict === "ok" && billing.drift === 0 && billing.errors === 0,
     detail: [verdict !== "ok" ? verdict : null,
       billing.drift ? `billing drift x${billing.drift}` : null,
-      billing.errors ? `reconcile errors x${billing.errors}` : null].filter(Boolean).join(", ") || null,
+      billing.errors ? `reconcile errors x${billing.errors}` : null,
+      demo.deleted ? `demo reaped x${demo.deleted}` : null].filter(Boolean).join(", ") || null,
   });
 
   return NextResponse.json({ ok: verdict === "ok", verdict, billing, last_run: run?.ran_at ?? null });

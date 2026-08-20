@@ -23,6 +23,7 @@ export interface ActiveCompany {
   yard_quantity: number;
   npt_day_estimate: number;
   comped: boolean;
+  is_demo: boolean;
 }
 
 /** Current signed-in user, or null. */
@@ -33,7 +34,7 @@ export async function getSaasUser(): Promise<User | null> {
   return data.user ?? null;
 }
 
-type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number; npt_day_estimate: number; comped: boolean };
+type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number; npt_day_estimate: number; comped: boolean; is_demo: boolean };
 type MembershipRow = { role: ActiveCompany["role"]; company: CompanyRow | CompanyRow[] | null };
 
 function toActive(row: MembershipRow): ActiveCompany | null {
@@ -47,10 +48,11 @@ function toActive(row: MembershipRow): ActiveCompany | null {
     yard_quantity: company.yard_quantity ?? 0,
     npt_day_estimate: company.npt_day_estimate ?? 10000,
     comped: company.comped ?? false,
+    is_demo: company.is_demo ?? false,
   };
 }
 
-const MEMBERSHIP_SELECT = "role, company:saas_companies(id, name, subscription_status, yard_quantity, npt_day_estimate, comped)";
+const MEMBERSHIP_SELECT = "role, company:saas_companies(id, name, subscription_status, yard_quantity, npt_day_estimate, comped, is_demo)";
 
 /** Every company this user belongs to — feeds the switcher. */
 export async function getUserCompanies(userId: string): Promise<ActiveCompany[]> {

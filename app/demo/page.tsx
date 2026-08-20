@@ -23,7 +23,8 @@ export const metadata: Metadata = {
 
 const DEMO_PROOF = "/proof/111bed6bb1722b779dbc701a0e32a557abe3";
 
-export default function DemoPage() {
+export default async function DemoPage({ searchParams }: { searchParams: Promise<{ busy?: string; err?: string }> }) {
+  const { busy, err } = await searchParams;
   return (
     <div className="saas min-h-dvh bg-coal text-ink antialiased">
       <main className="mx-auto w-full max-w-5xl px-4 pb-20 pt-10 md:px-8">
@@ -31,22 +32,33 @@ export default function DemoPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">SYNNR · live demo</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">This is the actual product.</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Drive the actual product.</h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-dim">
-              Not a video, not a deck — the real readiness board, rendered with a fictional
-              two-yard shop. Every date, alert, and red tile below works exactly like this
-              on your own yard.
+              One tap gets you a private copy of a working coil tubing yard — 20 units,
+              45 hands, real red tiles. Run the readiness check, fix a dead cert, watch
+              it go green. No signup, no card, and nothing you click touches anyone else.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Link href="/signup" className="flex min-h-11 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-coal hover:bg-bone-soft">
-              Start your yard <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/readiness-audit" className="flex min-h-11 items-center rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
-              Free readiness map
+            <form action="/demo/start" method="post">
+              <button type="submit" className="flex min-h-12 cursor-pointer items-center gap-1.5 rounded-lg bg-bone px-5 text-sm font-semibold text-coal hover:bg-bone-soft">
+                Open the demo yard <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
+            <Link href="/signup" className="flex min-h-12 items-center rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
+              Start your own
             </Link>
           </div>
         </div>
+        {busy ? (
+          <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            The demo yard&apos;s getting a lot of traffic right now — give it a few minutes and tap again.
+          </p>
+        ) : err ? (
+          <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            Couldn&apos;t spin up your demo yard just now — try once more, and if it sticks, the tour below shows everything anyway.
+          </p>
+        ) : null}
 
         {/* Exhibit 1: the command center, live-rendered */}
         <div className="mt-8 rounded-2xl border border-line bg-surface/40 p-2 sm:p-4">
