@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
-import { parseCsv, norm, matchValue, parseDate } from "@/lib/saas/import-parse";
+import { parseCsv, matchValue, parseDate, mapHeader } from "@/lib/saas/import-parse";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { isWritable, yardCapState, canPerform } from "@/lib/saas/entitlements";
 
@@ -118,21 +118,11 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   if (parsed.length < 2) {
     return { ok: false, error: "Need a header row plus at least one data row.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
-  const header = parsed[0].map(norm);
-  const idx = (names: string[]) => names.map((n) => header.indexOf(n)).find((i) => i >= 0) ?? -1;
-  const col = {
-    unit: idx(["unit", "unit_name", "truck", "rig"]),
-    unitType: idx(["unit_type", "type"]),
-    asset: idx(["asset", "asset_name", "equipment"]),
-    category: idx(["category"]),
-    crew: idx(["crew", "crew_member", "hand", "employee"]),
-    item: idx(["item", "cert", "title", "inspection"]),
-    kind: idx(["kind", "item_kind", "cert_kind"]),
-    issued: idx(["issued", "issued_date"]),
-    expires: idx(["expires", "expiration", "expiration_date", "expires_at"]),
-  };
+  // Column resolution lives in import-parse (pure, alias-tested) — "Unit #",
+  // "Serial Number", and "Equipment Tag" all land without a template rewrite.
+  const col = mapHeader(parsed[0]);
   if (col.unit < 0 && col.crew < 0) {
-    return { ok: false, error: 'Header must include a "unit" or "crew" column. Download the template below.', rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    return { ok: false, error: 'Header must include a unit column (unit / truck / vehicle) or a crew column (crew / hand / employee). Download the template below.', rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
 
   // Preview uses placeholder ids for would-be creations so keys still dedupe.

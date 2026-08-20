@@ -9,7 +9,7 @@ import type { DashSnap } from "./dashboard-view";
  * so "the dip on Tuesday" and "we caught two that morning" line up visually.
  */
 export function TrendChart({ snaps }: { snaps: DashSnap[] }) {
-  const W = 640, H = 170, PAD_L = 34, PAD_B = 22, PAD_T = 8;
+  const W = 640, H = 174, PAD_L = 34, PAD_B = 26, PAD_T = 8;
   const chartW = W - PAD_L - 8;
   const chartH = H - PAD_B - PAD_T;
   const n = Math.max(snaps.length, 1);
@@ -52,8 +52,10 @@ export function TrendChart({ snaps }: { snaps: DashSnap[] }) {
                 <title>{`${s.misses_caught} miss${s.misses_caught === 1 ? "" : "es"} caught`}</title>
               </circle>
             )}
-            <text x={cx} y={H - 4} textAnchor="middle" fontSize="9.5"
-              fill="rgba(236,229,215,0.35)" fontFamily="monospace">{dayLabel(s.day)}</text>
+            {/* Weekday row: bigger, brighter, more headroom — 9.5px at 35%
+                opacity read as smudges once the SVG scaled down on laptops. */}
+            <text x={cx} y={H - 5} textAnchor="middle" fontSize="11.5" letterSpacing="0.5"
+              fill="rgba(236,229,215,0.55)" fontFamily="monospace">{dayLabel(s.day)}</text>
           </g>
         );
       })}

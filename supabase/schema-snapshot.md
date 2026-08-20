@@ -121,6 +121,7 @@ Verified live: every row-security flag is on, including `saas_cron_runs`
 | saas_alerts_sent, saas_readiness_snapshots | member (read-only) | none — cron/service-role only |
 | saas_events | member | INSERT member |
 | **saas_loadout_templates / _items** | member or global seed (company_id null) | **ALL: admin AND company_id NOT NULL — global seeds are read-only for every tenant** |
+| **saas_doc_requests** (0005) | member | INSERT/UPDATE member · no session DELETE (dead links become status='revoked'). Public upload page writes via service role after token check. |
 
 ## Column-level grants (added 2026-08-19)
 

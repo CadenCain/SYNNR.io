@@ -29,6 +29,43 @@ export function parseCsv(text: string): string[][] {
 
 export const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
+/**
+ * Header → column mapping for the bulk importer. Real yard spreadsheets never
+ * agree on names: the same column arrives as "Asset ID", "Serial Number",
+ * "Unit #", or "Equipment Tag" depending on who built the sheet. Every alias
+ * is normalized through norm() first ("Unit #" → "unit", "Serial Number" →
+ * "serial_number"), so punctuation and casing never matter. First alias hit
+ * wins; a header that matches nothing is simply ignored (never a crash).
+ *
+ * Collision rule: "type" belongs to the unit — cert kinds must say "kind" or
+ * "cert type". Deliberately absent: bare "name" (ambiguous between unit,
+ * asset, and crew sheets) and "date" (ambiguous between issued and expires).
+ */
+export const HEADER_ALIASES = {
+  unit: ["unit", "unit_name", "unit_number", "unit_no", "unit_id", "truck", "truck_number", "truck_no", "vehicle", "vehicle_number", "rig", "rig_number"],
+  unitType: ["unit_type", "type"],
+  asset: ["asset", "asset_name", "asset_id", "asset_tag", "asset_number", "equipment", "equipment_tag", "equipment_id", "equipment_number", "serial", "serial_number", "serial_no", "sn", "tag", "tag_number"],
+  category: ["category", "asset_category", "class"],
+  crew: ["crew", "crew_member", "hand", "employee", "worker", "driver", "operator", "technician", "tech"],
+  item: ["item", "cert", "certification", "certificate", "title", "inspection", "document", "doc", "card"],
+  kind: ["kind", "item_kind", "cert_kind", "item_type", "cert_type"],
+  issued: ["issued", "issued_date", "issue_date", "issued_on", "date_issued", "effective_date"],
+  expires: ["expires", "expiration", "expiration_date", "expires_at", "expiry", "expiry_date", "exp_date", "due", "due_date", "renewal", "renewal_date", "valid_until", "valid_through", "good_through"],
+} as const;
+
+export type HeaderMap = Record<keyof typeof HEADER_ALIASES, number>;
+
+/** Raw header row → column indexes (-1 = column absent). */
+export function mapHeader(rawHeader: string[]): HeaderMap {
+  const header = rawHeader.map(norm);
+  const idx = (names: readonly string[]) => names.map((n) => header.indexOf(n)).find((i) => i >= 0) ?? -1;
+  const out = {} as HeaderMap;
+  for (const key of Object.keys(HEADER_ALIASES) as (keyof typeof HEADER_ALIASES)[]) {
+    out[key] = idx(HEADER_ALIASES[key]);
+  }
+  return out;
+}
+
 export const matchValue = (input: string, list: { value: string; label: string }[], fallback: string) => {
   const n = norm(input);
   return list.find((x) => x.value === n || norm(x.label) === n)?.value ?? (input ? n : fallback);

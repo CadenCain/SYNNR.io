@@ -180,7 +180,10 @@ export default function DashboardView(d: DashboardData) {
                     <div className={`h-full rounded-full ${k.bar >= 90 ? "bg-emerald-500" : k.bar >= 70 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${k.bar}%` }} />
                   </div>
                 ) : (
-                  <div className="mt-1.5 min-h-4 truncate text-xs leading-4 text-ink-faint">{k.sub ?? ""}</div>
+                  // Two-line clamp, fixed height: the phrase renders whole
+                  // ("units failing right now — fix these first") and the five
+                  // cards stay level whether a sub wraps or not.
+                  <div className="mt-1.5 min-h-8 text-xs leading-4 text-ink-faint line-clamp-2">{k.sub ?? ""}</div>
                 )}
                 {k.spark ? (
                   <div className="mt-1.5 flex items-center">

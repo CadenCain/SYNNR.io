@@ -16,6 +16,9 @@ import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-ro
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateCrewMember, deleteCrewMember } from "@/app/app/_actions";
+import { closeDocRequest } from "../doc-actions";
+import SendUpdateLink from "./send-update-link";
+import { fmtDate } from "@/lib/saas/format";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +45,25 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
   const certs = (certData ?? []) as RowItem[];
   const itemCustomers = await getItemCustomers(db, company.id, certs.map((i) => i.id));
   for (const it of certs) it.customers = itemCustomers.get(it.id) ?? [];
+
+  // Doc-request queue for this hand: submitted photos waiting review, plus
+  // links still out in the field. Signed URLs are short-lived; RLS already
+  // scopes the storage read to this company's prefix.
+  const { data: docReqData } = await db
+    .from("saas_doc_requests")
+    .select("id, status, created_at, expires_at, submitted_at, file_path, submitted_kind, submitted_expiration, submitted_note")
+    .eq("crew_member_id", crewId).eq("company_id", company.id)
+    .in("status", ["pending", "submitted"])
+    .order("created_at", { ascending: false });
+  type DocReq = { id: string; status: string; created_at: string; expires_at: string; submitted_at: string | null; file_path: string | null; submitted_kind: string | null; submitted_expiration: string | null; submitted_note: string | null };
+  const docReqs = ((docReqData ?? []) as DocReq[]).filter((r) => r.status === "submitted" || new Date(r.expires_at) > new Date());
+  const photoUrls = new Map<string, string>();
+  for (const r of docReqs) {
+    if (r.status === "submitted" && r.file_path) {
+      const { data: signed } = await db.storage.from("proofs").createSignedUrl(r.file_path, 3600);
+      if (signed?.signedUrl) photoUrls.set(r.id, signed.signedUrl);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-7">
@@ -94,12 +116,55 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
         }
       />
 
+      {/* Photos in from the field — review, renew the card, close it out. */}
+      {docReqs.some((r) => r.status === "submitted") && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-amber-400">Waiting on your review</h2>
+          {docReqs.filter((r) => r.status === "submitted").map((r) => (
+            <Card key={r.id} className="flex flex-col gap-3 border-amber-500/30 p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-medium">
+                  New {r.submitted_kind ?? "card"} photo from {c.name}
+                  {r.submitted_expiration ? <span className="text-ink-dim"> — expires {fmtDate(r.submitted_expiration)}</span> : null}
+                </p>
+                <span className="text-xs text-ink-faint">{r.submitted_at ? new Date(r.submitted_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span>
+              </div>
+              {r.submitted_note && <p className="text-sm text-ink-dim">&ldquo;{r.submitted_note}&rdquo;</p>}
+              <div className="flex flex-wrap gap-2">
+                {photoUrls.get(r.id) && (
+                  <a href={photoUrls.get(r.id)} target="_blank" rel="noreferrer"
+                    className="flex min-h-10 items-center justify-center rounded-lg bg-bone px-4 text-[13px] font-semibold text-coal hover:bg-bone-soft">
+                    Open the photo
+                  </a>
+                )}
+                <form action={closeDocRequest}>
+                  <input type="hidden" name="id" value={r.id} />
+                  <input type="hidden" name="crew_id" value={c.id} />
+                  <button type="submit" className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 px-4 text-[13px] text-ink hover:bg-elevated">
+                    Done — card updated below
+                  </button>
+                </form>
+              </div>
+              <p className="text-xs text-ink-faint">Check the photo, update the card&apos;s dates in the crew book below, then close this out.</p>
+            </Card>
+          ))}
+        </section>
+      )}
+
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew book — cards &amp; certs</h2>
         {certs.length > 0 && (
           <div className="flex flex-col gap-2">
             {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
           </div>
+        )}
+        {/* The office doesn't chase paper — the hand photographs their own
+            card from the field and it lands in the review queue above. */}
+        <SendUpdateLink crewMemberId={c.id} crewName={c.name} crewPhone={c.phone} />
+        {docReqs.some((r) => r.status === "pending") && (
+          <p className="text-xs text-ink-faint">
+            A link is already out with {c.name.split(" ")[0]} — good through {fmtDate(docReqs.find((r) => r.status === "pending")!.expires_at.slice(0, 10))}.
+          </p>
         )}
         <Card className="p-5">
           <h3 className="mb-3 text-sm font-medium text-ink">{certs.length ? "Add another card" : "Add a card — H2S, well control, CDL, medical…"}</h3>

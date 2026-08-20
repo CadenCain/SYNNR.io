@@ -51,9 +51,26 @@ export default async function CrewPage() {
   const worst = new Map<string, ComplianceStatus>();
   for (const [id, list] of byCrew) { const w = worstStatus(list); if (w) worst.set(id, w); }
 
+  // Field photos waiting on review — surfaced at the top of the roster so a
+  // submitted card never dies unseen inside one hand's page.
+  const { data: pendingDocs } = await db
+    .from("saas_doc_requests")
+    .select("crew_member_id")
+    .eq("company_id", company.id).eq("status", "submitted");
+  const submittedByCrew = new Set(((pendingDocs ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
+
   return (
     <div className="flex flex-col gap-7">
       <PageHeader title="Crew" description="Your hands and their cards — H2S, well control, CDL, medicals. Current crew is what makes a truck actually ready." />
+
+      {submittedByCrew.size > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/[0.05] p-4">
+          <p className="text-sm">
+            <span className="font-semibold text-amber-400">{submittedByCrew.size} card photo{submittedByCrew.size === 1 ? "" : "s"}</span>{" "}
+            in from the field, waiting on review — open the hand&apos;s page below to see {submittedByCrew.size === 1 ? "it" : "them"}.
+          </p>
+        </Card>
+      )}
 
       {crew.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -67,6 +84,9 @@ export default async function CrewPage() {
                   <div className="truncate font-medium">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs text-ink-faint">inactive</span> : null}</div>
                   <div className="truncate text-sm text-ink-dim">{c.role ?? "crew"}{c.phone ? ` · ${c.phone}` : ""}</div>
                 </div>
+                {submittedByCrew.has(c.id) && (
+                  <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">Photo in</span>
+                )}
                 {worst.has(c.id) ? (
                   <span className="flex items-center gap-1.5">
                     <StatusBadge status={worst.get(c.id)!} />

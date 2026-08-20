@@ -21,6 +21,7 @@ import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "
 import ShareProof from "@/app/app/_components/share-proof";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { worstStatus } from "@/lib/saas/status";
+import { getCompanyReadiness } from "@/lib/saas/readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     .limit(6);
   const history = (historyData ?? []) as { id: string; type: string; status: string; performed_by_name: string | null; started_at: string }[];
 
+  // The unit's verdict comes from the SAME readiness engine the dashboard and
+  // the blocking check use — the banner can never disagree with the wall.
+  const rd = await getCompanyReadiness(db, company.id);
+  const tile = rd.units.find((t) => t.id === unitId) ?? null;
+  const failingCerts = items.filter((i) => i.status === "expired" || i.status === "none");
+
   return (
     <div className="flex flex-col gap-7">
       <PageHeader
@@ -136,8 +143,51 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         }
       />
 
+      {/* ── THE VERDICT — glare-proof. A foreman squinting at this in full sun
+          gets the call and the reason in one glance: solid ground, white text,
+          tap targets sized for gloves. Desktop gets the calmer bordered cut. ── */}
+      {tile && tile.state === "not_ready" && (
+        <section id="verdict">
+          <div className="rounded-2xl bg-red-600 p-5 text-white sm:border sm:border-red-500/40 sm:bg-red-500/[0.08] sm:text-ink">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-red-100 sm:text-red-400">Not ready</div>
+            <h2 className="mt-1.5 text-2xl font-bold leading-tight sm:text-xl">
+              {u.name} NOT READY: <span className="sm:text-red-300">{tile.why}</span>
+            </h2>
+            {failingCerts.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {failingCerts.slice(0, 4).map((i) => (
+                  <li key={i.id} className="text-base font-medium text-red-50 sm:text-sm sm:text-red-300">
+                    • {i.title} — {i.status === "expired" ? `expired ${i.expiration_date ?? ""}` : "no expiration on file"}
+                  </li>
+                ))}
+                {failingCerts.length > 4 && <li className="text-sm text-red-100 sm:text-red-300/80">+ {failingCerts.length - 4} more below</li>}
+              </ul>
+            )}
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <a href="#book" className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-coal">
+                Fix it — open the truck book
+              </a>
+              <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
+                Run the check anyway
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+      {tile && tile.state === "due_soon" && (
+        <section id="verdict">
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+            <div className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-amber-400">Due soon</div>
+            <p className="mt-1.5 text-lg font-semibold leading-snug">{u.name} rolls today, but: {tile.why}</p>
+            <a href="#book" className="mt-3 inline-flex min-h-12 items-center justify-center rounded-xl bg-bone px-5 text-sm font-semibold text-coal sm:min-h-10">
+              Renew it before it bites
+            </a>
+          </div>
+        </section>
+      )}
+
       {/* Truck book */}
-      <section className="flex flex-col gap-3">
+      <section id="book" className="flex flex-col gap-3">
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Truck book — certs, inspections &amp; DOT</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
