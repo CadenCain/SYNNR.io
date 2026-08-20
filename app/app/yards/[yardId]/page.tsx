@@ -86,6 +86,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                 <label className="text-xs text-ink-faint">Location<input name="location" defaultValue={y.location ?? ""} className={`${fld} mt-1 w-full`} /></label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
+              {company.role !== "member" && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -106,6 +107,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+              )}
             </PopoverContent>
           </Popover>
           </>

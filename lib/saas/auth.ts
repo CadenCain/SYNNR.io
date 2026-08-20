@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
-import { canCreateBillable } from "./billing-rules";
+import { isWritable, canPerform, roleBlockedMessage, type Action } from "./entitlements";
 
 /**
  * Auth + tenancy helpers for the self-serve SaaS (saas_* tables).
@@ -22,6 +22,7 @@ export interface ActiveCompany {
   subscription_status: string;
   yard_quantity: number;
   npt_day_estimate: number;
+  comped: boolean;
 }
 
 /** Current signed-in user, or null. */
@@ -32,22 +33,10 @@ export async function getSaasUser(): Promise<User | null> {
   return data.user ?? null;
 }
 
-/** The user's first active company (Phase 2 = single company per user in
- *  practice). Returns null if they belong to none yet. */
-export async function getFirstActiveCompany(userId: string): Promise<ActiveCompany | null> {
-  const sb = await saasServer();
-  if (!sb) return null;
-  const { data } = await sb
-    .from("saas_memberships")
-    .select("role, company:saas_companies(id, name, subscription_status, yard_quantity, npt_day_estimate)")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (!data) return null;
-  type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number; npt_day_estimate: number };
-  const row = data as unknown as { role: ActiveCompany["role"]; company: CompanyRow | CompanyRow[] | null };
+type CompanyRow = { id: string; name: string; subscription_status: string; yard_quantity: number; npt_day_estimate: number; comped: boolean };
+type MembershipRow = { role: ActiveCompany["role"]; company: CompanyRow | CompanyRow[] | null };
+
+function toActive(row: MembershipRow): ActiveCompany | null {
   const company = Array.isArray(row.company) ? row.company[0] : row.company;
   if (!company) return null;
   return {
@@ -55,9 +44,42 @@ export async function getFirstActiveCompany(userId: string): Promise<ActiveCompa
     name: company.name,
     role: row.role,
     subscription_status: company.subscription_status,
-    yard_quantity: company.yard_quantity,
+    yard_quantity: company.yard_quantity ?? 0,
     npt_day_estimate: company.npt_day_estimate ?? 10000,
+    comped: company.comped ?? false,
   };
+}
+
+const MEMBERSHIP_SELECT = "role, company:saas_companies(id, name, subscription_status, yard_quantity, npt_day_estimate, comped)";
+
+/** Every company this user belongs to — feeds the switcher. */
+export async function getUserCompanies(userId: string): Promise<ActiveCompany[]> {
+  const sb = await saasServer();
+  if (!sb) return [];
+  const { data } = await sb
+    .from("saas_memberships")
+    .select(MEMBERSHIP_SELECT)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true });
+  return ((data ?? []) as unknown as MembershipRow[]).map(toActive).filter(Boolean) as ActiveCompany[];
+}
+
+/** The user's active company: the one they picked (cookie), else the first.
+ *  The cookie is validated against a real membership — a forged id falls
+ *  back instead of granting anything. */
+export async function getFirstActiveCompany(userId: string): Promise<ActiveCompany | null> {
+  const companies = await getUserCompanies(userId);
+  if (companies.length === 0) return null;
+  try {
+    const { cookies } = await import("next/headers");
+    const picked = (await cookies()).get("synnr_co")?.value;
+    if (picked) {
+      const match = companies.find((c) => c.id === picked);
+      if (match) return match;
+    }
+  } catch { /* outside a request scope — first company wins */ }
+  return companies[0];
 }
 
 /** Gate helper for /app — returns {user, company} or redirects. */
@@ -79,6 +101,23 @@ export async function requireCompany(): Promise<{ user: User; company: ActiveCom
  */
 export async function requireBillableCompany(): Promise<{ user: User; company: ActiveCompany }> {
   const got = await requireCompany();
-  if (!canCreateBillable(got.company.subscription_status)) redirect("/onboarding/billing");
+  if (!isWritable(got.company.subscription_status, got.company.comped)) redirect("/app/settings/billing?locked=1");
   return got;
+}
+
+/** Same gate for actions that return JSON instead of redirecting. */
+export async function requireWritableCompany(): Promise<
+  { ok: true; user: User; company: ActiveCompany } | { ok: false; error: string }
+> {
+  const got = await requireCompany();
+  if (!isWritable(got.company.subscription_status, got.company.comped)) {
+    return { ok: false, error: "Subscription paused — your records are safe and exportable. Update billing to edit again." };
+  }
+  return { ok: true, ...got };
+}
+
+/** Role wall for destructive/management actions — throws the friendly message, which
+ *  the app's error boundary shows, instead of silently no-op'ing. */
+export function assertCan(company: ActiveCompany, action: Action): void {
+  if (!canPerform(company.role, action)) throw new Error(roleBlockedMessage(action));
 }

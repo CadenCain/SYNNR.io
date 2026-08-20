@@ -53,7 +53,7 @@ export default function SignupForm() {
     // An INVITED user carries ?next=/invite/<token> — sending them to
     // onboarding would have them create their own separate company instead
     // of joining the one that invited them. That exact bug shipped once.
-    const nextPath = (() => { const n = params.get("next") ?? ""; return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
     router.replace(nextPath || (ref ? `/onboarding?ref=${encodeURIComponent(ref)}` : "/onboarding"));
     router.refresh();
   }

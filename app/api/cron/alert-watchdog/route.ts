@@ -81,11 +81,10 @@ export async function GET(req: Request) {
   let billing: { drift: number; checked: number; errors: number } = { drift: 0, checked: 0, errors: 0 };
   try {
     const rec = await reconcileYardBilling();
-    billing = { drift: rec.drift.length, checked: rec.checked, errors: rec.errors.length };
-    if (rec.drift.length > 0 || rec.errors.length > 0) {
-      const driftLines = rec.drift.map((d) =>
-        `• ${d.companyName}: billing ${d.stripeQuantity} yard(s), has ${d.billableYards} billable (should bill ${d.expected})`);
-      await sendEmail([OWNER], `[SYNNR ops] BILLING DRIFT — ${rec.drift.length} company(ies) out of step`,
+    billing = { drift: rec.issues.length, checked: rec.checked, errors: rec.errors.length };
+    if (rec.issues.length > 0 || rec.errors.length > 0) {
+      const driftLines = rec.issues.map((d) => `• ${d}`);
+      await sendEmail([OWNER], `[SYNNR ops] BILLING DRIFT — ${rec.issues.length} issue(s)`,
         `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">Nightly billed-vs-actual reconcile (${rec.checked} subscription(s) checked):
 
 ${driftLines.join("\n") || "(no drift, but errors below)"}

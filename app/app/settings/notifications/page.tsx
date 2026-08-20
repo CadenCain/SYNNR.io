@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Plus, Trash2, MessageSquareText, Mail } from "lucide-react";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { smsConfigured } from "@/lib/saas/notify";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ const fld = "h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outli
 async function saveSettings(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
+  assertCan(company, "manage_alerts");
   const lead_days = Math.max(1, Math.min(120, parseInt(String(formData.get("lead_days") ?? "30"), 10) || 30));
   const email_enabled = formData.get("email_enabled") === "on";
   const db = await saasDb();
@@ -27,6 +28,7 @@ async function saveSettings(formData: FormData) {
 async function addRecipient(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
+  assertCan(company, "manage_alerts");
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || null;
   let phone = String(formData.get("phone") ?? "").replace(/[^\d+]/g, "") || null;
@@ -47,6 +49,7 @@ async function addRecipient(formData: FormData) {
 async function removeRecipient(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
+  assertCan(company, "manage_alerts");
   const id = String(formData.get("id") ?? "");
   const db = await saasDb();
   await db.from("saas_alert_recipients").delete().eq("id", id).eq("company_id", company.id);

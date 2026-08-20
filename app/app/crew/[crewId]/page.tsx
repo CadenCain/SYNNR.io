@@ -67,6 +67,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                   </select></label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
+              {company.role !== "member" && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -87,6 +88,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+              )}
             </PopoverContent>
           </Popover>
         }
@@ -96,7 +98,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew book — cards &amp; certs</h2>
         {certs.length > 0 && (
           <div className="flex flex-col gap-2">
-            {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} />)}
+            {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
           </div>
         )}
         <Card className="p-5">

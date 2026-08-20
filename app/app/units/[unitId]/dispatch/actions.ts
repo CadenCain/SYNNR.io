@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { localToday } from "@/lib/saas/status";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { notifyEvent, logEvent } from "@/lib/saas/notify";
@@ -16,7 +16,7 @@ import { notifyEvent, logEvent } from "@/lib/saas/notify";
  * Records are append-only at the database level.
  */
 export async function recordDispatchCheck(fd: FormData): Promise<void> {
-  const { company, user } = await requireCompany();
+  const { company, user } = await requireBillableCompany();
   const unitId = String(fd.get("unit_id") ?? "");
   if (!unitId) return;
   const jobDate = String(fd.get("job_date") ?? "") || null;

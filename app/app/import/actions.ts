@@ -6,8 +6,7 @@ import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
 import { parseCsv, norm, matchValue, parseDate } from "@/lib/saas/import-parse";
 import { clearAlertLog } from "@/lib/saas/alert-log";
-import { syncYardQuantity } from "@/lib/saas/billing";
-import { canCreateBillable } from "@/lib/saas/billing-rules";
+import { isWritable, yardCapState, canPerform } from "@/lib/saas/entitlements";
 
 /**
  * Hardened import: dry-run preview → commit. Idempotent — re-importing the
@@ -75,11 +74,13 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   const { company } = await requireCompany();
   // Preview is free (it writes nothing); committing rows needs a live
   // subscription — the importer is the bulk version of every gated creator.
-  if (commit && !canCreateBillable(company.subscription_status)) {
-    return { ok: false, error: "Subscription needed to import — open Settings → Billing.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+  if (commit && !isWritable(company.subscription_status, company.comped)) {
+    return { ok: false, error: "Subscription paused — records are read-only until billing is updated.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
-  if (company.role !== "owner" && company.role !== "admin") {
-    return { ok: false, error: "Import is admin-only — ask an owner/admin to load the sheet.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+  // Role matrix: members may import into an EXISTING yard (daily work);
+  // creating a yard through the new-yard field is admin+, and capped.
+  if (newYard.trim() && !canPerform(company.role, "import_new_yard")) {
+    return { ok: false, error: "Only an admin can create a yard through import. Pick an existing yard, or ask whoever runs your account.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
   const db = await saasDb();
 
@@ -96,6 +97,11 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   let yardOp: string | null = null;
   let createdYard = false;
   if (!resolvedYard && newYard.trim()) {
+    const { count: inUseCount } = await db.from("saas_yards").select("id", { count: "exact", head: true })
+      .eq("company_id", company.id).neq("name", "Sample Yard (demo)");
+    if (yardCapState(inUseCount ?? 0, company.yard_quantity, company.comped).atCap) {
+      return { ok: false, error: `You're on ${company.yard_quantity} yard(s) — add one to your plan from the Yards page before importing into a new yard.`, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    }
     yardOp = `create yard "${newYard.trim()}"`;
     if (commit) {
       const { data, error } = await db.from("saas_yards").insert({ company_id: company.id, name: newYard.trim() }).select("id").single();
@@ -264,7 +270,6 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     // A yard created by the importer is a billable yard — every other create
     // path syncs Stripe, this one didn't, so import-onboarded shops were
     // under-billed until someone touched a yard in the UI.
-    if (createdYard) await syncYardQuantity(company.id);
   }
 
   return { ok: true, rows, creates, updates, errors, committed: commit };

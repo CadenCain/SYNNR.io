@@ -83,6 +83,7 @@ export async function POST(req: Request) {
         const qty = sub.items?.data?.[0]?.quantity ?? null;
         await syncByCustomer(String(sub.customer), {
           subscription_status: sub.status,
+          yard_quantity: sub.items?.data?.[0]?.quantity ?? undefined,
           stripe_subscription_id: sub.id,
           ...(qty != null ? { yard_quantity: qty } : {}),
         }, sub.metadata?.company_id ?? null);

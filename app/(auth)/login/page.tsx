@@ -6,9 +6,10 @@ import LoginForm from "./login-form";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Log in · RollReady" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
-  const nextPath = next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; invite?: string }> }) {
+  const { next, invite } = await searchParams;
+  const raw = next || (invite ? `/invite/${invite}` : "");
+  const nextPath = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/app";
   if (await getSaasUser()) redirect(nextPath);
   return (
     <div className="flex flex-col gap-6">

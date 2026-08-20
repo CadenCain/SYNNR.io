@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { syncYardQuantity } from "@/lib/saas/billing";
 import { logEvent } from "@/lib/saas/notify";
 
 // Every record change is logged under the hand who made it — "who renewed
@@ -56,7 +55,8 @@ export async function updateYard(fd: FormData) {
   revalidatePath(`/app/yards/${id}`);
 }
 export async function deleteYard(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "delete_yard");
   const id = str(fd, "id");
   const db = await saasDb();
   // Same cascade problem one level up: units in this yard, their assets, and
@@ -77,7 +77,9 @@ export async function deleteYard(fd: FormData) {
     if (unitIds.length) await db.from("saas_units").delete().eq("company_id", company.id).in("id", unitIds);
   }
   await db.from("saas_yards").delete().eq("id", id).eq("company_id", company.id);
-  await syncYardQuantity(company.id); // per-yard billing follows the yard count
+  // Deliberately NOT touching the subscription: under the hard cap the
+  // allowance only moves when the owner moves it (spec: no silent credits
+  // either — they lower the plan from Billing and see the proration).
   redirect("/app/yards");
 }
 
@@ -95,7 +97,8 @@ export async function updateUnit(fd: FormData) {
   revalidatePath(`/app/units/${id}`);
 }
 export async function deleteUnit(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "delete_record");
   const id = str(fd, "id");
   const yard_id = str(fd, "yard_id");
   const db = await saasDb();
@@ -165,7 +168,8 @@ export async function updateAssetLastSeen(fd: FormData) {
 }
 
 export async function deleteAsset(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "delete_record");
   const id = str(fd, "id");
   const unit_id = str(fd, "unit_id");
   const db = await saasDb();
@@ -189,7 +193,8 @@ export async function updateCrewMember(fd: FormData) {
   revalidatePath(`/app/crew/${id}`);
 }
 export async function deleteCrewMember(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "delete_record");
   const id = str(fd, "id");
   const db = await saasDb();
   // Crew certs live in saas_compliance_items(parent_type='crew') — remove them with the member.
@@ -407,7 +412,8 @@ export async function updateComplianceItem(fd: FormData) {
   if (redirectPath) revalidatePath(redirectPath);
 }
 export async function deleteComplianceItem(fd: FormData) {
-  const { company, user } = await requireCompany();
+  const { company, user } = await requireBillableCompany();
+  assertCan(company, "delete_record");
   const id = str(fd, "id");
   const redirectPath = str(fd, "redirect_path");
   const db = await saasDb();

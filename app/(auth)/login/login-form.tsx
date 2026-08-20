@@ -30,7 +30,7 @@ export default function LoginForm() {
       return;
     }
     // The /app gate routes to /onboarding if they have no company yet.
-    const nextPath = (() => { const n = params.get("next") ?? ""; return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
     router.replace(nextPath || "/app");
     router.refresh();
   }

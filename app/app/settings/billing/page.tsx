@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany , assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BillingActions from "./billing-actions";
+import { redirect } from "next/navigation";
+import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
+import { canLowerAllowance } from "@/lib/saas/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +27,27 @@ const STATUS_LABEL: Record<string, string> = {
   trialing: "Free trial", active: "Active", past_due: "Payment failed", canceled: "Canceled", none: "No subscription",
 };
 
-export default async function BillingSettings() {
+async function changeAllowance(formData: FormData) {
+  "use server";
+  const { requireCompany } = await import("@/lib/saas/auth");
   const { company } = await requireCompany();
+  assertCan(company, "billing"); // owner only — this moves money
+  const dir = String(formData.get("dir"));
+  const inUse = await billableYardCount(company.id);
+  const target = company.yard_quantity + (dir === "up" ? 1 : -1);
+  if (dir === "down") {
+    const check = canLowerAllowance(target, inUse);
+    if (!check.ok) redirect(`/app/settings/billing?err=${encodeURIComponent(check.reason ?? "Can't lower below yards in use.")}`);
+  }
+  const res = await setYardAllowance(company.id, target);
+  if (!res.ok) redirect(`/app/settings/billing?err=${encodeURIComponent(res.error)}`);
+  redirect("/app/settings/billing");
+}
+
+export default async function BillingSettings({ searchParams }: { searchParams: Promise<{ err?: string; locked?: string }> }) {
+  const { company } = await requireCompany();
+  const { err, locked } = await searchParams;
+  const inUseBillable = await billableYardCount(company.id);
   const db = await saasDb();
 
   const [{ data: comp }, { count: yardCount }] = await Promise.all([
@@ -68,9 +90,47 @@ export default async function BillingSettings() {
         </div>
       </Card>
 
+      {company.comped ? (
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold">Comped account</h2>
+          <p className="mt-1 text-sm text-ink-dim">Unlimited yards, nothing billed. This panel appears for paying accounts.</p>
+        </Card>
+      ) : (
+        <Card className="flex flex-col gap-3 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Yard allowance</h2>
+              <p className="mt-0.5 text-sm text-ink-dim">
+                Plan: <span className="font-semibold text-ink">{company.yard_quantity}</span> yard{company.yard_quantity === 1 ? "" : "s"} ·
+                in use: <span className="font-semibold text-ink">{inUseBillable}</span>
+              </p>
+            </div>
+            {company.role === "owner" ? (
+              <div className="flex items-center gap-2">
+                <form action={changeAllowance}><input type="hidden" name="dir" value="down" />
+                  <button className="h-10 w-10 rounded-lg border border-line-2 text-lg text-ink-dim hover:bg-elevated" aria-label="Lower allowance">−</button></form>
+                <form action={changeAllowance}><input type="hidden" name="dir" value="up" />
+                  <button className="h-10 w-10 rounded-lg border border-line-2 text-lg text-ink-dim hover:bg-elevated" aria-label="Raise allowance">+</button></form>
+              </div>
+            ) : (
+              <span className="text-xs text-ink-faint">Owner only</span>
+            )}
+          </div>
+          {err ? <p className="text-sm text-red-400">{err}</p> : null}
+          <p className="text-xs text-ink-faint">
+            Raising adds $500/mo per yard, prorated from today. Lowering is refused while more yards are in use than the new plan — delete yards first; nothing is ever auto-deleted.
+          </p>
+        </Card>
+      )}
+
+      {locked ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          That action needs an active subscription. Your records are safe, readable, and exportable meanwhile.
+        </p>
+      ) : null}
+
       <p className="text-xs text-ink-faint">
-        Billed monthly at ${PER_YARD} per active yard. Add or remove yards anytime — your subscription quantity follows.
-        Card required, cancel anytime, your data stays exportable.
+        You&apos;re on {company.yard_quantity} yard{company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime — $500/mo each, prorated. Cancel anytime, your data stays exportable.
       </p>
 
       <Card className="flex flex-col gap-3 p-5">

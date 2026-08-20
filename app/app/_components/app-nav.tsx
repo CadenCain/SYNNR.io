@@ -47,7 +47,12 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName, userName, readiness }: { companyName?: string; userName?: string; readiness?: number | null }) {
+export default function AppNav({ companyName, userName, readiness, companies = [], activeCompanyId, switchAction }: {
+  companyName?: string; userName?: string; readiness?: number | null;
+  companies?: { id: string; name: string }[];
+  activeCompanyId?: string;
+  switchAction?: (fd: FormData) => Promise<void>;
+}) {
   const pill =
     readiness == null
       ? null
@@ -78,6 +83,22 @@ export default function AppNav({ companyName, userName, readiness }: { companyNa
           </div>
           {pill ? <span title="Overall readiness" className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         </div>
+
+        {/* Company switcher — hidden with one company. One user, many shops
+            (spec §4): an unpaid company must never trap the login. */}
+        {companies.length > 1 && switchAction ? (
+          <form action={switchAction} className="mb-1">
+            <select
+              name="company_id"
+              defaultValue={activeCompanyId}
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
+              className="h-9 w-full rounded-lg border border-line-2 bg-coal px-2 text-sm text-ink-dim outline-none focus:border-bone"
+              aria-label="Switch company"
+            >
+              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </form>
+        ) : null}
 
         {/* Search (jump to compliance list) */}
         <form

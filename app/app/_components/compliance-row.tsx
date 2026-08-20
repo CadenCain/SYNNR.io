@@ -23,7 +23,7 @@ export interface RowItem {
 }
 
 /** One compliance item: status, dates, Renew (camera), and an Edit/Delete disclosure. */
-export default function ComplianceRow({ item, companyId, redirectPath }: { item: RowItem; companyId: string; redirectPath: string }) {
+export default function ComplianceRow({ item, companyId, redirectPath, canDelete = true }: { item: RowItem; companyId: string; redirectPath: string; canDelete?: boolean }) {
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -67,6 +67,7 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
                   <input name="customers" defaultValue={(item.customers ?? []).join(", ")} placeholder="e.g. Oxy, Diamondback" className={inputCls} /></label>
                 <Button type="submit" size="sm">Save changes</Button>
               </form>
+              {canDelete && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -88,6 +89,7 @@ export default function ComplianceRow({ item, companyId, redirectPath }: { item:
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
+              )}
             </PopoverContent>
           </Popover>
         </div>

@@ -26,6 +26,30 @@ async function createInvite(formData: FormData) {
   revalidatePath("/app/settings/team");
 }
 
+async function transferOwnership(formData: FormData) {
+  "use server";
+  const { company, user } = await requireCompany();
+  // The crown moves only by the owner's own hand.
+  if (company.role !== "owner") throw new Error("Only the account owner can transfer ownership.");
+  const targetUserId = String(formData.get("user_id") ?? "");
+  if (!targetUserId || targetUserId === user.id) return;
+  const admin = saasAdmin();
+  if (!admin) throw new Error("Not configured.");
+  const { data: target } = await admin.from("saas_memberships").select("user_id, role")
+    .eq("company_id", company.id).eq("user_id", targetUserId).eq("status", "active").maybeSingle();
+  if (!target || (target as { role: string }).role !== "admin") {
+    throw new Error("Ownership can only be transferred to an admin. Promote them first.");
+  }
+  // Service role (sessions hold no UPDATE on memberships). Promote first,
+  // then demote — a crash between leaves two owners (safe, fixable) rather
+  // than zero (locked out).
+  await admin.from("saas_memberships").update({ role: "owner" })
+    .eq("company_id", company.id).eq("user_id", targetUserId);
+  await admin.from("saas_memberships").update({ role: "admin" })
+    .eq("company_id", company.id).eq("user_id", user.id);
+  revalidatePath("/app/settings/team");
+}
+
 async function revokeInvite(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
@@ -76,7 +100,18 @@ export default async function TeamSettings() {
         {members.map((m) => (
           <Card key={m.user_id} className="flex items-center justify-between gap-3 p-4">
             <span className="truncate">{emails.get(m.user_id) ?? m.user_id}{m.user_id === user.id ? " (you)" : ""}</span>
-            <span className="rounded-sm border border-line px-2.5 py-0.5 text-xs capitalize text-ink-dim">{m.role}</span>
+            <span className="flex items-center gap-2">
+              {company.role === "owner" && m.role === "admin" && m.user_id !== user.id ? (
+                <form action={transferOwnership}>
+                  <input type="hidden" name="user_id" value={m.user_id} />
+                  <button type="submit" className="rounded-lg border border-line-2 px-2.5 py-1 text-xs text-ink-dim hover:bg-elevated hover:text-ink"
+                    title="Hand ownership to this admin — you become an admin">
+                    Make owner
+                  </button>
+                </form>
+              ) : null}
+              <span className="rounded-sm border border-line px-2.5 py-0.5 text-xs capitalize text-ink-dim">{m.role}</span>
+            </span>
           </Card>
         ))}
       </section>
@@ -104,6 +139,9 @@ export default async function TeamSettings() {
         </section>
       )}
 
+      {company.role === "member" ? (
+        <p className="text-sm text-ink-faint">Only admins can invite teammates — ask whoever runs your account.</p>
+      ) : (
       <Card className="p-5">
         <h3 className="mb-3 text-sm font-medium text-ink">Invite a teammate</h3>
         <form action={createInvite} className="flex flex-col gap-3 sm:flex-row">
@@ -118,6 +156,7 @@ export default async function TeamSettings() {
         </form>
         <p className="mt-2 text-xs text-ink-faint">Generates a shareable link — send it however you like. (Email delivery coming soon.)</p>
       </Card>
+      )}
     </div>
   );
 }
