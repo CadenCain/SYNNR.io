@@ -19,7 +19,7 @@ export async function quickAddUnit(args: { name: string; type?: string }):
   const { company } = await requireCompany();
   if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
   const name = args.name.trim();
-  if (!name) return { ok: false, error: "Name the truck or rig." };
+  if (!name) return { ok: false, error: "Name it — truck, rig, or shop." };
 
   const db = await saasDb();
   const { data: yardRow } = await db.from("saas_yards")

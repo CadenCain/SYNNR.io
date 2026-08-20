@@ -368,10 +368,10 @@ export default function QuickClient({ items, units, assets, companyId }: { items
   if (mode === "unit") {
     return (
       <form onSubmit={saveUnit} className="flex flex-col gap-4">
-        <BackBar onBack={() => reset()} label="Add a truck or rig" />
+        <BackBar onBack={() => reset()} label="Add a truck, rig, or shop" />
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           What do you call it?
-          <input name="name" required autoFocus placeholder="e.g. Truck 12, Rig 4" className={FIELD} />
+          <input name="name" required autoFocus placeholder="e.g. Truck 12, Rig 4, Main shop" className={FIELD} />
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           What is it?
@@ -547,7 +547,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         <button onClick={() => setMode("unit")}
           className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">
           <Truck className="h-5 w-5 shrink-0 text-ink-dim" />
-          <span className="text-base font-medium">Add a truck or rig</span>
+          <span className="text-base font-medium">Add a truck, rig, or shop</span>
         </button>
         <button onClick={() => setMode("gear")}
           className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">
