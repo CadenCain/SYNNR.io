@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 // Leftover dead-marketplace routes still in the tree (app/apps, app/checkout,
-// app/ingest, app/demo) are parked — they 307 to home so no stale page is
-// served. The self-serve SaaS now OWNS /login, /signup, and /app/** (the old
-// versions were relocated to legacy/ out of the route tree), so those are no
-// longer parked. /dashboard, /billing, /team, /account were also relocated;
-// kept parked here so stray hits to those old URLs still land on home.
+// app/ingest) are parked — they 307 to home so no stale page is served. The
+// self-serve SaaS now OWNS /login, /signup, /app/**, and (2026-08-21) /demo —
+// the live drive-it-yourself demo replaced the parked marketplace stub.
+// /dashboard, /billing, /team, /account were relocated; kept parked here so
+// stray hits to those old URLs still land on home.
 const PARKED = [
   "/dashboard",
   "/apps",
@@ -15,7 +15,6 @@ const PARKED = [
   "/team",
   "/account",
   "/ingest",
-  "/demo",
 ];
 
 const nextConfig: NextConfig = {
