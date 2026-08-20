@@ -7,7 +7,7 @@ import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { saasDb } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
-import { yardCapState } from "@/lib/saas/entitlements";
+import { yardCapState, isWritable } from "@/lib/saas/entitlements";
 import { isBillableYard } from "@/lib/saas/billing-rules";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
@@ -85,6 +85,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
 
   const inUse = yards.filter((y) => isBillableYard(y.name)).length;
   const cap = yardCapState(inUse, company.yard_quantity, company.comped);
+  const writable = isWritable(company.subscription_status, company.comped);
+  const hasSubscription = company.subscription_status !== "none";
   const canAdd = company.role !== "member";
   const isOwner = company.role === "owner";
 
@@ -130,7 +132,25 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      {!canAdd ? null : cap.atCap && !company.comped ? (
+      {!canAdd ? null : (!writable || !hasSubscription) && !company.comped ? (
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold">{hasSubscription ? "Your subscription has ended." : "No subscription yet."}</h2>
+          {isOwner ? (
+            <>
+              <p className="mt-1 text-sm text-ink-dim">
+                {hasSubscription
+                  ? "Restart billing to keep building your yard — everything you entered is still here."
+                  : "Yards live on a plan — $500/mo each. Start yours and this page opens up."}
+              </p>
+              <Link href={hasSubscription ? "/app/settings/billing" : "/onboarding/billing"} className={`${buttonClass("default")} mt-3 inline-flex`}>
+                {hasSubscription ? "Restart billing" : "Start your subscription"}
+              </Link>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-ink-dim">Ask your account owner to set up billing.</p>
+          )}
+        </Card>
+      ) : cap.atCap && !company.comped ? (
         <Card className="p-5">
           <h2 className="text-sm font-semibold">You&apos;re on {company.yard_quantity} yard{company.yard_quantity === 1 ? "" : "s"}.</h2>
           {isOwner ? (

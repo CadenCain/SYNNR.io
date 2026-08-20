@@ -39,12 +39,15 @@ export function canLowerAllowance(newAllowance: number, billableInUse: number): 
 
 // ── Read-only on lapse ──────────────────────────────────────────────────────
 
-/** Anything but an active subscription is read-and-export only (owner's call:
- *  past_due pauses edits too — the banner sends them to fix the card).
- *  Comped companies are always writable. Nothing is ever deleted or locked
- *  out of READING; this gates writes only. */
+/** Never-subscribed, canceled, unpaid: read-and-export only. past_due keeps
+ *  WRITE access — Stripe retries a failed card for ~2 weeks, and freezing
+ *  cert renewals on day one of a billing glitch could ground a truck over
+ *  OUR mistake; that's a manufactured churn event. When dunning gives up,
+ *  Stripe flips the status to canceled/unpaid and read-only starts then.
+ *  (Reversed from read-only-immediately after review, 2026-08-20.)
+ *  Comped companies are always writable. Reading is never gated at all. */
 export function isWritable(subscriptionStatus: string, comped: boolean): boolean {
-  return comped || subscriptionStatus === "active";
+  return comped || subscriptionStatus === "active" || subscriptionStatus === "past_due";
 }
 
 export const READ_ONLY_MESSAGE =

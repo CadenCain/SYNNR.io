@@ -46,9 +46,11 @@ describe("canLowerAllowance — never auto-delete a yard to satisfy a downgrade"
 });
 
 describe("isWritable — lapsed is read-only, never locked out", () => {
-  it("active writes; everything else is read-and-export only", () => {
+  it("active writes; past_due keeps writing through Stripe's dunning window", () => {
     expect(isWritable("active", false)).toBe(true);
-    expect(isWritable("past_due", false)).toBe(false); // owner's call: fix the card first
+    // Reversed 2026-08-20: freezing renewals on day one of a failed card
+    // could ground a truck over a billing glitch. Stripe's retries decide.
+    expect(isWritable("past_due", false)).toBe(true);
     expect(isWritable("canceled", false)).toBe(false);
     expect(isWritable("none", false)).toBe(false);
   });

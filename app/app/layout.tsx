@@ -61,17 +61,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
         switchAction={switchCompany} />
       <div className="relative z-10 min-w-0 flex-1">
-        {!writable && (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            Your subscription is paused. Your records are safe and exportable —{" "}
+        {/* Never-subscribed, lapsed, and payment-failed are three different
+            situations — telling a brand-new signup their subscription "paused"
+            describes something that never happened and points at the wrong
+            door. */}
+        {!writable && company.subscription_status === "none" ? (
+          <div className="border-b border-line-2 bg-elevated px-4 py-2.5 text-sm text-ink-dim">
+            You&apos;re on the free view — look around all you like.{" "}
             {company.role === "owner" ? (
-              <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">update billing</Link>
+              <Link href="/onboarding/billing" className="font-medium text-ink underline underline-offset-2">Start your subscription</Link>
             ) : (
-              <span className="font-medium">ask your account owner to update billing</span>
+              <span className="font-medium text-ink">Ask your account owner to subscribe</span>
             )}{" "}
-            to start editing again.
+            to start adding your yard.
           </div>
-        )}
+        ) : !writable ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+            Your subscription has ended. Your records are safe and exportable —{" "}
+            {company.role === "owner" ? (
+              <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">restart billing</Link>
+            ) : (
+              <span className="font-medium">ask your account owner to restart billing</span>
+            )}{" "}
+            to edit again.
+          </div>
+        ) : company.subscription_status === "past_due" ? (
+          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+            Payment failed — everything still works while the card retries.{" "}
+            {company.role === "owner" ? (
+              <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">Update your card</Link>
+            ) : (
+              <span className="font-medium">Ask your account owner to update the card</span>
+            )}{" "}
+            before editing pauses.
+          </div>
+        ) : null}
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {children}
         </main>
