@@ -15,16 +15,17 @@ export default async function QuickPage() {
     db.from("saas_compliance_items_with_status")
       .select("id, title, status, expiration_date, parent_type, parent_id")
       .eq("company_id", company.id),
-    db.from("saas_units").select("id, name, saas_yards(name)").eq("company_id", company.id).order("name"),
+    db.from("saas_units").select("id, name, type, saas_yards(name)").eq("company_id", company.id).order("name"),
     db.from("saas_assets").select("id, name, last_seen_where, unit_id").eq("company_id", company.id).order("name"),
     db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
 
-  type UnitRow = { id: string; name: string; saas_yards: { name: string } | { name: string }[] | null };
+  type UnitRow = { id: string; name: string; type: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
   const units: QuickUnit[] = unitRows.map((u) => ({
     id: u.id,
     name: u.name,
+    type: u.type,
     yardName: (Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name) ?? "",
   }));
 

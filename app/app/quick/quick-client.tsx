@@ -43,6 +43,7 @@ export interface QuickUnit {
   id: string;
   name: string;
   yardName: string;
+  type: string;
 }
 
 function plusOneYear(): string {
@@ -234,8 +235,10 @@ export default function QuickClient({ items, units, assets, companyId }: { items
             <>
               <button onClick={() => { const u = justMade; reset(false); setAddForUnit(u); setMode("add"); }}
                 className="h-14 rounded-xl bg-bone text-base font-semibold text-coal">Add a cert to {justMade.name}</button>
-              <button onClick={() => { const u = justMade; reset(false); setAddForUnit(u); setMode("gear"); }}
-                className="h-14 rounded-xl border border-line-2 text-base text-ink">Add gear to {justMade.name}</button>
+              {justMade.type !== "shop" && (
+                <button onClick={() => { const u = justMade; reset(false); setAddForUnit(u); setMode("gear"); }}
+                  className="h-14 rounded-xl border border-line-2 text-base text-ink">Add gear to {justMade.name}</button>
+              )}
             </>
           ) : (
             <button onClick={() => reset()} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal">Do another</button>
@@ -389,9 +392,12 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     );
   }
 
-  /* ── ADD GEAR TO A TRUCK ── */
+  /* ── ADD GEAR TO A TRUCK ──
+     Shops are excluded as gear targets: nothing "rides on" a building. A
+     shop's own equipment lives as certs in its book, not as assets. */
   if (mode === "gear") {
-    if (unitList.length === 0) {
+    const gearTargets = unitList.filter((u) => u.type !== "shop");
+    if (gearTargets.length === 0) {
       return (
         <div className="flex flex-col gap-4">
           <BackBar onBack={() => reset()} label="Add gear" />
@@ -410,9 +416,9 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         <BackBar onBack={() => reset()} label="Add gear" sub={addForUnit?.name} />
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           On which truck / rig?
-          <select name="unit_id" required className={FIELD} defaultValue={addForUnit?.id ?? ""}>
+          <select name="unit_id" required className={FIELD} defaultValue={addForUnit && addForUnit.type !== "shop" ? addForUnit.id : ""}>
             <option value="" disabled>Pick one…</option>
-            {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
+            {gearTargets.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">

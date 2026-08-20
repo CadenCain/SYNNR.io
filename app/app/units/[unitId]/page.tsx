@@ -40,6 +40,13 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   if (!unit) notFound();
   const u = unit as { id: string; name: string; type: string; identifier: string | null; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const yardName = Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name;
+  // A shop is a BUILDING: it doesn't roll out, no crew is assigned to it, no
+  // gear rides on it. Its whole reason to be on the books is its paper (fire
+  // extinguishers, overhead crane, compressor), so its page is the cert book
+  // and nothing else. Legacy escape hatch: if crew/assets somehow already
+  // hang on a shop, the LISTS stay visible (so nothing becomes invisible and
+  // unmanageable) — only the add/assign forms disappear.
+  const isShop = u.type === "shop";
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
@@ -246,7 +253,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         </AddDisclosure>
       </section>
 
-      {/* Gear list — the standing reference of what rides on this unit */}
+      {/* Gear list — the standing reference of what rides on this unit.
+          Shops don't have one: nothing "rides on" a building. */}
+      {!isShop && (
       <Link href={`/app/units/${unitId}/loadout`}>
         <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
@@ -257,6 +266,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
       </Link>
+      )}
 
       {/* Dispatch history — the immutable records (spec #1d) */}
       {history.length > 0 && (
@@ -289,7 +299,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       )}
 
       {/* Crew on this unit — standing assignment; their cards decide this
-          truck's ready call and pre-select on the readiness check. */}
+          truck's ready call and pre-select on the readiness check. Not a
+          thing for shops (buildings don't have a crew). */}
+      {(!isShop || assignedCrew.length > 0) && (
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
         {assignedCrew.length > 0 && (
@@ -313,7 +325,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             ))}
           </div>
         )}
-        {unassignedCrew.length > 0 ? (
+        {!isShop && unassignedCrew.length > 0 ? (
           <AddDisclosure label={assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"} defaultOpen={assignedCrew.length === 0}>
             <form action={assignCrewToUnit} className="flex flex-col gap-3 sm:flex-row">
               <input type="hidden" name="unit_id" value={u.id} />
@@ -324,14 +336,18 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Assign</Button>
             </form>
           </AddDisclosure>
-        ) : assignedCrew.length === 0 ? (
+        ) : !isShop && assignedCrew.length === 0 ? (
           <Card className="px-6 py-8 text-center text-sm text-ink-dim">
             No crew yet. <Link href="/app/crew" className="text-bone hover:underline">Add your hands</Link> first, then assign them here.
           </Card>
         ) : null}
       </section>
+      )}
 
-      {/* Assets */}
+      {/* Assets — not a thing for shops either: gear lives ON trucks; a
+          shop's own equipment (crane, compressor) is tracked as CERTS in its
+          book above, which is the part an inspector actually asks for. */}
+      {(!isShop || assets.length > 0) && (
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Assets on this unit</h2>
         {assets.length > 0 && (
@@ -367,6 +383,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             ))}
           </div>
         )}
+        {!isShop && (
         <AddDisclosure label="Add an asset to this unit" defaultOpen={assets.length === 0}>
           <form action={addAsset} className="flex flex-col gap-3">
             <input type="hidden" name="unit_id" value={u.id} />
@@ -395,7 +412,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             </div>
           </form>
         </AddDisclosure>
+        )}
       </section>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
  * standing in the yard can get his first truck in without any setup.
  */
 export async function quickAddUnit(args: { name: string; type?: string }):
-  Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string } }> {
+  Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string; type: string } }> {
   const { company } = await requireCompany();
   if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
   const name = args.name.trim();
@@ -40,8 +40,9 @@ export async function quickAddUnit(args: { name: string; type?: string }):
     yard = made as { id: string; name: string };
   }
 
+  const unitType = args.type || "truck";
   const { data, error } = await db.from("saas_units")
-    .insert({ company_id: company.id, yard_id: yard.id, name, type: args.type || "truck" })
+    .insert({ company_id: company.id, yard_id: yard.id, name, type: unitType })
     .select("id, name").single();
   if (error) return { ok: false, error: error.message };
 
@@ -49,7 +50,7 @@ export async function quickAddUnit(args: { name: string; type?: string }):
   revalidatePath("/app/yards");
   revalidatePath("/app");
   const u = data as { id: string; name: string };
-  return { ok: true, unit: { id: u.id, name: u.name, yardName: yard.name } };
+  return { ok: true, unit: { id: u.id, name: u.name, yardName: yard.name, type: unitType } };
 }
 
 /** Quick Action: put a piece of gear on a truck from the phone. */
