@@ -106,9 +106,37 @@ export async function addAsset(formData: FormData) {
     if (redirectPath) revalidatePath(redirectPath);
     return; // double-tap echo
   }
-  const { error } = await db.from("saas_assets").insert({
+  const { data: created, error } = await db.from("saas_assets").insert({
     company_id: company.id, yard_id, unit_id, name, category, identifier,
-  });
+  }).select("id").single();
   if (error) throw new Error(error.message);
+
+  // Two photos at intake: the iron itself and its paperwork. Uploads ride the
+  // session client, so storage RLS (company-prefixed paths) still applies.
+  // Neither is required — the field rule everywhere in this app is "never
+  // block the entry, flag the gap" — the asset shows amber until both exist.
+  const assetId = (created as { id: string }).id;
+  const shots: { field: string; label: "photo" | "paperwork" }[] = [
+    { field: "photo", label: "photo" },
+    { field: "paperwork", label: "paperwork" },
+  ];
+  for (const s of shots) {
+    const f = formData.get(s.field);
+    if (!(f instanceof File) || f.size === 0) continue;
+    if (!f.type.startsWith("image/") || f.size > 15 * 1024 * 1024) continue; // wrong kind/huge: skip, stays flagged
+    const safe = (f.name || `${s.label}.jpg`).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${company.id}/asset/${assetId}/${Date.now()}-${s.label}-${safe}`;
+    const { error: upErr } = await db.storage.from("proofs").upload(path, f, { upsert: false, contentType: f.type });
+    if (upErr) continue;
+    await db.from("saas_attachments").insert({
+      company_id: company.id, entity_type: "asset", entity_id: assetId,
+      storage_path: path, content_type: f.type || null, label: s.label,
+    });
+    if (s.label === "photo") {
+      await db.from("saas_assets").update({ primary_photo_path: path })
+        .eq("id", assetId).eq("company_id", company.id);
+    }
+  }
+
   if (redirectPath) revalidatePath(redirectPath);
 }

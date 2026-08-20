@@ -118,19 +118,28 @@ export default function RenewControl({
   const saveBlocked = busy || ocr === "reading" || ocr === "unconfirmed";
 
   return (
-    <form onSubmit={save} className="mt-3 flex flex-col gap-2 rounded-lg border border-line-2 bg-coal p-3">
-      <label className="flex flex-col gap-1 text-xs text-ink-dim">
-        New proof photo
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => void onPick(e.target.files?.[0])}
-          className="text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1.5 file:text-ink"
-        />
-        {fileName ? <span className="text-emerald-400">✓ {fileName}</span> : null}
-      </label>
+    // order-last + w-full: inside the row's flex-wrap container this panel
+    // wraps to its own full-width band under the item instead of cramming
+    // into the actions corner (where it collided with the edit popover).
+    <form onSubmit={save} className="order-last mt-1 flex w-full flex-col gap-2 rounded-lg border border-line-2 bg-coal p-3">
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        className={cn(
+          "flex h-14 w-full items-center justify-center gap-2.5 rounded-lg border-2 border-dashed text-sm",
+          fileName ? "border-emerald-500/50 text-emerald-400" : "border-line-2 text-ink-dim hover:bg-elevated",
+        )}
+      >
+        {fileName ? <><Check className="h-4 w-4" /> Photo ready — tap to retake</> : <><Camera className="h-5 w-5" /> Shoot the new cert</>}
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => void onPick(e.target.files?.[0])}
+      />
       <label className="flex flex-col gap-1 text-xs text-ink-dim">
         New expiration date
         <input

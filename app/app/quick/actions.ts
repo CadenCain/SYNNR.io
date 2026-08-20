@@ -53,8 +53,11 @@ export async function quickAddUnit(args: { name: string; type?: string }):
 }
 
 /** Quick Action: put a piece of gear on a truck from the phone. */
-export async function quickAddAsset(args: { unit_id: string; name: string; category?: string; where?: string }):
-  Promise<{ ok: boolean; error?: string }> {
+export async function quickAddAsset(args: {
+  unit_id: string; name: string; category?: string; where?: string;
+  /** storage paths the client already uploaded (company-prefix verified below) */
+  photo_path?: string | null; paper_path?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
   if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
   const name = args.name.trim();
@@ -63,7 +66,7 @@ export async function quickAddAsset(args: { unit_id: string; name: string; categ
   const db = await saasDb();
   if (!(await ownsParent(db, company.id, "unit", args.unit_id))) return { ok: false, error: "Pick one of your trucks." };
   const where = (args.where ?? "").trim();
-  const { error } = await db.from("saas_assets").insert({
+  const { data: created, error } = await db.from("saas_assets").insert({
     company_id: company.id,
     unit_id: args.unit_id,
     name,
@@ -76,8 +79,29 @@ export async function quickAddAsset(args: { unit_id: string; name: string; categ
       last_seen_by: (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "someone",
       last_seen_at: new Date().toISOString(),
     } : {}),
-  });
+  }).select("id").single();
   if (error) return { ok: false, error: error.message };
+
+  // Intake photos the client already uploaded: verify the paths are ours
+  // (company prefix), then pin them to the new asset — iron shot becomes the
+  // primary image, paper shot rides as an attachment. Missing ones stay
+  // missing and the asset wears the amber flag.
+  const assetId = (created as { id: string }).id;
+  const pins: { path: string | null | undefined; label: "photo" | "paperwork" }[] = [
+    { path: args.photo_path, label: "photo" },
+    { path: args.paper_path, label: "paperwork" },
+  ];
+  for (const p of pins) {
+    if (!p.path || !ownsStoragePath(p.path, company.id)) continue;
+    await db.from("saas_attachments").insert({
+      company_id: company.id, entity_type: "asset", entity_id: assetId,
+      storage_path: p.path, content_type: null, label: p.label,
+    });
+    if (p.label === "photo") {
+      await db.from("saas_assets").update({ primary_photo_path: p.path })
+        .eq("id", assetId).eq("company_id", company.id);
+    }
+  }
 
   revalidatePath("/app/quick");
   revalidatePath("/app/yards");

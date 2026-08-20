@@ -80,6 +80,12 @@ export default function QuickClient({ items, units, assets, companyId }: { items
   const [expiration, setExpiration] = useState(plusOneYear());
   const [ocr, setOcr] = useState<"idle" | "reading" | "unconfirmed" | "confirmed" | "none">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
+  // Gear intake carries TWO shots — the iron and its paperwork — each with
+  // its own camera field. Optional in a hurry; the asset flags amber without them.
+  const gearPhotoRef = useRef<HTMLInputElement>(null);
+  const gearPaperRef = useRef<HTMLInputElement>(null);
+  const [gearPhotoName, setGearPhotoName] = useState("");
+  const [gearPaperName, setGearPaperName] = useState("");
 
   async function onPickPhoto(file: File | undefined) {
     setFileName(file?.name ?? "");
@@ -105,9 +111,13 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setWhereText("");
     setErr("");
     setFileName("");
+    setGearPhotoName("");
+    setGearPaperName("");
     setOcr("idle");
     setExpiration(plusOneYear());
     if (fileRef.current) fileRef.current.value = "";
+    if (gearPhotoRef.current) gearPhotoRef.current.value = "";
+    if (gearPaperRef.current) gearPaperRef.current.value = "";
     if (toHome) setMode("home");
   }
 
@@ -158,11 +168,24 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setBusy(true);
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get("name") ?? "").trim();
+    const upIntake = async (f: File | undefined, label: string): Promise<string | null> => {
+      if (!f) return null;
+      const sb = getBrowserSupabase();
+      if (!sb) return null;
+      const safe = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${companyId}/asset/intake/${Date.now()}-${label}-${safe}`;
+      const { error } = await sb.storage.from("proofs").upload(path, f, { upsert: false });
+      return error ? null : path;
+    };
+    const photo_path = await upIntake(gearPhotoRef.current?.files?.[0], "photo");
+    const paper_path = await upIntake(gearPaperRef.current?.files?.[0], "paperwork");
     const res = await quickAddAsset({
       unit_id: String(fd.get("unit_id") ?? ""),
       name,
       category: String(fd.get("category") ?? "other"),
       where: String(fd.get("where") ?? ""),
+      photo_path,
+      paper_path,
     });
     setBusy(false);
     if (!res.ok) { setErr(res.error ?? "Couldn't save."); return; }
@@ -406,6 +429,9 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           Where is it right now? (optional)
           <input name="where" placeholder="Andrews yard, on 12, shop bench" className={FIELD} />
         </label>
+        <CameraField fileRef={gearPhotoRef} fileName={gearPhotoName} setFileName={setGearPhotoName} label="Shoot the iron" />
+        <CameraField fileRef={gearPaperRef} fileName={gearPaperName} setFileName={setGearPaperName} label="Shoot its paperwork" />
+        <p className="text-center text-xs text-ink-faint">No photos yet? Save anyway — it&apos;ll wear an amber flag until both are on file.</p>
         {err ? <p className="text-sm text-amber-400">{err}</p> : null}
         <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
           {busy ? "Saving…" : "Put it on the books"}

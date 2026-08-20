@@ -43,6 +43,18 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
     photoUrl = signed?.signedUrl ?? null;
   }
 
+  // Paperwork shot (cert / MTR / test chart) — latest attachment labeled so.
+  const { data: paperRows } = await db.from("saas_attachments")
+    .select("storage_path").eq("company_id", company.id)
+    .eq("entity_type", "asset").eq("entity_id", assetId).eq("label", "paperwork")
+    .order("created_at", { ascending: false }).limit(1);
+  let paperUrl: string | null = null;
+  const paperPath = ((paperRows ?? []) as { storage_path: string }[])[0]?.storage_path ?? null;
+  if (paperPath) {
+    const { data: signed } = await db.storage.from("proofs").createSignedUrl(paperPath, 3600);
+    paperUrl = signed?.signedUrl ?? null;
+  }
+
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
     .select("id, title, kind, issued_date, expiration_date, status")
@@ -145,19 +157,41 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         </p>
       </Card>
 
+      {/* Two shots make an asset accountable: the iron and its paper. A slot
+          without its photo wears amber — flagged, not blocked, same rule as a
+          cert with no date. */}
       <Card className="flex flex-col gap-3 p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Photo</h2>
-          <PhotoUpload assetId={a.id} companyId={company.id} hasPhoto={!!photoUrl} />
-        </div>
-        {photoUrl ? (
-          <Image src={photoUrl} alt={a.name} width={640} height={400} unoptimized
-            className="max-h-72 w-full rounded-xl border border-line object-cover" />
-        ) : (
-          <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-line text-sm text-ink-faint">
-            <Box className="mr-2 h-5 w-5" /> No photo yet
+        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Photos — the iron &amp; its paper</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">The asset</span>
+              <PhotoUpload assetId={a.id} companyId={company.id} hasPhoto={!!photoUrl} />
+            </div>
+            {photoUrl ? (
+              <Image src={photoUrl} alt={a.name} width={640} height={400} unoptimized
+                className="max-h-72 w-full rounded-xl border border-line object-cover" />
+            ) : (
+              <div className="flex h-40 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.04] text-sm text-amber-400">
+                <Box className="h-5 w-5" /> Asset photo missing
+              </div>
+            )}
           </div>
-        )}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">The paperwork</span>
+              <PhotoUpload assetId={a.id} companyId={company.id} hasPhoto={!!paperUrl} label="paperwork" />
+            </div>
+            {paperUrl ? (
+              <Image src={paperUrl} alt={`${a.name} paperwork`} width={640} height={400} unoptimized
+                className="max-h-72 w-full rounded-xl border border-line object-cover" />
+            ) : (
+              <div className="flex h-40 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/[0.04] text-sm text-amber-400">
+                <Box className="h-5 w-5" /> Paperwork photo missing
+              </div>
+            )}
+          </div>
+        </div>
       </Card>
 
       <section className="flex flex-col gap-3">

@@ -27,7 +27,7 @@ export default function ComplianceRow({ item, companyId, redirectPath, canDelete
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-medium">{item.title}</span>
             <StatusBadge status={item.status} />
@@ -43,8 +43,12 @@ export default function ComplianceRow({ item, companyId, redirectPath, canDelete
             </div>
           ) : null}
         </div>
+        {/* Renew + edit sit side by side; RenewControl's OPEN state renders
+            order-last w-full, wrapping to its own full-width band under the
+            row instead of wedging into this corner and colliding with the
+            edit popover. */}
+        <RenewControl itemId={item.id} companyId={companyId} redirectPath={redirectPath} />
         <div className="flex items-center gap-2">
-          <RenewControl itemId={item.id} companyId={companyId} redirectPath={redirectPath} />
           <Popover>
             <PopoverTrigger aria-label="Edit item" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink">
               <Pencil className="h-3.5 w-3.5" />

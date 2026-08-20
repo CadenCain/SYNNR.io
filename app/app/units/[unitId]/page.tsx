@@ -51,8 +51,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
 
   const { data: assetData } = await db
-    .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at").eq("unit_id", unitId).order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null }[];
+    .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at, primary_photo_path").eq("unit_id", unitId).order("name");
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null; primary_photo_path: string | null }[];
 
   // Worst-cert chip per asset — the child card carries its own verdict, same
   // treatment the crew cards already get.
@@ -67,6 +67,23 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   }
   const worstByAsset = new Map<string, ComplianceStatus>();
   for (const [aid, list] of certsByAsset) { const w = worstStatus(list); if (w) worstByAsset.set(aid, w); }
+
+  // Photo accountability: every asset should carry a shot of the iron AND its
+  // paperwork. Absence is flagged, not blocked — same rule as a cert with no
+  // date: the record exists, the gap stays loud until someone closes it.
+  const { data: paperData } = assetIds.length
+    ? await db.from("saas_attachments").select("entity_id")
+        .eq("company_id", company.id).eq("entity_type", "asset").eq("label", "paperwork").in("entity_id", assetIds)
+    : { data: [] };
+  const hasPaper = new Set(((paperData ?? []) as { entity_id: string }[]).map((r) => r.entity_id));
+  const photoGap = (a: { id: string; primary_photo_path: string | null }): string | null => {
+    const noPhoto = !a.primary_photo_path;
+    const noPaper = !hasPaper.has(a.id);
+    if (noPhoto && noPaper) return "no photos — shoot the iron & its paperwork";
+    if (noPaper) return "paperwork photo missing";
+    if (noPhoto) return "asset photo missing";
+    return null;
+  };
 
   // Crew: standing assignments + everyone else, with worst-card status chips.
   const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
@@ -334,6 +351,11 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                         </span>
                       );
                     })() : null}
+                    {photoGap(a) ? (
+                      <span className="mt-1 inline-block rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-400">
+                        {photoGap(a)}
+                      </span>
+                    ) : null}
                   </span>
                   {worstByAsset.has(a.id)
                     ? <StatusBadge status={worstByAsset.get(a.id)!} />
@@ -346,15 +368,31 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           </div>
         )}
         <AddDisclosure label="Add an asset to this unit" defaultOpen={assets.length === 0}>
-          <form action={addAsset} className="flex flex-col gap-3 sm:flex-row">
+          <form action={addAsset} className="flex flex-col gap-3">
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
-            <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} flex-1`} />
-            <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
-              {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-            <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} flex-1`} />
+              <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
+                {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            {/* Both shots at intake — the iron and its paper. Skippable in a
+                hurry; the asset wears an amber flag until they exist. */}
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Photo of the asset
+                <input type="file" name="photo" accept="image/*" capture="environment"
+                  className="h-11 w-full rounded-lg border border-line-2 bg-coal px-2.5 py-2 text-sm text-ink-dim file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1 file:text-ink" />
+              </label>
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Photo of the paperwork (cert, MTR, test chart)
+                <input type="file" name="paperwork" accept="image/*" capture="environment"
+                  className="h-11 w-full rounded-lg border border-line-2 bg-coal px-2.5 py-2 text-sm text-ink-dim file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1 file:text-ink" />
+              </label>
+            </div>
+            <div>
+              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
+            </div>
           </form>
         </AddDisclosure>
       </section>
