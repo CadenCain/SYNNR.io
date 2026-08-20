@@ -123,6 +123,12 @@ Verified live: every row-security flag is on, including `saas_cron_runs`
 | **saas_loadout_templates / _items** | member or global seed (company_id null) | **ALL: admin AND company_id NOT NULL — global seeds are read-only for every tenant** |
 | **saas_doc_requests** (0005) | member | INSERT/UPDATE member · no session DELETE (dead links become status='revoked'). Public upload page writes via service role after token check. |
 
+**Append-only ledgers (0006):** `saas_alerts_sent` and `saas_events` carry
+BEFORE UPDATE triggers (`saas_block_update()`) that raise on ANY update —
+service role included; verified live. DELETE on alerts_sent stays
+service-role-only and item-scoped (the alert re-arm on renewal — see
+lib/saas/alert-log.ts); sessions have no write policies on either table.
+
 ## Column-level grants (added 2026-08-19)
 
 RLS restricts rows, not columns — so billing truth is also protected by

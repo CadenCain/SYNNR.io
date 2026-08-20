@@ -131,6 +131,23 @@ describe("alert sweep — one payload per recipient, one ledger row per item", (
     const rows = ledger[0].payload as { compliance_item_id: string; channel: string }[];
     expect(rows.map((r) => r.compliance_item_id).sort()).toEqual(["i1", "i2", "i3"]);
     expect(res.items_logged).toBe(3);
+
+    // the sweep NEVER edits or deletes ledger rows — append-only by
+    // construction here, and enforced at the DB by the 0006 no-update trigger
+    expect(writes.filter((w) => w.table === "saas_alerts_sent" && w.kind !== "insert")).toHaveLength(0);
+  });
+
+  it("re-arm (clearAlertLog) deletes ONLY the renewed item's rows, tenant-scoped", async () => {
+    const { client, writes } = fakeSupabase(sweepTables(["i1", "i2", "i3"]));
+    dbHolder.current = client;
+    const { clearAlertLog } = await import("../alert-log");
+    await clearAlertLog(CO, ["i1", "i2"]);
+    const deletes = writes.filter((w) => w.kind === "delete");
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].table).toBe("saas_alerts_sent");
+    expect(deletes[0].filters).toMatchObject({ company_id: CO, compliance_item_id: ["i1", "i2"] });
+    // never a blanket wipe, never another table
+    expect(writes.some((w) => w.kind === "delete" && w.table !== "saas_alerts_sent")).toBe(false);
   });
 
   it("second sweep over the same state sends NOTHING — the ledger dedupes", async () => {
