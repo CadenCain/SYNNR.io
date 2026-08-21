@@ -4,7 +4,7 @@
  * Replace [PHONE] with the real cell (e.g. "432-555-0100") and every tel:
  * link and printed number updates together.
  */
-export const OWNER_PHONE = "[PHONE]";
-export const OWNER_PHONE_TEL = `tel:${OWNER_PHONE.replace(/[^\d+]/g, "") || "[PHONE]"}`;
+export const OWNER_PHONE = "432-250-0715";
+export const OWNER_PHONE_TEL = "tel:+14322500715";
 export const OWNER_EMAIL = "cadencain@synnr.io";
 export const FOUNDER_LINE = "Built and run by one guy in the Permian. Call me.";
