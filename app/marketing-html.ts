@@ -284,7 +284,7 @@ export const MARKETING_HTML = `
 <section class="band section final" id="cta">
   <div class="container">
     <div class="final-card">
-      <span class="eyebrow" style="margin-bottom:24px">Get started</span>
+      <span class="eyebrow" style="margin-bottom:24px">The next step</span>
       <h2 class="display" style="font-size:clamp(40px,6.4vw,84px)"><span class="lt">Stop getting turned around</span> at the gate.</h2>
       <p class="lede">Open the demo and poke at a working yard — no signup, no card. When it looks like your yard, call me and we'll load yours together, free.</p>
       <div class="hero-cta">
