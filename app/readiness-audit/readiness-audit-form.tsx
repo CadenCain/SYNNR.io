@@ -19,13 +19,13 @@ export default function ReadinessAuditForm() {
       const r = await fetch("/api/readiness-audit", { method: "POST", body: fd });
       const d = await r.json();
       if (!r.ok || !d.ok) {
-        setErr(d.error || "Something went wrong — email cadencain@synnr.io.");
+        setErr(d.error || "Something went wrong — call or text 432-250-0715.");
         setBusy(false);
         return;
       }
       setDone(true);
     } catch {
-      setErr("Couldn't reach us — try again, or email cadencain@synnr.io.");
+      setErr("Couldn't reach us — try again, or call or text 432-250-0715.");
       setBusy(false);
     }
   }
@@ -35,7 +35,7 @@ export default function ReadinessAuditForm() {
       <div className="ra-form-done">
         <b>Got it ✓</b>
         <p>
-          We'll email you this week with your free readiness audit — what's expired, expiring, and missing in your yard.
+          I'll call or text you this week with your free readiness map — what's expired, expiring, and missing in your yard.
           No pitch, just the facts. We'll follow up if it looks like a fit.
         </p>
       </div>
@@ -62,8 +62,8 @@ export default function ReadinessAuditForm() {
         <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Certs lapsing? DOT surprises? Whiteboard chaos? Tell us." />
       </label>
       <div className="svc-form-row">
-        <label>Best email<input name="email" type="email" required autoComplete="email" placeholder="you@shop.com" /></label>
-        <label>Phone (optional)<input name="phone" type="tel" autoComplete="tel" placeholder="(432) 555-0100" /></label>
+        <label>Cell<input name="phone" type="tel" required autoComplete="tel" placeholder="(432) 555-0100" /></label>
+        <label>Email (optional)<input name="email" type="email" autoComplete="email" placeholder="you@shop.com" /></label>
       </div>
       {err ? <p className="svc-form-err">{err}</p> : null}
       <button className="btn btn-primary" type="submit" disabled={busy}>

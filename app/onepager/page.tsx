@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { OWNER_PHONE, OWNER_EMAIL } from "@/lib/contact";
+import { OWNER_PHONE } from "@/lib/contact";
 import PrintButton from "./print-button";
 
 /**
@@ -66,7 +66,7 @@ export default function OnePager() {
           <div className="op-brand">SYNNR<small>Yard readiness · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b> — founder<br />
-            {OWNER_PHONE} · {OWNER_EMAIL}
+            {OWNER_PHONE} — call or text
           </div>
         </div>
 
@@ -110,10 +110,10 @@ export default function OnePager() {
 
         <div className="op-foot">
           <div className="who">
-            <b>Built and run by one guy in the Permian. Call me.</b><br />
+            <b>Built and run by one guy in the Permian. Call or text me.</b><br />
             Five years on wireline — I&apos;ve eaten the 5am scramble, the hotshot bill, and the company
             man&apos;s long memory. No fake logos, no made-up numbers.<br />
-            <b>{OWNER_PHONE}</b> · {OWNER_EMAIL} · synnr.io
+            <b>{OWNER_PHONE}</b> — call or text · synnr.io
           </div>
           <div className="op-qr">
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -38,7 +38,7 @@ export default function DemoLeadForm() {
           <Check className="h-6 w-6 text-emerald-400" />
         </span>
         <p className="text-lg font-semibold">Got it — I&apos;ll call you.</p>
-        <p className="text-sm text-ink-dim">Usually same day. Impatient? <a href={OWNER_PHONE_TEL} className="text-bone underline">{OWNER_PHONE}</a></p>
+        <p className="text-sm text-ink-dim">Usually same day. Impatient? Call or text <a href={OWNER_PHONE_TEL} className="text-bone underline">{OWNER_PHONE}</a></p>
       </div>
     );
   }
@@ -48,7 +48,6 @@ export default function DemoLeadForm() {
       <input name="name" required placeholder="Your name" autoComplete="name" className={fld} />
       <input name="company" placeholder="Company (optional)" autoComplete="organization" className={fld} />
       <input name="phone" required type="tel" placeholder="Cell" autoComplete="tel" className={fld} />
-      <input name="email" type="email" placeholder="Email (optional)" autoComplete="email" className={fld} />
       {err && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">{err}</p>}
       <button type="submit" disabled={busy}
         className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal hover:bg-bone-soft disabled:opacity-50">

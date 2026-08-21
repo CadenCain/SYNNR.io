@@ -56,7 +56,7 @@ export const MARKETING_HTML = `
         <a href="/demo" class="btn btn-primary">Open the live demo
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Talk to me — ${OWNER_PHONE}</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text — ${OWNER_PHONE}</a>
       </div>
       <p class="mono reveal" data-d="3" style="margin-top:14px;font-size:12.5px;color:var(--fg-faint)">${FOUNDER_LINE}</p>
     </div>
@@ -240,7 +240,7 @@ export const MARKETING_HTML = `
         <a href="/demo" class="btn btn-primary">See it live first
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Talk to me — ${OWNER_PHONE}</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text — ${OWNER_PHONE}</a>
       </div>
       <p class="mono" style="margin-top:18px;font-size:12px;color:var(--fg-faint)">Billed monthly per active yard · cancel anytime · your data, exportable · or start with the <a href="/readiness-audit" style="color:var(--fg)">free readiness map</a>.</p>
     </div>
@@ -248,7 +248,7 @@ export const MARKETING_HTML = `
     <div class="setup-card">
       <h3>Setup is free for the first 10 yards. I'll do it with you in one afternoon.</h3>
       <p>Hand me your binder, your spreadsheets, whatever you've got — I load the yard with you, remote or in person anywhere in the Permian, and hand it back running the same day. ${FOUNDER_LINE}</p>
-      <p class="setup-note"><a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> — fleets and custom needs are a conversation, not a price sheet.</p>
+      <p class="setup-note">Call or text <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> — fleets and custom needs are a conversation, not a price sheet.</p>
     </div>
   </div>
 </section>
@@ -293,7 +293,7 @@ export const MARKETING_HTML = `
         </a>
         <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call me — ${OWNER_PHONE}</a>
       </div>
-      <p class="mono" style="margin-top:20px;font-size:12px;color:var(--fg-faint)">${FOUNDER_LINE} Or email <a href="mailto:cadencain@synnr.io" style="color:var(--fg)">cadencain@synnr.io</a> · existing customers <a href="/login" style="color:var(--fg)">log in here</a></p>
+      <p class="mono" style="margin-top:20px;font-size:12px;color:var(--fg-faint)">${FOUNDER_LINE} <a href="${OWNER_PHONE_TEL}" style="color:var(--fg)">${OWNER_PHONE}</a> · existing customers <a href="/login" style="color:var(--fg)">log in here</a></p>
     </div>
   </div>
 </section>
@@ -307,7 +307,7 @@ export const MARKETING_HTML = `
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
-      <span>Yard readiness for oilfield service shops · <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · ${FOUNDER_LINE}</span>
+      <span>Yard readiness for oilfield service shops · call or text <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · ${FOUNDER_LINE}</span>
     </div>
   </div>
 </footer>

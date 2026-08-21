@@ -6,5 +6,6 @@
  */
 export const OWNER_PHONE = "432-250-0715";
 export const OWNER_PHONE_TEL = "tel:+14322500715";
-export const OWNER_EMAIL = "cadencain@synnr.io";
-export const FOUNDER_LINE = "Built and run by one guy in the Permian. Call me.";
+export const OWNER_SMS = "sms:+14322500715";
+export const OWNER_EMAIL = "cadencain@synnr.io"; // legal-page contact only - the funnel is phone/text
+export const FOUNDER_LINE = "Built and run by one guy in the Permian. Call or text me.";

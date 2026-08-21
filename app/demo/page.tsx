@@ -53,7 +53,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
               </button>
             </form>
             <a href={OWNER_PHONE_TEL} className="flex min-h-13 items-center gap-2 rounded-lg border border-line-2 px-5 text-sm text-ink hover:bg-elevated">
-              <Phone className="h-4 w-4" /> Talk to me — {OWNER_PHONE}
+              <Phone className="h-4 w-4" /> Call or text me — {OWNER_PHONE}
             </a>
           </div>
           <p className="text-xs text-ink-faint">No signup. No card. Fake data, real product. {FOUNDER_LINE}</p>
