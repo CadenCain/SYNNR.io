@@ -598,6 +598,9 @@
   border: 1px solid var(--line);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
+/* the lead product spans the row; the also-included trio stays compact */
+.mkt .prod-lead { grid-column: 1 / -1; }
+.mkt .prod-lead .prod-desc { max-width: 62ch; font-size: 15.5px; }
 .mkt .prod-card {
   background: var(--bg);
   padding: 30px 26px 26px;

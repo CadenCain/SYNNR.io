@@ -1,3 +1,5 @@
+import { OWNER_PHONE, OWNER_PHONE_TEL, FOUNDER_LINE } from "@/lib/contact";
+
 // RollReady marketing page (product by SYNNR) — "editorial industrial" v2.
 // Structure: dark hero with mono data block → light problem band → dark
 // product demo + check → light how-it-works + pricing → dark statement,
@@ -21,8 +23,9 @@ export const MARKETING_HTML = `
       <a href="/build">Custom builds</a>
     </nav>
     <div class="nav-cta">
+      <a href="${OWNER_PHONE_TEL}" class="nav-login">${OWNER_PHONE}</a>
       <a href="/login" class="nav-login">Log in</a>
-      <a href="/signup" class="btn btn-primary btn-sm">Get started</a>
+      <a href="/demo" class="btn btn-primary btn-sm">See a live yard</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
@@ -32,9 +35,10 @@ export const MARKETING_HTML = `
       <a href="#pricing">Pricing</a>
       <a href="/partners">Partners</a>
       <a href="/build">Custom builds</a>
+      <a href="/demo">See a live yard</a>
+      <a href="${OWNER_PHONE_TEL}">Call ${OWNER_PHONE}</a>
       <a href="/readiness-audit">Free readiness map</a>
       <a href="/login">Log in</a>
-      <a href="/signup">Get started</a>
     </nav>
   </div>
 </header>
@@ -49,14 +53,15 @@ export const MARKETING_HTML = `
       <h1 class="display reveal" data-d="1"><span class="lt">Roll ready.</span><br/><span class="dim">Paper current.<br/>Gear found.</span></h1>
       <p class="lede reveal" data-d="2">Everything in your yard that expires, walks off, or shuts you down — on one system. Four tools: whether the truck can roll Friday, whose cards are current, where the gear was last seen, and proof you can hand a customer. Start with the one that's costing you money. Built by a Permian wireline hand, not a software vendor.</p>
       <div class="hero-cta reveal" data-d="3">
-        <a href="/signup" class="btn btn-primary">Get started
+        <a href="/demo" class="btn btn-primary">Open the live demo
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="/readiness-audit" class="btn btn-ghost">Free readiness map</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Talk to me — ${OWNER_PHONE}</a>
       </div>
+      <p class="mono reveal" data-d="3" style="margin-top:14px;font-size:12.5px;color:var(--fg-faint)">${FOUNDER_LINE}</p>
     </div>
     <div class="hero-foot reveal" data-d="3">
-      <p class="fineprint">Billed monthly. Cancel anytime. Your data stays yours, exportable.</p>
+      <p class="fineprint">The demo needs no signup and no card — it's the real product with fake data. Billed monthly when you're ready. Your data stays yours, exportable.</p>
       <div class="dt" role="table" aria-label="The math">
         <div class="dt-row"><span class="k">One miss on location, NPT</span><span class="v bad">$10,000+ / day</span></div>
         <div class="dt-row"><span class="k">SYNNR, per yard</span><span class="v">$500 / mo</span></div>
@@ -78,50 +83,43 @@ export const MARKETING_HTML = `
   </div>
 </section>
 
-<!-- ═══ PRODUCT LINE-UP — dark, one engine sliced by buyer ═══ -->
+<!-- ═══ THE LEAD PRODUCT — certs first; everything else rides along ═══ -->
 <section class="band band-light section" id="products">
   <div class="container">
     <div class="shead">
-      <span class="eyebrow">The line-up</span>
-      <h2 class="h2">One system.<br/><span class="dim">Four jobs it does.</span></h2>
-      <p class="lede">Same engine underneath, so nothing gets typed twice. Most shops start with whichever one is bleeding right now.</p>
+      <span class="eyebrow">The job it does</span>
+      <h2 class="h2">Nothing in your yard expires<br/><span class="dim">without you hearing about it first.</span></h2>
+      <p class="lede">Here's how the bad day actually happens: a BOP test or a DOT sticker quietly lapses, the truck rolls, the company man checks the paper, and the whole crew turns around at the gate. That's a $10,000+ NPT day for one date nobody was watching. SYNNR watches every cert, inspection, DOT item, and crew card in your yard — and the heads-up lands in your inbox the night before it would've bitten you, not after.</p>
     </div>
 
     <div class="prod-grid">
-      <div class="prod-card">
-        <span class="prod-name">SYNNR <b>Roll</b></span>
-        <p class="prod-what">Can this truck roll?</p>
-        <p class="prod-desc">Every cert, DOT item, and crew card on the unit, checked live. Ask it about Friday and it answers for Friday, so a cert that's fine today but dead by the job fails now instead of on location.</p>
-        <p class="prod-who"><b>For</b> yard managers and dispatchers who sign off on what leaves the gate.</p>
-        <a class="prod-more" href="/products/roll">More &rarr;</a>
-      </div>
-
-      <div class="prod-card">
-        <span class="prod-name">SYNNR <b>Cards</b></span>
-        <p class="prod-what">Crew paper only.</p>
-        <p class="prod-desc">H2S, well control, CDL, medicals. One register, one email before anything lapses, routed to whoever actually rolls that crew. No asset tracking required.</p>
-        <p class="prod-who"><b>For</b> safety managers who just need the hands current.</p>
-        <a class="prod-more" href="/products/cards">More &rarr;</a>
-      </div>
-
-      <div class="prod-card">
-        <span class="prod-name">SYNNR <b>Yard</b></span>
-        <p class="prod-what">Where's the gear?</p>
-        <p class="prod-desc">A register of what you own, with photos, and a note on where each piece was last seen, who said so, and how long ago. It's a note, not a tracker — and it tells you when it's gone stale instead of pretending.</p>
-        <p class="prod-who"><b>For</b> shop foremen tired of being the one guy who knows.</p>
-        <a class="prod-more" href="/products/yard">More &rarr;</a>
-      </div>
-
-      <div class="prod-card">
-        <span class="prod-name">SYNNR <b>Proof</b></span>
-        <p class="prod-what">Show the customer.</p>
-        <p class="prod-desc">A live link that shows an operator or an auditor exactly what's current, right now. No packet to assemble the night before, no scanning a binder at 9pm.</p>
-        <p class="prod-who"><b>For</b> anyone bidding work or sitting through an audit.</p>
-        <a class="prod-more" href="/products/proof">More &rarr;</a>
+      <div class="prod-card prod-lead">
+        <span class="prod-name">SYNNR <b>Cert Watch</b></span>
+        <p class="prod-what">Every expiration date in the yard, watched.</p>
+        <p class="prod-desc">BOP tests, annual DOT, pressure tests, H2S, well control, CDLs, medicals — one register, alerts before anything lapses, routed to whoever actually rolls that crew. And the readiness check won't call a truck "ready" over dead paper: ask it about Friday and it answers for Friday. No override button.</p>
+        <p class="prod-who"><b>For</b> the ops or safety manager whose name is on it when the truck gets turned around.</p>
+        <a class="prod-more" href="/demo">See it working in the live demo &rarr;</a>
       </div>
     </div>
 
-    <p class="prod-note">All four come with the account. You are not buying modules and you are not getting quoted per feature — one price per yard, use what you need.</p>
+    <p class="prod-note" style="margin-top:34px"><b style="color:var(--fg)">Also in every yard — same price, no modules:</b></p>
+    <div class="prod-grid">
+      <div class="prod-card">
+        <span class="prod-name">Readiness checks</span>
+        <p class="prod-desc">Run the truck against the job date before it rolls. Red means red — no override.</p>
+        <a class="prod-more" href="/products/roll">More &rarr;</a>
+      </div>
+      <div class="prod-card">
+        <span class="prod-name">Gear last-seen</span>
+        <p class="prod-desc">Where each piece was last seen, who said so, how long ago — and honest about going stale.</p>
+        <a class="prod-more" href="/products/yard">More &rarr;</a>
+      </div>
+      <div class="prod-card">
+        <span class="prod-name">Proof links</span>
+        <p class="prod-desc">A live link for the operator or the auditor — no binder assembled at 9pm the night before.</p>
+        <a class="prod-more" href="/products/proof">More &rarr;</a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -155,10 +153,10 @@ export const MARKETING_HTML = `
 
     <p class="show-caption">That red tile is the product. The miss caught in the yard at 5am, not on location at 9 with a company man watching.</p>
     <div class="show-cta">
-      <a href="/signup" class="btn btn-primary">Catch your first miss
+      <a href="/demo" class="btn btn-primary">Poke around the live demo
         <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a href="/demo" class="btn btn-ghost">Poke around the live demo</a>
+      <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Or call me — ${OWNER_PHONE}</a>
     </div>
   </div>
 </section>
@@ -239,30 +237,18 @@ export const MARKETING_HTML = `
         <li>Readiness checks with no override button, plus proof links</li>
       </ul>
       <div class="hero-cta">
-        <a href="/signup" class="btn btn-primary">Get started
+        <a href="/demo" class="btn btn-primary">See it live first
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="/readiness-audit" class="btn btn-ghost">Get a free readiness map</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Talk to me — ${OWNER_PHONE}</a>
       </div>
-      <p class="mono" style="margin-top:18px;font-size:12px;color:var(--fg-faint)">Card required · billed monthly per active yard · cancel anytime · your data, exportable.</p>
+      <p class="mono" style="margin-top:18px;font-size:12px;color:var(--fg-faint)">Billed monthly per active yard · cancel anytime · your data, exportable · or start with the <a href="/readiness-audit" style="color:var(--fg)">free readiness map</a>.</p>
     </div>
 
     <div class="setup-card">
-      <h3>Don't want to do the data entry? Setup is optional and one-time.</h3>
-      <p>Load your own yard free with the importer, or we do it for you:</p>
-      <div class="setup-opts">
-        <div class="setup-opt">
-          <span class="so-k">Remote setup</span>
-          <div class="so-p">$750 <small>first yard · +$250 each additional</small></div>
-          <p>Send your lists and spreadsheets; we load the yard and hand it back running.</p>
-        </div>
-        <div class="setup-opt">
-          <span class="so-k">Onsite setup</span>
-          <div class="so-p">$1,500 <small>first yard · +$400 each additional</small></div>
-          <p>In person, anywhere in the Permian Basin / West Texas. Outside the region: same rate plus travel at cost.</p>
-        </div>
-      </div>
-      <p class="setup-note">3+ yards, or need something custom? <a href="mailto:cadencain@synnr.io">Talk to us</a> — fleet deals are negotiated, not discounted by formula.</p>
+      <h3>Setup is free for the first 10 yards. I'll do it with you in one afternoon.</h3>
+      <p>Hand me your binder, your spreadsheets, whatever you've got — I load the yard with you, remote or in person anywhere in the Permian, and hand it back running the same day. ${FOUNDER_LINE}</p>
+      <p class="setup-note"><a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> — fleets and custom needs are a conversation, not a price sheet.</p>
     </div>
   </div>
 </section>
@@ -273,6 +259,7 @@ export const MARKETING_HTML = `
     <span class="eyebrow" style="margin-bottom:26px">Why SYNNR exists</span>
     <p>Five years on Permian wireline. I've eaten the 5am scramble, the hotshot bill, and the company man's long memory. <b>SYNNR is the tool I needed and nobody built.</b></p>
     <div class="sig">Caden Cain · founder, SYNNR · Texas</div>
+    <p class="mono" style="margin-top:18px;font-size:13px"><a href="${OWNER_PHONE_TEL}" style="color:var(--fg)">${FOUNDER_LINE} ${OWNER_PHONE}</a></p>
     <p class="mono" style="margin-top:34px;font-size:12px;color:var(--fg-ghost);max-width:52ch;line-height:1.7">No fake logos. No made-up numbers. We're onboarding our first shops now — real numbers go here the day they're real.</p>
   </div>
 </section>
@@ -299,14 +286,14 @@ export const MARKETING_HTML = `
     <div class="final-card">
       <span class="eyebrow" style="margin-bottom:24px">Get started</span>
       <h2 class="display" style="font-size:clamp(40px,6.4vw,84px)"><span class="lt">Stop getting turned around</span> at the gate.</h2>
-      <p class="lede">Load your yard, run the check, and stop the not-ready truck before it costs you a day. Import your list and go.</p>
+      <p class="lede">Open the demo and poke at a working yard — no signup, no card. When it looks like your yard, call me and we'll load yours together, free.</p>
       <div class="hero-cta">
-        <a href="/signup" class="btn btn-primary">Get started
+        <a href="/demo" class="btn btn-primary">Open the live demo
           <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="/login" class="btn btn-ghost">Log in</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call me — ${OWNER_PHONE}</a>
       </div>
-      <p class="mono" style="margin-top:20px;font-size:12px;color:var(--fg-faint)">Billed monthly · cancel anytime · or email <a href="mailto:cadencain@synnr.io" style="color:var(--fg)">cadencain@synnr.io</a></p>
+      <p class="mono" style="margin-top:20px;font-size:12px;color:var(--fg-faint)">${FOUNDER_LINE} Or email <a href="mailto:cadencain@synnr.io" style="color:var(--fg)">cadencain@synnr.io</a> · existing customers <a href="/login" style="color:var(--fg)">log in here</a></p>
     </div>
   </div>
 </section>
@@ -320,7 +307,7 @@ export const MARKETING_HTML = `
         <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
         <span class="wordmark">SYNNR</span>
       </a>
-      <span>Yard readiness for oilfield service shops · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a></span>
+      <span>Yard readiness for oilfield service shops · <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · ${FOUNDER_LINE}</span>
     </div>
   </div>
 </footer>

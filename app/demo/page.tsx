@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { ArrowRight, ShieldCheck, Smartphone, Truck } from "lucide-react";
+import { ArrowRight, Phone, ShieldCheck, Smartphone, Truck } from "lucide-react";
+import { OWNER_PHONE, OWNER_PHONE_TEL, FOUNDER_LINE } from "@/lib/contact";
+import DemoLeadForm from "./lead-form";
 
 /**
  * PUBLIC live demo landing — the link that gets posted where oilfield people
@@ -11,9 +13,9 @@ import { ArrowRight, ShieldCheck, Smartphone, Truck } from "lucide-react";
  * the only preview here is the showcase proof, generated from the SAME seed
  * the visitor is about to drive.
  *
- * Every signup CTA goes through /demo/exit (signs out a demo session first)
- * because /signup bounces signed-in users back to /app — a plain link
- * silently boomerangs.
+ * CTAs are demo-first and PHONE-first: the buyer is a West Texas ops/safety
+ * manager who will never put a card in a website — he pokes the demo, then
+ * calls. Lead capture posts to /api/demo-lead (no card, no account).
  */
 
 export const dynamic = "force-dynamic";
@@ -50,11 +52,11 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
                 <Truck className="h-5 w-5" /> Open the demo yard <ArrowRight className="h-4 w-4" />
               </button>
             </form>
-            <a href="/demo/exit" className="flex min-h-13 items-center rounded-lg border border-line-2 px-5 text-sm text-ink hover:bg-elevated">
-              Start your own instead
+            <a href={OWNER_PHONE_TEL} className="flex min-h-13 items-center gap-2 rounded-lg border border-line-2 px-5 text-sm text-ink hover:bg-elevated">
+              <Phone className="h-4 w-4" /> Talk to me — {OWNER_PHONE}
             </a>
           </div>
-          <p className="text-xs text-ink-faint">No signup. No card. Fake data, real product.</p>
+          <p className="text-xs text-ink-faint">No signup. No card. Fake data, real product. {FOUNDER_LINE}</p>
           {busy ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
               The demo yard&apos;s getting a lot of traffic right now — give it a few minutes and tap again.
@@ -94,18 +96,20 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-8 text-center">
-          <h2 className="text-xl font-semibold">Your yard could look like this by Friday.</h2>
+        {/* Lead capture — get this with YOUR yard's data */}
+        <div id="your-yard" className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-8 text-center">
+          <h2 className="text-xl font-semibold">Want this loaded with your trucks?</h2>
           <p className="max-w-md text-sm text-ink-dim">
-            Bring your binder — import it or photograph it in. $500 a yard, monthly, no contract.
-            First miss it catches pays for the year.
+            I&apos;ll set it up free — bring your binder, your spreadsheets, whatever you&apos;ve got,
+            and we load your yard together in one afternoon. $500 a yard monthly after that,
+            never per-seat, no contract. First miss it catches pays for the year.
           </p>
-          <div className="mt-2 flex flex-wrap justify-center gap-2">
-            <a href="/demo/exit" className="flex min-h-12 items-center gap-1.5 rounded-lg bg-bone px-5 font-semibold text-coal hover:bg-bone-soft">
-              Start your yard <ArrowRight className="h-4 w-4" />
+          <DemoLeadForm />
+          <div className="mt-1 flex flex-wrap justify-center gap-2">
+            <a href={OWNER_PHONE_TEL} className="flex min-h-11 items-center gap-2 rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
+              <Phone className="h-4 w-4" /> Or just call: {OWNER_PHONE}
             </a>
-            <a href="/" className="flex min-h-12 items-center rounded-lg border border-line-2 px-5 text-sm text-ink hover:bg-elevated">
+            <a href="/" className="flex min-h-11 items-center rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
               Back to the site
             </a>
           </div>
