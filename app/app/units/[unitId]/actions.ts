@@ -53,11 +53,19 @@ export async function renewComplianceItem(args: {
 
   const expiration = normalizeDateField(args.expiration_date, "New expiration date");
   if (!expiration) throw new Error("New expiration date: set the date off the new cert.");
+  // Fingerprints: read the OLD date first so the feed can show old → new.
+  // A renewal with no proof photo wears the flag until proof lands — the
+  // answer to "what stops somebody just typing a new date before a job?"
+  const { data: beforeRow } = await db.from("saas_compliance_items")
+    .select("title, expiration_date").eq("id", args.itemId).eq("company_id", company.id).maybeSingle();
+  const before = beforeRow as { title: string; expiration_date: string | null } | null;
+  const hasProof = Boolean(args.storage_path && ownsStoragePath(args.storage_path, company.id));
   const { error: upErr } = await db
     .from("saas_compliance_items")
     .update({
       expiration_date: expiration,
       issued_date: normalizeDateField(args.issued_date, "Issued") ?? new Date().toISOString().slice(0, 10),
+      renewed_without_proof: !hasProof,
     })
     .eq("id", args.itemId)
     .eq("company_id", company.id);
@@ -79,13 +87,12 @@ export async function renewComplianceItem(args: {
   // alert log is cron-owned and has no member delete policy.
   await clearAlertLog(company.id, args.itemId);
 
-  const { data: itemRow } = await db.from("saas_compliance_items").select("title").eq("id", args.itemId).maybeSingle();
   const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
   void logEvent({
     companyId: company.id,
     kind: "renewed",
     actor,
-    message: `${(itemRow as { title: string } | null)?.title ?? "Item"} renewed — good to ${args.expiration_date}${actor ? `, by ${actor}` : ""}`,
+    message: `${before?.title ?? "Item"} renewed: ${before?.expiration_date ?? "no date"} → ${expiration}${actor ? `, by ${actor}` : ""}${hasProof ? " — proof photo attached" : " — NO PROOF ATTACHED"}`,
   });
 
   if (args.redirectPath) revalidatePath(args.redirectPath);

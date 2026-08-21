@@ -145,6 +145,61 @@ describe("the dates the naive spec would block are LEGAL — pinned on purpose",
   });
 });
 
+describe("fingerprints — a changed date is never silent (the Collide pencil-whip finding)", () => {
+  it("renew WITHOUT proof: flag set, feed shows old → new and NO PROOF ATTACHED", async () => {
+    const { renewComplianceItem } = await actions();
+    const { logEvent } = await import("../notify");
+    vi.mocked(logEvent).mockClear();
+    const fake = fakeSupabase({
+      saas_units: [{ id: "u1", name: "Rig 4", company_id: CO }],
+      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
+      saas_alerts_sent: [],
+      saas_attachments: [],
+    });
+    dbHolder.current = fake.client;
+    await renewComplianceItem({ itemId: "item-1", expiration_date: "2027-03-01" });
+    const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
+    expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(true);
+    const msg = String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message);
+    expect(msg).toContain("2026-03-01 → 2027-03-01");
+    expect(msg).toContain("NO PROOF ATTACHED");
+  });
+
+  it("renew WITH proof photo: flag cleared, feed says proof attached", async () => {
+    const { renewComplianceItem } = await actions();
+    const { logEvent } = await import("../notify");
+    vi.mocked(logEvent).mockClear();
+    const fake = fakeSupabase({
+      saas_units: [{ id: "u1", name: "Rig 4", company_id: CO }],
+      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
+      saas_alerts_sent: [],
+      saas_attachments: [],
+    });
+    dbHolder.current = fake.client;
+    await renewComplianceItem({ itemId: "item-1", expiration_date: "2027-03-01", storage_path: `${CO}/compliance_item/item-1/x.jpg` });
+    const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
+    expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(false);
+    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("proof photo attached");
+  });
+
+  it("edit-form date change: flagged proofless + old → new logged", async () => {
+    const { updateComplianceItem } = await actions();
+    const { logEvent } = await import("../notify");
+    vi.mocked(logEvent).mockClear();
+    const fake = fakeSupabase({
+      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
+      saas_alerts_sent: [],
+      saas_item_customers: [],
+      saas_customers: [],
+    });
+    dbHolder.current = fake.client;
+    await updateComplianceItem(updateFd("2027-06-01"));
+    const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
+    expect((upd?.payload as { renewed_without_proof?: boolean }).renewed_without_proof).toBe(true);
+    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("2026-03-01 → 2027-06-01");
+  });
+});
+
 describe("unit mutations are single atomic statements — sequencing is Postgres's job", () => {
   it("updateUnit issues exactly ONE tenant-scoped UPDATE (no torn multi-write)", async () => {
     const { updateUnit } = await actions();

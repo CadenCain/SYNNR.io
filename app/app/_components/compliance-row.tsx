@@ -18,6 +18,7 @@ const inputCls = "h-10 rounded-lg border border-line-2 bg-coal px-3 text-sm text
 export interface RowItem {
   id: string; title: string; kind: string;
   issued_date: string | null; expiration_date: string | null; status: ComplianceStatus;
+  renewed_without_proof?: boolean;
   /** customer/operator names this requirement applies to; empty = all jobs */
   customers?: string[];
 }
@@ -28,9 +29,15 @@ export default function ComplianceRow({ item, companyId, redirectPath, canDelete
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{item.title}</span>
             <StatusBadge status={item.status} />
+            {item.renewed_without_proof && (
+              <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-400"
+                title="The date was changed without attaching the new cert — renew with a photo to clear this.">
+                renewed — no proof
+              </span>
+            )}
           </div>
           <div className="mt-0.5 text-sm text-ink-dim">
             {kindLabel(item.kind)}{item.expiration_date ? ` · expires ${fmtDate(item.expiration_date)}` : " · no expiration set"}

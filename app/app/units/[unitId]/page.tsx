@@ -50,7 +50,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status")
+    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
     .eq("parent_type", "unit").eq("parent_id", unitId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const items = (ciData ?? []) as RowItem[];

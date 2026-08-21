@@ -39,7 +39,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
 
   const { data: certData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status")
+    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
     .eq("parent_type", "crew").eq("parent_id", crewId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const certs = (certData ?? []) as RowItem[];

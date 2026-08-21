@@ -57,7 +57,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status")
+    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
     .eq("parent_type", "asset").eq("parent_id", assetId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const items = (ciData ?? []) as RowItem[];

@@ -377,9 +377,27 @@ export async function updateComplianceItem(fd: FormData) {
   const redirectPath = str(fd, "redirect_path");
   if (!id || !title) return;
   const db = await saasDb();
+  // Fingerprints: this form has no camera, so a CHANGED expiration typed
+  // here is by definition proof-less — flag it and log old → new to the
+  // append-only feed. (First real field feedback: "I was able to just
+  // change the date… without having to show proof." Now it shows.)
+  const { data: beforeRow } = await db.from("saas_compliance_items")
+    .select("expiration_date").eq("id", id).eq("company_id", company.id).maybeSingle();
+  const oldExp = (beforeRow as { expiration_date: string | null } | null)?.expiration_date ?? null;
+  const dateChanged = oldExp !== expiration_date;
   const { error } = await db.from("saas_compliance_items")
-    .update({ title, kind, issued_date, expiration_date }).eq("id", id).eq("company_id", company.id);
+    .update({ title, kind, issued_date, expiration_date, ...(dateChanged ? { renewed_without_proof: true } : {}) })
+    .eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+  if (dateChanged) {
+    const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
+    void logEvent({
+      companyId: company.id,
+      kind: "renewed",
+      actor,
+      message: `${title} date edited: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""} — NO PROOF ATTACHED`,
+    });
+  }
 
   // A new date means a new cycle — clear the alert log or the sweep's
   // per-item dedupe mutes this item forever (the camera-renew path has always
@@ -406,11 +424,13 @@ export async function updateComplianceItem(fd: FormData) {
       }
     }
   }
-  {
-    const { data: t } = await db.from("saas_compliance_items").select("title").eq("id", id).eq("company_id", company.id).maybeSingle();
+  // One feed line per action: the date-change fingerprint above (old → new,
+  // NO PROOF ATTACHED) already covers edits that moved the date; the generic
+  // "edited" line only fires for cosmetic edits (title/kind/customers).
+  if (!dateChanged) {
     const actor = actorName(user);
     void logEvent({ companyId: company.id, kind: "edited", actor,
-      message: `${(t as { title: string } | null)?.title ?? "Item"} edited${actor ? ` by ${actor}` : ""}` });
+      message: `${title} edited${actor ? ` by ${actor}` : ""}` });
   }
   if (redirectPath) revalidatePath(redirectPath);
 }
