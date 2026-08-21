@@ -231,21 +231,26 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         {items.length > 0 && (
           <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
             <table className="w-full border-collapse text-sm">
+              {/* On a phone the VERDICT column must be on screen, not behind
+                  a sideways swipe nobody makes — Kind hides below sm and the
+                  text columns wrap so Status always fits. */}
               <thead>
                 <tr>
-                  {["Item", "On", "Kind", "Expires", "Status"].map((h) => (
-                    <th key={h} className="whitespace-nowrap border-b border-line px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint">{h}</th>
-                  ))}
+                  <th className="border-b border-line px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-4">Item</th>
+                  <th className="border-b border-line px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-4">On</th>
+                  <th className="hidden border-b border-line px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:table-cell">Kind</th>
+                  <th className="border-b border-line px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-4">Expires</th>
+                  <th className="border-b border-line px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-4">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((i) => (
                   <tr key={i.id} className="last:[&>td]:border-0">
-                    <td className="border-b border-line/60 px-4 py-3 font-medium">{i.title}</td>
-                    <td className="border-b border-line/60 px-4 py-3 text-ink-dim">{onLabel(i)}</td>
-                    <td className="border-b border-line/60 px-4 py-3 capitalize text-ink-dim">{i.kind.replace(/_/g, " ")}</td>
-                    <td className="border-b border-line/60 px-4 py-3 tabular-nums text-ink-dim">{i.expiration_date ?? "—"}</td>
-                    <td className="border-b border-line/60 px-4 py-3">
+                    <td className="border-b border-line/60 px-3 py-3 font-medium sm:px-4">{i.title}</td>
+                    <td className="border-b border-line/60 px-3 py-3 text-ink-dim sm:px-4">{onLabel(i)}</td>
+                    <td className="hidden border-b border-line/60 px-4 py-3 capitalize text-ink-dim sm:table-cell">{i.kind.replace(/_/g, " ")}</td>
+                    <td className="border-b border-line/60 px-3 py-3 tabular-nums text-ink-dim sm:px-4">{i.expiration_date ?? "—"}</td>
+                    <td className="border-b border-line/60 px-3 py-3 sm:px-4">
                       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${CHIP[i.status]}`}>{LABEL[i.status]}</span>
                     </td>
                   </tr>
