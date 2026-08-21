@@ -530,7 +530,12 @@
 @keyframes showChipIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
 .mkt .show-caption { margin: 26px 0 0; max-width: 58ch; font-size: 14.5px; color: var(--fg-dim); }
-.mkt .show-cta { display: flex; margin-top: 26px; }
+/* Same wrap-and-stretch behavior as .hero-cta — two mono nowrap buttons
+   side by side overflowed a phone the moment the demo link joined the row. */
+.mkt .show-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+@media (max-width: 640px) {
+  .mkt .show-cta .btn { flex: 1 1 auto; }
+}
 
 @media (max-width: 900px) {
   .mkt .show-chip { position: static; max-width: none; margin-top: 10px; }
