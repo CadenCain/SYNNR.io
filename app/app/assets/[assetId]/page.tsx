@@ -207,7 +207,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
             <input type="hidden" name="parent_id" value={a.id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. BOP test" className={`${fld} flex-1`} />
+              <input name="title" required placeholder="e.g. BOP test" className={`${fld} min-w-0 flex-1`} />
               <select name="kind" defaultValue="test" className={`${fld} sm:w-44`}>
                 {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
               </select>

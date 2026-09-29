@@ -239,7 +239,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="parent_id" value={u.id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. Annual DOT inspection" className={`${fld} flex-1`} />
+              <input name="title" required placeholder="e.g. Annual DOT inspection" className={`${fld} min-w-0 flex-1`} />
               <select name="kind" defaultValue="inspection" className={`${fld} sm:w-44`}>
                 {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
               </select>
@@ -329,7 +329,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <AddDisclosure label={assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"} defaultOpen={assignedCrew.length === 0}>
             <form action={assignCrewToUnit} className="flex flex-col gap-3 sm:flex-row">
               <input type="hidden" name="unit_id" value={u.id} />
-              <select name="crew_member_id" required defaultValue="" className={`${fld} flex-1`}>
+              <select name="crew_member_id" required defaultValue="" className={`${fld} min-w-0 flex-1`}>
                 <option value="" disabled>Pick a hand…</option>
                 {unassignedCrew.map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` (${c.role})` : ""}</option>)}
               </select>
@@ -390,7 +390,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} flex-1`} />
+              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} min-w-0 flex-1`} />
               <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
                 {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>

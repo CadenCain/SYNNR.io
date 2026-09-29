@@ -107,9 +107,9 @@ export default async function CrewPage() {
       <Card className="p-5">
         <h2 className="mb-3 text-sm font-medium text-ink">{crew.length ? "Add another hand" : "Add your first hand"}</h2>
         <form action={createCrewMember} className="flex flex-col gap-3 lg:flex-row">
-          <input name="name" required placeholder="Name" className={`${fld} flex-1`} />
-          <input name="role" placeholder="Role (operator, driver…)" className={`${fld} flex-1`} />
-          <input name="phone" type="tel" placeholder="Phone (optional)" className={`${fld} flex-1`} />
+          <input name="name" required placeholder="Name" className={`${fld} min-w-0 flex-1`} />
+          <input name="role" placeholder="Role (operator, driver…)" className={`${fld} min-w-0 flex-1`} />
+          <input name="phone" type="tel" placeholder="Phone (optional)" className={`${fld} min-w-0 flex-1`} />
           <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
         </form>
       </Card>

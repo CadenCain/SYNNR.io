@@ -113,7 +113,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
         </h3>
         <form action={addLoadoutItem} className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <input type="hidden" name="unit_id" value={unitId} />
-          <input name="label" required placeholder="e.g. Cement head" className={`${fld} flex-1`} />
+          <input name="label" required placeholder="e.g. Cement head" className={`${fld} min-w-0 flex-1`} />
           <input name="category" placeholder="Category (optional)" className={`${fld} lg:w-44`} />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="required" defaultChecked className="h-4 w-4 accent-[#e7ddc7]" /> Required</label>
           <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>

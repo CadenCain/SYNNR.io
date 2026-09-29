@@ -134,9 +134,9 @@ export default async function NotificationsSettings() {
           <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add the first person to alert, like the foreman who rolls the trucks"}</h3>
           <form action={addRecipient} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row">
-              <input name="name" required placeholder="Name" className={`${fld} flex-1`} />
-              <input name="email" type="email" placeholder="Email (optional)" className={`${fld} flex-1`} />
-              <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} flex-1`} />
+              <input name="name" required placeholder="Name" className={`${fld} min-w-0 flex-1`} />
+              <input name="email" type="email" placeholder="Email (optional)" className={`${fld} min-w-0 flex-1`} />
+              <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} min-w-0 flex-1`} />
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_email" defaultChecked className="h-4 w-4 accent-[#e7ddc7]" /> Email</label>
