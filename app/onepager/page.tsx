@@ -46,7 +46,7 @@ export default function OnePager() {
         .op-qr { text-align:center; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#333; }
         .op-qr img { width:1.15in; height:1.15in; display:block; margin:0 auto 6px; }
         .op-free { background:#111; color:#fff; padding:12px 16px; font-size:15px; font-weight:700; }
-        @media (max-width: 700px) { .op-cols { grid-template-columns:1fr; } .op-sheet { padding:24px 18px; min-height:0; } }
+        @media (max-width: 700px) { .op-cols { grid-template-columns:1fr; } .op-sheet { padding:24px 18px; min-height:0; } .op-math { flex-direction:column; } .op-math > div + div { border-left:0; border-top:1.5px solid #111; } .op-foot { flex-direction:column; align-items:flex-start; } .op-head { flex-direction:column; gap:8px; } .op-contact { text-align:left; } }
         @media print {
           .op-root { background:#fff; padding:0; }
           .op-toolbar { display:none; }
