@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
   // Only the upload route reads photos, so only it carries the reader, its
   // wasm, and the English model (lib/saas/ocr-data).
   outputFileTracingIncludes: {
+    // New demo yards open with a hand's cert photo waiting on the manager.
+    "/demo/start": ["./lib/saas/demo-assets/**"],
     "/api/saas/certs/upload": [
       "./lib/saas/ocr-data/**",
       "./node_modules/tesseract.js/**",

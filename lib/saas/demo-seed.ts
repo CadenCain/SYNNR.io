@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_CREW, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_SNAPSHOTS, DEMO_ALERTS_SENT,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_SNAPSHOTS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD,
 } from "./demo-data";
+import { verifyUpload } from "./cert-verify";
 import { localToday, addDaysIso } from "./status";
 
 /**
@@ -67,7 +68,7 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
   const { data: assetRows, error: aErr } = await admin.from("saas_assets")
     .insert(assetSpecs.map(({ unitKey, a }) => ({
       company_id: companyId, yard_id: yardId, unit_id: unitId(unitKey),
-      name: a.name, category: a.category, status: a.status ?? "in_service",
+      name: a.name, category: a.category, identifier: a.identifier ?? null, status: a.status ?? "in_service",
     })))
     .select("id, name, unit_id");
   if (aErr) throw new Error(`assets: ${aErr.message}`);
@@ -121,6 +122,51 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
       created_at: tsAgo(m.daysAgo, m.hour, 0),
     })),
   ]);
+
+  // The upload waiting on the manager (see DEMO_WAITING_UPLOAD). Best effort:
+  // a demo yard without it still works, it just shows one less rule.
+  try {
+    const w = DEMO_WAITING_UPLOAD;
+    const assetId = assetIdByKey.get(`${unitId(w.unitKey)}|${w.assetName}`);
+    const itemRowId = assetId ? itemId("asset", assetId, w.itemTitle) : null;
+    if (assetId && itemRowId) {
+      const { readFile } = await import("node:fs/promises");
+      const path = await import("node:path");
+      const { createHash } = await import("node:crypto");
+      const bytes = await readFile(path.join(process.cwd(), w.image));
+      const storagePath = `${companyId}/cert/${itemRowId}/demo-bop-cert.jpg`;
+      const { error: upErr } = await admin.storage.from("proofs").upload(storagePath, bytes, { contentType: "image/jpeg", upsert: true });
+      if (!upErr) {
+        const bopItem = DEMO_UNITS.find((u) => u.key === w.unitKey)!.assets!.find((a) => a.name === w.assetName)!;
+        const prev = iso(bopItem.items![0].exp as number);
+        const typed = iso(w.typedExpirationDays);
+        const v = verifyUpload({
+          evidence: "cert", claimedExpiration: typed, claimedIssued: null, today: localToday(),
+          readText: w.paperText, itemTitle: w.itemTitle, holderName: null, identifier: bopItem.identifier ?? null,
+          prevExpiration: prev, itemWasFailing: true, sameHashOn: [],
+        });
+        const { data: up } = await admin.from("saas_cert_uploads").insert({
+          company_id: companyId, item_id: itemRowId, uploaded_by: null, uploaded_by_name: w.by, uploaded_by_role: "member",
+          created_at: tsAgo(0, w.hour, w.minute), storage_path: storagePath, content_type: "image/jpeg",
+          sha256: createHash("sha256").update(bytes).digest("hex"), evidence: "cert",
+          claimed_expiration: typed, claimed_issued: v.issued, prev_expiration: prev,
+          read_ok: true, read_dates: v.readDates, read_excerpt: w.paperText.replace(/\s+/g, " ").slice(0, 600),
+          checks: v.checks, flags: v.flags, verdict: v.verdict, status: "waiting",
+        }).select("id").single();
+        if (up) {
+          await admin.from("saas_compliance_items").update({ waiting_upload_id: (up as { id: string }).id }).eq("id", itemRowId);
+          const why = v.checks.find((c) => !c.ok)?.detail.replace(/\.+$/, "") ?? "The software couldn't check it";
+          await admin.from("saas_events").insert({
+            company_id: companyId, kind: "upload_waiting", actor: w.by, unit_id: unitId(w.unitKey),
+            message: `${w.itemTitle} (${w.assetName}): ${w.by} uploaded a new cert. Waiting on a manager. ${why}.`,
+            created_at: tsAgo(0, w.hour, w.minute),
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[demo-seed] waiting upload skipped:", e instanceof Error ? e.message : e);
+  }
 
   // Immutable check records → dispatch history + the month tape
   await admin.from("saas_dispatch_checks").insert(DEMO_CHECKS.map((c) => ({

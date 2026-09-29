@@ -45,3 +45,24 @@ describe("reading cert photos on the server", () => {
     expect(await expiryOn(buf)).toContain("2027-08-14");
   }, 30_000);
 });
+
+describe("the demo yard's waiting upload tells the truth", () => {
+  it("the reader finds the serial and the real dates on the demo cert, and the typed date isn't there", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const { DEMO_WAITING_UPLOAD } = await import("../demo-data");
+    const { verifyUpload } = await import("../cert-verify");
+    const buf = await readFile(path.join(process.cwd(), DEMO_WAITING_UPLOAD.image));
+    const text = (await readPhotoText(buf)) ?? "";
+    expect(findDates(text).map((d) => d.iso)).toEqual(expect.arrayContaining(["2026-09-15", "2027-03-15"]));
+    const v = verifyUpload({
+      evidence: "cert", claimedExpiration: "2027-09-28", claimedIssued: null, today: "2026-09-28",
+      readText: text, itemTitle: DEMO_WAITING_UPLOAD.itemTitle, holderName: null, identifier: "QB-4471",
+      prevExpiration: "2026-09-22", itemWasFailing: true, sameHashOn: [],
+    });
+    expect(v.verdict).toBe("needs_review");
+    expect(v.checks.find((c) => c.key === "serial")?.ok).toBe(true);
+    expect(v.checks.find((c) => c.key === "date")?.ok).toBe(false);
+    expect(v.flags.join(" ")).toContain("exactly 1 year");
+  }, 30_000);
+});

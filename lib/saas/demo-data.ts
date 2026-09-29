@@ -19,7 +19,7 @@ export const DEMO_COMPANY_NAME = "Caprock Coil & Pressure Control";
 export const DEMO_YARD_NAME = "Odessa Yard";
 
 export interface DemoItem { title: string; kind: string; exp: number | null; issued?: number }
-export interface DemoAsset { name: string; category: string; status?: string; items?: DemoItem[] }
+export interface DemoAsset { name: string; category: string; identifier?: string; status?: string; items?: DemoItem[] }
 export interface DemoUnit {
   key: string; name: string; type: string; identifier?: string;
   expect: "ready" | "not_ready" | "due_soon";
@@ -92,7 +92,7 @@ export const DEMO_CREW: DemoCrew[] = [
 ];
 
 const bop = (n: number, exp: number): DemoAsset => ({
-  name: `Quad BOP stack #${n}`, category: "pressure_control",
+  name: `Quad BOP stack #${n}`, category: "pressure_control", identifier: `QB-${4468 + n}`,
   items: [{ title: "BOP pressure test", kind: "test", exp, issued: exp - 365 }],
 });
 const injector = (n: number, exp: number): DemoAsset => ({
@@ -197,6 +197,33 @@ export const DEMO_UNITS: DemoUnit[] = [
 ];
 
 /** Activity feed — ten days of a working yard, hours a yard actually keeps. */
+/**
+ * One upload waiting on the manager, so the demo shows the rule that matters
+ * most: a hand can't clear a cert with a date that isn't on the paper. Logan
+ * sent the real BOP cert for CT-03 (lib/saas/demo-assets/bop-cert-ct03.jpg)
+ * but typed a date a year out; the paper says something else, so CT-03
+ * stays red and the upload sits on the Review page.
+ */
+export const DEMO_WAITING_UPLOAD = {
+  unitKey: "ct3",
+  assetName: "Quad BOP stack #3",
+  itemTitle: "BOP pressure test",
+  by: "Logan McAfee",
+  typedExpirationDays: 365,
+  image: "lib/saas/demo-assets/bop-cert-ct03.jpg",
+  /** What the server reads off that image (checked in demo-data.test.ts against the reader). */
+  paperText: `PERMIAN PRESSURE TESTING LLC
+Odessa, TX · (432) 555-0142
+CERTIFICATE OF PRESSURE TEST
+Equipment: Quad BOP stack #3
+Serial No: QB-4471
+Test pressure: 10,000 psi Held: 15 min Result: PASS
+Date tested: 09/15/2026
+Expires: 03/15/2027
+Tested by: R. Salinas Cert #88213`,
+  hour: 5, minute: 40,
+};
+
 export const DEMO_EVENTS: DemoEvent[] = [
   { kind: "check_not_ready", message: "CT-03 checked NOT READY: BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", daysAgo: 0, hour: 5, minute: 5 },
   { kind: "alert_sent", message: "Warning emailed: HS-01 Hotshot registration expires in 6 days", actor: null, daysAgo: 0, hour: 6, minute: 32 },

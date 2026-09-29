@@ -67,6 +67,7 @@ export const MARKETING_HTML = `
   <div class="container">
     <h2 class="h2">Every expiration date in your yard, on one list</h2>
     <p class="lede">BOP and pressure tests, annual DOT, registrations, H2S, well control, CDLs, and medical cards all go on one register. Before anything lapses, an email goes to the people you pick for that yard, like the foreman who rolls the trucks. If something does lapse, that truck reads <b>NOT READY</b> until the record is fixed. There is no override button.</p>
+    <p class="lede">Nobody fixes a record by typing a new date. A hand takes a photo of the new cert, and SYNNR reads it: the date has to be on the paper, the hand's name on their card, the serial on the gear's cert. If it all matches, the truck goes green. If it doesn't, it stays red until a manager looks at the photo.</p>
 
     <h3 class="also-head">Also included at the same price</h3>
     <div class="also">
