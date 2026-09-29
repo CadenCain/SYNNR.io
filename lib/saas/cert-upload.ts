@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readPhotoText } from "./cert-read";
-import { verifyUpload, type Check, type Evidence } from "./cert-verify";
+import { verifyUpload, precheck, type Check, type Evidence } from "./cert-verify";
 import { usDate } from "./cert-dates";
 import { localToday, addDaysIso } from "./status";
 import { clearAlertLog } from "./alert-log";
@@ -84,6 +84,8 @@ export async function processUpload(args: {
   const { admin, company, actor } = args;
   const refuse = (message: string, canForce = false): UploadResult => ({ ok: false, outcome: "rejected", message, canForce });
 
+  const pre = precheck(args.evidence, args.claimedExpiration, localToday());
+  if (pre) return refuse(pre);
   const item = await loadItemCtx(admin, company.id, args.itemId);
   if (!item) return refuse("That item isn't in your yard anymore. Refresh the page.");
 
@@ -186,7 +188,7 @@ export async function processUpload(args: {
   await admin.from("saas_compliance_items").update({ waiting_upload_id: uploadId })
     .eq("id", item.id).eq("company_id", company.id);
 
-  const missed = v.checks.filter((c) => !c.ok).map((c) => c.detail);
+  const missed = v.checks.filter((c) => !c.ok).map((c) => c.detail.replace(/\.+$/, ""));
   const why = args.evidence === "temporary" ? "Retest paper, cert on the way"
     : v.verdict === "verified" ? "Your yard has every hand upload wait for a manager"
     : missed[0] ?? "The software couldn't check it";

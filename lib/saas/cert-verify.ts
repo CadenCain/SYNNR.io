@@ -76,12 +76,13 @@ function nearlyEqual(a: string, b: string): boolean {
 
 /** Is this name on the card? The last name has to be there; one letter of OCR slop is forgiven on longer names. */
 export function nameOnPaper(name: string, text: string): { ok: boolean; looked: string } {
-  const parts = words(name).filter((w) => w.length >= 2 && !["jr", "sr", "ii", "iii"].includes(w));
-  const last = parts[parts.length - 1] ?? "";
+  const original = name.split(/[^A-Za-z0-9'-]+/).filter((w) => w.length >= 2 && !["jr", "sr", "ii", "iii"].includes(w.toLowerCase()));
+  const shown = original[original.length - 1] ?? "";
+  const last = shown.toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!last) return { ok: true, looked: "" };
   const onPage = words(text);
   const ok = onPage.some((w) => (last.length >= 5 ? nearlyEqual(w, last) : w === last));
-  return { ok, looked: last };
+  return { ok, looked: shown };
 }
 
 /** Is this serial / unit number on the paper? Compared with spaces and dashes stripped. */
@@ -93,6 +94,15 @@ export function identifierOnPaper(identifier: string, text: string): boolean {
 
 const ROUND_DAYS = [90, 180, 182, 183, 184, 365, 366, 730, 731, 1095, 1096];
 
+/** The checks that need no photo: run them first so a bad date is refused in a blink, not after a read. */
+export function precheck(evidence: Evidence, claimedExpiration: string | null, today: string): string | null {
+  if (evidence !== "cert") return null;
+  if (!claimedExpiration) return "Enter the expiration date printed on the new cert.";
+  if (claimedExpiration <= today) return "That date isn't in the future. Upload the new cert, not the old one.";
+  if (claimedExpiration > addDaysIso(today, 365 * 10)) return "That date is more than 10 years out. Check it against the paper.";
+  return null;
+}
+
 export function verifyUpload(v: VerifyInput): Verification {
   const checks: Check[] = [];
   const flags: string[] = [];
@@ -101,12 +111,8 @@ export function verifyUpload(v: VerifyInput): Verification {
   const empty = (reject: string | null, canForce = false): Verification =>
     ({ reject, canForce, verdict: "needs_review", checks, flags, readDates, issued: null });
 
-  if (v.evidence === "cert") {
-    const exp = v.claimedExpiration;
-    if (!exp) return empty("Enter the expiration date printed on the new cert.");
-    if (exp <= v.today) return empty("That date isn't in the future. Upload the new cert, not the old one.");
-    if (exp > addDaysIso(v.today, 365 * 10)) return empty("That date is more than 10 years out. Check it against the paper.");
-  }
+  const pre = precheck(v.evidence, v.claimedExpiration, v.today);
+  if (pre) return empty(pre);
 
   // Could the server read it at all? A cert that can't be read gets retaken.
   // A tag or an invoice for "cert on the way" is often handwritten, so an
