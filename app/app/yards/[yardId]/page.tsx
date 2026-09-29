@@ -118,14 +118,16 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
         <div className="flex flex-col gap-2">
           {units.map((u) => (
             <Link key={u.id} href={`/app/units/${u.id}`}>
-              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-5 w-5 text-ink-dim" /></span>
+              <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2 sm:gap-4">
+                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-coal sm:flex"><Truck className="h-5 w-5 text-ink-dim" /></span>
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium">{u.name}</div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="break-words font-medium">{u.name}</span>
+                    {(() => { const st = stateByUnit.get(u.id); const c = st ? UNIT_CHIP[st] : null;
+                      return c ? <span className={`whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold ${c.cls}`}>{c.label}</span> : null; })()}
+                  </div>
                   <div className="text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
                 </div>
-                {(() => { const st = stateByUnit.get(u.id); const c = st ? UNIT_CHIP[st] : null;
-                  return c ? <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${c.cls}`}>{c.label}</span> : null; })()}
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>
