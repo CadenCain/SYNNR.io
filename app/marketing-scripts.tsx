@@ -47,6 +47,12 @@ export default function MarketingScripts() {
     on(window, "scroll", onScrollNav, { passive: true });
     onScrollNav();
 
+    /* phone menu: close it once a link is tapped (it's a checkbox toggle, so
+       an in-page jump otherwise leaves it open on top of the section) */
+    const menuToggle = document.getElementById("navMenu") as HTMLInputElement | null;
+    root.querySelectorAll<HTMLAnchorElement>(".nav-mobile a").forEach((a) =>
+      on(a, "click", () => { if (menuToggle) menuToggle.checked = false; }));
+
     /* reveals */
     const forceShow = (el: HTMLElement) => {
       el.style.transition = "none";

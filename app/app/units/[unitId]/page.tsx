@@ -131,6 +131,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   // the blocking check use — the banner can never disagree with the wall.
   const rd = await getCompanyReadiness(db, company.id);
   const tile = rd.units.find((t) => t.id === unitId) ?? null;
+  // An upload for one of this truck's certs may already be sitting with a
+  // manager; say so on the red banner so nobody chases the same paper twice.
+  const scopeIds = [u.id, ...assets.map((a) => a.id), ...assignedIds];
+  const { data: waitData } = await db.from("saas_compliance_items").select("title")
+    .eq("company_id", company.id).in("parent_id", scopeIds).not("waiting_upload_id", "is", null);
+  const waitingTitles = [...new Set(((waitData ?? []) as { title: string }[]).map((r) => r.title))];
   const failingCerts = items.filter((i) => (i.status === "expired" || i.status === "none") && !pendingCovers(i, localToday()));
   // "Upload the new cert" goes where the bad paper lives: this truck's book,
   // the piece of gear, or the hand. The cert that turned CT-03 red is often
@@ -160,7 +166,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         description={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`}
         actions={
           <>
-          <ShareProof scope="unit" unitId={u.id} />
+          <ShareProof scope="unit" unitId={u.id} warn={tile?.state === "not_ready" ? `${u.name} is NOT READY right now, and the link will say so.` : undefined} />
           <Link href={`/app/units/${unitId}/dispatch`}
             className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">
             <Truck className="h-4 w-4" /> Check readiness
@@ -221,6 +227,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <h2 className="mt-1.5 text-2xl font-bold leading-tight sm:text-xl">
               {u.name} NOT READY: <span className="sm:text-red-300">{tile.why}</span>
             </h2>
+            {waitingTitles.length > 0 && (
+              <p className="mt-2 text-sm font-medium text-red-50 sm:text-amber-400">
+                A new {waitingTitles[0]} cert{waitingTitles.length > 1 ? ` and ${waitingTitles.length - 1} more` : ""} {isManager ? "is waiting on you." : "is waiting on a manager."}
+                {isManager ? <> <Link href="/app/review" className="underline underline-offset-2">Review it</Link></> : null}
+              </p>
+            )}
             {failingCerts.length > 0 && (
               <ul className="mt-3 flex flex-col gap-1.5">
                 {failingCerts.slice(0, 4).map((i) => (

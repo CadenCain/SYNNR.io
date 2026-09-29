@@ -39,6 +39,12 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   if (!asset) notFound();
   const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null };
 
+  // The truck it rides on, for the back link.
+  const { data: unitRow } = a.unit_id
+    ? await db.from("saas_units").select("name").eq("id", a.unit_id).eq("company_id", company.id).maybeSingle()
+    : { data: null };
+  const unitName = (unitRow as { name: string } | null)?.name ?? null;
+
   let photoUrl: string | null = null;
   if (a.primary_photo_path) {
     const { data: signed } = await db.storage.from("proofs").createSignedUrl(a.primary_photo_path, 3600);
@@ -72,7 +78,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   return (
     <div className="flex flex-col gap-7">
       <PageHeader
-        back={a.unit_id ? { href: `/app/units/${a.unit_id}`, label: "Unit" } : { href: "/app/yards", label: "Yards" }}
+        back={a.unit_id ? { href: `/app/units/${a.unit_id}`, label: unitName ?? "Truck" } : { href: "/app/yards", label: "Yards" }}
         title={a.name}
         description={`${categoryLabel(a.category)}${a.identifier ? ` · ${a.identifier}` : ""} · ${statusLabel}`}
         actions={
@@ -133,6 +139,19 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           </Popover>
         }
       />
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-ink-dim">Certs, tests &amp; inspections</h2>
+        {items.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {items.map((it) => <ComplianceRow key={it.id} item={it} redirectPath={here} isManager={isManager} allowOnTheWay={rules.allowCertOnTheWay} paperUrl={paper.get(it.id)} />)}
+          </div>
+        )}
+        <AddDisclosure label={items.length ? "Add another" : "Add a test, cert, or inspection"} defaultOpen={items.length === 0}>
+          <AddCert parentType="asset" parentId={a.id} redirectPath={here} isManager={isManager} defaultKind="test"
+            placeholder="e.g. BOP test" heading="" bare />
+        </AddDisclosure>
+      </section>
 
       {/* Last seen — a note, not a tracker. Never affects readiness. */}
       <Card className="flex flex-col gap-3 p-5">
@@ -208,18 +227,6 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         </div>
       </Card>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-ink-dim">Certs, tests &amp; inspections</h2>
-        {items.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {items.map((it) => <ComplianceRow key={it.id} item={it} redirectPath={here} isManager={isManager} allowOnTheWay={rules.allowCertOnTheWay} paperUrl={paper.get(it.id)} />)}
-          </div>
-        )}
-        <AddDisclosure label={items.length ? "Add another" : "Add a test, cert, or inspection"} defaultOpen={items.length === 0}>
-          <AddCert parentType="asset" parentId={a.id} redirectPath={here} isManager={isManager} defaultKind="test"
-            placeholder="e.g. BOP test" heading="" bare />
-        </AddDisclosure>
-      </section>
     </div>
   );
 }

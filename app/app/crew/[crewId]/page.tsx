@@ -148,7 +148,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
               )}
               {isManager ? (
                 <>
-                  <UseSentPhoto docRequestId={r.id} cards={certs.map((x) => ({ id: x.id, title: x.title }))} suggestedExpiration={r.submitted_expiration} />
+                  <UseSentPhoto docRequestId={r.id} cards={certs.map((x) => ({ id: x.id, title: x.title }))} suggestedExpiration={r.submitted_expiration} suggestedKind={r.submitted_kind} />
                   <form action={closeDocRequest}>
                     <input type="hidden" name="id" value={r.id} />
                     <input type="hidden" name="crew_id" value={c.id} />

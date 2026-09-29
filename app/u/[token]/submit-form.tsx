@@ -14,7 +14,9 @@ import { shrinkPhoto } from "@/lib/shrink-photo";
 const KINDS = ["CDL", "DOT medical card", "H2S", "Well control", "Other card"];
 const fld = "h-13 min-h-13 w-full rounded-xl border border-line-2 bg-coal px-4 text-base text-ink outline-none focus:border-bone";
 
-export default function SubmitForm({ token, kindHint, alreadySubmitted }: { token: string; kindHint: string | null; alreadySubmitted: boolean }) {
+export default function SubmitForm({ token, kindHint, cards = [], alreadySubmitted }: { token: string; kindHint: string | null; cards?: string[]; alreadySubmitted: boolean }) {
+  // Their own cards when we have them; the generic list otherwise.
+  const options = cards.length ? [...cards, "Other card"] : KINDS;
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,9 +59,9 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
 
       <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
         Which card?
-        <select name="kind" defaultValue={kindHint && KINDS.includes(kindHint) ? kindHint : kindHint || "CDL"} className={fld}>
-          {kindHint && !KINDS.includes(kindHint) ? <option value={kindHint}>{kindHint}</option> : null}
-          {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+        <select name="kind" defaultValue={kindHint && options.includes(kindHint) ? kindHint : kindHint || options[0]} className={fld}>
+          {kindHint && !options.includes(kindHint) ? <option value={kindHint}>{kindHint}</option> : null}
+          {options.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
       </label>
 

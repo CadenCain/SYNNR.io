@@ -392,11 +392,20 @@ export function AddCert({ parentType, parentId, redirectPath, isManager, default
  * which card it is, confirm the date, and it runs the same checks as any
  * upload. A hand's link never changes a record by itself.
  */
-export function UseSentPhoto({ docRequestId, cards, suggestedExpiration }: {
-  docRequestId: string; cards: { id: string; title: string }[]; suggestedExpiration: string | null;
+export function UseSentPhoto({ docRequestId, cards, suggestedExpiration, suggestedKind }: {
+  docRequestId: string; cards: { id: string; title: string }[]; suggestedExpiration: string | null; suggestedKind?: string | null;
 }) {
   const router = useRouter();
-  const [itemId, setItemId] = useState(cards.length === 1 ? cards[0].id : "");
+  // Pick the card the hand named ("H2S" finds "H2S Clear"), else the only one.
+  const guess = (() => {
+    if (cards.length === 1) return cards[0].id;
+    const k = (suggestedKind ?? "").toLowerCase().trim();
+    if (!k || k === "other card") return "";
+    return cards.find((c) => c.title.toLowerCase() === k)?.id
+      ?? cards.find((c) => c.title.toLowerCase().includes(k) || k.includes(c.title.toLowerCase()))?.id
+      ?? "";
+  })();
+  const [itemId, setItemId] = useState(guess);
   const [expiration, setExpiration] = useState(suggestedExpiration ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Check, Copy, X } from "lucide-react";
+import { Share2, Check, Copy, X, Send } from "lucide-react";
 import { createReadinessProof } from "../_proof-actions";
 
 /**
@@ -17,10 +17,13 @@ export default function ShareProof({
   scope,
   yardId,
   unitId,
+  warn,
 }: {
   scope: "company" | "yard" | "unit";
   yardId?: string;
   unitId?: string;
+  /** Said next to the link, e.g. "CT-03 is NOT READY right now, and the link says so." */
+  warn?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
@@ -61,19 +64,36 @@ export default function ShareProof({
     }
   }
 
+  // On a phone, hand it straight to Messages (or the share sheet) so the
+  // company man gets it in one tap.
+  async function send() {
+    const text = `Readiness proof: ${url}`;
+    const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string; url?: string }) => Promise<void> };
+    if (nav.share) {
+      try { await nav.share({ title: "Readiness proof", url }); return; } catch { /* closed the sheet */ return; }
+    }
+    window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+  }
+
   if (url) {
     return (
+      <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-1.5 pl-2.5">
         <span className="hidden text-xs font-semibold text-emerald-400 sm:block">Proof link</span>
         <input readOnly value={url} onFocus={(e) => e.currentTarget.select()}
-          className="h-8 w-40 rounded-md border border-line-2 bg-coal px-2 text-xs text-ink outline-none sm:w-64" />
+          className="h-8 w-28 min-w-0 rounded-md border border-line-2 bg-coal px-2 text-xs text-ink outline-none sm:w-64" />
         <button onClick={copy} className="flex h-8 items-center gap-1 rounded-md border border-line-2 px-2 text-xs text-ink-dim hover:bg-elevated hover:text-ink">
           {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+        </button>
+        <button onClick={send} className="flex h-8 items-center gap-1 rounded-md bg-bone px-2 text-xs font-medium text-white hover:bg-bone-soft">
+          <Send className="h-3.5 w-3.5" /> Send
         </button>
         <button onClick={() => { setUrl(""); setCopied(false); }} aria-label="Dismiss"
           className="flex h-8 w-8 items-center justify-center rounded-md text-ink-faint hover:bg-elevated hover:text-ink">
           <X className="h-3.5 w-3.5" />
         </button>
+      </div>
+      {warn ? <p className="text-xs text-red-400">{warn}</p> : null}
       </div>
     );
   }

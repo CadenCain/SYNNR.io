@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import InviteLink from "./invite-link";
 
+const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Manager", member: "Hand" };
+
 export const dynamic = "force-dynamic";
 
 async function createInvite(formData: FormData) {
@@ -14,7 +16,7 @@ async function createInvite(formData: FormData) {
   const { company } = await requireCompany();
   // Members can look but not mint invites, and NOBODY mints an owner through
   // this form — a member could otherwise invite themselves an owner account.
-  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only owners and admins can invite.");
+  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only a manager can invite people.");
   const requested = String(formData.get("role") ?? "member");
   const role = requested === "admin" ? "admin" : "member";
   const email = String(formData.get("email") ?? "").trim() || null;
@@ -39,7 +41,7 @@ async function transferOwnership(formData: FormData) {
   const { data: target } = await admin.from("saas_memberships").select("user_id, role")
     .eq("company_id", company.id).eq("user_id", targetUserId).eq("status", "active").maybeSingle();
   if (!target || (target as { role: string }).role !== "admin") {
-    throw new Error("Ownership can only be transferred to an admin. Promote them first.");
+    throw new Error("Ownership can only go to a manager. Make them a manager first.");
   }
   // Service role (sessions hold no UPDATE on memberships). Promote first,
   // then demote — a crash between leaves two owners (safe, fixable) rather
@@ -54,7 +56,7 @@ async function transferOwnership(formData: FormData) {
 async function revokeInvite(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
-  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only owners and admins can revoke invites.");
+  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only a manager can revoke an invite.");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const db = await saasDb();
@@ -106,12 +108,12 @@ export default async function TeamSettings() {
                 <form action={transferOwnership}>
                   <input type="hidden" name="user_id" value={m.user_id} />
                   <button type="submit" className="rounded-lg border border-line-2 px-2.5 py-1 text-xs text-ink-dim hover:bg-elevated hover:text-ink"
-                    title="Make this admin the owner. You become an admin.">
+                    title="Make this manager the owner. You become a manager.">
                     Make owner
                   </button>
                 </form>
               ) : null}
-              <span className="rounded-sm border border-line px-2.5 py-0.5 text-xs capitalize text-ink-dim">{m.role}</span>
+              <span className="rounded-md border border-line px-2.5 py-0.5 text-xs text-ink-dim">{ROLE_LABEL[m.role] ?? m.role}</span>
             </span>
           </Card>
         ))}
@@ -124,7 +126,7 @@ export default async function TeamSettings() {
             <Card key={iv.id} className="flex flex-col gap-2 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate text-sm text-ink-dim">
-                  {iv.email || "Anyone with the link"} · {iv.role} ·{" "}
+                  {iv.email || "Anyone with the link"} · {ROLE_LABEL[iv.role] ?? iv.role} ·{" "}
                   <span className="text-ink-faint">expires {fmtDay(iv.expires_at)}</span>
                 </span>
                 <form action={revokeInvite}>
@@ -141,7 +143,7 @@ export default async function TeamSettings() {
       )}
 
       {company.role === "member" ? (
-        <p className="text-sm text-ink-faint">Only admins can invite teammates. Ask whoever runs your account.</p>
+        <p className="text-sm text-ink-faint">Only a manager can invite people. Ask whoever runs your account.</p>
       ) : (
       <Card className="p-5">
         <h3 className="mb-3 text-sm font-medium text-ink">Invite a teammate</h3>
@@ -150,12 +152,12 @@ export default async function TeamSettings() {
             className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
           <select name="role" defaultValue="member"
             className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8] lg:w-36">
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
+            <option value="member">Hand</option>
+            <option value="admin">Manager</option>
           </select>
           <Button type="submit">Create invite link</Button>
         </form>
-        <p className="mt-2 text-xs text-ink-faint">Makes a link you can text or send however you like.</p>
+        <p className="mt-2 text-xs text-ink-faint">Makes a link you can text or send however you like. Hands upload certs and run readiness checks. Managers also approve uploads, type in dates, and set the rules.</p>
       </Card>
       )}
     </div>

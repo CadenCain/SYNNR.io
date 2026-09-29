@@ -29,7 +29,7 @@ export async function quickAddUnit(args: { name: string; type?: string }):
   if (!yard) {
     // Creating the first yard is still creating a yard: admin+ and under cap.
     if (!canPerform(company.role, "create_yard")) {
-      return { ok: false, error: "There's no yard yet. Ask an admin to set one up first." };
+      return { ok: false, error: "There's no yard yet. Ask a manager to set one up first." };
     }
     if (yardCapState(0, company.yard_quantity, company.comped).atCap) {
       return { ok: false, error: "Your plan has no yards on it yet. Subscribe or add a yard in Settings, Billing." };

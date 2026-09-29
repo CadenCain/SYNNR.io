@@ -1,4 +1,4 @@
-import { fmtWhen } from "@/lib/saas/format";
+import { fmtWhen, fmtDate } from "@/lib/saas/format";
 import type { Metadata } from "next";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
@@ -199,7 +199,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
     <div className="saas min-h-dvh bg-coal px-4 py-10 text-ink antialiased print:bg-white print:text-black">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
           <div className="flex items-center gap-2.5">
             <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
               <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
@@ -301,7 +301,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                     </td>
                     <td className="border-b border-line/60 px-2 py-3 text-ink-dim sm:px-4">{onLabel(i)}</td>
                     <td className="hidden border-b border-line/60 px-4 py-3 capitalize text-ink-dim sm:table-cell">{i.kind.replace(/_/g, " ")}</td>
-                    <td className="border-b border-line/60 px-2 py-3 tabular-nums text-ink-dim sm:px-4">{i.expiration_date ?? "—"}</td>
+                    <td className="whitespace-nowrap border-b border-line/60 px-2 py-3 tabular-nums text-ink-dim sm:px-4">{i.expiration_date ? fmtDate(i.expiration_date) : "No date"}</td>
                     <td className="border-b border-line/60 px-2 py-3 sm:px-4">
                       <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${RESULT_CHIP[judged.get(i.id)!.result]}`}>{RESULT_LABEL[judged.get(i.id)!.result]}</span>
                     </td>

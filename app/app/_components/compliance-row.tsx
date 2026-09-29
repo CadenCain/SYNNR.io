@@ -41,7 +41,9 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
+        {/* Full width on a phone so the name never gets squeezed into a
+            one-word column; the buttons wrap to their own line below. */}
+        <div className="min-w-0 flex-1 basis-full sm:basis-auto">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{item.title}</span>
             {onTheWay ? (
@@ -62,7 +64,7 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
             )}
           </div>
           <div className="mt-0.5 text-sm text-ink-dim">
-            {kindLabel(item.kind)}{item.expiration_date ? ` · expires ${fmtDate(item.expiration_date)}` : " · no expiration on file"}
+            {kindLabel(item.kind).replace(/\s*\(.*$/, "")}{item.expiration_date ? ` · expires ${fmtDate(item.expiration_date)}` : " · no expiration on file"}
             {onTheWay ? ` · counts through ${fmtDate(item.pending_until!)}` : ""}
             {paperUrl ? (
               <> · <a href={paperUrl} target="_blank" rel="noreferrer" className="text-bone underline underline-offset-2">See the cert</a></>

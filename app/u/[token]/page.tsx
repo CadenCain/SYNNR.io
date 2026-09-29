@@ -46,6 +46,13 @@ export default async function DocUpdatePage({ params }: { params: Promise<{ toke
     admin.from("saas_companies").select("name, subscription_status, comped").eq("id", req.company_id).maybeSingle(),
   ]);
   const crewName = (crewData as { name: string } | null)?.name ?? "there";
+  // The hand's own cards, soonest-to-lapse first, so the one that's due is
+  // already picked. (Titles only: nothing else about the record leaves.)
+  const { data: cardData } = await admin.from("saas_compliance_items")
+    .select("title, expiration_date").eq("company_id", req.company_id)
+    .eq("parent_type", "crew").eq("parent_id", req.crew_member_id)
+    .order("expiration_date", { ascending: true, nullsFirst: true });
+  const cards = [...new Set(((cardData ?? []) as { title: string }[]).map((c) => c.title))];
   const co = coData as { name: string; subscription_status: string; comped: boolean } | null;
   if (!co || !isWritable(co.subscription_status, co.comped)) return <Invalid reason="paused. Tell your manager" />;
 
@@ -62,7 +69,7 @@ export default async function DocUpdatePage({ params }: { params: Promise<{ toke
           </div>
         </div>
         <div className="rounded-2xl border border-line bg-surface p-5">
-          <SubmitForm token={token} kindHint={req.kind_hint} alreadySubmitted={req.status === "submitted"} />
+          <SubmitForm token={token} kindHint={req.kind_hint ?? cards[0] ?? null} cards={cards} alreadySubmitted={req.status === "submitted"} />
         </div>
         <p className="text-center text-xs text-ink-faint">
           Takes about 30 seconds. The photo goes to your safety manager and nowhere else.

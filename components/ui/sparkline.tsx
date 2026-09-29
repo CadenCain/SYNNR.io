@@ -16,7 +16,7 @@ export function Sparkline({
     .map((v, i) => ({ v, i }))
     .filter((p): p is { v: number; i: number } => p.v !== null);
   if (pts.length < 2) {
-    return <span className={`text-xs text-ink-faint ${className}`}>— no history yet</span>;
+    return <span className={`text-xs text-ink-faint ${className}`}>No history yet</span>;
   }
   const w = 72, h = 20, pad = 2;
   const min = Math.min(...pts.map((p) => p.v));

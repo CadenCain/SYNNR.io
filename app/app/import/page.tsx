@@ -30,7 +30,7 @@ export default async function ImportPage() {
         <ImportClient yards={yards} />
       ) : (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
-          Importing writes company-wide, so it&apos;s admin-only. Ask an owner or admin to load the sheet.
+          A spreadsheet of dates is a manager&apos;s job, since the dates go in without photos. Ask a manager to load it.
         </Card>
       )}
     </div>

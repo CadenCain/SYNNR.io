@@ -69,15 +69,21 @@ export default async function NotificationsSettings() {
   const yards = (yardData ?? []) as { id: string; name: string }[];
   const yardName = new Map(yards.map((y) => [y.id, y.name]));
   const smsReady = smsConfigured();
+  const manager = company.role === "owner" || company.role === "admin";
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <Link href="/app/settings" className="text-sm text-ink-dim hover:text-ink">← Settings</Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Notifications</h1>
-        <p className="mt-1 text-sm text-ink-dim">We watch every expiration and every roll-out. Tell us who gets the heads-up, and how early.</p>
+        <p className="mt-1 text-sm text-ink-dim">We watch every expiration and every readiness check. Pick who gets the heads-up, and how early.</p>
       </div>
 
+      {!manager ? (
+        <Card className="p-5 text-sm text-ink-dim">
+          Alerts are {(s?.email_enabled ?? true) ? "on" : "off"}, starting {s?.lead_days ?? 30} days before anything expires. A manager changes who gets them.
+        </Card>
+      ) : (
       <Card className="p-5">
         <form action={saveSettings} className="flex flex-col gap-5">
           <label className="flex items-center gap-3 text-sm">
@@ -92,12 +98,13 @@ export default async function NotificationsSettings() {
           <div><Button type="submit">Save</Button></div>
         </form>
       </Card>
+      )}
 
       <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-sm font-semibold">Who gets the alerts</h2>
           <p className="mt-0.5 text-sm text-ink-dim">
-            Expiring certs &amp; crew cards, NOT-ready overrides, and gear that didn&apos;t come back.
+            Certs and crew cards before they expire, trucks checked NOT READY, and uploads waiting on a manager.
             {!smsReady && " Text alerts aren't turned on yet. Email alerts work now."}
           </p>
         </div>
@@ -117,20 +124,20 @@ export default async function NotificationsSettings() {
                   {r.channels.includes("email") && <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-dim"><Mail className="h-3 w-3" /> email</span>}
                   {r.channels.includes("sms") && (smsReady
                     ? <span className="flex items-center gap-1 rounded-sm border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400"><MessageSquareText className="h-3 w-3" /> text</span>
-                    : <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-faint" title="Text alerts activate once SMS credentials are connected"><MessageSquareText className="h-3 w-3" /> text — off</span>)}
+                    : <span className="flex items-center gap-1 rounded-sm border border-line-2 px-2 py-0.5 text-xs text-ink-faint" title="Text alerts activate once SMS credentials are connected"><MessageSquareText className="h-3 w-3" /> text off</span>)}
                 </div>
-                <form action={removeRecipient}>
+                {manager && <form action={removeRecipient}>
                   <input type="hidden" name="id" value={r.id} />
                   <button type="submit" title="Remove" className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </form>
+                </form>}
               </Card>
             ))}
           </div>
         )}
 
-        <Card className="p-5">
+        {manager && <Card className="p-5">
           <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add the first person to alert, like the foreman who rolls the trucks"}</h3>
           <form action={addRecipient} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row">
@@ -152,7 +159,7 @@ export default async function NotificationsSettings() {
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
           </form>
-        </Card>
+        </Card>}
       </section>
     </div>
   );

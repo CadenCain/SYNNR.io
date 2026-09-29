@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat, FileCheck } from "lucide-react";
+import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat, FileCheck, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -31,9 +32,10 @@ const TABS_LEFT = [
   { href: "/app", label: "Home", icon: LayoutGrid, exact: true },
   { href: "/app/yards", label: "Yards", icon: Warehouse },
 ];
+// Phones: the four places a yard lives in, plus the button. Everything else
+// is one tap away under More.
 const TABS_RIGHT = [
-  { href: "/app/compliance", label: "Compliance", icon: ShieldCheck },
-  { href: "/app/settings", label: "Settings", icon: Settings },
+  { href: "/app/crew", label: "Crew", icon: HardHat },
 ];
 
 function isActive(path: string, href: string, exact?: boolean) {
@@ -64,6 +66,8 @@ export default function AppNav({ companyName, userName, readiness, companies = [
           : { cls: "border-red-500/40 bg-red-500/10 text-red-400", txt: `${readiness}%` };
   const path = usePathname() || "/app";
   const router = useRouter();
+  const [more, setMore] = useState(false);
+  const moreActive = ["/app/compliance", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
 
   async function signOut() {
     const sb = getBrowserSupabase();
@@ -196,7 +200,50 @@ export default function AppNav({ companyName, userName, readiness, companies = [
           </span>
         </Link>
         {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href)} />)}
+        <button type="button" onClick={() => setMore(true)} aria-label="More"
+          className={cn("relative flex flex-col items-center gap-1 py-1 text-[11px]", moreActive ? "font-medium text-bone" : "text-ink-faint")}>
+          <Menu className="h-5 w-5" />
+          More
+          {reviewCount ? <span className="absolute right-[22%] top-0 h-2 w-2 rounded-full bg-amber-500" aria-hidden /> : null}
+        </button>
       </nav>
+
+      {/* More: the rest of the app on a phone. */}
+      {more ? (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="More">
+          <button type="button" aria-label="Close" onClick={() => setMore(false)} className="absolute inset-0 bg-slate-900/40" />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-line bg-surface px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-2xl">
+            <div className="flex items-center justify-between px-2 pb-2">
+              <span className="text-sm font-semibold text-ink-dim">{companyName ?? "Menu"}</span>
+              <button type="button" onClick={() => setMore(false)} aria-label="Close" className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-dim hover:bg-elevated">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {[
+              { href: "/app/compliance", label: "Compliance & Logs", icon: ShieldCheck },
+              ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
+              { href: "/app/search", label: "Search", icon: Search },
+              { href: "/app/settings", label: "Settings", icon: Settings },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href} onClick={() => setMore(false)}
+                  className={cn("flex min-h-12 items-center gap-3 rounded-lg px-3 text-base", isActive(path, item.href) ? "bg-bone/10 font-medium text-bone" : "text-ink hover:bg-elevated")}>
+                  <Icon className="h-5 w-5" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.href === "/app/review" && reviewCount ? (
+                    <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-400">{reviewCount}</span>
+                  ) : null}
+                </Link>
+              );
+            })}
+            <button type="button" onClick={signOut}
+              className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-base text-ink-dim hover:bg-elevated">
+              <LogOut className="h-5 w-5" /> Sign out
+            </button>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

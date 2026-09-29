@@ -59,6 +59,11 @@ export default async function CrewPage() {
     .eq("company_id", company.id).eq("status", "submitted");
   const submittedByCrew = new Set(((pendingDocs ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
 
+  // Worst first: a photo waiting, then lapsed or missing cards, then due soon.
+  const RANK: Record<string, number> = { expired: 0, none: 0, nocards: 1, expiring: 2, valid: 3 };
+  const rank = (id: string) => (submittedByCrew.has(id) ? -1 : RANK[worst.get(id) ?? "nocards"]);
+  crew.sort((a, b) => rank(a.id) - rank(b.id) || a.name.localeCompare(b.name));
+
   return (
     <div className="flex flex-col gap-7">
       <PageHeader title="Crew" description="Your hands and their cards: H2S, well control, CDL, and medical. A truck is only ready if its crew is current." />
@@ -76,27 +81,31 @@ export default async function CrewPage() {
         <div className="flex flex-col gap-2">
           {crew.map((c) => (
             <Link key={c.id} href={`/app/crew/${c.id}`}>
-              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-coal">
+              <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2 sm:gap-4">
+                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-coal sm:flex">
                   <HardHat className="h-5 w-5 text-ink-dim" />
                 </span>
+                {/* Name gets the whole first line; the status rides the second,
+                    so a phone never cuts a name to "Aaron Pru…". */}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold text-ink">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs font-normal text-ink-faint">inactive</span> : null}</div>
-                  <div className="truncate text-sm text-ink-dim">{c.role ?? "crew"}{c.phone ? ` · ${c.phone}` : ""}</div>
+                  <div className="font-semibold text-ink">{c.name}{c.status === "inactive" ? <span className="ml-2 text-xs font-normal text-ink-faint">inactive</span> : null}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-dim">
+                    {submittedByCrew.has(c.id) && (
+                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">Photo in</span>
+                    )}
+                    {worst.has(c.id) ? (
+                      <>
+                        <StatusBadge status={worst.get(c.id)!} />
+                        {/* A green badge over one card and a green badge over
+                            five look identical; the count keeps thin records honest. */}
+                        <span className="text-xs text-ink-faint">{(byCrew.get(c.id) ?? []).length} card{(byCrew.get(c.id) ?? []).length === 1 ? "" : "s"}</span>
+                      </>
+                    ) : (
+                      <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">No cards on file</span>
+                    )}
+                    <span className="truncate">{c.role ?? "crew"}{c.phone ? ` · ${c.phone}` : ""}</span>
+                  </div>
                 </div>
-                {submittedByCrew.has(c.id) && (
-                  <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">Photo in</span>
-                )}
-                {worst.has(c.id) ? (
-                  <span className="flex items-center gap-1.5">
-                    <StatusBadge status={worst.get(c.id)!} />
-                    {/* A green badge over one card and a green badge over five
-                        look identical — the count keeps thin records honest. */}
-                    <span className="font-mono text-[10px] text-ink-faint">{(byCrew.get(c.id) ?? []).length} card{(byCrew.get(c.id) ?? []).length === 1 ? "" : "s"}</span>
-                  </span>
-                ) : (
-                  <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">No cards on file</span>
-                )}
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
             </Link>

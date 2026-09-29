@@ -34,8 +34,9 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
           <p className="text-base leading-relaxed text-ink-dim">
             Tap the button and you get your own copy of a made-up Odessa coil tubing company: 20 trucks,
             45 hands, and a few problems already on the board. CT‑03 has a dead BOP test, P‑02&apos;s annual
-            DOT lapsed, and one operator&apos;s H2S card expired yesterday. Run a readiness check, open the red
-            trucks, and renew a cert to watch it go green.
+            DOT lapsed, and one operator&apos;s H2S card expired yesterday. A hand already sent a photo of a new
+            BOP cert with a date that isn&apos;t on the paper, so it&apos;s waiting on you under Review uploads. Run a
+            readiness check, open the red trucks, and see what it takes to turn one green.
           </p>
           <p className="text-base leading-relaxed text-ink-dim">
             Nobody else sees your copy, and it deletes itself after 24 hours.

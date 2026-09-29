@@ -84,7 +84,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   }
   // Creating a yard through the new-yard field is admin+, and capped.
   if (newYard.trim() && !canPerform(company.role, "import_new_yard")) {
-    return { ok: false, error: "Only an admin can create a yard through import. Pick an existing yard, or ask whoever runs your account.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    return { ok: false, error: "Only a manager can create a yard through import. Pick an existing yard, or ask whoever runs your account.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
   const db = await saasDb();
 

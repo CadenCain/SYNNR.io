@@ -86,5 +86,5 @@ export function canPerform(role: Role, action: Action): boolean {
 export function roleBlockedMessage(action: Action): string {
   if (action === "billing" || action === "transfer_ownership")
     return "Only the account owner can do that.";
-  return "Only an admin can do that. Ask whoever runs your account.";
+  return "Only a manager can do that. Ask whoever runs your account.";
 }

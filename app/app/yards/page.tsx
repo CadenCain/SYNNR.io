@@ -97,12 +97,15 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           <h1 className="text-2xl font-semibold tracking-tight">Yards</h1>
           <p className="mt-1 text-sm text-ink-dim">
             Each yard holds your trucks, shops, assets, and certs.
-            {company.comped
+            {company.role === "member" ? ""
+              : company.comped
               ? " Comped account, unlimited yards."
               : ` Using ${inUse} of ${company.yard_quantity} on your plan.`}
           </p>
         </div>
-        <Link href="/app/import" className={buttonClass("outline", "sm")}><Upload className="h-4 w-4" /> Import</Link>
+        {company.role !== "member" && (
+          <Link href="/app/import" className={buttonClass("outline", "sm")}><Upload className="h-4 w-4" /> Import</Link>
+        )}
       </div>
 
       {err ? <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{err}</p> : null}
