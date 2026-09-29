@@ -208,7 +208,7 @@ export async function processUpload(args: {
     canApprove: manager,
     message: manager
       ? `The software couldn't confirm it: ${why}. Look at it and approve it yourself if it's right.`
-      : `Sent to a manager. ${item.title} stays red until they OK it. ${why}.`,
+      : `Sent to a manager. ${item.title} ${item.status === "expired" || item.status === "none" ? "stays red" : "keeps its current date"} until they OK it. ${why}.`,
   };
 }
 

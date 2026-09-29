@@ -181,7 +181,7 @@ export function verifyUpload(v: VerifyInput): Verification {
     const hit = kws.filter((k) => page.has(k) || (k.length >= 4 && pageFlat.includes(k)));
     checks.push({
       key: "type", label: "Right kind of cert", ok: hit.length > 0,
-      detail: hit.length > 0 ? `It mentions ${hit.join(", ")}` : `It doesn't mention ${kws.join(" or ")}. Make sure it's the right cert.`,
+      detail: hit.length > 0 ? `It reads like a ${v.itemTitle} cert` : `Nothing on it matches "${v.itemTitle}". Make sure it's the right cert.`,
     });
   }
 

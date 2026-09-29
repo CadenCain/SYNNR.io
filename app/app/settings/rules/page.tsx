@@ -59,7 +59,7 @@ export default async function RulesPage() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-semibold">Your switches</h2>
+        <h2 className="font-semibold">Manager switches</h2>
         {!manager && <p className="mt-1 text-sm text-ink-dim">A manager sets these.</p>}
         <form action={saveRules} className="mt-4 flex flex-col gap-5">
           <label className="flex cursor-pointer items-start gap-3">

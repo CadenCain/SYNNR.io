@@ -119,13 +119,13 @@ function ExpirationInput({ photo }: { photo: ReturnType<typeof useCertPhoto> }) 
   );
 }
 
-function Result({ r, onRetake, onForce, onApprove, onDone, busy }: {
-  r: Outcome; busy: boolean;
+function Result({ r, onRetake, onForce, onApprove, onDone, busy, canRetake = true }: {
+  r: Outcome; busy: boolean; canRetake?: boolean;
   onRetake: () => void; onForce: () => void; onApprove: () => void; onDone: () => void;
 }) {
   const tone = r.outcome === "applied" ? "border-emerald-500/40 bg-emerald-500/10" : r.outcome === "waiting" ? "border-amber-500/40 bg-amber-500/10" : "border-red-500/40 bg-red-500/10";
   const head = r.outcome === "applied" ? "text-emerald-400" : r.outcome === "waiting" ? "text-amber-400" : "text-red-400";
-  const title = r.outcome === "applied" ? "Saved" : r.outcome === "waiting" ? "Waiting on a manager" : "Not saved";
+  const title = r.outcome === "applied" ? "Saved" : r.outcome === "waiting" ? (r.canApprove ? "Needs your OK" : "Waiting on a manager") : "Not saved";
   return (
     <div className={cn("flex flex-col gap-3 rounded-lg border p-3", tone)} role="status">
       <div>
@@ -153,7 +153,7 @@ function Result({ r, onRetake, onForce, onApprove, onDone, busy }: {
             {busy ? "Sending…" : "Send it to a manager anyway"}
           </button>
         )}
-        {r.outcome !== "applied" && (
+        {r.outcome !== "applied" && canRetake && (
           <button type="button" onClick={onRetake} className={r.outcome === "rejected" ? primary : secondary}>
             <Camera className="h-4 w-4" /> Retake
           </button>
@@ -426,7 +426,7 @@ export function UseSentPhoto({ docRequestId, cards, suggestedExpiration }: {
   }
 
   if (result) {
-    return <Result r={result} busy={busy} onRetake={() => setResult(null)} onForce={() => {}} onApprove={() => void approveIt()} onDone={() => { setResult(null); router.refresh(); }} />;
+    return <Result r={result} busy={busy} canRetake={false} onRetake={() => setResult(null)} onForce={() => {}} onApprove={() => void approveIt()} onDone={() => { setResult(null); router.refresh(); }} />;
   }
   if (cards.length === 0) {
     return <p className="text-sm text-ink-dim">Add the card below first, then come back and use this photo for it.</p>;
