@@ -12,7 +12,7 @@ import path from "node:path";
  */
 
 const LANG_PATH = path.join(process.cwd(), "lib", "saas", "ocr-data");
-const READ_TIMEOUT_MS = 30_000;
+const READ_TIMEOUT_MS = 25_000;
 
 async function prepare(buf: Buffer): Promise<Buffer> {
   // Straighten by the phone's EXIF, shrink, and flatten the light: tesseract
@@ -35,27 +35,35 @@ interface OcrWorker { recognize: (img: Buffer) => Promise<{ data: { text?: strin
 
 export async function readPhotoText(buf: Buffer): Promise<string | null> {
   const box: { worker: OcrWorker | null } = { worker: null };
-  try {
+  // One clock around everything, starting the reader included: a reader that
+  // can't start must fail fast (and the upload goes to a manager), not hang
+  // the request until the platform kills it.
+  const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), READ_TIMEOUT_MS));
+  const work = (async () => {
     const img = await prepare(buf);
     const { createWorker } = await import("tesseract.js");
     const worker = (await createWorker("eng", 1, {
       langPath: LANG_PATH,
       gzip: false,
       cacheMethod: "none",
+      errorHandler: (e: unknown) => console.error("[cert-read] worker error:", e),
     })) as unknown as OcrWorker;
     box.worker = worker;
-    const read = worker.recognize(img);
-    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), READ_TIMEOUT_MS));
-    const res = await Promise.race([read, timeout]);
-    if (!res) {
+    const { data } = await worker.recognize(img);
+    return data.text ?? "";
+  })();
+  try {
+    const res = await Promise.race([work, timeout]);
+    if (res === "timeout") {
       console.error("[cert-read] timed out");
       return null;
     }
-    return (res as { data: { text?: string } }).data.text ?? "";
+    return res;
   } catch (e) {
     console.error("[cert-read] failed:", e instanceof Error ? e.message : e);
     return null;
   } finally {
+    work.catch(() => {});
     if (box.worker) await box.worker.terminate().catch(() => {});
   }
 }
