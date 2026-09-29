@@ -7,32 +7,36 @@
    ============================================================ */
 
 .mkt {
-  --bg:        #131110;
-  --bg-1:      #191614;
-  --bg-2:      #201c19;
-  --bg-3:      #29241f;
-  --panel:     #161311;
-  --card:      #191613;
+  /* Light site, one deep-blue accent (2026-09), matching the app. Every
+     legacy component below reads these, so the subpages re-theme too. */
+  --bg:        #ffffff;
+  --bg-1:      #f6f8fb;
+  --bg-2:      #eef2f7;
+  --bg-3:      #e3e8ef;
+  --panel:     #ffffff;
+  --card:      #ffffff;
 
-  --line:        rgba(233,221,200,0.10);
-  --line-2:      rgba(233,221,200,0.16);
-  --line-strong: rgba(233,221,200,0.30);
+  --line:        #e3e8ef;
+  --line-2:      #cfd7e2;
+  --line-strong: #94a3b8;
 
-  --fg:        #ece5d7;
-  --fg-dim:    #a59d8c;
-  --fg-faint:  #8a8071;  /* 4.86:1 on --bg — fine print stays readable on a phone outdoors */
-  --fg-ghost:  #5f5749;
+  --fg:        #0f172a;
+  --fg-dim:    #475569;
+  --fg-faint:  #64748b;
+  --fg-ghost:  #94a3b8;
 
-  --accent:      #e7ddc7;
-  --accent-soft: #f3ecdb;
-  --accent-2:    #ccbe9d;
-  --accent-ink:  #efe8d8;
-  --accent-rgb:  231,221,199;
+  --accent:      #1d4ed8;
+  --accent-soft: #1e40af;
+  --accent-2:    #3b63e0;
+  --accent-ink:  #0f172a;
+  --accent-rgb:  29,78,216;
+  --brand:       #1d4ed8;
+  --brand-dark:  #1e40af;
 
-  --danger:  #cf7a54;
-  --ochre:   #cba85f;
-  --warn:    #cba85f;
-  --good:    #c9bd97;
+  --danger:  #dc2626;
+  --ochre:   #b45309;
+  --warn:    #b45309;
+  --good:    #15803d;
 
   /* squared-off world — radius vars kept for subpage css that reads them */
   --radius:      4px;
@@ -56,30 +60,37 @@
   position: relative;
 }
 
-.mkt ::selection { background: rgba(var(--accent-rgb),.35); color:#fff; }
+.mkt ::selection { background: rgba(29,78,216,.25); }
 
 /* ---- light band: warm paper. Every component below reads these vars,
    so flipping a band re-themes everything inside it. ---- */
 .mkt .band { position: relative; }
 .mkt .band-light {
-  --bg:        #f0eadd;
-  --bg-1:      #e9e2d3;
-  --bg-2:      #e2dbcb;
-  --panel:     #ece5d6;
-  --card:      #ebe4d5;
-  --line:        rgba(25,20,15,0.12);
-  --line-2:      rgba(25,20,15,0.20);
-  --line-strong: rgba(25,20,15,0.38);
-  --fg:        #191510;
-  --fg-dim:    #5d564a;
-  --fg-faint:  #8c8374;
-  --fg-ghost:  #b3aa99;
-  --accent:      #191510;
-  --accent-soft: #000;
-  --accent-2:    #6b5f4a;
-  --accent-ink:  #191510;
-  --accent-rgb:  25,21,16;
+  --bg:        #f6f8fb;
+  --bg-1:      #eef2f7;
+  --bg-2:      #e3e8ef;
+  --panel:     #ffffff;
+  --card:      #ffffff;
   background: var(--bg); color: var(--fg);
+}
+/* Deep navy: the homepage top and the closing band. */
+.mkt .band-navy, .mkt .nav.nav-navy {
+  --bg:        #0a1633;
+  --bg-1:      #0f1f45;
+  --bg-2:      #152a5a;
+  --line:        rgba(255,255,255,0.10);
+  --line-2:      rgba(255,255,255,0.18);
+  --line-strong: rgba(255,255,255,0.40);
+  --fg:        #ffffff;
+  --fg-dim:    #c3cde3;
+  --fg-faint:  #9fb0d3;
+  color: var(--fg);
+}
+.mkt .band-navy {
+  background:
+    radial-gradient(60rem 36rem at 78% 30%, rgba(29,78,216,0.55), transparent 62%),
+    radial-gradient(40rem 30rem at 10% 100%, rgba(59,99,224,0.25), transparent 60%),
+    #0a1633;
 }
 
 /* ---- layout ---- */
@@ -134,7 +145,6 @@
 .mkt .btn svg { width:15px; height:15px; }
 .mkt .btn-primary { background: var(--fg); color: var(--bg); }
 .mkt .btn-primary:hover { background: var(--accent-soft); }
-.mkt .band-light .btn-primary:hover { background:#000; color:#f0eadd; }
 .mkt .btn-light { background: var(--fg); color: var(--bg); }
 .mkt .btn-ghost { background: transparent; color: var(--fg); border-color: var(--line-strong); }
 .mkt .btn-ghost:hover { border-color: var(--fg); }
@@ -152,7 +162,7 @@
   border-bottom: 1px solid transparent;
 }
 .mkt .nav.scrolled, .mkt .nav.nav-static {
-  background: rgba(19,17,16,.88);
+  background: rgba(255,255,255,.92);
   backdrop-filter: blur(16px) saturate(130%); -webkit-backdrop-filter: blur(16px) saturate(130%);
   border-bottom-color: var(--line);
 }
@@ -201,9 +211,9 @@
   .mkt .nav-toggle:checked ~ .nav-mobile {
     display:flex; flex-direction:column;
     position:absolute; top:100%; right:var(--pad); min-width:240px; z-index:70;
-    background: rgba(19,17,16,.97); backdrop-filter: blur(18px);
-    border:1px solid var(--line-2); border-radius:2px; padding:6px;
-    box-shadow: 0 24px 60px -24px rgba(0,0,0,.9);
+    background: var(--bg); backdrop-filter: blur(18px);
+    border:1px solid var(--line-2); border-radius:10px; padding:6px;
+    box-shadow: 0 24px 60px -24px rgba(15,23,42,.35);
   }
   .mkt .nav-mobile a {
     padding:13px 16px; color:var(--fg-dim);
@@ -705,3 +715,116 @@
 .mkt .simple-footer a:hover { color: var(--fg); }
 .mkt .simple-footer .brand-sm { font-weight: 700; color: var(--fg); }
 .mkt .simple-footer .copy { color: var(--fg-faint); }
+
+
+/* =====================================================================
+   2026-09 homepage: navy top with the real app on a laptop and a phone,
+   light card sections below, deep-blue buttons. x- classes are this page's.
+   ===================================================================== */
+.mkt .btn { border-radius: 8px; }
+.mkt .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 1px 2px rgba(15,23,42,.12); }
+.mkt .btn-primary:hover { background: var(--brand-dark); color: #fff; }
+.mkt .btn-ghost { background: transparent; color: var(--fg); border-color: var(--line-2); }
+.mkt .btn-ghost:hover { border-color: var(--fg); background: rgba(127,127,127,.06); }
+.mkt .nav.nav-navy { background: #0a1633; border-bottom-color: rgba(255,255,255,.08); }
+.mkt .nav.nav-navy.scrolled { background: rgba(10,22,51,.94); }
+.mkt .nav-burger { border-radius: 8px; }
+
+.mkt .x-hero { padding-top: clamp(104px, 12vw, 140px); padding-bottom: clamp(64px, 8vw, 104px); overflow: hidden; }
+.mkt .x-hero-grid { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.mkt .x-kicker { font-size: 14px; font-weight: 600; color: #9fb7ff; letter-spacing: .01em; }
+.mkt .x-kicker-blue { color: var(--brand); }
+.mkt .x-hero h1 { margin-top: 14px; font-size: clamp(34px, 4.6vw, 58px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.06; text-wrap: balance; }
+.mkt .x-lede { margin-top: 20px; font-size: clamp(16.5px, 1.5vw, 19px); line-height: 1.6; color: var(--fg-dim); max-width: 54ch; text-wrap: pretty; }
+.mkt .x-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.mkt .x-cta-center { justify-content: center; }
+.mkt .x-note { margin-top: 14px; font-size: 14px; color: var(--fg-faint); }
+
+/* laptop + phone, built in CSS around the real screenshots */
+.mkt .x-devices { position: relative; padding: 0 0 8% 10%; }
+.mkt .x-laptop-screen { position: relative; border: 10px solid #1b2436; border-bottom-width: 14px; border-radius: 16px 16px 4px 4px; background: #1b2436; overflow: hidden;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.06); }
+.mkt .x-laptop-screen img { display: block; width: 100%; height: auto; border-radius: 4px; }
+.mkt .x-laptop-base { height: 14px; margin: 0 -7%; border-radius: 0 0 16px 16px;
+  background: linear-gradient(#c9d1dc, #8e99a8); box-shadow: 0 16px 30px -12px rgba(0,0,0,.6); position: relative; }
+.mkt .x-laptop-base::after { content: ""; position: absolute; left: 50%; top: 0; width: 16%; height: 5px; transform: translateX(-50%); border-radius: 0 0 6px 6px; background: #7c8797; }
+.mkt .x-phone { position: absolute; left: 0; bottom: 0; width: 27%; border: 6px solid #111827; border-radius: 26px; overflow: hidden; background: #111827;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.08); }
+.mkt .x-phone img { display: block; width: 100%; height: auto; border-radius: 20px; }
+
+.mkt .x-section { padding-block: clamp(64px, 8vw, 112px); }
+.mkt .x-head { max-width: 760px; }
+.mkt .x-h2 { font-size: clamp(28px, 3.4vw, 42px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; text-wrap: balance; }
+.mkt .x-kicker + .x-h2 { margin-top: 10px; }
+.mkt .x-sub { margin-top: 14px; font-size: 17px; line-height: 1.6; color: var(--fg-dim); text-wrap: pretty; }
+.mkt .x-body { margin-top: 16px; font-size: 17px; line-height: 1.65; color: var(--fg-dim); max-width: 60ch; }
+.mkt .x-body b { color: var(--fg); }
+.mkt .x-body a { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.mkt .x-h3 { margin-top: clamp(48px, 6vw, 72px); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+
+.mkt .x-grid { display: grid; gap: 16px; margin-top: 28px; }
+.mkt .x-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mkt .x-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mkt .x-h3 + .x-grid { margin-top: 18px; }
+.mkt .x-card { background: #fff; color: #0f172a; border: 1px solid #e3e8ef; border-radius: 14px; padding: 22px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.05), 0 8px 24px -16px rgba(15,23,42,.18); }
+.mkt .x-card h3 { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.35; }
+.mkt .x-card p { margin-top: 6px; font-size: 15.5px; line-height: 1.6; color: #475569; }
+.mkt .x-card .x-ic { margin-bottom: 14px; }
+.mkt .x-ic { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; flex: none; }
+.mkt .x-ic svg { width: 21px; height: 21px; }
+.mkt .x-ic-blue { background: rgba(29,78,216,.10); color: #1d4ed8; }
+.mkt .x-ic-red { background: rgba(220,38,38,.10); color: #dc2626; }
+.mkt .x-miss { display: flex; gap: 16px; align-items: flex-start; }
+.mkt .x-miss .x-ic { margin-bottom: 0; }
+
+.mkt .x-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
+.mkt .x-proofcard { border-top: 4px solid #1d4ed8; }
+.mkt .x-checks { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 10px; }
+.mkt .x-checks li { display: flex; gap: 10px; align-items: flex-start; font-size: 15.5px; line-height: 1.5; color: #0f172a; }
+.mkt .x-checks svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: #15803d; }
+.mkt .x-fine { margin-top: 14px; font-size: 14px; line-height: 1.55; color: #64748b; }
+
+.mkt .x-browser { margin-top: 32px; border: 1px solid #d5dce6; border-radius: 14px; overflow: hidden; background: #fff;
+  box-shadow: 0 30px 70px -30px rgba(15,23,42,.35); }
+.mkt .x-browser-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; background: #eef2f7; border-bottom: 1px solid #e3e8ef; }
+.mkt .x-browser-bar i { width: 10px; height: 10px; border-radius: 999px; background: #cfd7e2; }
+.mkt .x-browser-bar span { margin-left: 10px; font-size: 12.5px; color: #64748b; }
+.mkt .x-browser img { display: block; width: 100%; height: auto; }
+.mkt #screens .x-cta { margin-top: 28px; }
+
+.mkt .x-step { display: flex; flex-direction: column; gap: 12px; }
+.mkt .x-step p { margin-top: 0; font-size: 16px; color: #0f172a; }
+.mkt .x-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 999px; background: #1d4ed8; color: #fff; font-weight: 700; font-size: 16px; }
+
+.mkt .x-price { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.mkt .x-price-card { padding: 28px; border-top: 4px solid #1d4ed8; }
+.mkt .x-price-big { font-size: clamp(56px, 7vw, 76px); font-weight: 750; letter-spacing: -0.04em; line-height: 1; color: #0f172a; }
+.mkt .x-price-big span { display: block; margin-top: 8px; font-size: 16px; font-weight: 500; letter-spacing: 0; color: #475569; }
+.mkt .x-price-card .x-checks { margin-top: 22px; }
+.mkt .x-block { display: flex; width: 100%; margin-top: 24px; }
+
+.mkt .x-founder { max-width: 820px; margin-inline: auto; padding: clamp(24px, 4vw, 40px); }
+.mkt .x-founder > p:first-of-type { font-size: clamp(18px, 2vw, 22px); line-height: 1.6; color: #0f172a; }
+.mkt .x-founder a { color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.mkt .x-sign { margin-top: 16px !important; font-size: 16px !important; font-weight: 700; color: #0f172a !important; }
+
+.mkt .x-close { padding-block: clamp(64px, 8vw, 104px); text-align: center; }
+.mkt .x-close .x-lede { margin-inline: auto; }
+
+.mkt .simple-footer { background: #fff; }
+
+@media (max-width: 1023px) {
+  .mkt .x-hero-grid { grid-template-columns: 1fr; }
+  .mkt .x-devices { max-width: 680px; margin-inline: auto; width: 100%; }
+  .mkt .x-split, .mkt .x-price { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .mkt .x-grid-2, .mkt .x-grid-3 { grid-template-columns: 1fr; }
+  .mkt .x-cta .btn { flex: 1 1 100%; }
+  .mkt .x-devices { padding: 0 0 10% 8%; }
+  .mkt .x-phone { width: 30%; border-width: 4px; border-radius: 16px; }
+  .mkt .x-phone img { border-radius: 12px; }
+  .mkt .x-laptop-screen { border-width: 6px; border-bottom-width: 9px; border-radius: 10px 10px 3px 3px; }
+  .mkt .x-laptop-base { height: 9px; }
+}

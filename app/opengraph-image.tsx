@@ -16,10 +16,10 @@ export default function OgImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#131110",
+          background: "linear-gradient(135deg, #0a1633 0%, #0f2a6b 100%)",
           padding: "72px 80px",
           fontFamily: "sans-serif",
-          color: "#ece5d7",
+          color: "#ffffff",
         }}
       >
         <div style={{ display: "flex", fontSize: 40, fontWeight: 700, letterSpacing: -1 }}>SYNNR</div>
@@ -27,11 +27,11 @@ export default function OgImage() {
           <div style={{ display: "flex", fontSize: 68, fontWeight: 800, lineHeight: 1.06, letterSpacing: -2, maxWidth: 1000 }}>
             Every cert in your yard, watched before it lapses.
           </div>
-          <div style={{ display: "flex", fontSize: 30, color: "#a59d8c", maxWidth: 1000 }}>
+          <div style={{ display: "flex", fontSize: 30, color: "#c3cde3", maxWidth: 1000 }}>
             BOP tests, DOT dates, and crew cards on one list. The truck reads NOT READY until the paper is fixed.
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 28, color: "#1d4ed8", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>
+        <div style={{ display: "flex", fontSize: 28, color: "#9fb7ff", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>
       </div>
     ),
     { ...size },

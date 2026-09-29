@@ -82,8 +82,8 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
               The same yard on a phone. A red truck shows what&apos;s wrong and a button to fix it. You can
               open the demo on your phone too.
             </p>
-            <Image src="/screens/mobile-verdict.png" alt="SYNNR on a phone: CT-03 not ready, with a button to fix it"
-              width={250} height={512} className="mx-auto mt-2 w-40 rounded-2xl border border-line" />
+            <Image src="/screens/app-phone.webp" alt="SYNNR on a phone: 2 units can't roll, with a button to fix CT-03"
+              width={750} height={1624} className="mx-auto mt-2 w-40 rounded-[22px] border-[5px] border-slate-900 shadow-lg" />
           </div>
         </div>
 

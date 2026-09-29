@@ -132,6 +132,25 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const rd = await getCompanyReadiness(db, company.id);
   const tile = rd.units.find((t) => t.id === unitId) ?? null;
   const failingCerts = items.filter((i) => (i.status === "expired" || i.status === "none") && !pendingCovers(i, localToday()));
+  // "Upload the new cert" goes where the bad paper lives: this truck's book,
+  // the piece of gear, or the hand. The cert that turned CT-03 red is often
+  // on its BOP stack, not the truck.
+  const bad = (st: ComplianceStatus | null | undefined) => st === "expired" || st === "none";
+  const fixHref = failingCerts.length > 0 ? "#book"
+    : (() => {
+        const a = assets.find((x) => bad(worstByAsset.get(x.id)));
+        if (a) return `/app/assets/${a.id}`;
+        const c = assignedCrew.find((x) => bad(x.worst));
+        if (c) return `/app/crew/${c.id}`;
+        return "#book";
+      })();
+  const dueHref = (() => {
+    const a = assets.find((x) => worstByAsset.get(x.id) === "expiring");
+    if (a) return `/app/assets/${a.id}`;
+    const c = assignedCrew.find((x) => x.worst === "expiring");
+    if (c && !items.some((i) => i.status === "expiring")) return `/app/crew/${c.id}`;
+    return "#book";
+  })();
 
   return (
     <div className="flex flex-col gap-7">
@@ -213,7 +232,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               </ul>
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <a href="#book" className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-coal">
+              <a href={fixHref} className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-white">
                 Upload the new cert
               </a>
               <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
@@ -228,7 +247,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
             <div className="text-sm font-bold text-amber-400">Due soon</div>
             <p className="mt-1.5 text-lg font-semibold leading-snug">{u.name} rolls today, but: {tile.why}</p>
-            <a href="#book" className="mt-3 inline-flex min-h-12 items-center justify-center rounded-xl bg-bone px-5 text-sm font-semibold text-coal sm:min-h-10">
+            <a href={dueHref} className="mt-3 inline-flex min-h-12 items-center justify-center rounded-xl bg-bone px-5 text-sm font-semibold text-white sm:min-h-10">
               Upload the new cert
             </a>
           </div>
