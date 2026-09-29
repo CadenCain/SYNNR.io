@@ -26,6 +26,7 @@ import { fmtWhen } from "@/lib/saas/format";
 import { judgeItem } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { qrSvg, tagUrl } from "@/lib/saas/qr";
+import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
 import PhotoUpload from "./photo-upload";
 
 export const dynamic = "force-dynamic";
@@ -266,13 +267,15 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         {/* The tag on the iron. Scanning it opens a public page with this
             piece's tests and paper, no login. */}
         <Card className="flex flex-col items-center gap-3 p-5 text-center lg:col-span-2">
-          <h2 className="self-start text-sm font-semibold text-ink-dim">QR tag</h2>
+          <h2 className="self-start text-sm font-semibold text-ink-dim">Tag</h2>
           <div className="w-40 rounded-lg border border-line bg-white p-2 [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qr }} />
-          <p className="text-[13px] text-ink-dim">Stick it on the iron. Anyone who scans it with a phone camera sees its serial, test dates, and paper. No login.</p>
+          <p className="text-[13px] text-ink-dim">Stick the QR code on the iron, or put the same link on an NFC tag. Anyone who scans it with a phone sees its serial, test dates, and paper. No login.</p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href={`/app/tags?ids=${a.id}`} className={buttonClass("outline", "sm")}><Printer className="h-4 w-4" /> Print tag</Link>
             <a href={`/t/${a.tag_token}`} target="_blank" rel="noreferrer" className={buttonClass("ghost", "sm")}><ExternalLink className="h-4 w-4" /> What a scan shows</a>
           </div>
+          <NfcWriteButton url={tagUrl(a.tag_token)} />
+          <NfcHowTo url={tagUrl(a.tag_token)} />
         </Card>
       </div>
 

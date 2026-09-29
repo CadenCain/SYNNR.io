@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import PrintButton from "./print-button";
+import { NfcWriteButton, NfcHowTo, NfcSheetHint } from "@/app/app/_components/nfc-write";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
         <PageHeader
           back={{ href: "/app", label: "Equipment" }}
           title="QR tags"
-          description={`${rows.length} ${rows.length === 1 ? "tag" : "tags"}. Print on label paper, or plain paper you cut out and laminate. A scan shows that piece's serial, test dates, and paper.`}
+          description={`${rows.length} ${rows.length === 1 ? "tag" : "tags"}. Print on label paper, or plain paper you cut out and laminate, or put each link on an NFC tag. A scan shows that piece's serial, test dates, and paper.`}
           actions={rows.length ? <PrintButton /> : null}
         />
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -69,6 +70,8 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
           )}
           {ids && <Link href="/app/tags" className="ml-2 text-bone hover:underline">Show every tag</Link>}
         </div>
+        <NfcSheetHint />
+        <NfcHowTo className="max-w-xl" />
       </div>
 
       {rows.length === 0 ? (
@@ -86,6 +89,7 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
                 <div className={cn("break-words font-bold leading-tight", small ? "text-[11px]" : "text-base")}>{r.name}</div>
                 {r.identifier ? <div className={cn("font-semibold tabular-nums", small ? "text-[10px]" : "text-sm")}>SN {r.identifier}</div> : null}
                 <div className={cn("mt-1 text-slate-500", small ? "text-[8px]" : "text-[11px]")}>Scan for test dates</div>
+                <div className="mt-1.5"><NfcWriteButton url={tagUrl(r.tagToken)} compact /></div>
               </div>
             </div>
           ))}
