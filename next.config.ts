@@ -20,6 +20,24 @@ const PARKED = [
 const nextConfig: NextConfig = {
   // Off so headless-Chrome captures of the real UI ship clean.
   devIndicators: false,
+  // The cert reader (tesseract) runs in Node with a worker thread and wasm;
+  // it has to load from node_modules as-is, not bundled.
+  serverExternalPackages: ["tesseract.js", "tesseract.js-core"],
+  // Only the upload route reads photos, so only it carries the reader, its
+  // wasm, and the English model (lib/saas/ocr-data).
+  outputFileTracingIncludes: {
+    "/api/saas/certs/upload": [
+      "./lib/saas/ocr-data/**",
+      "./node_modules/tesseract.js/**",
+      "./node_modules/tesseract.js-core/**",
+    ],
+  },
+  experimental: {
+    // Phones shrink photos before sending (about 0.5MB), but a server action
+    // carrying an older photo form shouldn't die at the 1MB default. Vercel
+    // caps a request at 4.5MB, so 4MB is the real ceiling.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   async redirects() {
     return [
       // Old funnel URLs land directly on the live one (single hop — no chains).

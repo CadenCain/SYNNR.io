@@ -45,6 +45,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // engine as the dashboard, never a second opinion.
   const db = await saasDb();
   const { readiness } = await getCompanyReadiness(db, company.id);
+  // Managers see how many uploads are waiting on them, everywhere.
+  const manager = company.role === "owner" || company.role === "admin";
+  const { count: waitingCount } = manager
+    ? await db.from("saas_cert_uploads").select("id", { count: "exact", head: true })
+        .eq("company_id", company.id).eq("status", "waiting")
+    : { count: null };
+  const reviewCount = manager ? waitingCount ?? 0 : null;
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
@@ -59,7 +66,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <AppNav companyName={company.name} userName={userName} readiness={readiness}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
-        switchAction={switchCompany} />
+        switchAction={switchCompany} reviewCount={reviewCount} />
       <div className="relative z-10 min-w-0 flex-1">
         {/* Never-subscribed, lapsed, and payment-failed are three different
             situations — telling a brand-new signup their subscription "paused"
@@ -101,6 +108,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}{" "}
             before editing pauses.
           </div>
+        ) : null}
+        {reviewCount ? (
+          <Link href="/app/review" className="flex items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300 md:hidden">
+            <span><span className="font-semibold">{reviewCount} upload{reviewCount === 1 ? "" : "s"}</span> waiting on your OK</span>
+            <span className="font-medium underline underline-offset-2">Review</span>
+          </Link>
         ) : null}
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {children}

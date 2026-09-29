@@ -13,10 +13,12 @@ import {
 
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import ComplianceRow, { type RowItem, ROW_COLUMNS } from "@/app/app/_components/compliance-row";
+import { AddCert } from "@/app/app/_components/cert-upload";
+import { paperLinks } from "@/lib/saas/paper";
+import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 import { AddDisclosure } from "@/components/ui/disclosure";
 import { getItemCustomers } from "@/lib/saas/customers";
-import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateAsset, deleteAsset, updateAssetLastSeen } from "@/app/app/_actions";
 import { fmtDate, seenAge } from "@/lib/saas/format";
 import PhotoUpload from "./photo-upload";
@@ -57,19 +59,22 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
-    .eq("parent_type", "asset").eq("parent_id", assetId)
+    .select(ROW_COLUMNS)
+    .eq("company_id", company.id).eq("parent_type", "asset").eq("parent_id", assetId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const items = (ciData ?? []) as RowItem[];
   const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
+  const [paper, rules] = await Promise.all([paperLinks(db, items), getYardRules(db, company.id)]);
+  const isManager = isManagerRole(company.role);
+  const statusLabel = a.status === "out_of_service" ? "red-tagged (out of service)" : a.status.replace(/_/g, " ");
 
   return (
     <div className="flex flex-col gap-7">
       <PageHeader
         back={a.unit_id ? { href: `/app/units/${a.unit_id}`, label: "Unit" } : { href: "/app/yards", label: "Yards" }}
         title={a.name}
-        description={`${categoryLabel(a.category)}${a.identifier ? ` · ${a.identifier}` : ""} · ${a.status.replace(/_/g, " ")}`}
+        description={`${categoryLabel(a.category)}${a.identifier ? ` · ${a.identifier}` : ""} · ${statusLabel}`}
         actions={
           <Popover>
             <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
@@ -83,16 +88,25 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
                   <select name="category" defaultValue={a.category} className={`${fld} mt-1 w-full`}>
                     {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select></label>
-                <label className="text-xs text-ink-faint">Status
-                  <select name="status" defaultValue={a.status} className={`${fld} mt-1 w-full`}>
-                    <option value="in_service">In service</option>
-                    <option value="out_of_service">Out of service</option>
-                    <option value="missing">Missing</option>
-                  </select></label>
-                <label className="text-xs text-ink-faint">Identifier<input name="identifier" defaultValue={a.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                {a.status === "out_of_service" && !isManager ? (
+                  <>
+                    <input type="hidden" name="status" value="out_of_service" />
+                    <p className="text-xs text-ink-faint">Red-tagged. Only a manager can put it back in service.</p>
+                  </>
+                ) : (
+                  <label className="text-xs text-ink-faint">Status
+                    <select name="status" defaultValue={a.status} className={`${fld} mt-1 w-full`}>
+                      <option value="in_service">In service</option>
+                      <option value="out_of_service">Red-tagged (out of service)</option>
+                      <option value="missing">Missing</option>
+                    </select></label>
+                )}
+                {isManager ? (
+                  <label className="text-xs text-ink-faint">Serial number<input name="identifier" defaultValue={a.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              {company.role !== "member" && (
+              {isManager && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -198,26 +212,12 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         <h2 className="text-sm font-semibold text-ink-dim">Certs, tests &amp; inspections</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
-            {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
+            {items.map((it) => <ComplianceRow key={it.id} item={it} redirectPath={here} isManager={isManager} allowOnTheWay={rules.allowCertOnTheWay} paperUrl={paper.get(it.id)} />)}
           </div>
         )}
         <AddDisclosure label={items.length ? "Add another" : "Add a test, cert, or inspection"} defaultOpen={items.length === 0}>
-          <form action={addComplianceItem} className="flex flex-col gap-3">
-            <input type="hidden" name="parent_type" value="asset" />
-            <input type="hidden" name="parent_id" value={a.id} />
-            <input type="hidden" name="redirect_path" value={here} />
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. BOP test" className={`${fld} min-w-0 flex-1`} />
-              <select name="kind" defaultValue="test" className={`${fld} sm:w-44`}>
-                {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Issued<input name="issued_date" type="date" className={fld} /></label>
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Expires<input name="expiration_date" type="date" className={fld} /></label>
-              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
-            </div>
-          </form>
+          <AddCert parentType="asset" parentId={a.id} redirectPath={here} isManager={isManager} defaultKind="test"
+            placeholder="e.g. BOP test" heading="" bare />
         </AddDisclosure>
       </section>
     </div>

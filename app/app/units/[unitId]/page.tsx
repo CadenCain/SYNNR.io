@@ -14,10 +14,16 @@ import {
 
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import ComplianceRow, { type RowItem, ROW_COLUMNS } from "@/app/app/_components/compliance-row";
+import { AddCert } from "@/app/app/_components/cert-upload";
+import { paperLinks } from "@/lib/saas/paper";
+import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
+import { pendingCovers } from "@/lib/saas/judge";
+import { localToday } from "@/lib/saas/status";
 import { AddDisclosure } from "@/components/ui/disclosure";
+import PhotoForm from "@/components/photo-form";
 import { getItemCustomers } from "@/lib/saas/customers";
-import { addComplianceItem, addAsset } from "./actions";
+import { addAsset } from "./actions";
 import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -50,12 +56,14 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
   const { data: ciData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
-    .eq("parent_type", "unit").eq("parent_id", unitId)
+    .select(ROW_COLUMNS)
+    .eq("company_id", company.id).eq("parent_type", "unit").eq("parent_id", unitId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const items = (ciData ?? []) as RowItem[];
   const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
+  const [paper, rules] = await Promise.all([paperLinks(db, items), getYardRules(db, company.id)]);
+  const isManager = isManagerRole(company.role);
 
   const { data: assetData } = await db
     .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at, primary_photo_path").eq("unit_id", unitId).order("name");
@@ -123,7 +131,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   // the blocking check use — the banner can never disagree with the wall.
   const rd = await getCompanyReadiness(db, company.id);
   const tile = rd.units.find((t) => t.id === unitId) ?? null;
-  const failingCerts = items.filter((i) => i.status === "expired" || i.status === "none");
+  const failingCerts = items.filter((i) => (i.status === "expired" || i.status === "none") && !pendingCovers(i, localToday()));
 
   return (
     <div className="flex flex-col gap-7">
@@ -150,10 +158,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   <select name="type" defaultValue={u.type} className={`${fld} mt-1 w-full`}>
                     {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select></label>
-                <label className="text-xs text-ink-faint">Identifier<input name="identifier" defaultValue={u.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                {isManager ? (
+                  <label className="text-xs text-ink-faint">Unit number / VIN<input name="identifier" defaultValue={u.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              {company.role !== "member" && (
+              {isManager && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -204,7 +214,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <a href="#book" className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-coal">
-                Fix it in the truck book
+                Upload the new cert
               </a>
               <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
                 Run the check anyway
@@ -219,7 +229,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <div className="text-sm font-bold text-amber-400">Due soon</div>
             <p className="mt-1.5 text-lg font-semibold leading-snug">{u.name} rolls today, but: {tile.why}</p>
             <a href="#book" className="mt-3 inline-flex min-h-12 items-center justify-center rounded-xl bg-bone px-5 text-sm font-semibold text-coal sm:min-h-10">
-              Renew it before it bites
+              Upload the new cert
             </a>
           </div>
         </section>
@@ -230,26 +240,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         <h2 className="text-sm font-semibold text-ink-dim">Truck book: certs, inspections, and DOT</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
-            {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
+            {items.map((it) => <ComplianceRow key={it.id} item={it} redirectPath={here} isManager={isManager} allowOnTheWay={rules.allowCertOnTheWay} paperUrl={paper.get(it.id)} />)}
           </div>
         )}
         <AddDisclosure label={items.length ? "Add another item" : "Add a cert, inspection, or DOT item"} defaultOpen={items.length === 0}>
-          <form action={addComplianceItem} className="flex flex-col gap-3">
-            <input type="hidden" name="parent_type" value="unit" />
-            <input type="hidden" name="parent_id" value={u.id} />
-            <input type="hidden" name="redirect_path" value={here} />
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. Annual DOT inspection" className={`${fld} min-w-0 flex-1`} />
-              <select name="kind" defaultValue="inspection" className={`${fld} sm:w-44`}>
-                {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Issued<input name="issued_date" type="date" className={fld} /></label>
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Expires<input name="expiration_date" type="date" className={fld} /></label>
-              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
-            </div>
-          </form>
+          <AddCert parentType="unit" parentId={u.id} redirectPath={here} isManager={isManager} defaultKind="inspection"
+            placeholder="e.g. Annual DOT inspection" heading="" bare />
         </AddDisclosure>
       </section>
 
@@ -385,7 +381,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         )}
         {!isShop && (
         <AddDisclosure label="Add an asset to this unit" defaultOpen={assets.length === 0}>
-          <form action={addAsset} className="flex flex-col gap-3">
+          <PhotoForm action={addAsset} className="flex flex-col gap-3">
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
@@ -410,7 +406,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <div>
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
-          </form>
+          </PhotoForm>
         </AddDisclosure>
         )}
       </section>

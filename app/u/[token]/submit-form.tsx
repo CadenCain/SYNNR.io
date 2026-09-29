@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, Check } from "lucide-react";
 import { submitDocUpdate } from "./actions";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 
 /**
  * The hand's upload form — built for a phone in a truck cab: one big camera
@@ -25,6 +26,9 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
     setBusy(true); setError(null);
     const fd = new FormData(e.currentTarget);
     fd.set("token", token);
+    // A phone photo is 3-6MB; shrink it so it gets through on one bar.
+    const raw = fd.get("photo");
+    if (raw instanceof File && raw.size > 0) fd.set("photo", await shrinkPhoto(raw));
     const res = await submitDocUpdate(fd);
     setBusy(false);
     if (res.ok) setDone(true);

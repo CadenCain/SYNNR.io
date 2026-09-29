@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
+import { canPerform } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
 
@@ -45,7 +46,8 @@ async function purgeItemsFor(
 
 // ── YARD ──
 export async function updateYard(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "create_yard");
   const id = str(fd, "id");
   const name = str(fd, "name");
   const location = str(fd, "location") || null;
@@ -86,14 +88,15 @@ export async function deleteYard(fd: FormData) {
 
 // ── UNIT ──
 export async function updateUnit(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const id = str(fd, "id");
   const name = str(fd, "name");
   const type = str(fd, "type") || "other";
-  const identifier = str(fd, "identifier") || null;
   if (!id || !name) return;
+  // The unit number is what DOT paper gets matched against: a manager's field.
+  const identifier = fd.has("identifier") && canPerform(company.role, "edit_records") ? { identifier: str(fd, "identifier") || null } : {};
   const db = await saasDb();
-  const { error } = await db.from("saas_units").update({ name, type, identifier }).eq("id", id).eq("company_id", company.id);
+  const { error } = await db.from("saas_units").update({ name, type, ...identifier }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/units/${id}`);
 }
@@ -117,15 +120,24 @@ export async function deleteUnit(fd: FormData) {
 
 // ── ASSET ──
 export async function updateAsset(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const id = str(fd, "id");
   const name = str(fd, "name");
   const category = str(fd, "category") || "other";
-  const identifier = str(fd, "identifier") || null;
   const status = str(fd, "status") || "in_service";
   if (!id || !name) return;
+  const manager = canPerform(company.role, "edit_records");
+  // The serial is what a cert photo gets matched against, and a red tag only
+  // comes off by a manager. The database enforces both (migration 0009);
+  // this keeps a hand's save from tripping it.
+  const identifier = fd.has("identifier") && manager ? { identifier: str(fd, "identifier") || null } : {};
   const db = await saasDb();
-  const { error } = await db.from("saas_assets").update({ name, category, identifier, status }).eq("id", id).eq("company_id", company.id);
+  const { data: before } = await db.from("saas_assets").select("status").eq("id", id).eq("company_id", company.id).maybeSingle();
+  const wasRedTagged = (before as { status: string } | null)?.status === "out_of_service";
+  if (wasRedTagged && status !== "out_of_service" && !manager) {
+    throw new Error("Only a manager can put red-tagged gear back in service.");
+  }
+  const { error } = await db.from("saas_assets").update({ name, category, status, ...identifier }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);
 }
@@ -181,15 +193,18 @@ export async function deleteAsset(fd: FormData) {
 
 // ── CREW ──
 export async function updateCrewMember(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const id = str(fd, "id");
-  const name = str(fd, "name");
   const role = str(fd, "role") || null;
   const phone = str(fd, "phone") || null;
-  const status = str(fd, "status") || "active";
-  if (!id || !name) return;
+  if (!id) return;
+  // A card photo is matched against the hand's name, and "inactive" takes a
+  // hand off the books: both a manager's call (the database agrees).
+  const manager = canPerform(company.role, "edit_records");
+  const name = str(fd, "name");
+  const managed = manager && name ? { name, status: str(fd, "status") || "active" } : {};
   const db = await saasDb();
-  const { error } = await db.from("saas_crew_members").update({ name, role, phone, status }).eq("id", id).eq("company_id", company.id);
+  const { error } = await db.from("saas_crew_members").update({ role, phone, ...managed }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/crew/${id}`);
 }
@@ -209,7 +224,8 @@ const SAMPLE_YARD = "Sample Yard (demo)";
 const SAMPLE_TAG = " (demo)";
 
 export async function loadSampleYard() {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "create_yard");
   const db = await saasDb();
   const iso = (days: number) => { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10); };
 
@@ -306,7 +322,8 @@ export async function loadSampleYard() {
 }
 
 export async function clearSampleYard() {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
+  assertCan(company, "delete_yard");
   const db = await saasDb();
   // Deleting the yard cascades UNITS but NOT assets — saas_assets.unit_id and
   // yard_id are ON DELETE SET NULL, proven live in the 2026-08-18 audit when
@@ -339,7 +356,7 @@ export async function clearSampleYard() {
 
 // ── UNIT ↔ CREW (standing assignment — feeds the checkout ready decision) ──
 export async function assignCrewToUnit(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const unit_id = str(fd, "unit_id");
   const crew_member_id = str(fd, "crew_member_id");
   if (!unit_id || !crew_member_id) return;
@@ -355,7 +372,7 @@ export async function assignCrewToUnit(fd: FormData) {
   revalidatePath(`/app/units/${unit_id}`);
 }
 export async function unassignCrewFromUnit(fd: FormData) {
-  const { company } = await requireCompany();
+  const { company } = await requireBillableCompany();
   const unit_id = str(fd, "unit_id");
   const crew_member_id = str(fd, "crew_member_id");
   const db = await saasDb();
@@ -366,36 +383,39 @@ export async function unassignCrewFromUnit(fd: FormData) {
 
 // ── COMPLIANCE ITEM ──
 export async function updateComplianceItem(fd: FormData) {
-  const { company, user } = await requireCompany();
+  const { company, user } = await requireBillableCompany();
+  // Renaming a cert or typing its date is a manager's job: the photo check
+  // reads the title, and a date without paper is exactly the thing to stop.
+  assertCan(company, "edit_records");
   const id = str(fd, "id");
   const title = str(fd, "title");
   const kind = str(fd, "kind") || "cert";
-  // Impossible calendar dates die with the field named; past dates are LEGAL
-  // (recording lapsed paper is the product). Same contract as the importer.
-  const issued_date = normalizeDateField(str(fd, "issued_date"), "Issued");
-  const expiration_date = normalizeDateField(str(fd, "expiration_date"), "Expires");
   const redirectPath = str(fd, "redirect_path");
   if (!id || !title) return;
+  // A form without date fields leaves the dates alone (it used to wipe them).
+  const editsDates = fd.has("expiration_date");
+  // Impossible calendar dates die with the field named; past dates are LEGAL
+  // (recording lapsed paper is the product). Same contract as the importer.
+  const issued_date = editsDates ? normalizeDateField(str(fd, "issued_date"), "Issued") : undefined;
+  const expiration_date = editsDates ? normalizeDateField(str(fd, "expiration_date"), "Expires") : undefined;
   const db = await saasDb();
-  // Fingerprints: this form has no camera, so a CHANGED expiration typed
-  // here is by definition proof-less — flag it and log old → new to the
-  // append-only feed. (First real field feedback: "I was able to just
-  // change the date… without having to show proof." Now it shows.)
   const { data: beforeRow } = await db.from("saas_compliance_items")
     .select("expiration_date").eq("id", id).eq("company_id", company.id).maybeSingle();
   const oldExp = (beforeRow as { expiration_date: string | null } | null)?.expiration_date ?? null;
-  const dateChanged = oldExp !== expiration_date;
+  const dateChanged = editsDates && oldExp !== expiration_date;
+  // The database marks a hand-typed date change (renewed_without_proof) on
+  // its own; the feed line below says who and what.
   const { error } = await db.from("saas_compliance_items")
-    .update({ title, kind, issued_date, expiration_date, ...(dateChanged ? { renewed_without_proof: true } : {}) })
+    .update({ title, kind, ...(editsDates ? { issued_date, expiration_date } : {}) })
     .eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   if (dateChanged) {
-    const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
+    const actor = actorName(user);
     void logEvent({
       companyId: company.id,
       kind: "renewed",
       actor,
-      message: `${title} date edited: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""}. No proof attached.`,
+      message: `${title} date typed in: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""}. No photo attached.`,
     });
   }
 
@@ -403,7 +423,7 @@ export async function updateComplianceItem(fd: FormData) {
   // per-item dedupe mutes this item forever (the camera-renew path has always
   // done this; typing the date in this form did not, so hand-edited items
   // silently stopped alerting).
-  await clearAlertLog(company.id, id);
+  if (dateChanged) await clearAlertLog(company.id, id);
 
   // Customer relevance tags: comma-separated names → ensure each customer
   // exists, then replace this item's joins. Blank = applies to all jobs.

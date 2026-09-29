@@ -12,9 +12,11 @@ import {
 
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import ComplianceRow, { type RowItem } from "@/app/app/_components/compliance-row";
+import ComplianceRow, { type RowItem, ROW_COLUMNS } from "@/app/app/_components/compliance-row";
+import { AddCert, UseSentPhoto } from "@/app/app/_components/cert-upload";
+import { paperLinks } from "@/lib/saas/paper";
+import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 import { getItemCustomers } from "@/lib/saas/customers";
-import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateCrewMember, deleteCrewMember } from "@/app/app/_actions";
 import { closeDocRequest } from "../doc-actions";
 import SendUpdateLink from "./send-update-link";
@@ -39,12 +41,14 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
 
   const { data: certData } = await db
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, issued_date, expiration_date, status, renewed_without_proof")
-    .eq("parent_type", "crew").eq("parent_id", crewId)
+    .select(ROW_COLUMNS)
+    .eq("company_id", company.id).eq("parent_type", "crew").eq("parent_id", crewId)
     .order("expiration_date", { ascending: true, nullsFirst: false });
   const certs = (certData ?? []) as RowItem[];
   const itemCustomers = await getItemCustomers(db, company.id, certs.map((i) => i.id));
   for (const it of certs) it.customers = itemCustomers.get(it.id) ?? [];
+  const [paper, rules] = await Promise.all([paperLinks(db, certs), getYardRules(db, company.id)]);
+  const isManager = isManagerRole(company.role);
 
   // Doc-request queue for this hand: submitted photos waiting review, plus
   // links still out in the field. Signed URLs are short-lived; RLS already
@@ -79,17 +83,23 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
             <PopoverContent align="end" className="w-80 p-3">
               <form action={updateCrewMember} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={c.id} />
-                <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={c.name} required className={`${fld} mt-1 w-full`} /></label>
+                {isManager ? (
+                  <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={c.name} required className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
                 <label className="text-xs text-ink-faint">Role<input name="role" defaultValue={c.role ?? ""} className={`${fld} mt-1 w-full`} /></label>
                 <label className="text-xs text-ink-faint">Phone<input name="phone" defaultValue={c.phone ?? ""} className={`${fld} mt-1 w-full`} /></label>
-                <label className="text-xs text-ink-faint">Status
-                  <select name="status" defaultValue={c.status} className={`${fld} mt-1 w-full`}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select></label>
+                {isManager ? (
+                  <label className="text-xs text-ink-faint">Status
+                    <select name="status" defaultValue={c.status} className={`${fld} mt-1 w-full`}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select></label>
+                ) : (
+                  <p className="text-xs text-ink-faint">A manager changes a hand&apos;s name or active status.</p>
+                )}
                 <Button type="submit" size="sm">Save</Button>
               </form>
-              {company.role !== "member" && (
+              {isManager && (
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
@@ -119,7 +129,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
       {/* Photos in from the field — review, renew the card, close it out. */}
       {docReqs.some((r) => r.status === "submitted") && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-amber-400">Waiting on your review</h2>
+          <h2 className="text-sm font-semibold text-amber-400">{isManager ? "Photos waiting on you" : "Photos waiting on a manager"}</h2>
           {docReqs.filter((r) => r.status === "submitted").map((r) => (
             <Card key={r.id} className="flex flex-col gap-3 border-amber-500/30 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -130,22 +140,27 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                 <span className="text-xs text-ink-faint">{r.submitted_at ? fmtWhen(r.submitted_at) : ""}</span>
               </div>
               {r.submitted_note && <p className="text-sm text-ink-dim">&ldquo;{r.submitted_note}&rdquo;</p>}
-              <div className="flex flex-wrap gap-2">
-                {photoUrls.get(r.id) && (
-                  <a href={photoUrls.get(r.id)} target="_blank" rel="noreferrer"
-                    className="flex min-h-10 items-center justify-center rounded-lg bg-bone px-4 text-[13px] font-semibold text-coal hover:bg-bone-soft">
-                    Open the photo
-                  </a>
-                )}
-                <form action={closeDocRequest}>
-                  <input type="hidden" name="id" value={r.id} />
-                  <input type="hidden" name="crew_id" value={c.id} />
-                  <button type="submit" className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 px-4 text-[13px] text-ink hover:bg-elevated">
-                    Done, card updated below
-                  </button>
-                </form>
-              </div>
-              <p className="text-xs text-ink-faint">Check the photo, update the card&apos;s dates in the crew book below, then close this out.</p>
+              {photoUrls.get(r.id) && (
+                <a href={photoUrls.get(r.id)} target="_blank" rel="noreferrer" className="block w-fit">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photoUrls.get(r.id)} alt={`Photo ${c.name} sent`} className="max-h-72 w-auto max-w-full rounded-lg border border-line-2 object-contain" />
+                </a>
+              )}
+              {isManager ? (
+                <>
+                  <UseSentPhoto docRequestId={r.id} cards={certs.map((x) => ({ id: x.id, title: x.title }))} suggestedExpiration={r.submitted_expiration} />
+                  <form action={closeDocRequest}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="crew_id" value={c.id} />
+                    <input type="hidden" name="outcome" value="revoked" />
+                    <button type="submit" className="cursor-pointer text-sm text-ink-dim underline underline-offset-2 hover:text-ink">
+                      Not usable, throw it out
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <p className="text-sm text-ink-dim">A manager checks this photo and applies it to the right card.</p>
+              )}
             </Card>
           ))}
         </section>
@@ -155,7 +170,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
         <h2 className="text-sm font-semibold text-ink-dim">Cards and certs</h2>
         {certs.length > 0 && (
           <div className="flex flex-col gap-2">
-            {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
+            {certs.map((it) => <ComplianceRow key={it.id} item={it} redirectPath={here} isManager={isManager} allowOnTheWay={rules.allowCertOnTheWay} paperUrl={paper.get(it.id)} />)}
           </div>
         )}
         {/* The office doesn't chase paper — the hand photographs their own
@@ -166,25 +181,9 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
             A link is already out with {c.name.split(" ")[0]}. It works through {fmtDate(docReqs.find((r) => r.status === "pending")!.expires_at.slice(0, 10))}.
           </p>
         )}
-        <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{certs.length ? "Add another card" : "Add a card: H2S, well control, CDL, medical"}</h3>
-          <form action={addComplianceItem} className="flex flex-col gap-3">
-            <input type="hidden" name="parent_type" value="crew" />
-            <input type="hidden" name="parent_id" value={c.id} />
-            <input type="hidden" name="redirect_path" value={here} />
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="title" required placeholder="e.g. H2S Clear, CDL, DOT medical" className={`${fld} min-w-0 flex-1`} />
-              <select name="kind" defaultValue="cert" className={`${fld} sm:w-44`}>
-                {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Issued<input name="issued_date" type="date" className={fld} /></label>
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Expires<input name="expiration_date" type="date" className={fld} /></label>
-              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
-            </div>
-          </form>
-        </Card>
+        <AddCert parentType="crew" parentId={c.id} redirectPath={here} isManager={isManager}
+          placeholder="e.g. H2S Clear, CDL, DOT medical"
+          heading={certs.length ? "Add another card" : "Add a card: H2S, well control, CDL, medical"} />
       </section>
     </div>
   );

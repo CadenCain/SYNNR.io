@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ComplianceStatus } from "./db";
-import { localToday, addDaysIso } from "./status";
+import { localToday } from "./status";
+import { judgeUnit, FAILING_GEAR, type JItem } from "./judge";
 
 /**
  * The readiness check: a RECORD-CURRENCY check, not a dispatch checklist.
@@ -103,7 +103,6 @@ export async function computeDispatchCheck(
   // fall back to today. Anything today-or-later is honored.
   const jobDate = jobDateArg && jobDateArg >= today ? jobDateArg : today;
   const isFutureJob = jobDate > today;
-  const warnHorizon = addDaysIso(jobDate, 21); // "renew soon" heads-up window
   const { data: unitData } = await db
     .from("saas_units").select("id, name, type, yard_id")
     .eq("id", unitId).eq("company_id", companyId).maybeSingle();
@@ -123,7 +122,7 @@ export async function computeDispatchCheck(
       ? db.from("saas_loadout_items").select("id, label, required, sort").eq("template_id", template.id).order("sort")
       : Promise.resolve({ data: [] }),
     db.from("saas_assets").select("id, name, status").eq("unit_id", unitId).eq("company_id", companyId),
-    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
+    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId).eq("company_id", companyId),
   ]);
   const loadout = (tplItems ?? []) as { id: string; label: string; required: boolean; sort: number }[];
   const assets = (assetData ?? []) as { id: string; name: string; status: string }[];
@@ -131,110 +130,91 @@ export async function computeDispatchCheck(
 
   // Certs: unit + its assets + assigned crew
   const assetIds = assets.map((a) => a.id);
+  const COLS = "id, title, expiration_date, pending_until, reminder_days, parent_id";
   const [{ data: unitCerts }, { data: assetCerts }, { data: crewCerts }, { data: crewNames }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
-      .select("id, title, expiration_date, status, parent_id").eq("parent_type", "unit").eq("parent_id", unitId),
+      .select(COLS).eq("company_id", companyId).eq("parent_type", "unit").eq("parent_id", unitId),
     assetIds.length
       ? db.from("saas_compliance_items_with_status")
-          .select("id, title, expiration_date, status, parent_id").eq("parent_type", "asset").in("parent_id", assetIds)
+          .select(COLS).eq("company_id", companyId).eq("parent_type", "asset").in("parent_id", assetIds)
       : Promise.resolve({ data: [] }),
     crewIds.length
       ? db.from("saas_compliance_items_with_status")
-          .select("id, title, expiration_date, status, parent_id").eq("parent_type", "crew").in("parent_id", crewIds)
+          .select(COLS).eq("company_id", companyId).eq("parent_type", "crew").in("parent_id", crewIds)
       : Promise.resolve({ data: [] }),
     crewIds.length
-      ? db.from("saas_crew_members").select("id, name").in("id", crewIds)
+      ? db.from("saas_crew_members").select("id, name").eq("company_id", companyId).in("id", crewIds)
       : Promise.resolve({ data: [] }),
   ]);
-  type Cert = { id: string; title: string; expiration_date: string | null; status: ComplianceStatus; parent_id: string };
-  const assetName = new Map(assets.map((a) => [a.id, a.name]));
   const crewName = new Map(((crewNames ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
   const lines: CheckLine[] = [];
-  const failures: string[] = [];
   const warnings: string[] = [];
 
   // 1) Gear list vs the asset book. The gear list is a REFERENCE, not a gate:
-  //    a line that simply isn't in the book yet is a heads-up (warning), never
-  //    a failure — SYNNR keeps up with everybody's records; it doesn't run
-  //    a checklist. A matched asset FLAGGED missing/out-of-service is a real
-  //    problem and still fails.
+  //    a line that simply isn't in the book yet is a heads-up, never a
+  //    failure. Gear that IS flagged missing or red-tagged fails the truck
+  //    through the rules below, whether or not it's on the list.
   for (const li of loadout) {
     const match = matchAssetForLine(li.label, assets);
     if (!match) {
-      // A required line that isn't in the book must not wear green — a hand
-      // scanning chips saw six OKs on a truck that wasn't ready. It still
-      // doesn't FAIL the truck (the gear list warns, never gates).
+      // A required line that isn't in the book must not wear green: a hand
+      // scanning chips saw six OKs on a truck that wasn't ready.
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "warn" : "ok", detail: li.required ? "not in the asset book yet" : "optional, not in the asset book" });
       if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet. Add it so it's tracked.`);
-    } else if (match.status !== "in_service") {
-      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "missing" : "ok", detail: `${match.name} is flagged ${match.status.replace(/_/g, " ")}` });
-      if (li.required) failures.push(`${li.label}: ${match.name} flagged ${match.status.replace(/_/g, " ")}`);
+    } else if (FAILING_GEAR.has(match.status)) {
+      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "missing", detail: `${match.name} is flagged ${match.status === "out_of_service" ? "red-tagged" : "missing"}` });
     } else {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "ok", detail: `on the list (${match.name})` });
     }
   }
 
-  // 2) Assets flagged missing/out of service (even if not on the template)
-  for (const a of assets) {
-    if (a.status === "missing") {
-      lines.push({ source_type: "asset", source_id: a.id, label: a.name, result: "missing", detail: "flagged missing on the asset list" });
-      failures.push(`${a.name}: flagged missing`);
-    }
-  }
+  // 2) The rules (lib/saas/judge.ts), against the JOB DATE: a cert that's
+  //    fine today but lapses before the job fails. Heads-up window: 21 days
+  //    past the job.
+  const j = judgeUnit({
+    unitItems: (unitCerts ?? []) as JItem[],
+    assets,
+    assetItems: (assetCerts ?? []) as JItem[],
+    crew: crewIds.map((id) => ({ id, name: crewName.get(id) ?? "assigned hand" })),
+    crewItems: (crewCerts ?? []) as JItem[],
+  }, jobDate, today, { soonDays: 21 });
 
-  // 3) Paper — unit + asset certs, evaluated against the JOB DATE.
-  //    A cert that's unexpired today but lapses before the job FAILS: "still
-  //    active" is not "current for this job" (the whole point of Q1).
-  const pushCert = (c: Cert, label: string, sourceType: "cert" | "crew_cert") => {
-    if (c.expiration_date === null) {
-      lines.push({ source_type: sourceType, source_id: c.id, label, result: "missing", detail: "no expiration on file" });
-      failures.push(`${label}: no expiration on file`);
-    } else if (c.expiration_date < jobDate) {
-      // lapsed by the job. Word it by whether the job is today or future.
-      const detail = isFutureJob
-        ? `expires ${c.expiration_date}, before the ${jobDate} job`
-        : `expired ${c.expiration_date}`;
-      lines.push({ source_type: sourceType, source_id: c.id, label, result: "expired", detail });
-      failures.push(isFutureJob ? `${label}: expires ${c.expiration_date}, before the job` : `${label}: expired`);
-    } else {
-      // current through the job. Heads-up if it lapses shortly after.
-      lines.push({ source_type: sourceType, source_id: c.id, label, result: "ok", detail: `good to ${c.expiration_date}` });
-      if (c.expiration_date <= warnHorizon) {
+  const failures: string[] = [];
+  for (const l of j.lines) {
+    const source_type: CheckLine["source_type"] = l.kind === "asset" ? "asset" : l.kind === "cert" ? "cert" : "crew_cert";
+    if (l.result === "ok" || l.result === "due_soon") {
+      lines.push({ source_type, source_id: l.id, label: l.label, result: "ok", detail: `good to ${l.expiration_date}` });
+      if (l.result === "due_soon") {
         warnings.push(isFutureJob
-          ? `${label}: expires ${c.expiration_date}, just after the job. Renew soon.`
-          : `${label}: due soon (${c.expiration_date})`);
+          ? `${l.label}: expires ${l.expiration_date}, just after the job. Renew soon.`
+          : `${l.label}: due soon (${l.expiration_date})`);
       }
+    } else if (l.result === "pending") {
+      lines.push({ source_type, source_id: l.id, label: l.label, result: "warn", detail: l.detail });
+      warnings.push(`${l.label}: ${l.detail}. The real cert still has to be uploaded.`);
+    } else {
+      lines.push({ source_type, source_id: l.id, label: l.kind === "crew" ? l.label.replace(/: no cards on file$/, "") : l.label, result: l.result, detail: l.detail });
+      failures.push(l.kind === "crew" ? l.label
+        : l.kind === "asset" ? `${l.label}: ${l.detail}`
+        : l.result === "missing" ? `${l.label}: no expiration on file`
+        : isFutureJob && l.expiration_date && l.expiration_date >= today ? `${l.label}: expires ${l.expiration_date}, before the job`
+        : `${l.label}: expired`);
     }
-  };
-  for (const c of (unitCerts ?? []) as Cert[]) pushCert(c, c.title, "cert");
-  for (const c of (assetCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${assetName.get(c.parent_id) ?? "asset"})`, "cert");
-  for (const c of (crewCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${crewName.get(c.parent_id) ?? "crew"})`, "crew_cert");
-
-  // An assigned hand with ZERO cards on file used to pass silently — "every
-  // assigned hand's cards checked" was vacuously true. Same rule as a cert
-  // with no date: unverifiable is failing, and people are the highest-stakes
-  // paper in the yard.
-  for (const f of crewWithNoCards(crewIds, (crewCerts ?? []) as { parent_id: string }[], crewName)) {
-    lines.push({ source_type: "crew_cert", source_id: f.crewId, label: f.label, result: "missing", detail: "no cards on file" });
-    failures.push(f.label); // label already says "no cards on file"
   }
 
-  // NO verdict on empty config — and "configured" means the SHOP put data in
-  // (assets, certs, or assigned crew), not merely that a global seed template
-  // exists for this unit type. A bare unit + seed template used to read
-  // NOT ready and log miss_caught — inflating the misses/dollar counters with
-  // value SYNNR never delivered. Nothing of the shop's on record = not_setup.
-  const configured =
-    assets.length > 0 || crewIds.length > 0 ||
-    (unitCerts ?? []).length > 0 || (assetCerts ?? []).length > 0;
-  const verdict: DispatchComputation["verdict"] = !configured ? "not_setup" : failures.length > 0 ? "not_ready" : "ready";
+  // NO verdict on empty config: "configured" means the SHOP put data in
+  // (certs or assigned crew), not merely that a seed template exists. A bare
+  // unit used to read NOT ready and log miss_caught, inflating the counters
+  // with value SYNNR never delivered.
+  const verdict: DispatchComputation["verdict"] =
+    j.verdict === "not_ready" ? "not_ready" : j.verdict === "not_setup" ? "not_setup" : "ready";
 
   // A "Ready" must never quietly mean "nothing was actually checked."
-  // Anything this check skipped gets said out loud — on the app page AND on
-  // the public proof link (both render these warnings).
+  // Anything this check skipped gets said out loud, on the app page AND on
+  // the public proof link.
   const notChecked: string[] = [];
-  if (configured && crewIds.length === 0) {
+  if (verdict !== "not_setup" && crewIds.length === 0) {
     notChecked.push("No crew is assigned to this unit, so crew cards weren't part of this check. Assign crew so their cards get checked.");
   }
   warnings.push(...notChecked);

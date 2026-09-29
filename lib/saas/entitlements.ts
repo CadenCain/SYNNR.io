@@ -57,17 +57,20 @@ export const READ_ONLY_MESSAGE =
 
 export type Action =
   | "view" | "export" | "run_check" | "renew" | "add_record" | "update_location"
-  | "import_existing_yard" | "create_proof"
+  | "import_existing_yard" | "create_proof" | "edit_records" | "review_uploads" | "set_rules"
   | "delete_record" | "create_yard" | "delete_yard" | "import_new_yard"
   | "manage_team" | "revoke_proof" | "manage_alerts" | "rename_company" | "promote_admin"
   | "billing" | "transfer_ownership";
 
+// "renew" for a hand means uploading a photo of the new cert; typing a date
+// ("edit_records") and importing a binder full of dates are a manager's.
 const MEMBER_ACTIONS = new Set<Action>([
   "view", "export", "run_check", "renew", "add_record", "update_location",
-  "import_existing_yard", "create_proof",
+  "create_proof",
 ]);
 const ADMIN_ACTIONS = new Set<Action>([
   ...MEMBER_ACTIONS,
+  "import_existing_yard", "edit_records", "review_uploads", "set_rules",
   "delete_record", "create_yard", "delete_yard", "import_new_yard",
   "manage_team", "revoke_proof", "manage_alerts", "rename_company", "promote_admin",
 ]);

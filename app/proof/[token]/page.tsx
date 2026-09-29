@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
-import type { ComplianceStatus } from "@/lib/saas/db";
+import { getCompanyReadiness } from "@/lib/saas/readiness";
+import { judgeItem, FAILING_GEAR, type LineResult } from "@/lib/saas/judge";
+import { localToday } from "@/lib/saas/status";
 
 /**
  * PUBLIC readiness proof — the link a shop hands the company man instead of
@@ -17,13 +19,18 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const CHIP: Record<ComplianceStatus, string> = {
+const CHIP = {
   valid: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   expiring: "border-amber-500/30 bg-amber-500/10 text-amber-400",
   expired: "border-red-500/30 bg-red-500/10 text-red-400",
   none: "border-line-2 bg-elevated text-ink-dim",
 };
-const LABEL: Record<ComplianceStatus, string> = { valid: "Valid", expiring: "Due soon", expired: "Expired", none: "Missing" };
+const RESULT_CHIP: Record<LineResult, string> = {
+  ok: CHIP.valid, due_soon: CHIP.expiring, pending: CHIP.expiring, expired: CHIP.expired, missing: CHIP.expired,
+};
+const RESULT_LABEL: Record<LineResult, string> = {
+  ok: "Valid", due_soon: "Due soon", pending: "Cert on the way", expired: "Expired", missing: "No date",
+};
 
 function Invalid({ reason }: { reason: string }) {
   return (
@@ -69,29 +76,61 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
 
   // Assets in scope
-  let assetQ = admin.from("saas_assets").select("id, name, category, status").eq("company_id", proof.company_id);
-  if (proof.scope === "yard" && proof.yard_id) assetQ = assetQ.eq("yard_id", proof.yard_id);
+  let assetQ = admin.from("saas_assets").select("id, name, category, status, unit_id").eq("company_id", proof.company_id);
+  if (proof.scope === "yard" && proof.yard_id) {
+    const inYard = unitFilter ?? [];
+    assetQ = inYard.length
+      ? assetQ.or(`yard_id.eq.${proof.yard_id},unit_id.in.(${inYard.join(",")})`)
+      : assetQ.eq("yard_id", proof.yard_id);
+  }
   if (proof.scope === "unit" && proof.unit_id) assetQ = assetQ.eq("unit_id", proof.unit_id);
   const { data: assetData } = await assetQ.order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string }[];
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; unit_id: string | null }[];
   const assetIds = new Set(assets.map((a) => a.id));
 
-  // Compliance items in scope (company scope includes crew certs)
+  // Crew in scope: the hands assigned to the trucks in scope. Their cards are
+  // part of whether a truck can roll, so the proof shows them.
+  let crewInScope: Set<string> | null = null; // null = every hand (company scope)
+  if (unitFilter) {
+    const { data: ucData } = unitFilter.length
+      ? await admin.from("saas_unit_crew").select("crew_member_id").eq("company_id", proof.company_id).in("unit_id", unitFilter)
+      : { data: [] };
+    crewInScope = new Set(((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
+  }
+
+  // Compliance items in scope
   const { data: itemData } = await admin
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, expiration_date, status, parent_type, parent_id")
+    .select("id, title, kind, expiration_date, pending_until, reminder_days, parent_type, parent_id, last_upload_id")
     .eq("company_id", proof.company_id);
-  type Item = { id: string; title: string; kind: string; expiration_date: string | null; status: ComplianceStatus; parent_type: string; parent_id: string };
+  type Item = { id: string; title: string; kind: string; expiration_date: string | null; pending_until: string | null; reminder_days: number | null; parent_type: string; parent_id: string; last_upload_id: string | null };
   let items = (itemData ?? []) as Item[];
   if (unitFilter) {
     const uf = new Set(unitFilter);
     items = items.filter((i) =>
       (i.parent_type === "unit" && uf.has(i.parent_id)) ||
-      (i.parent_type === "asset" && assetIds.has(i.parent_id)),
+      (i.parent_type === "asset" && assetIds.has(i.parent_id)) ||
+      (i.parent_type === "crew" && crewInScope!.has(i.parent_id)),
     );
   }
-  const rank: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
-  items.sort((a, b) => rank[a.status] - rank[b.status] || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""));
+  const today = localToday();
+  const judged = new Map(items.map((i) => [i.id, judgeItem(i, today, today)]));
+  const rank: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, due_soon: 3, ok: 4 };
+  items.sort((a, b) => rank[judged.get(a.id)!.result] - rank[judged.get(b.id)!.result] || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""));
+
+  // The actual paper: the photo behind each item's current date, if there is one.
+  const paperUrl = new Map<string, string>();
+  {
+    const uploadIds = items.map((i) => i.last_upload_id).filter((x): x is string => Boolean(x));
+    const { data: upData } = uploadIds.length
+      ? await admin.from("saas_cert_uploads").select("id, item_id, storage_path").in("id", uploadIds)
+      : { data: [] };
+    const ups = (upData ?? []) as { id: string; item_id: string; storage_path: string }[];
+    if (ups.length) {
+      const { data: signed } = await admin.storage.from("proofs").createSignedUrls(ups.map((u) => u.storage_path), 3600);
+      ups.forEach((u, idx) => { const url = signed?.[idx]?.signedUrl; if (url) paperUrl.set(u.item_id, url); });
+    }
+  }
 
   // Names for context columns
   const { data: unitNamesData } = await admin.from("saas_units").select("id, name").eq("company_id", proof.company_id);
@@ -104,21 +143,24 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
     : i.parent_type === "crew" ? `${crewNames.get(i.parent_id) ?? "crew"} (crew)`
     : assetNames.get(i.parent_id) ?? "asset";
 
-  const missingAssets = assets.filter((a) => a.status === "missing");
-  const failingCount = items.filter((i) => i.status === "expired" || i.status === "none").length;
-  // Nothing tracked = nothing proven. An empty scope must never read "Ready".
-  const configured = items.length > 0 || assets.length > 0;
-  const ready = configured && failingCount === 0 && missingAssets.length === 0;
-  const generatedAt = fmtWhen(new Date().toISOString());
-
-  // Unit scope: a "Ready" must carry what it did NOT check. The operator sees
-  // the same caveats the shop sees — an all-optional loadout or an unmanned
-  // unit can't hide behind a green banner. (Same engine as the in-app check.)
+  // The verdict comes from the same rules as the app (lib/saas/judge.ts).
+  const gearDown = assets.filter((a) => FAILING_GEAR.has(a.status));
+  const failingCount = items.filter((i) => ["expired", "missing"].includes(judged.get(i.id)!.result)).length;
+  let blockedUnits = 0;
   let notChecked: string[] = [];
   if (proof.scope === "unit" && proof.unit_id) {
     const comp = await computeDispatchCheck(admin, proof.company_id, proof.unit_id);
     notChecked = comp?.notChecked ?? [];
+    if (comp?.verdict === "not_ready") blockedUnits = 1;
+  } else {
+    const rd = await getCompanyReadiness(admin, proof.company_id);
+    const inScope = unitFilter ? new Set(unitFilter) : null;
+    blockedUnits = rd.units.filter((u) => (!inScope || inScope.has(u.id)) && u.state === "not_ready").length;
   }
+  // Nothing tracked = nothing proven. An empty scope must never read "Ready".
+  const configured = items.length > 0 || assets.length > 0;
+  const ready = configured && failingCount === 0 && gearDown.length === 0 && blockedUnits === 0;
+  const generatedAt = fmtWhen(new Date().toISOString());
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
   // who checked it, the verdict, and photo proof.
@@ -180,9 +222,11 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           ) : null}
           {!ready && configured ? (
             <p className="mt-2 text-sm text-red-300">
-              {failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : ""}
-              {failingCount > 0 && missingAssets.length > 0 ? " · " : ""}
-              {missingAssets.length > 0 ? `${missingAssets.length} asset${missingAssets.length === 1 ? "" : "s"} unaccounted for` : ""}
+              {[
+                failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : "",
+                gearDown.length > 0 ? `${gearDown.length} piece${gearDown.length === 1 ? "" : "s"} of gear missing or red-tagged` : "",
+                failingCount === 0 && gearDown.length === 0 && blockedUnits > 0 ? "A hand on this crew has no cards on file" : "",
+              ].filter(Boolean).join(" · ")}
             </p>
           ) : null}
           {notChecked.length > 0 ? (
@@ -203,8 +247,10 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               <span className="text-xs text-ink-faint">{fmtWhen(record.started_at)}</span>
             </div>
             <p className="mt-2 text-sm">
-              <span className={record.status === "not_ready_override" ? "font-semibold text-red-400" : "font-semibold text-emerald-400"}>
-                {record.status === "not_ready_override" ? "Rolled out NOT ready on override" : "Rolled out Ready"}
+              <span className={record.status === "ready" ? "font-semibold text-emerald-400" : "font-semibold text-red-400"}>
+                {record.status === "ready" ? "Checked: READY"
+                  : record.status === "not_ready_override" ? "Rolled out NOT ready on override"
+                  : "Checked: NOT READY"}
               </span>
               <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "—"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
               {record.override_reason ? <span className="text-ink-dim"> · reason: &ldquo;{record.override_reason}&rdquo;</span> : null}
@@ -247,12 +293,17 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               <tbody>
                 {items.map((i) => (
                   <tr key={i.id} className="last:[&>td]:border-0">
-                    <td className="border-b border-line/60 px-2 py-3 font-medium sm:px-4">{i.title}</td>
+                    <td className="border-b border-line/60 px-2 py-3 font-medium sm:px-4">
+                      {i.title}
+                      {paperUrl.get(i.id) ? (
+                        <a href={paperUrl.get(i.id)} target="_blank" rel="noreferrer" className="mt-0.5 block text-xs font-normal text-bone underline underline-offset-2 print:hidden">See the cert</a>
+                      ) : null}
+                    </td>
                     <td className="border-b border-line/60 px-2 py-3 text-ink-dim sm:px-4">{onLabel(i)}</td>
                     <td className="hidden border-b border-line/60 px-4 py-3 capitalize text-ink-dim sm:table-cell">{i.kind.replace(/_/g, " ")}</td>
                     <td className="border-b border-line/60 px-2 py-3 tabular-nums text-ink-dim sm:px-4">{i.expiration_date ?? "—"}</td>
                     <td className="border-b border-line/60 px-2 py-3 sm:px-4">
-                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${CHIP[i.status]}`}>{LABEL[i.status]}</span>
+                      <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${RESULT_CHIP[judged.get(i.id)!.result]}`}>{RESULT_LABEL[judged.get(i.id)!.result]}</span>
                     </td>
                   </tr>
                 ))}
@@ -278,8 +329,8 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                     <td className="border-b border-line/60 px-4 py-3 font-medium">{a.name}</td>
                     <td className="border-b border-line/60 px-4 py-3 capitalize text-ink-dim">{a.category.replace(/_/g, " ")}</td>
                     <td className="border-b border-line/60 px-4 py-3">
-                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${a.status === "in_service" ? CHIP.valid : a.status === "missing" ? CHIP.expired : CHIP.expiring}`}>
-                        {a.status.replace(/_/g, " ")}
+                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${a.status === "in_service" ? CHIP.valid : CHIP.expired}`}>
+                        {a.status === "out_of_service" ? "red-tagged" : a.status.replace(/_/g, " ")}
                       </span>
                     </td>
                   </tr>

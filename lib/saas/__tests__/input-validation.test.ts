@@ -85,11 +85,11 @@ function addFd(expiration: string) {
 describe("impossible dates die before the write, with the field named", () => {
   beforeEach(() => freshDb());
 
-  it('renew with "banana" → clean error, ZERO writes', async () => {
-    const { renewComplianceItem } = await actions();
+  it('edit form with "banana" → clean error, ZERO writes', async () => {
+    const { updateComplianceItem } = await actions();
     const { writes } = freshDb();
-    await expect(renewComplianceItem({ itemId: "item-1", expiration_date: "banana" }))
-      .rejects.toThrow(/New expiration date: bad date/);
+    await expect(updateComplianceItem(updateFd("banana")))
+      .rejects.toThrow(/Expires: bad date/);
     expect(itemWrites(writes)).toHaveLength(0);
   });
 
@@ -119,9 +119,9 @@ describe("impossible dates die before the write, with the field named", () => {
 
 describe("the dates the naive spec would block are LEGAL — pinned on purpose", () => {
   it("a PAST expiration SAVES (expired paper is the product, the UI flags it red)", async () => {
-    const { renewComplianceItem } = await actions();
+    const { updateComplianceItem } = await actions();
     const { writes } = freshDb();
-    await renewComplianceItem({ itemId: "item-1", expiration_date: "2020-01-01" });
+    await updateComplianceItem(updateFd("2020-01-01"));
     const w = itemWrites(writes).filter((x) => x.kind === "update");
     expect(w).toHaveLength(1);
     expect((w[0].payload as { expiration_date: string }).expiration_date).toBe("2020-01-01");
@@ -146,43 +146,10 @@ describe("the dates the naive spec would block are LEGAL — pinned on purpose",
 });
 
 describe("fingerprints — a changed date is never silent (the Collide pencil-whip finding)", () => {
-  it("renew WITHOUT proof: flag set, feed shows old → new and NO PROOF ATTACHED", async () => {
-    const { renewComplianceItem } = await actions();
-    const { logEvent } = await import("../notify");
-    vi.mocked(logEvent).mockClear();
-    const fake = fakeSupabase({
-      saas_units: [{ id: "u1", name: "Rig 4", company_id: CO }],
-      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
-      saas_alerts_sent: [],
-      saas_attachments: [],
-    });
-    dbHolder.current = fake.client;
-    await renewComplianceItem({ itemId: "item-1", expiration_date: "2027-03-01" });
-    const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
-    expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(true);
-    const msg = String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message);
-    expect(msg).toContain("2026-03-01 → 2027-03-01");
-    expect(msg).toContain("No proof attached");
-  });
-
-  it("renew WITH proof photo: flag cleared, feed says proof attached", async () => {
-    const { renewComplianceItem } = await actions();
-    const { logEvent } = await import("../notify");
-    vi.mocked(logEvent).mockClear();
-    const fake = fakeSupabase({
-      saas_units: [{ id: "u1", name: "Rig 4", company_id: CO }],
-      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
-      saas_alerts_sent: [],
-      saas_attachments: [],
-    });
-    dbHolder.current = fake.client;
-    await renewComplianceItem({ itemId: "item-1", expiration_date: "2027-03-01", storage_path: `${CO}/compliance_item/item-1/x.jpg` });
-    const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
-    expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(false);
-    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("with a proof photo");
-  });
-
-  it("edit-form date change: flagged proofless + old → new logged", async () => {
+  // Renewing is a photo upload now (lib/saas/cert-upload.ts); the only typed
+  // date change left is a manager's edit form, and the database marks it
+  // renewed_without_proof itself (migration 0009). The feed line is ours.
+  it("manager's edit-form date change: old → new logged, no photo", async () => {
     const { updateComplianceItem } = await actions();
     const { logEvent } = await import("../notify");
     vi.mocked(logEvent).mockClear();
@@ -194,9 +161,63 @@ describe("fingerprints — a changed date is never silent (the Collide pencil-wh
     });
     dbHolder.current = fake.client;
     await updateComplianceItem(updateFd("2027-06-01"));
+    const msg = String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message);
+    expect(msg).toContain("2026-03-01 → 2027-06-01");
+    expect(msg).toContain("No photo attached");
+  });
+
+  it("a form with no date fields leaves the dates alone (it used to wipe them)", async () => {
+    const { updateComplianceItem } = await actions();
+    const fake = fakeSupabase({
+      saas_compliance_items: [{ id: "item-1", title: "BOP pressure test", expiration_date: "2026-03-01", company_id: CO }],
+      saas_alerts_sent: [], saas_item_customers: [], saas_customers: [],
+    });
+    dbHolder.current = fake.client;
+    const fd = new FormData();
+    fd.set("id", "item-1"); fd.set("title", "BOP pressure test, 10k"); fd.set("kind", "test"); fd.set("redirect_path", "");
+    await updateComplianceItem(fd);
     const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
-    expect((upd?.payload as { renewed_without_proof?: boolean }).renewed_without_proof).toBe(true);
-    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("2026-03-01 → 2027-06-01");
+    expect(upd?.payload).toEqual({ title: "BOP pressure test, 10k", kind: "test" });
+  });
+});
+
+describe("a hand can't type a date", () => {
+  it("adding a cert WITH a date as a member is refused before any write", async () => {
+    const { addComplianceItem } = await actions();
+    const { writes } = freshDb();
+    authMock.company.role = "member";
+    try {
+      await expect(addComplianceItem(addFd("2027-01-01"))).rejects.toThrow(/Only a manager can type in a date/);
+      expect(itemWrites(writes)).toHaveLength(0);
+    } finally {
+      authMock.company.role = "owner";
+    }
+  });
+
+  it("a member CAN add the item with no date (it shows red until a photo lands)", async () => {
+    const { addComplianceItem } = await actions();
+    const { writes } = freshDb();
+    authMock.company.role = "member";
+    try {
+      await addComplianceItem(addFd(""));
+      expect(itemWrites(writes).filter((w) => w.kind === "insert")).toHaveLength(1);
+    } finally {
+      authMock.company.role = "owner";
+    }
+  });
+
+  it("a member's unit edit never carries the unit number", async () => {
+    const { updateUnit } = await actions();
+    const { writes } = freshDb();
+    authMock.company.role = "member";
+    try {
+      const fd = new FormData();
+      fd.set("id", "u1"); fd.set("name", "Rig 4"); fd.set("type", "truck"); fd.set("identifier", "FAKE-1");
+      await updateUnit(fd);
+      expect(writes.find((w) => w.table === "saas_units")?.payload).toEqual({ name: "Rig 4", type: "truck" });
+    } finally {
+      authMock.company.role = "owner";
+    }
   });
 });
 

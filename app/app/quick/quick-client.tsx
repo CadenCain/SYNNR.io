@@ -5,20 +5,20 @@ import { useRouter } from "next/navigation";
 import { Box, Camera, Check, ChevronLeft, MapPin, Plus, RefreshCw, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { extractExpirationDate } from "@/lib/ocr-date";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
 import { ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { updateAssetLastSeen } from "../_actions";
 import { fmtDate } from "@/lib/saas/format";
-import { renewComplianceItem } from "@/app/app/units/[unitId]/actions";
-import { quickAddCert, quickAddUnit, quickAddAsset } from "./actions";
+import { quickAddUnit, quickAddAsset } from "./actions";
+import { UploadCertPanel, AddCert } from "../_components/cert-upload";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 
 /**
  * The 2-tap field workflow. Built for gloved hands in sunlight:
  * huge tap targets, camera-first, one decision per screen, big green done.
  *
- * Renew: tap the item → shoot the new cert → confirm date → done.
- * Add:   pick the truck → name it → shoot it → done.
+ * Renew: tap the item → shoot the new cert → the server checks it → done.
+ * Add:   pick the truck → name it → shoot the cert → done.
  *
  * Everything a shop needs to PUT ON THE BOOKS lives here too — trucks and
  * gear, not just paper. Before this, a new customer standing in his own yard
@@ -46,24 +46,9 @@ export interface QuickUnit {
   type: string;
 }
 
-function plusOneYear(): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
 const FIELD = "h-14 rounded-xl border border-line-2 bg-coal px-4 text-base text-ink outline-none focus:border-bone";
 
-async function uploadProof(companyId: string, entityId: string, file: File): Promise<{ path: string; type: string | null } | null> {
-  const sb = getBrowserSupabase();
-  if (!sb) return null;
-  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${companyId}/compliance_item/${entityId}/${Date.now()}-${safe}`;
-  const { error } = await sb.storage.from("proofs").upload(path, file, { upsert: false });
-  return error ? null : { path, type: file.type || null };
-}
-
-export default function QuickClient({ items, units, assets, companyId }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string }) {
+export default function QuickClient({ items, units, assets, companyId, isManager, allowOnTheWay }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string; isManager: boolean; allowOnTheWay: boolean }) {
   const router = useRouter();
   const [mode, setMode] = useState<"home" | "renew" | "add" | "seen" | "unit" | "gear" | "done">("home");
   /** Kept locally so a truck added a second ago is selectable immediately,
@@ -77,32 +62,13 @@ export default function QuickClient({ items, units, assets, companyId }: { items
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [doneMsg, setDoneMsg] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [expiration, setExpiration] = useState(plusOneYear());
-  const [ocr, setOcr] = useState<"idle" | "reading" | "unconfirmed" | "confirmed" | "none">("idle");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [addUnitId, setAddUnitId] = useState("");
   // Gear intake carries TWO shots — the iron and its paperwork — each with
   // its own camera field. Optional in a hurry; the asset flags amber without them.
   const gearPhotoRef = useRef<HTMLInputElement>(null);
   const gearPaperRef = useRef<HTMLInputElement>(null);
   const [gearPhotoName, setGearPhotoName] = useState("");
   const [gearPaperName, setGearPaperName] = useState("");
-
-  async function onPickPhoto(file: File | undefined) {
-    setFileName(file?.name ?? "");
-    if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      setErr("That photo is over 15 MB. Take a normal photo and try again.");
-      setFileName("");
-      if (fileRef.current) fileRef.current.value = "";
-      return;
-    }
-    setErr("");
-    setOcr("reading");
-    const read = await extractExpirationDate(file);
-    if (read) { setExpiration(read); setOcr("unconfirmed"); }
-    else setOcr("none");
-  }
 
   function reset(toHome = true) {
     setPicked(null);
@@ -111,41 +77,12 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setJustMade(null);
     setWhereText("");
     setErr("");
-    setFileName("");
+    setAddUnitId("");
     setGearPhotoName("");
     setGearPaperName("");
-    setOcr("idle");
-    setExpiration(plusOneYear());
-    if (fileRef.current) fileRef.current.value = "";
     if (gearPhotoRef.current) gearPhotoRef.current.value = "";
     if (gearPaperRef.current) gearPaperRef.current.value = "";
     if (toHome) setMode("home");
-  }
-
-  async function saveRenew(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!picked) return;
-    if (ocr === "unconfirmed" || ocr === "reading") return;
-    setErr("");
-    setBusy(true);
-    let storage_path: string | null = null;
-    let content_type: string | null = null;
-    const file = fileRef.current?.files?.[0];
-    if (file) {
-      const up = await uploadProof(companyId, picked.id, file);
-      if (up) { storage_path = up.path; content_type = up.type; }
-      else setErr("The photo didn't upload, but the date saved.");
-    }
-    try {
-      await renewComplianceItem({ itemId: picked.id, expiration_date: expiration, storage_path, content_type, redirectPath: "/app/quick" });
-      setDoneMsg(`${picked.title} renewed ✓`);
-      setMode("done");
-      router.refresh();
-    } catch {
-      setErr("Couldn't save. Try again.");
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function saveUnit(e: React.FormEvent<HTMLFormElement>) {
@@ -169,8 +106,9 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setBusy(true);
     const fd = new FormData(e.currentTarget);
     const name = String(fd.get("name") ?? "").trim();
-    const upIntake = async (f: File | undefined, label: string): Promise<string | null> => {
-      if (!f) return null;
+    const upIntake = async (raw: File | undefined, label: string): Promise<string | null> => {
+      if (!raw) return null;
+      const f = await shrinkPhoto(raw);
       const sb = getBrowserSupabase();
       if (!sb) return null;
       const safe = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -191,31 +129,6 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setBusy(false);
     if (!res.ok) { setErr(res.error ?? "Couldn't save."); return; }
     setDoneMsg(`${name} added ✓`);
-    setMode("done");
-    router.refresh();
-  }
-
-  async function saveAdd(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setErr("");
-    setBusy(true);
-    const fd = new FormData(e.currentTarget);
-    const unit_id = String(fd.get("unit_id") ?? "");
-    const title = String(fd.get("title") ?? "").trim();
-    const kind = String(fd.get("kind") ?? "cert");
-    const expiration_date = String(fd.get("expiration_date") ?? "") || null;
-
-    let storage_path: string | null = null;
-    let content_type: string | null = null;
-    const file = fileRef.current?.files?.[0];
-    if (file && unit_id) {
-      const up = await uploadProof(companyId, unit_id, file);
-      if (up) { storage_path = up.path; content_type = up.type; }
-    }
-    const res = await quickAddCert({ unit_id, title, kind, expiration_date, storage_path, content_type });
-    setBusy(false);
-    if (!res.ok) { setErr(res.error ?? "Couldn't save."); return; }
-    setDoneMsg(`${title} added ✓`);
     setMode("done");
     router.refresh();
   }
@@ -254,7 +167,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     if (!picked) {
       return (
         <div className="flex flex-col gap-3">
-          <BackBar onBack={() => reset()} label="What are you renewing?" />
+          <BackBar onBack={() => reset()} label="Which cert is it for?" />
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
               <p className="text-ink-dim">Nothing tracked yet. Add your first cert and it&apos;ll show up here.</p>
@@ -278,36 +191,11 @@ export default function QuickClient({ items, units, assets, companyId }: { items
       );
     }
     return (
-      <form onSubmit={saveRenew} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <BackBar onBack={() => setPicked(null)} label={picked.title} sub={picked.parentLabel} />
-        <CameraField fileRef={fileRef} fileName={fileName} setFileName={setFileName} label="Shoot the new cert" onFile={onPickPhoto} />
-        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
-          New expiration date
-          <input name="expiration_date" type="date" required value={expiration}
-            onChange={(e) => { setExpiration(e.target.value); if (ocr === "unconfirmed") setOcr("confirmed"); }}
-            className={cn(FIELD, ocr === "unconfirmed" && "border-amber-500/60 ring-1 ring-amber-500/30")} />
-        </label>
-        {ocr === "reading" ? (
-          <p className="text-sm text-ink-dim">Reading the photo…</p>
-        ) : ocr === "unconfirmed" ? (
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
-            <span className="text-sm text-amber-400">This date was read off the photo. Check that it&apos;s right.</span>
-            <button type="button" onClick={() => setOcr("confirmed")}
-              className="shrink-0 rounded-lg border border-amber-500/50 px-3 py-1.5 text-sm font-semibold text-amber-300">
-              Looks right
-            </button>
-          </div>
-        ) : ocr === "confirmed" ? (
-          <p className="text-sm text-emerald-400">✓ Date confirmed by you.</p>
-        ) : ocr === "none" && fileName ? (
-          <p className="text-sm text-ink-faint">Couldn&apos;t read a date off the photo. Enter it yourself.</p>
-        ) : null}
-        {err ? <p className="text-sm text-amber-400">{err}</p> : null}
-        <button type="submit" disabled={busy || ocr === "reading" || ocr === "unconfirmed"}
-          className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
-          {busy ? "Saving…" : ocr === "unconfirmed" ? "Confirm the date first" : "Save renewal"}
-        </button>
-      </form>
+        <UploadCertPanel big itemId={picked.id} isManager={isManager} allowOnTheWay={allowOnTheWay}
+          onClose={() => { reset(); router.refresh(); }} />
+      </div>
     );
   }
 
@@ -329,38 +217,22 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         </div>
       );
     }
+    const unitId = addUnitId || addForUnit?.id || "";
     return (
-      <form onSubmit={saveAdd} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <BackBar onBack={() => reset()} label="Add a cert or inspection" sub={addForUnit?.name} />
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
           Which truck / rig / shop?
-          <select name="unit_id" required className={FIELD} defaultValue={addForUnit?.id ?? ""}>
+          <select required className={FIELD} value={unitId} onChange={(e) => setAddUnitId(e.target.value)}>
             <option value="" disabled>Pick one…</option>
             {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` (${u.yardName})` : ""}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
-          What is it?
-          <input name="title" required placeholder="e.g. BOP test, DOT sticker" className={FIELD} />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
-            Kind
-            <select name="kind" defaultValue="cert" className={FIELD}>
-              {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
-            Expires
-            <input name="expiration_date" type="date" className={FIELD} />
-          </label>
-        </div>
-        <CameraField fileRef={fileRef} fileName={fileName} setFileName={setFileName} label="Shoot it (optional)" />
-        {err ? <p className="text-sm text-amber-400">{err}</p> : null}
-        <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
-          {busy ? "Saving…" : "Save it"}
-        </button>
-      </form>
+        {unitId ? (
+          <AddCert key={unitId} bare parentType="unit" parentId={unitId} redirectPath="/app/quick" isManager={isManager}
+            placeholder="e.g. BOP test, DOT sticker" heading="" />
+        ) : null}
+      </div>
     );
   }
 
@@ -517,8 +389,8 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         className="flex min-h-24 items-center gap-4 rounded-2xl border border-line bg-surface px-5 text-left active:bg-elevated">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bone text-coal"><RefreshCw className="h-6 w-6" /></span>
         <span>
-          <span className="block text-lg font-semibold">Renew a cert</span>
-          <span className="block text-sm text-ink-dim">{needsWork > 0 ? `${needsWork} need attention` : "Snap the new one, set the date"}</span>
+          <span className="block text-lg font-semibold">Upload a new cert</span>
+          <span className="block text-sm text-ink-dim">{needsWork > 0 ? `${needsWork} need attention` : "Take a photo of the new one"}</span>
         </span>
       </button>
       <button onClick={() => setMode("add")}

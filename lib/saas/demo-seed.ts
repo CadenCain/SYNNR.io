@@ -148,6 +148,17 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
   return companyId;
 }
 
+/** Delete everything a company has in the proofs bucket (folders nest a few deep). */
+async function removeStorageFolder(admin: SupabaseClient, prefix: string, depth = 0): Promise<void> {
+  if (depth > 4) return;
+  const bucket = admin.storage.from("proofs");
+  const { data } = await bucket.list(prefix, { limit: 1000 });
+  const entries = (data ?? []) as { name: string; id: string | null }[];
+  const files = entries.filter((e) => e.id).map((e) => `${prefix}/${e.name}`);
+  if (files.length) await bucket.remove(files);
+  for (const dir of entries.filter((e) => !e.id)) await removeStorageFolder(admin, `${prefix}/${dir.name}`, depth + 1);
+}
+
 /** Reap demo companies (and their throwaway users) older than maxAgeHours. */
 export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 24): Promise<{ deleted: number; errors: string[] }> {
   const errors: string[] = [];
@@ -164,12 +175,13 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const tables = [
         "saas_alerts_sent", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
-        "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_compliance_items",
+        "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",
         "saas_notification_settings", "saas_enforcement_settings", "saas_invitations", "saas_memberships",
       ];
       for (const t of tables) await admin.from(t).delete().eq("company_id", cid);
       await admin.from("saas_companies").delete().eq("id", cid);
+      await removeStorageFolder(admin, cid); // visitors' uploaded photos
       for (const m of (members ?? []) as { user_id: string }[]) {
         await admin.auth.admin.deleteUser(m.user_id).catch(() => {});
       }

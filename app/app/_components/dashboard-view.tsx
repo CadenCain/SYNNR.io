@@ -124,7 +124,7 @@ export default function DashboardView(d: DashboardData) {
                 <p className="mt-2 text-2xl font-semibold leading-snug">No trucks are blocked today.</p>
                 <p className="mt-1 truncate text-sm text-ink-dim">{dueSoon[0].name}: {dueSoon[0].why}</p>
                 <Link href={`/app/units/${dueSoon[0].id}`} className="mt-4 flex min-h-12 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
-                  Renew it
+                  Open {dueSoon[0].name}
                 </Link>
               </Card>
             </section>

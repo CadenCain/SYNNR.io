@@ -8,6 +8,7 @@ import { logEvent } from "@/lib/saas/notify";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 import { normalizeDateField } from "@/lib/saas/import-parse";
+import { canPerform } from "@/lib/saas/entitlements";
 
 export async function addComplianceItem(formData: FormData) {
   const { company } = await requireBillableCompany();
@@ -22,6 +23,11 @@ export async function addComplianceItem(formData: FormData) {
   const responsible_person = String(formData.get("responsible_person") ?? "").trim() || null;
   const redirectPath = String(formData.get("redirect_path") ?? "");
   if (!parent_id || !title) return;
+  // Typed-in dates are a manager's (setup from the binder). A hand adds the
+  // item with no date and uploads the cert photo.
+  if ((expiration_date || issued_date) && !canPerform(company.role, "edit_records")) {
+    throw new Error("Only a manager can type in a date. Add it with a photo of the cert instead.");
+  }
 
   const db = await saasDb();
   // parent_type and parent_id come off the wire — prove the parent is ours
@@ -39,64 +45,8 @@ export async function addComplianceItem(formData: FormData) {
   if (redirectPath) revalidatePath(redirectPath);
 }
 
-/** Camera-first renewal: bump the dates and (optionally) attach the new proof. */
-export async function renewComplianceItem(args: {
-  itemId: string;
-  expiration_date: string;
-  issued_date?: string | null;
-  storage_path?: string | null;
-  content_type?: string | null;
-  redirectPath?: string;
-}) {
-  const { company, user } = await requireCompany();
-  const db = await saasDb();
-
-  const expiration = normalizeDateField(args.expiration_date, "New expiration date");
-  if (!expiration) throw new Error("New expiration date: set the date off the new cert.");
-  // Fingerprints: read the OLD date first so the feed can show old → new.
-  // A renewal with no proof photo wears the flag until proof lands — the
-  // answer to "what stops somebody just typing a new date before a job?"
-  const { data: beforeRow } = await db.from("saas_compliance_items")
-    .select("title, expiration_date").eq("id", args.itemId).eq("company_id", company.id).maybeSingle();
-  const before = beforeRow as { title: string; expiration_date: string | null } | null;
-  const hasProof = Boolean(args.storage_path && ownsStoragePath(args.storage_path, company.id));
-  const { error: upErr } = await db
-    .from("saas_compliance_items")
-    .update({
-      expiration_date: expiration,
-      issued_date: normalizeDateField(args.issued_date, "Issued") ?? new Date().toISOString().slice(0, 10),
-      renewed_without_proof: !hasProof,
-    })
-    .eq("id", args.itemId)
-    .eq("company_id", company.id);
-  if (upErr) throw new Error(upErr.message);
-
-  if (args.storage_path && ownsStoragePath(args.storage_path, company.id)) {
-    await db.from("saas_attachments").insert({
-      company_id: company.id,
-      entity_type: "compliance_item",
-      entity_id: args.itemId,
-      storage_path: args.storage_path,
-      content_type: args.content_type ?? null,
-      label: "proof",
-    });
-  }
-
-  // Renewed = a fresh cycle: clear its alert-log rows so the NEXT expiry
-  // alerts again (the dedup is per-item, not per-cycle). Service role — the
-  // alert log is cron-owned and has no member delete policy.
-  await clearAlertLog(company.id, args.itemId);
-
-  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
-  void logEvent({
-    companyId: company.id,
-    kind: "renewed",
-    actor,
-    message: `${before?.title ?? "Item"} renewed: ${before?.expiration_date ?? "no date"} → ${expiration}${actor ? `, by ${actor}` : ""}${hasProof ? ", with a proof photo" : ". No proof attached."}`,
-  });
-
-  if (args.redirectPath) revalidatePath(args.redirectPath);
-}
+// Renewing moved to the photo upload (app/api/saas/certs/upload): the old
+// camera-renew action let anyone type a new date with the photo optional.
 
 export async function addAsset(formData: FormData) {
   const { company } = await requireBillableCompany();

@@ -77,8 +77,12 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   if (commit && !isWritable(company.subscription_status, company.comped)) {
     return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
-  // Role matrix: members may import into an EXISTING yard (daily work);
-  // creating a yard through the new-yard field is admin+, and capped.
+  // A spreadsheet full of expiration dates is a pile of typed-in dates, so
+  // importing is a manager's job (a hand's dates come from photos).
+  if (!canPerform(company.role, "import_existing_yard")) {
+    return { ok: false, error: "Only a manager can import a spreadsheet of certs. Hands upload photos of the new certs instead.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+  }
+  // Creating a yard through the new-yard field is admin+, and capped.
   if (newYard.trim() && !canPerform(company.role, "import_new_yard")) {
     return { ok: false, error: "Only an admin can create a yard through import. Pick an existing yard, or ask whoever runs your account.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }

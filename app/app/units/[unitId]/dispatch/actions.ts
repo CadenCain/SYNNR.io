@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { localToday } from "@/lib/saas/status";
 import { requireBillableCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { notifyEvent, logEvent } from "@/lib/saas/notify";
 
@@ -44,9 +44,15 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
     redirect(`/app/records/${(recent as { id: string }).id}`);
   }
 
-  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email || null;
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
 
-  const { data: check, error } = await db
+  // Written by the server, not the caller's session: the database only
+  // accepts check records from here (migration 0009), so nobody can post a
+  // "ready" record from a phone. The verdict above was computed server-side
+  // under the caller's own RLS, and every id is this company's.
+  const writer = saasAdmin();
+  if (!writer) throw new Error("Something's down on our end. Try again in a minute.");
+  const { data: check, error } = await writer
     .from("saas_dispatch_checks")
     .insert({
       company_id: company.id,
@@ -64,7 +70,7 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   const checkId = (check as { id: string }).id;
 
   if (comp.lines.length) {
-    await db.from("saas_dispatch_check_items").insert(
+    await writer.from("saas_dispatch_check_items").insert(
       comp.lines.map((l) => ({
         check_id: checkId,
         company_id: company.id,

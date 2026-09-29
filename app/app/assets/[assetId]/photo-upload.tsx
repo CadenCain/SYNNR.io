@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera } from "lucide-react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { setAssetPhoto } from "./actions";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 
 export default function PhotoUpload({
   assetId,
@@ -22,8 +23,9 @@ export default function PhotoUpload({
   const [busy, setBusy] = useState(false);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    const file = await shrinkPhoto(raw);
     setBusy(true);
     const sb = getBrowserSupabase();
     if (!sb) { setBusy(false); return; }

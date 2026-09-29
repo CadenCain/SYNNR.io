@@ -62,8 +62,16 @@ describe("isWritable — lapsed is read-only, never locked out", () => {
 
 describe("canPerform — the role matrix, spot-pinned at every boundary", () => {
   it("members do the daily work", () => {
-    for (const a of ["run_check", "renew", "add_record", "update_location", "create_proof", "export", "import_existing_yard"] as const) {
+    for (const a of ["run_check", "renew", "add_record", "update_location", "create_proof", "export"] as const) {
       expect(canPerform("member", a)).toBe(true);
+    }
+  });
+
+  it("members can't type dates, import a binder, review uploads, or set the rules", () => {
+    for (const a of ["edit_records", "import_existing_yard", "review_uploads", "set_rules"] as const) {
+      expect(canPerform("member", a)).toBe(false);
+      expect(canPerform("admin", a)).toBe(true);
+      expect(canPerform("owner", a)).toBe(true);
     }
   });
 

@@ -146,7 +146,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <input type="hidden" name="job_date" value={comp.jobDate} />
           <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${comp.jobDate}` : ""}`} />
           <p className="text-center text-xs text-ink-faint">
-            Saves the result and every line with your name and the time. It can't be edited afterward.
+            Saves the result and every line with your name and the time. It can&apos;t be edited afterward.
             {comp.verdict === "not_ready" ? " A NOT READY result is saved as NOT READY. There is no override. Fix the items and run it again." : ""}
           </p>
         </form>

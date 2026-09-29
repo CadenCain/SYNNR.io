@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat } from "lucide-react";
+import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -46,8 +46,10 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName, userName, readiness, companies = [], activeCompanyId, switchAction }: {
+export default function AppNav({ companyName, userName, readiness, companies = [], activeCompanyId, switchAction, reviewCount = null }: {
   companyName?: string; userName?: string; readiness?: number | null;
+  /** Uploads waiting on a manager. null = not a manager, no Review link. */
+  reviewCount?: number | null;
   companies?: { id: string; name: string }[];
   activeCompanyId?: string;
   switchAction?: (fd: FormData) => Promise<void>;
@@ -114,7 +116,9 @@ export default function AppNav({ companyName, userName, readiness, companies = [
         </form>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
-          {GROUPS.map((g) => (
+          {(reviewCount === null ? GROUPS : GROUPS.map((g, i) => i === 0
+            ? { ...g, items: [...g.items, { href: "/app/review", label: "Review uploads", icon: FileCheck }] }
+            : g)).map((g) => (
             <div key={g.label} className="flex flex-col gap-1">
               <div className="px-3 pb-1 text-xs font-medium text-ink-faint">{g.label}</div>
               {g.items.map((item) => {
@@ -131,7 +135,10 @@ export default function AppNav({ companyName, userName, readiness, companies = [
                     )}
                   >
                     <Icon className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {item.href === "/app/review" && reviewCount ? (
+                      <span className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-400">{reviewCount}</span>
+                    ) : null}
                   </Link>
                 );
               })}

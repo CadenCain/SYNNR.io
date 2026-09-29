@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
 import { computeReadiness, worstStatus, localToday, type UnitState } from "./status";
+import { judgeUnit, pendingCovers, FAILING_GEAR, type JItem } from "./judge";
 
 /**
  * One readiness engine for the whole app ("one source of truth"): the
@@ -11,10 +12,11 @@ import { computeReadiness, worstStatus, localToday, type UnitState } from "./sta
  * it is not a dispatch checklist. The gear list is reference only (it warns,
  * it never gates), so the tile and the readiness check agree by design:
  * both fail a unit only on real record problems. A unit is:
- *   not_ready — an expired OR no-date ("Missing") cert on the unit, its
- *               assets, or assigned crew — or an asset flagged missing.
+ *   not_ready — the rules in lib/saas/judge.ts: an expired or no-date cert
+ *               on the unit, its gear, or its crew; gear flagged missing or
+ *               red-tagged; an assigned hand with no cards.
  *               An item we can't prove is an item that fails.
- *   due_soon  — anything expiring inside its reminder window
+ *   due_soon  — anything expiring inside its reminder window, or a cert on the way
  *   ready     — everything current
  *   not_setup — nothing of the shop's tracked at all; never reads green
  */
@@ -36,108 +38,78 @@ export interface CompanyReadiness {
   hardFail: boolean;
 }
 
-const daysUntil = (iso: string) => {
-  const today = localToday();
-  return Math.round((new Date(`${iso}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86400e3);
-};
-
 export async function getCompanyReadiness(db: SupabaseClient, companyId: string): Promise<CompanyReadiness> {
-  const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }] = await Promise.all([
+  const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }, { data: crewData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, parent_type, parent_id").eq("company_id", companyId),
+      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id").eq("company_id", companyId),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
     db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId),
     db.from("saas_unit_crew").select("unit_id, crew_member_id").eq("company_id", companyId),
+    db.from("saas_crew_members").select("id, name").eq("company_id", companyId),
   ]);
 
-
-  type Item = { id: string; title: string; status: ComplianceStatus; expiration_date: string | null; parent_type: string; parent_id: string };
+  type Item = JItem & { status: ComplianceStatus; parent_type: string; parent_id: string };
+  const today = localToday();
   const items = (itemData ?? []) as Item[];
+  // "Cert on the way" counts like due-soon everywhere: not failing, not
+  // current. Once its window closes the view's own status takes over again.
+  const effective = (i: Item): ComplianceStatus =>
+    (i.status === "expired" || i.status === "none") && pendingCovers(i, today) ? "expiring" : i.status;
   const counts = { expired: 0, expiring: 0, valid: 0, none: 0 } as Record<ComplianceStatus, number>;
-  for (const i of items) counts[i.status]++;
+  for (const i of items) counts[effective(i)]++;
 
   type UnitRow = { id: string; name: string; type: string; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
   const assets = (assetData ?? []) as { id: string; name: string; unit_id: string | null; status: string }[];
   const unitCrew = (ucData ?? []) as { unit_id: string; crew_member_id: string }[];
+  const crewNames = new Map(((crewData ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
-  // Indexes for per-unit rollups
-  const assetsByUnit = new Map<string, typeof assets>();
-  for (const a of assets) {
-    if (!a.unit_id) continue;
-    const arr = assetsByUnit.get(a.unit_id) ?? [];
-    arr.push(a);
-    assetsByUnit.set(a.unit_id, arr);
-  }
-  const itemsByParent = new Map<string, Item[]>();
-  for (const i of items) {
-    const arr = itemsByParent.get(i.parent_id) ?? [];
-    arr.push(i);
-    itemsByParent.set(i.parent_id, arr);
-  }
-  const crewByUnit = new Map<string, string[]>();
-  for (const uc of unitCrew) {
-    const arr = crewByUnit.get(uc.unit_id) ?? [];
-    arr.push(uc.crew_member_id);
-    crewByUnit.set(uc.unit_id, arr);
-  }
+  const group = <T,>(rows: T[], key: (r: T) => string | null) => {
+    const m = new Map<string, T[]>();
+    for (const r of rows) { const k = key(r); if (!k) continue; const a = m.get(k) ?? []; a.push(r); m.set(k, a); }
+    return m;
+  };
+  const assetsByUnit = group(assets, (a) => a.unit_id);
+  const itemsByParent = group(items, (i) => i.parent_id);
+  const crewByUnit = group(unitCrew, (uc) => uc.unit_id);
 
   const units: UnitTile[] = unitRows.map((u) => {
     const yardName = (Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name) ?? "";
     const unitAssets = assetsByUnit.get(u.id) ?? [];
-    const scope: Item[] = [
-      ...(itemsByParent.get(u.id) ?? []),
-      ...unitAssets.flatMap((a) => itemsByParent.get(a.id) ?? []),
-      ...(crewByUnit.get(u.id) ?? []).flatMap((cid) => itemsByParent.get(cid) ?? []),
-    ];
-    const crewItems = (crewByUnit.get(u.id) ?? []).flatMap((cid) => itemsByParent.get(cid) ?? []);
-    const crewWorst = worstStatus(crewItems.map((i) => i.status));
-
-    const missingAsset = unitAssets.find((a) => a.status === "missing");
-    const expired = scope.filter((i) => i.status === "expired").sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))[0];
-    const noDate = scope.find((i) => i.status === "none");
-    const expiring = scope.filter((i) => i.status === "expiring").sort((a, b) => (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""))[0];
-
-    let state: UnitState; let why: string;
-    if (missingAsset) {
-      state = "not_ready"; why = `${missingAsset.name}: missing`;
-    } else if (expired) {
-      const d = expired.expiration_date ? Math.abs(daysUntil(expired.expiration_date)) : 0;
-      state = "not_ready"; why = `${expired.title}: expired${d ? ` ${d}d ago` : ""}`;
-    } else if (noDate) {
-      state = "not_ready"; why = `${noDate.title}: no expiration on file`;
-    } else if (expiring) {
-      const d = expiring.expiration_date ? daysUntil(expiring.expiration_date) : null;
-      state = "due_soon"; why = `${expiring.title} expires${d !== null ? (d <= 0 ? " today" : ` in ${d}d`) : " soon"}`;
-    } else if (scope.length === 0) {
-      state = "not_setup"; why = "Nothing tracked yet";
-    } else {
-      state = "ready"; why = "All current";
-    }
-    return { id: u.id, yardId: u.yard_id, name: u.name, type: u.type, yardName, state, why, crewWorst };
+    const crewIds = (crewByUnit.get(u.id) ?? []).map((uc) => uc.crew_member_id);
+    const crewItems = crewIds.flatMap((cid) => itemsByParent.get(cid) ?? []);
+    const j = judgeUnit({
+      unitItems: itemsByParent.get(u.id) ?? [],
+      assets: unitAssets,
+      assetItems: unitAssets.flatMap((a) => itemsByParent.get(a.id) ?? []),
+      crew: crewIds.map((id) => ({ id, name: crewNames.get(id) ?? "A hand" })),
+      crewItems,
+    }, today, today);
+    const state: UnitState = j.verdict;
+    return {
+      id: u.id, yardId: u.yard_id, name: u.name, type: u.type, yardName, state, why: j.why,
+      crewWorst: worstStatus(crewItems.map(effective)),
+    };
   });
 
   // Blended company score (formula in lib/saas/status.ts). Currency counts
-  // EVERY item — a no-date "Missing" item is in the denominator and not the
+  // EVERY item: a no-date "Missing" item is in the denominator and not the
   // numerator, so it drags the score exactly like an expired one.
   const split = (pred: (i: Item) => boolean) => {
     let valid = 0, total = 0;
-    for (const i of items) if (pred(i)) { total++; if (i.status === "valid") valid++; }
+    for (const i of items) if (pred(i)) { total++; if (effective(i) === "valid") valid++; }
     return { valid, total };
   };
   const gear = split((i) => i.parent_type !== "crew");
   const crew = split((i) => i.parent_type === "crew");
 
-  // Score = LIVE records only. Recorded checks deliberately don't feed it:
-  // a past check can't make today's paperwork current, and gear lines are
-  // reference-only now, so scoring them would just hand out points for
-  // pressing a button (and a stale check would cap the score with nothing
-  // on screen to explain it).
-  const anyAssetMissing = assets.some((a) => a.status === "missing");
-  // Hard cap when anything is unprovable: expired, no date on file, or an
-  // asset flagged missing. Each of these also shows up as a red tile, so the
-  // cap is never a mystery.
-  const hardFail = counts.expired > 0 || counts.none > 0 || anyAssetMissing;
+  // Score = LIVE records only. Recorded checks don't feed it: a past check
+  // can't make today's paperwork current. Hard cap when anything is
+  // unprovable: expired, no date on file, or gear flagged missing or
+  // red-tagged. Each of these also shows as a red tile, so the cap is never
+  // a mystery.
+  const anyGearDown = assets.some((a) => FAILING_GEAR.has(a.status));
+  const hardFail = counts.expired > 0 || counts.none > 0 || anyGearDown;
   const readiness = computeReadiness({
     certCurrency: gear.total > 0 ? gear.valid / gear.total : null,
     crewCurrency: crew.total > 0 ? crew.valid / crew.total : null,

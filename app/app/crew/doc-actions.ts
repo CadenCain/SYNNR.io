@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCompany, requireWritableCompany } from "@/lib/saas/auth";
+import { requireBillableCompany, requireWritableCompany, assertCan } from "@/lib/saas/auth";
+import { logEvent } from "@/lib/saas/notify";
 import { saasDb } from "@/lib/saas/db";
 
 /**
@@ -34,13 +35,9 @@ export async function createDocRequest(args: { crewMemberId: string; kindHint?: 
     .single();
   if (error) return { ok: false, error: error.message };
 
-  const actor = (user.user_metadata?.full_name as string | undefined) || user.email || null;
-  await db.from("saas_events").insert({
-    company_id: company.id,
-    kind: "doc_request_sent",
-    message: `Asked ${(crew as { name: string }).name} for a photo of the new card`,
-    actor,
-  });
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
+  void logEvent({ companyId: company.id, kind: "doc_request_sent", actor,
+    message: `Asked ${(crew as { name: string }).name} for a photo of the new card` });
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
   revalidatePath(`/app/crew/${args.crewMemberId}`);
@@ -50,7 +47,9 @@ export async function createDocRequest(args: { crewMemberId: string; kindHint?: 
 /** Close a request off the review queue — after the card's been renewed from
  *  the photo, or when the request is dead. Keeps the row (audit), flips status. */
 export async function closeDocRequest(fd: FormData) {
-  const { company, user } = await requireCompany();
+  const { company, user } = await requireBillableCompany();
+  // Closing one out is the review, so it's a manager's (the database agrees).
+  assertCan(company, "review_uploads");
   const id = String(fd.get("id") ?? "");
   const crewId = String(fd.get("crew_id") ?? "");
   const outcome = String(fd.get("outcome") ?? "done"); // done | revoked
@@ -62,13 +61,9 @@ export async function closeDocRequest(fd: FormData) {
   await db.from("saas_doc_requests")
     .update({ status: outcome === "revoked" ? "revoked" : "done" })
     .eq("id", id).eq("company_id", company.id);
-  const actor = (user.user_metadata?.full_name as string | undefined) || user.email || null;
-  await db.from("saas_events").insert({
-    company_id: company.id,
-    kind: "doc_request_closed",
-    message: outcome === "revoked" ? "Document update link revoked" : "Document update reviewed and closed",
-    actor,
-  });
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
+  void logEvent({ companyId: company.id, kind: "doc_request_closed", actor,
+    message: outcome === "revoked" ? "A photo sent through an update link was thrown out" : "An update link was closed" });
   if (crewId) revalidatePath(`/app/crew/${crewId}`);
   revalidatePath("/app/crew");
 }

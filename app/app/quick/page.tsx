@@ -1,6 +1,7 @@
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { PageHeader } from "@/components/ui/page-header";
+import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 import QuickClient, { type QuickItem, type QuickUnit, type QuickAsset } from "./quick-client";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export default async function QuickPage() {
     db.from("saas_assets").select("id, name, last_seen_where, unit_id").eq("company_id", company.id).order("name"),
     db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
+
+  const rules = await getYardRules(db, company.id);
 
   type UnitRow = { id: string; name: string; type: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
@@ -55,8 +58,9 @@ export default async function QuickPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Quick action" description="Two taps. Renew what's due, add what's new, or say where something is." />
-      <QuickClient items={items} units={units} assets={assets} companyId={company.id} />
+      <PageHeader title="Quick action" description="Upload a new cert, add what's new, or say where something is." />
+      <QuickClient items={items} units={units} assets={assets} companyId={company.id}
+        isManager={isManagerRole(company.role)} allowOnTheWay={rules.allowCertOnTheWay} />
     </div>
   );
 }
