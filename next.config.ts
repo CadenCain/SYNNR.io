@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // New demo yards open with a hand's cert photo waiting on the manager.
     "/demo/start": ["./lib/saas/demo-assets/**"],
+    "/api/cron/alert-watchdog": ["./lib/saas/demo-assets/**"],
     "/api/saas/certs/upload": [
       "./lib/saas/ocr-data/**",
       "./node_modules/tesseract.js/**",

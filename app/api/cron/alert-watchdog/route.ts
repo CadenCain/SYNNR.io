@@ -116,6 +116,20 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
       `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
   }
 
+  // The showcase yard behind the /demo proof link, re-seeded so it tells the
+  // same story every day instead of aging into a yard full of lapsed paper.
+  try {
+    const { refreshShowcase } = await import("@/lib/saas/demo-seed");
+    const r = await refreshShowcase(admin);
+    if (!r.ok) {
+      await sendEmail([OWNER], "[SYNNR ops] showcase refresh failed",
+        `<pre style="font:13px/1.6 monospace">${r.error ?? "unknown"}</pre>`).catch(() => {});
+    }
+  } catch (e) {
+    await sendEmail([OWNER], "[SYNNR ops] showcase refresh CRASHED",
+      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+  }
+
   await logCronRun(admin, {
     job: "alert-watchdog",
     ok: verdict === "ok" && billing.drift === 0 && billing.errors === 0,

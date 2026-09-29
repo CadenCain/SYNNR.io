@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Phone, ShieldCheck, Smartphone, Truck } from "lucide-react";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 import DemoLeadForm from "./lead-form";
+import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 
 /**
  * Public demo landing. One tap seeds a private copy of the Caprock demo yard
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   description: "Try SYNNR with a demo yard. Your own private copy of a working coil tubing yard, no signup, no card.",
 };
 
-const DEMO_PROOF = "/proof/c7aae8c1e1a64d5eab617b46990f43932d78";
+const DEMO_PROOF = `/proof/${SHOWCASE_PROOF_TOKEN}`;
 
 export default async function DemoPage({ searchParams }: { searchParams: Promise<{ busy?: string; err?: string }> }) {
   const { busy, err } = await searchParams;

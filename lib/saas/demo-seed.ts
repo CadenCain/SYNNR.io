@@ -47,6 +47,13 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
     .insert({ company_id: companyId, user_id: ownerUserId, role: "owner", status: "active" });
   if (memErr) throw new Error(`demo membership: ${memErr.message}`);
 
+  await seedDemoYard(admin, companyId, yardId);
+  return companyId;
+}
+
+/** Everything inside a demo yard: crew, trucks, gear, paper, history. */
+async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: string): Promise<void> {
+
   // Crew (one batch; names are unique in the dataset → map ids by name)
   const { data: crewRows, error: cErr } = await admin.from("saas_crew_members")
     .insert(DEMO_CREW.map((c) => ({ company_id: companyId, name: c.name, role: c.role, status: "active" })))
@@ -190,8 +197,47 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
     } : null;
   }).filter((r): r is NonNullable<typeof r> => r !== null);
   if (sentRows.length) await admin.from("saas_alerts_sent").insert(sentRows);
+}
 
-  return companyId;
+/** The proof link on /demo. Its yard is re-seeded daily so it tells the same story as a fresh demo. */
+export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
+
+// Child tables, children first (not everything cascades). The company row,
+// its members, and its proof links are kept: the reaper deletes those too,
+// a refresh must not.
+const YARD_TABLES = [
+  "saas_alerts_sent", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
+  "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
+  "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
+];
+
+/**
+ * Re-seed the showcase yard in place (same company, same proof link). A
+ * one-time seed ages: by late September the August seed showed ten lapsed
+ * items, and the /demo page promised "CT-03's expired BOP test". Never
+ * touches a company that isn't the showcase.
+ */
+export async function refreshShowcase(admin: SupabaseClient): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data: proof } = await admin.from("saas_readiness_proofs")
+      .select("company_id, scope, revoked_at").eq("token", SHOWCASE_PROOF_TOKEN).maybeSingle();
+    const p = proof as { company_id: string; scope: string; revoked_at: string | null } | null;
+    if (!p || p.revoked_at || p.scope !== "company") return { ok: false, error: "showcase proof link missing or revoked" };
+    const { data: co } = await admin.from("saas_companies").select("id, name, subscription_status").eq("id", p.company_id).maybeSingle();
+    const c = co as { id: string; name: string; subscription_status: string } | null;
+    // A paying customer's company must never be wiped by this, whatever the token says.
+    if (!c || c.name !== DEMO_COMPANY_NAME || c.subscription_status === "active") return { ok: false, error: "showcase company doesn't look like the showcase" };
+    for (const t of YARD_TABLES) await admin.from(t).delete().eq("company_id", c.id);
+    await removeStorageFolder(admin, c.id);
+    const { data: yard, error: yErr } = await admin.from("saas_yards")
+      .insert({ company_id: c.id, name: DEMO_YARD_NAME }).select("id").single();
+    if (yErr || !yard) return { ok: false, error: `showcase yard: ${yErr?.message}` };
+    await seedDemoYard(admin, c.id, (yard as { id: string }).id);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 /** Delete everything a company has in the proofs bucket (folders nest a few deep). */
