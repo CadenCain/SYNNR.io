@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
 import { computeReadiness, localToday, type UnitState } from "./status";
-import { judgeUnit, pendingCovers, FAILING_GEAR, type JItem } from "./judge";
+import { judgeUnit, pendingCovers, FAILING_GEAR, withSerial, type JItem } from "./judge";
 
 /**
  * One readiness engine for the whole app ("one source of truth"): the
@@ -45,7 +45,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
       .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id")
       .eq("company_id", companyId).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
-    db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId).neq("status", "retired"),
+    db.from("saas_assets").select("id, name, identifier, unit_id, status").eq("company_id", companyId).neq("status", "retired"),
   ]);
 
   type Item = JItem & { status: ComplianceStatus; parent_type: string; parent_id: string };
@@ -61,7 +61,9 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
 
   type UnitRow = { id: string; name: string; type: string; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
-  const assets = (assetData ?? []) as { id: string; name: string; unit_id: string | null; status: string }[];
+  // "2in 1502 plug valve PV-2231": the serial says which valve.
+  const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; unit_id: string | null; status: string }[])
+    .map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
 
   const group = <T,>(rows: T[], key: (r: T) => string | null) => {
     const m = new Map<string, T[]>();

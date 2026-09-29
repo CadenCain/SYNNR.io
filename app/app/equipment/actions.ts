@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
@@ -75,4 +75,5 @@ export async function moveEquipment(fd: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);
   revalidatePath("/app");
+  refresh(); // redraw the page the Move box is on, with the new history row
 }

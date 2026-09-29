@@ -37,7 +37,7 @@ export interface DemoMove { serial: string; from: string; to: string; note?: str
 
 const annual = (title: string, kind: string, exp: number, issued?: number): DemoItem =>
   ({ title, kind, exp, issued: issued ?? exp - 365 });
-const RECERT = "Iron recert (UT + hydro)";
+const RECERT = "UT + hydro recert";
 
 const bop = (n: number, exp: number): DemoAsset => ({
   name: `Quad BOP stack #${n}`, category: "pressure_control", identifier: `QB-${4468 + n}`,

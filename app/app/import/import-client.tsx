@@ -10,7 +10,7 @@ import { previewImport, commitImport, type ImportResult } from "./actions";
 const SAMPLE = `unit,unit_type,asset,category,item,kind,issued,expires
 CT-04,coil tubing unit,Quad BOP stack #4,pressure control,BOP pressure test,test,2026-01-15,2027-01-15
 CT-04,coil tubing unit,Lubricator #1,pressure control,Lubricator pressure test,test,2026-03-02,2027-03-02
-CT-04,coil tubing unit,2in 1502 plug valve PV-2204,flow iron,Iron recert (UT + hydro),test,2026-04-10,2027-04-10
+CT-04,coil tubing unit,2in 1502 plug valve PV-2204,flow iron,UT + hydro recert,test,2026-04-10,2027-04-10
 CT-04,coil tubing unit,,,Annual DOT inspection,inspection,2026-02-01,2027-02-01`;
 
 export default function ImportClient({ yards }: { yards: { id: string; name: string }[] }) {

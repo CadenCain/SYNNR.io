@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { localToday } from "./status";
-import { judgeUnit, FAILING_GEAR, plainDate, type JItem } from "./judge";
+import { judgeUnit, FAILING_GEAR, plainDate, withSerial, type JItem } from "./judge";
 
 /**
  * The readiness check: a RECORD-CURRENCY check, not a dispatch checklist.
@@ -123,10 +123,11 @@ export async function computeDispatchCheck(
     template
       ? db.from("saas_loadout_items").select("id, label, required, sort").eq("template_id", template.id).order("sort")
       : Promise.resolve({ data: [] }),
-    db.from("saas_assets").select("id, name, status").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
+    db.from("saas_assets").select("id, name, identifier, status").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
   ]);
   const loadout = (tplItems ?? []) as { id: string; label: string; required: boolean; sort: number }[];
-  const assets = (assetData ?? []) as { id: string; name: string; status: string }[];
+  const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; status: string }[])
+    .map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
 
   // Certs: the unit + its iron
   const assetIds = assets.map((a) => a.id);

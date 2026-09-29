@@ -63,6 +63,11 @@ export interface Judgment {
 
 export const FAILING_GEAR = new Set(["missing", "out_of_service"]);
 
+/** "2in 1502 plug valve" + "PV-2231" → "2in 1502 plug valve PV-2231" (unless the name already says it). */
+export function withSerial(name: string, serial: string | null | undefined): string {
+  return serial && !name.includes(serial) ? `${name} ${serial}` : name;
+}
+
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "2026-09-23" → "Sep 23, 2026": how dates read everywhere a person sees them. */
 export function plainDate(iso: string): string {
