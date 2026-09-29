@@ -7,7 +7,7 @@ import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
  */
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7" />
+    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
   </svg>
 );
 

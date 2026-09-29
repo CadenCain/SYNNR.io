@@ -17,8 +17,9 @@ export function TrendChart({ snaps }: { snaps: DashSnap[] }) {
   const barW = Math.min(slot * 0.62, 34);
 
   const y = (v: number) => PAD_T + chartH - (v / 100) * chartH;
+  // Brand blue, with a low day called out: under 60% reads red at a glance.
   const color = (v: number | null) =>
-    v === null ? "rgba(255,255,255,0.08)" : v >= 90 ? "#34d399" : v >= 60 ? "#f5b02e" : "#f87171";
+    v === null ? "rgba(15,23,42,0.06)" : v >= 60 ? "#1d4ed8" : "#dc2626";
 
   const dayLabel = (iso: string) => {
     const d = new Date(`${iso}T12:00:00`);
@@ -31,9 +32,9 @@ export function TrendChart({ snaps }: { snaps: DashSnap[] }) {
       {/* gridlines at 0 / 50 / 100 */}
       {[0, 50, 100].map((g) => (
         <g key={g}>
-          <line x1={PAD_L} x2={W - 8} y1={y(g)} y2={y(g)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+          <line x1={PAD_L} x2={W - 8} y1={y(g)} y2={y(g)} stroke="rgba(15,23,42,0.08)" strokeWidth="1" />
           <text x={PAD_L - 6} y={y(g) + 3.5} textAnchor="end" fontSize="10"
-            fill="rgba(236,229,215,0.35)" fontFamily="monospace">{g}</text>
+            fill="#64748b" fontFamily="monospace">{g}</text>
         </g>
       ))}
       {snaps.map((s, i) => {
@@ -45,17 +46,17 @@ export function TrendChart({ snaps }: { snaps: DashSnap[] }) {
               // no snapshot that day — an honest stub, not a fabricated bar
               <rect x={cx - barW / 2} y={y(4)} width={barW} height={y(0) - y(4)} rx="2" fill={color(null)} />
             ) : (
-              <rect x={cx - barW / 2} y={y(v)} width={barW} height={Math.max(y(0) - y(v), 2)} rx="3" fill={color(v)} opacity="0.9" />
+              <rect x={cx - barW / 2} y={y(v)} width={barW} height={Math.max(y(0) - y(v), 2)} rx="4" fill={color(v)} opacity={i === snaps.length - 1 ? 1 : 0.55} />
             )}
             {s.misses_caught > 0 && (
-              <circle cx={cx} cy={y(0) + 8} r="2.5" fill="#34d399">
+              <circle cx={cx} cy={y(0) + 8} r="2.5" fill="#16a34a">
                 <title>{`${s.misses_caught} miss${s.misses_caught === 1 ? "" : "es"} caught`}</title>
               </circle>
             )}
             {/* Weekday row: bigger, brighter, more headroom — 9.5px at 35%
                 opacity read as smudges once the SVG scaled down on laptops. */}
             <text x={cx} y={H - 5} textAnchor="middle" fontSize="11.5" letterSpacing="0.5"
-              fill="rgba(236,229,215,0.55)" fontFamily="monospace">{dayLabel(s.day)}</text>
+              fill="#64748b" fontFamily="monospace">{dayLabel(s.day)}</text>
           </g>
         );
       })}

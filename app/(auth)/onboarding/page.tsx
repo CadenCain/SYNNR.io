@@ -66,7 +66,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
             type="text"
             required
             autoFocus
-            className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+            className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
             placeholder="Ace Wireline Services"
           />
         </label>

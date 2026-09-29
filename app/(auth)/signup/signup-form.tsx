@@ -66,7 +66,7 @@ export default function SignupForm() {
           name="fullName"
           type="text"
           autoComplete="name"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="John Smith"
         />
       </label>
@@ -77,7 +77,7 @@ export default function SignupForm() {
           type="email"
           required
           autoComplete="email"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="you@shop.com"
         />
       </label>
@@ -89,7 +89,7 @@ export default function SignupForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="At least 8 characters"
         />
       </label>

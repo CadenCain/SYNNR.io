@@ -14,7 +14,7 @@ export function AddDisclosure({ label, defaultOpen = false, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <details open={defaultOpen} className="group rounded-2xl border border-line bg-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03),0_20px_40px_-28px_rgba(0,0,0,0.9)]">
+    <details open={defaultOpen} className="group rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
       <summary className="flex min-h-13 cursor-pointer list-none items-center gap-2.5 px-5 py-3.5 text-sm font-medium text-ink-dim transition-colors hover:text-ink [&::-webkit-details-marker]:hidden">
         <Plus className="h-4 w-4 shrink-0" />
         {label}

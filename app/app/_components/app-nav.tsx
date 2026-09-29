@@ -42,7 +42,7 @@ function isActive(path: string, href: string, exact?: boolean) {
 
 const MARK = (
   <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7" />
+    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
   </svg>
 );
 
@@ -75,7 +75,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-coal px-3 py-4 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface px-3 py-4 md:flex">
         <div className="flex items-center gap-2.5 px-2 pb-4">
           {MARK}
           <div className="min-w-0 flex-1 leading-tight">
@@ -104,7 +104,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
         {/* Search (jump to compliance list) */}
         <form
           action="/app/search"
-          className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-faint focus-within:border-line-2"
+          className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-coal px-3 py-2 text-sm text-ink-faint focus-within:border-bone"
         >
           <Search className="h-4 w-4" />
           <input
@@ -131,7 +131,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                      active ? "bg-elevated text-ink" : "text-ink-dim hover:bg-white/[0.03] hover:text-ink",
+                      active ? "bg-bone/10 font-medium text-bone" : "text-ink-dim hover:bg-elevated hover:text-ink",
                     )}
                   >
                     <Icon className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
@@ -155,13 +155,13 @@ export default function AppNav({ companyName, userName, readiness, companies = [
 
         {userName ? (
           <div className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">
-            <Link href="/app/settings" title="Settings" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-0.5 hover:bg-white/[0.03]">
+            <Link href="/app/settings" title="Settings" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-0.5 hover:bg-elevated">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
                 {userName.slice(0, 1).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm text-ink">{userName}</span>
             </Link>
-            <button onClick={signOut} title="Sign out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-white/[0.03] hover:text-ink">
+            <button onClick={signOut} title="Sign out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-elevated hover:text-ink">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -170,7 +170,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
 
       {/* Mobile top bar — top padding respects the notch/status bar so the
           wordmark doesn't jam the top edge on a real phone. */}
-      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-coal/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
         {pill ? <span className={`ml-1 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
@@ -179,7 +179,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
         </Link>
         {userName ? (
           <Link href="/app/settings" aria-label="Settings" title={userName}
-            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-white/[0.04]">
+            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-elevated">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
               {userName.slice(0, 1).toUpperCase()}
             </span>
@@ -188,10 +188,10 @@ export default function AppNav({ companyName, userName, readiness, companies = [
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-coal/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-surface/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact)} />)}
         <Link href="/app/quick" className="flex flex-col items-center gap-1" aria-label="Quick action">
-          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-coal shadow-lg shadow-black/40">
+          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-coal shadow-lg shadow-slate-900/20">
             <Plus className="h-6 w-6" />
           </span>
         </Link>
@@ -204,7 +204,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
 function Tab({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof LayoutGrid; active: boolean }) {
   return (
     <Link href={href} aria-current={active ? "page" : undefined}
-      className={cn("flex flex-col items-center gap-1 py-1 text-[11px]", active ? "text-ink" : "text-ink-faint")}>
+      className={cn("flex flex-col items-center gap-1 py-1 text-[11px]", active ? "font-medium text-bone" : "text-ink-faint")}>
       <Icon className="h-5 w-5" />
       {label}
     </Link>

@@ -21,7 +21,7 @@ export default function Icon() {
           style={{
             width: 30,
             height: 30,
-            background: "#e7ddc7",
+            background: "#1d4ed8",
             transform: "rotate(45deg)",
             borderRadius: 7,
           }}

@@ -31,7 +31,7 @@ export default function OgImage() {
             BOP tests, DOT dates, and crew cards on one list. The truck reads NOT READY until the paper is fixed.
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 28, color: "#e7ddc7", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>
+        <div style={{ display: "flex", fontSize: 28, color: "#1d4ed8", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>
       </div>
     ),
     { ...size },

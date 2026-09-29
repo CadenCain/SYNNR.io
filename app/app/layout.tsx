@@ -55,15 +55,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
-      {/* ambient depth */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(60rem 40rem at 80% -10%, rgba(231,221,199,0.05), transparent 60%), radial-gradient(50rem 30rem at -10% 110%, rgba(231,221,199,0.035), transparent 55%)",
-        }}
-      />
       <AppNav companyName={company.name} userName={userName} readiness={readiness}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
         switchAction={switchCompany} reviewCount={reviewCount} />

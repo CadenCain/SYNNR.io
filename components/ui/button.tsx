@@ -2,14 +2,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * shadcn-shaped Button (hand-rolled variants — no cva dep). Dark industrial
- * theme on zinc + SYNNR bone accent. Large tap targets for one-handed yard use.
+ * shadcn-shaped Button (hand-rolled variants — no cva dep). Light theme,
+ * SYNNR deep-blue accent. Large tap targets for one-handed yard use.
  */
 type Variant = "default" | "outline" | "ghost" | "danger" | "subtle";
 type Size = "default" | "sm" | "lg" | "icon";
 
 const VARIANTS: Record<Variant, string> = {
-  default: "bg-[#e7ddc7] text-coal hover:bg-[#f3ecdb]",
+  default: "bg-bone text-white hover:bg-bone-soft",
   outline: "border border-line-2 bg-transparent text-ink hover:bg-elevated",
   ghost: "bg-transparent text-ink hover:bg-elevated hover:text-ink",
   subtle: "bg-elevated text-ink hover:bg-elevated",
@@ -23,7 +23,7 @@ const SIZES: Record<Size, string> = {
 };
 
 const BASE =
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e7ddc7]/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0";
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8]/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0";
 
 /** Style a non-button element (e.g. a Next.js <Link>) as a Button. */
 export function buttonClass(variant: Variant = "default", size: Size = "default", className?: string) {

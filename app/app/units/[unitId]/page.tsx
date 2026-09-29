@@ -179,7 +179,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                       <form action={deleteUnit}>
                         <input type="hidden" name="id" value={u.id} />
                         <input type="hidden" name="yard_id" value={u.yard_id} />
-                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete it</button>
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-white hover:bg-red-400")}>Delete it</button>
                       </form>
                     </AlertDialogFooter>
                   </AlertDialogContent>

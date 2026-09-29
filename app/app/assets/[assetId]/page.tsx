@@ -122,7 +122,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
                       <form action={deleteAsset}>
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="unit_id" value={a.unit_id ?? ""} />
-                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete it</button>
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-white hover:bg-red-400")}>Delete it</button>
                       </form>
                     </AlertDialogFooter>
                   </AlertDialogContent>

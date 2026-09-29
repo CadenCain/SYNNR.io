@@ -33,7 +33,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-6">
         <div className="mb-4 flex items-center gap-2.5">
           <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7" />
+            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
           </svg>
           <span className="font-semibold tracking-tight">SYNNR</span>
         </div>
@@ -42,7 +42,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           <>
             <h1 className="text-lg font-semibold">Invite not valid</h1>
             <p className="mt-1 text-sm text-ink-dim">This invite link is expired or has already been used.</p>
-            <Link href="/" className="mt-4 inline-block text-sm text-[#e7ddc7] hover:underline">← Home</Link>
+            <Link href="/" className="mt-4 inline-block text-sm text-[#1d4ed8] hover:underline">← Home</Link>
           </>
         ) : !user ? (
           <>

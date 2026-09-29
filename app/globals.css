@@ -3,7 +3,7 @@
 /*
   SYNNR — global base.
   Each page (marketing / dashboard / audit / checkout) carries its own
-  charcoal + bone design system, scoped under a wrapper class so the four
+  own design system, scoped under a wrapper class so the four
   CSS systems never collide when bundled globally by Next.
 */
 
@@ -11,69 +11,65 @@
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  /* RollReady app palette — the SAME warm ink + bone system as the marketing
-     site, so site → app feels like one company. Generates utilities:
-     bg-coal, bg-surface, bg-elevated, text-ink/-dim/-faint, border-line/-2,
-     bg-bone, etc. */
-  --color-coal:      #121110;
-  --color-surface:   #1a1714;
-  --color-elevated:  #211d19;
-  --color-ink:       #ece5d7;
-  --color-ink-dim:   #a59d8c;
-  /* 4.86:1 on coal / 4.60:1 on surface — passes readable-text contrast.
-     Was #756c5b (3.64:1), which is fine indoors and unreadable in a truck
-     at noon. Used 120+ times for section labels, timestamps, and sub-text. */
-  --color-ink-faint: #8a8071;
-  --color-line:      #2a2521;
-  --color-line-2:    #37312a;
-  --color-bone:      #e7ddc7;
-  --color-bone-soft: #f3ecdb;
+  /* SYNNR app palette: light, one deep-blue accent (2026-09). Names are
+     historical: "coal" is the page ground, "surface" a card, "bone" the
+     brand blue. Generates bg-coal, bg-surface, text-ink/-dim/-faint,
+     border-line/-2, bg-bone, etc. Light because the app gets read on a
+     phone in direct sun, and a white card with dark text wins out there. */
+  --color-coal:      #f4f6f9;
+  --color-surface:   #ffffff;
+  --color-elevated:  #eef2f7;
+  --color-ink:       #0f172a;
+  --color-ink-dim:   #475569;
+  /* 4.8:1 on white: readable sub-text, labels, and timestamps. */
+  --color-ink-faint: #64748b;
+  --color-line:      #e3e8ef;
+  --color-line-2:    #cfd7e2;
+  --color-bone:      #1d4ed8;
+  --color-bone-soft: #1e40af;
 
-  /* shadcn semantic tokens, mapped onto the existing palette — real shadcn
-     components (popover, dialog, …) drop in wearing the SYNNR skin instead
-     of shipping their own gray. Keep these pointing at the tokens above. */
-  --color-background: #121110;          /* coal */
-  --color-foreground: #ece5d7;          /* ink */
-  --color-card: #1a1714;                /* surface */
-  --color-card-foreground: #ece5d7;
-  --color-popover: #211d19;             /* elevated */
-  --color-popover-foreground: #ece5d7;
-  --color-primary: #e7ddc7;             /* bone */
-  --color-primary-foreground: #121110;
-  --color-secondary: #211d19;
-  --color-secondary-foreground: #ece5d7;
-  --color-muted: #1a1714;
-  --color-muted-foreground: #a59d8c;    /* ink-dim */
-  --color-accent: #211d19;
-  --color-accent-foreground: #ece5d7;
-  --color-destructive: #d55f53;         /* red-500 */
-  --color-destructive-foreground: #f3ecdb;
-  --color-border: #2a2521;              /* line */
-  --color-input: #37312a;               /* line-2 */
-  --color-ring: #8a8071;                /* ink-faint */
+  /* shadcn semantic tokens, mapped onto the palette above. */
+  --color-background: #f4f6f9;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #1d4ed8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eef2f7;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #eef2f7;
+  --color-muted-foreground: #475569;
+  --color-accent: #eef2f7;
+  --color-accent-foreground: #0f172a;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e3e8ef;
+  --color-input: #cfd7e2;
+  --color-ring: #1d4ed8;
 
-  /* Status colors, warmed to match the marketing demo exactly: sage / amber /
-     terracotta instead of Tailwind's cool defaults. Same utilities everywhere
-     (text-emerald-400, bg-red-500/10, ...) — only the values change. */
-  --color-emerald-300: #b6cfa9;
-  --color-emerald-400: #9dbb8e;
-  --color-emerald-500: #86a877;
-  --color-amber-300:   #eed29a;
-  --color-amber-400:   #e6c46a;
-  --color-amber-500:   #d9b34f;
-  --color-red-300:     #eda49b;
-  --color-red-400:     #e0756a;
-  --color-red-500:     #d55f53;
+  /* Status colors for a white ground: dark enough to read as text, and the
+     500s tint well at /10 for chip backgrounds. Same utilities everywhere
+     (text-emerald-400, bg-red-500/10, ...); only the values change. */
+  --color-emerald-300: #166534;
+  --color-emerald-400: #15803d;
+  --color-emerald-500: #16a34a;
+  --color-amber-300:   #92400e;
+  --color-amber-400:   #b45309;
+  --color-amber-500:   #d97706;
+  --color-red-300:     #b91c1c;
+  --color-red-400:     #dc2626;
+  --color-red-500:     #dc2626;
 
-  /* Square the world: editorial hairline language matching the site.
-     rounded-full is untouched (dots, avatars). */
+  /* Softer corners than the old square look; rounded-full is untouched. */
   --radius-xs:  2px;
-  --radius-sm:  2px;
-  --radius-md:  3px;
-  --radius-lg:  4px;
-  --radius-xl:  5px;
-  --radius-2xl: 6px;
-  --radius-3xl: 8px;
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl:  10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
 }
 
 *,
@@ -99,15 +95,15 @@
    cream (invisible), same bug class as the old unlayered `* { padding: 0 }`. */
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
     min-height: 100dvh;
-    background: #121110;
-    color: #ece5d7;
+    background: #f4f6f9;
+    color: #0f172a;
     font-family: var(--font-geist), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;

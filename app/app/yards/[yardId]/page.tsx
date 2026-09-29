@@ -101,7 +101,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                       <AlertDialogCancel>Keep it</AlertDialogCancel>
                       <form action={deleteYard}>
                         <input type="hidden" name="id" value={y.id} />
-                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Delete everything</button>
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-white hover:bg-red-400")}>Delete everything</button>
                       </form>
                     </AlertDialogFooter>
                   </AlertDialogContent>

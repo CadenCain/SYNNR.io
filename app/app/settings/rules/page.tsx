@@ -64,7 +64,7 @@ export default async function RulesPage() {
         <form action={saveRules} className="mt-4 flex flex-col gap-5">
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="hand_uploads_need_ok" defaultChecked={rules.handUploadsNeedOk} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#e7ddc7]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
             <span>
               <span className="block text-sm font-medium">Every upload from a hand waits for a manager</span>
               <span className="block text-sm text-ink-dim">Off: a clean match goes green on its own, and anything that doesn&apos;t match waits for you. On: you OK every upload a hand sends, even clean ones.</span>
@@ -72,7 +72,7 @@ export default async function RulesPage() {
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="allow_cert_on_the_way" defaultChecked={rules.allowCertOnTheWay} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#e7ddc7]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
             <span>
               <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
               <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>

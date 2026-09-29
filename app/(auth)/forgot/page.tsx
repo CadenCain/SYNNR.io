@@ -13,7 +13,7 @@ export default function ForgotPage() {
       </div>
       <ForgotForm />
       <p className="text-center text-sm text-ink-dim">
-        <Link href="/login" className="font-medium text-[#e7ddc7] hover:underline">← Back to log in</Link>
+        <Link href="/login" className="font-medium text-[#1d4ed8] hover:underline">← Back to log in</Link>
       </p>
     </div>
   );

@@ -44,7 +44,7 @@ export default function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="you@shop.com"
         />
       </label>
@@ -55,7 +55,7 @@ export default function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="••••••••"
         />
       </label>

@@ -68,10 +68,9 @@ export default function DashboardView(d: DashboardData) {
     { icon: Truck, label: d.activeYard ? `Not ready in ${d.activeYard.name}` : "Not ready", value: d.notReadyUnits, accent: d.notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "#fleet", sub: d.notReadyUnits > 0 ? "trucks that can't roll right now" : "every truck is current" },
     d.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
-      : { icon: Gauge, label: "Readiness", value: `${d.readiness}%`, accent: d.readiness >= 90 ? "text-emerald-400" : d.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: d.readiness, href: "/app/compliance", spark: d.spark.readiness, sparkColor: "#e7ddc7" },
-    { icon: Flame, label: "Misses caught", value: d.missesCaught, accent: d.missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: d.missesCaught > 0 ? `before rollout · ${delta(d.missThisWk, d.missLastWk)}` : "before rollout, this month", spark: d.spark.misses, sparkColor: "#34d399" },
+      : { icon: Gauge, label: "Readiness", value: `${d.readiness}%`, accent: d.readiness >= 90 ? "text-emerald-400" : d.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: d.readiness, href: "/app/compliance", spark: d.spark.readiness, sparkColor: "#1d4ed8" },
+    { icon: Flame, label: "Misses caught", value: d.missesCaught, accent: d.missesCaught > 0 ? "text-emerald-400" : "text-ink-dim", href: "#activity", sub: d.missesCaught > 0 ? `before rollout · ${delta(d.missThisWk, d.missLastWk)}` : "before rollout, this month", spark: d.spark.misses, sparkColor: "#16a34a" },
     { icon: Clock, label: "Expiring in 30d", value: d.expiring30, accent: "text-amber-400", href: "/app/compliance" },
-    { icon: AlertTriangle, label: "Failed checks", value: d.notReadyMonth, accent: d.notReadyMonth > 0 ? "text-red-400" : "text-ink-dim", href: "#activity", sub: "recorded this month" },
   ];
 
   return (
@@ -163,19 +162,24 @@ export default function DashboardView(d: DashboardData) {
       )}
 
       {/* KPI strip — every number clickable, every number honest (desktop) */}
-      <div className="hidden gap-3 md:grid md:grid-cols-3 xl:grid-cols-5">
+      <div className="hidden gap-3 md:grid md:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => {
           const Icon = k.icon;
+          // The icon sits in a tile tinted with its own status color.
+          const tint = k.accent.includes("red") ? "bg-red-500/10" : k.accent.includes("amber") ? "bg-amber-500/10"
+            : k.accent.includes("emerald") ? "bg-emerald-500/10" : "bg-elevated";
           return (
             <Link key={k.label} href={k.href}>
-              <Card className="h-full p-4 transition-colors hover:border-line-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink-dim">{k.label}</span>
-                  <Icon className={`h-4 w-4 ${k.accent}`} />
+              <Card className="h-full p-4 transition-colors hover:border-line-2 hover:shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tint}`}>
+                    <Icon className={`h-[18px] w-[18px] ${k.accent}`} />
+                  </span>
+                  <span className="min-w-0 text-sm font-medium text-ink-dim">{k.label}</span>
                 </div>
                 <div className={`mt-3 font-semibold tabular-nums tracking-tight ${typeof k.value === "string" && k.value.length > 6 ? "text-lg text-ink-dim" : "text-3xl"}`}>{k.value}</div>
                 {typeof k.bar === "number" ? (
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
                     <div className={`h-full rounded-full ${k.bar >= 90 ? "bg-emerald-500" : k.bar >= 70 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${k.bar}%` }} />
                   </div>
                 ) : (
@@ -186,7 +190,7 @@ export default function DashboardView(d: DashboardData) {
                 )}
                 {k.spark ? (
                   <div className="mt-1.5 flex items-center">
-                    <Sparkline values={k.spark} stroke={k.sparkColor ?? "#9a9aa2"} />
+                    <Sparkline values={k.spark} stroke={k.sparkColor ?? "#64748b"} />
                   </div>
                 ) : null}
               </Card>
@@ -259,12 +263,12 @@ export default function DashboardView(d: DashboardData) {
               {d.yards.length > 1 && (
                 <div className="flex flex-wrap gap-1.5">
                   <Link href="/app"
-                    className={`rounded-sm border px-3 py-1 text-xs font-medium ${!d.activeYard ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                    className={`rounded-md border px-3 py-1 text-xs font-medium ${!d.activeYard ? "border-bone bg-bone text-white" : "border-line-2 bg-surface text-ink-dim hover:text-ink"}`}>
                     All yards
                   </Link>
                   {d.yards.map((y) => (
                     <Link key={y.id} href={`/app?yard=${y.id}`}
-                      className={`rounded-sm border px-3 py-1 text-xs font-medium ${d.activeYard?.id === y.id ? "border-bone bg-bone text-coal" : "border-line-2 text-ink-dim hover:text-ink"}`}>
+                      className={`rounded-md border px-3 py-1 text-xs font-medium ${d.activeYard?.id === y.id ? "border-bone bg-bone text-white" : "border-line-2 bg-surface text-ink-dim hover:text-ink"}`}>
                       {y.name}
                     </Link>
                   ))}
@@ -273,7 +277,7 @@ export default function DashboardView(d: DashboardData) {
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {[...d.boardUnits].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]).map((u) => (
                   <Link key={u.id} href={`/app/units/${u.id}`}>
-                    <Card className={`h-full p-4 transition-colors hover:border-line-2 ${u.state === "not_ready" ? "border-red-500/40" : ""}`}>
+                    <Card className={`h-full p-4 transition-colors hover:border-line-2 hover:shadow-md ${u.state === "not_ready" ? "border-red-500/40 border-l-4 border-l-red-500" : u.state === "due_soon" ? "border-l-4 border-l-amber-500" : u.state === "ready" ? "border-l-4 border-l-emerald-500" : ""}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="truncate font-medium">{u.name}</div>
@@ -282,7 +286,7 @@ export default function DashboardView(d: DashboardData) {
                         <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${STATE_UI[u.state].chip}`}>{STATE_UI[u.state].label}</span>
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className={`truncate text-sm ${u.state === "not_ready" ? "text-red-300" : "text-ink-dim"}`}>{u.why}</span>
+                        <span className={`truncate text-sm ${u.state === "not_ready" ? "font-medium text-red-400" : "text-ink-dim"}`}>{u.why}</span>
                         {u.crewWorst ? (
                           <span className="flex shrink-0 items-center gap-1 text-xs text-ink-faint" title="Assigned crew cards">
                             <HardHat className="h-3 w-3" /> <StatusDot status={u.crewWorst} />
@@ -307,7 +311,7 @@ export default function DashboardView(d: DashboardData) {
               ) : (
                 <Card className="flex max-h-[420px] flex-col gap-0 overflow-y-auto p-2">
                   {d.events.map((e, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-white/[0.02]">
+                    <div key={i} className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-elevated/60">
                       <span className="mt-1 shrink-0">
                         {e.kind === "rolled_out_override" || e.kind === "checkin_partial" || e.kind === "check_not_ready" ? <AlertTriangle className="h-4 w-4 text-red-400" />
                           : e.kind === "miss_caught" ? <Flame className="h-4 w-4 text-emerald-400" />

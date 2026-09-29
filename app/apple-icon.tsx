@@ -21,7 +21,7 @@ export default function AppleIcon() {
           style={{
             width: 86,
             height: 86,
-            background: "#e7ddc7",
+            background: "#1d4ed8",
             transform: "rotate(45deg)",
             borderRadius: 20,
           }}

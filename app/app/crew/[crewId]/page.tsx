@@ -114,7 +114,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                       <AlertDialogCancel>Keep it</AlertDialogCancel>
                       <form action={deleteCrewMember}>
                         <input type="hidden" name="id" value={c.id} />
-                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-bone-soft hover:bg-red-400")}>Remove</button>
+                        <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-white hover:bg-red-400")}>Remove</button>
                       </form>
                     </AlertDialogFooter>
                   </AlertDialogContent>

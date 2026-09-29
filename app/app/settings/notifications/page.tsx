@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
-const fld = "h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]";
+const fld = "h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]";
 
 async function saveSettings(formData: FormData) {
   "use server";
@@ -81,7 +81,7 @@ export default async function NotificationsSettings() {
       <Card className="p-5">
         <form action={saveSettings} className="flex flex-col gap-5">
           <label className="flex items-center gap-3 text-sm">
-            <input type="checkbox" name="email_enabled" defaultChecked={s?.email_enabled ?? true} className="h-4 w-4 accent-[#e7ddc7]" />
+            <input type="checkbox" name="email_enabled" defaultChecked={s?.email_enabled ?? true} className="h-4 w-4 accent-[#1d4ed8]" />
             Alerts enabled
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
@@ -139,9 +139,9 @@ export default async function NotificationsSettings() {
               <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} min-w-0 flex-1`} />
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_email" defaultChecked className="h-4 w-4 accent-[#e7ddc7]" /> Email</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_email" defaultChecked className="h-4 w-4 accent-[#1d4ed8]" /> Email</label>
               {smsReady && (
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_sms" className="h-4 w-4 accent-[#e7ddc7]" /> Text (SMS)</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_sms" className="h-4 w-4 accent-[#1d4ed8]" /> Text (SMS)</label>
               )}
               {yards.length > 0 && (
                 <select name="yard_id" defaultValue="" className={`${fld} lg:w-52`}>

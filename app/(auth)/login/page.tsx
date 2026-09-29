@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <LoginForm />
       <p className="text-center text-sm text-ink-dim">
         New here?{" "}
-        <Link href="/signup" className="font-medium text-[#e7ddc7] hover:underline">
+        <Link href="/signup" className="font-medium text-[#1d4ed8] hover:underline">
           Get started
         </Link>
       </p>

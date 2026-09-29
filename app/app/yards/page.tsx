@@ -161,9 +161,9 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
               {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through because you were at your limit.</p> : null}
               <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 lg:flex-row">
                 <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
-                  className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
+                  className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
                 <input name="location" placeholder="Location (optional)"
-                  className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
+                  className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
                 <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard ($500/mo)</Button>
               </form>
             </>
@@ -176,9 +176,9 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           <h2 className="mb-3 text-sm font-medium text-ink">{yards.length ? "Add another yard" : "Add your first yard"}</h2>
           <form action={createYard} className="flex flex-col gap-3 lg:flex-row">
             <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
-              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
+              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
             <input name="location" placeholder="Location (optional)"
-              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
+              className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
             <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add yard</Button>
           </form>
           <p className="mt-2 text-xs text-ink-faint">
