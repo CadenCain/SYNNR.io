@@ -17,7 +17,7 @@ export default function BillingActions({ mode }: { mode: "portal" | "subscribe" 
   if (mode === "comped") {
     return (
       <span className="rounded-lg border border-line-2 bg-elevated px-3 py-2 text-sm text-ink-faint">
-        Comped account — no card on file
+        Comped account, no card on file
       </span>
     );
   }

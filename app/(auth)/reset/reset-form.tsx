@@ -20,7 +20,7 @@ export default function ResetForm() {
     setBusy(true);
     const { error } = await sb.auth.updateUser({ password });
     if (error) {
-      setErr(error.message.includes("session") ? "Reset link expired — request a new one." : error.message);
+      setErr(error.message.includes("session") ? "That reset link expired. Request a new one." : error.message);
       setBusy(false);
       return;
     }

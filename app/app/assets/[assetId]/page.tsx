@@ -122,7 +122,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
 
       {/* Last seen — a note, not a tracker. Never affects readiness. */}
       <Card className="flex flex-col gap-3 p-5">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Where is it</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Where is it</h2>
         <p className="text-sm">
           {a.last_seen_where ? (
             <>
@@ -161,7 +161,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           without its photo wears amber — flagged, not blocked, same rule as a
           cert with no date. */}
       <Card className="flex flex-col gap-3 p-5">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Photos — the iron &amp; its paper</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Photos of the asset and its paperwork</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -195,7 +195,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
       </Card>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Certs, tests &amp; inspections</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Certs, tests &amp; inspections</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}

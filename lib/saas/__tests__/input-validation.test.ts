@@ -162,7 +162,7 @@ describe("fingerprints — a changed date is never silent (the Collide pencil-wh
     expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(true);
     const msg = String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message);
     expect(msg).toContain("2026-03-01 → 2027-03-01");
-    expect(msg).toContain("NO PROOF ATTACHED");
+    expect(msg).toContain("No proof attached");
   });
 
   it("renew WITH proof photo: flag cleared, feed says proof attached", async () => {
@@ -179,7 +179,7 @@ describe("fingerprints — a changed date is never silent (the Collide pencil-wh
     await renewComplianceItem({ itemId: "item-1", expiration_date: "2027-03-01", storage_path: `${CO}/compliance_item/item-1/x.jpg` });
     const upd = fake.writes.find((w) => w.table === "saas_compliance_items" && w.kind === "update");
     expect((upd?.payload as { renewed_without_proof: boolean }).renewed_without_proof).toBe(false);
-    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("proof photo attached");
+    expect(String(vi.mocked(logEvent).mock.calls.at(-1)?.[0]?.message)).toContain("with a proof photo");
   });
 
   it("edit-form date change: flagged proofless + old → new logged", async () => {

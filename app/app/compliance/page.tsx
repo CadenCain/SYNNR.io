@@ -93,7 +93,7 @@ export default async function CompliancePage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Compliance & Logs"
-        description="Everything with an expiration — and the receipt for every heads-up we sent about it."
+        description="Everything with an expiration date, and every alert that went out about it."
         actions={<Link href="/app/settings/notifications" className={buttonClass("outline", "sm")}><Settings2 className="h-4 w-4" /> Alert settings</Link>}
       />
 
@@ -146,9 +146,9 @@ export default async function CompliancePage() {
       {/* The receipt layer: when / what / to / channel, scrolling under the
           work surface instead of living on its own page. */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Alerts sent</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Alerts sent</h2>
         {history.length === 0 ? (
-          <Card className="px-6 py-10 text-center text-sm text-ink-dim">No alerts sent yet — the daily sweep logs them here.</Card>
+          <Card className="px-6 py-10 text-center text-sm text-ink-dim">No alerts sent yet. They show up here after the daily check.</Card>
         ) : (
           <Card className="max-h-[380px] overflow-y-auto p-0">
             <Table>

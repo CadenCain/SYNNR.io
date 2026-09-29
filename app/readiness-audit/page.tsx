@@ -19,7 +19,7 @@ export default function ReadinessAuditPage() {
             <span className="eyebrow">Free readiness map</span>
             <h1 className="h2" style={{ marginTop: 8 }}>Send one list. Get a readiness map back.</h1>
             <p className="lede" style={{ marginInline: 0 }}>
-              Send us one cert list or loadout sheet — a spreadsheet, a photo of the whiteboard, whatever you&apos;ve got.
+              Send one cert list or loadout sheet. A spreadsheet, a photo of the whiteboard, whatever you&apos;ve got.
               We&apos;ll map what&apos;s expired, expiring, and missing in your yard and send it back. Free, no card, no pitch.
               Or just email <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> with the list attached.
             </p>

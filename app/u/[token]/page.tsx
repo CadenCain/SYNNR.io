@@ -47,7 +47,7 @@ export default async function DocUpdatePage({ params }: { params: Promise<{ toke
   ]);
   const crewName = (crewData as { name: string } | null)?.name ?? "there";
   const co = coData as { name: string; subscription_status: string; comped: boolean } | null;
-  if (!co || !isWritable(co.subscription_status, co.comped)) return <Invalid reason="paused — tell your manager" />;
+  if (!co || !isWritable(co.subscription_status, co.comped)) return <Invalid reason="paused. Tell your manager" />;
 
   return (
     <div className="saas min-h-dvh bg-coal px-4 py-8 text-ink antialiased">
@@ -57,7 +57,7 @@ export default async function DocUpdatePage({ params }: { params: Promise<{ toke
             <HardHat className="h-5 w-5 text-ink-dim" />
           </span>
           <div>
-            <p className="text-lg font-semibold leading-tight">Hey {crewName.split(" ")[0]} —</p>
+            <p className="text-lg font-semibold leading-tight">Hey {crewName.split(" ")[0]},</p>
             <p className="text-sm text-ink-dim">{co.name} needs a photo of your renewed card.</p>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default async function DocUpdatePage({ params }: { params: Promise<{ toke
           <SubmitForm token={token} kindHint={req.kind_hint} alreadySubmitted={req.status === "submitted"} />
         </div>
         <p className="text-center text-xs text-ink-faint">
-          Takes about 30 seconds. The photo goes straight to your safety manager — nowhere else.
+          Takes about 30 seconds. The photo goes to your safety manager and nowhere else.
         </p>
       </div>
     </div>

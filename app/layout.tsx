@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import SwRegister from "./sw-register";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -26,13 +25,13 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR — yard operations software for oilfield service shops",
+    default: "SYNNR: cert tracking for oilfield service yards",
     template: "%s",
   },
   description:
-    "SYNNR keeps up with your yard: whether the truck can roll, whose crew cards are current, where the gear was last seen, and proof you can hand a customer. Four tools, one system. Your whole crew on one account, never per-seat. $500 per yard, per month.",
+    "SYNNR tracks every cert, DOT date, and crew card in an oilfield service yard and warns you before anything lapses, so a truck never gets turned around at the gate. $500 per yard, per month. Never per-seat.",
   keywords: [
-    "RollReady", "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "cert expiration alerts",
+    "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "cert expiration alerts",
     "crew card tracking", "equipment tracking", "where is my equipment", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",
     "BOP recertification", "crew certs", "H2S certification", "well control", "DOT inspection",
     "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
@@ -40,16 +39,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "RollReady — catch the miss before the truck leaves the yard",
+    title: "SYNNR: cert tracking for oilfield service yards",
     description:
-      "Yard readiness for oilfield service shops. Where the gear was last seen, cert/DOT/crew-card tracking with alerts before anything lapses, and shareable proof links. Whole crew on one account. $500 per yard. By SYNNR.",
+      "Every cert, DOT date, and crew card in your yard on one list, with a warning before anything lapses. $500 per yard, per month.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RollReady — catch the miss before the truck leaves the yard",
+    title: "SYNNR: cert tracking for oilfield service yards",
     description:
-      "Yard readiness for oilfield service shops. Where the gear was last seen, cert & crew-card tracking, alerts before anything expires, proof links. $500 per yard. By SYNNR.",
+      "Every cert, DOT date, and crew card in your yard on one list, with a warning before anything lapses. $500 per yard, per month.",
   },
 };
 
@@ -61,20 +60,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
-        {/* Structured data — helps Google understand the product + company on a
-            "RollReady" or "SYNNR" brand search. */}
+        {/* Structured data for a "SYNNR" brand search. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "RollReady",
+              name: "SYNNR",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Yard readiness for oilfield service shops. Keeps up with where the gear was last seen, every cert, DOT item, and crew card, and flags what is lapsed or lapsing before a truck leaves with it.",
+                "Cert tracking for oilfield service yards. Every cert, DOT date, and crew card on one list, with a warning before anything lapses and a readiness check before a truck rolls.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",
@@ -87,7 +85,6 @@ export default function RootLayout({
         />
         {children}
         <Analytics />
-        <SwRegister />
       </body>
     </html>
   );

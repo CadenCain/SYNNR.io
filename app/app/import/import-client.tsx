@@ -58,7 +58,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
     } catch {
       // Without this the button sat on "Working…" forever and the customer
       // had no idea whether anything landed.
-      setErr("That didn't go through. Nothing was saved — try again, or send us the file and we'll load it.");
+      setErr("That didn't go through, and nothing was saved. Try again, or send me the file and I'll load it.");
     } finally {
       setBusy(false);
     }
@@ -73,7 +73,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
           <span className="text-ink">Yard</span>
           {yards.length > 0 ? (
             <select value={yardId} onChange={(e) => setYardId(e.target.value)} className={fld}>
-              <option value="">— New yard below —</option>
+              <option value="">New yard (name it below)</option>
               {yards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
             </select>
           ) : null}
@@ -101,7 +101,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
                 onChange={(e) => void readFile(e.target.files?.[0] ?? undefined)} />
             </label>
             <span className="text-xs text-ink-faint">
-              {fileName ? `Loaded ${fileName} — check it below, then preview.` : "CSV from Excel, Sheets, or whatever you keep it in."}
+              {fileName ? `Loaded ${fileName}. Check it below, then preview.` : "CSV from Excel, Sheets, or whatever you keep it in."}
             </span>
           </div>
           {err ? <p className="text-sm text-amber-400">{err}</p> : null}
@@ -109,7 +109,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
             className="rounded-lg border border-line-2 bg-coal px-3 py-2 font-mono text-xs text-ink outline-none focus:border-bone" />
           <span className="text-xs text-ink-faint">
             Columns (any order): <span className="font-mono">unit, unit_type, asset, category, crew, item, kind, issued, expires</span>.
-            Crew rows: leave unit blank, fill <span className="font-mono">crew</span>. Re-importing updates dates — no duplicates.
+            Crew rows: leave unit blank, fill <span className="font-mono">crew</span>. Importing again updates dates without making duplicates.
             Working in Excel? File → Save As → CSV, then drop the file above.
           </span>
         </label>
@@ -147,7 +147,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
                 ))}
               </div>
               {!result.committed && result.errors === 0 ? (
-                <p className="text-xs text-ink-faint">Looks clean — hit Commit import to apply.</p>
+                <p className="text-xs text-ink-faint">Looks clean. Tap Commit import to save it.</p>
               ) : !result.committed && result.errors > 0 ? (
                 <p className="text-xs text-amber-400">Rows with errors are skipped on commit; the rest import fine.</p>
               ) : null}

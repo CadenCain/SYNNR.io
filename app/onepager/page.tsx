@@ -10,7 +10,7 @@ import PrintButton from "./print-button";
  */
 
 export const metadata: Metadata = {
-  title: "SYNNR — one-pager",
+  title: "SYNNR one-pager",
   robots: { index: false, follow: false },
 };
 
@@ -57,7 +57,7 @@ export default function OnePager() {
       `}</style>
 
       <div className="op-toolbar">
-        <span>SYNNR one-pager — prints on one sheet, black on white.</span>
+        <span>SYNNR one-pager. Prints on one sheet, black on white.</span>
         <PrintButton />
       </div>
 
@@ -65,18 +65,18 @@ export default function OnePager() {
         <div className="op-head">
           <div className="op-brand">SYNNR<small>Yard readiness · Permian Basin</small></div>
           <div className="op-contact">
-            <b>Caden Cain</b> — founder<br />
-            {OWNER_PHONE} — call or text
+            <b>Caden Cain</b>, founder<br />
+            Call or text {OWNER_PHONE}
           </div>
         </div>
 
-        <h1 className="op-h">You don&apos;t lose money on the big stuff.<br /><span className="dim">You lose it at 5am.</span></h1>
+        <h1 className="op-h">An expired lubricator cert cost us $8,000 on a major&apos;s location.</h1>
 
         <p className="op-p">
-          A BOP test or a DOT sticker quietly lapses. The truck rolls anyway. The company man checks
-          the paper, and the whole crew turns around at the gate — a <b>$10,000+ NPT day</b> for one
-          date nobody was watching. SYNNR watches every cert, inspection, DOT item, and crew card in
-          your yard, and the heads-up lands the night before it would&apos;ve bitten you.
+          Nobody knew until the company man checked the paper and turned the crew around at the gate.
+          SYNNR watches every cert, inspection, DOT date, and crew card in your yard and emails the right
+          person before anything lapses. If something does lapse, that truck reads NOT READY until the
+          record is fixed.
         </p>
 
         <div className="op-cols">
@@ -84,18 +84,18 @@ export default function OnePager() {
             <h3>What it catches</h3>
             <ul>
               <li>BOP &amp; pressure tests, annual DOT, registrations</li>
-              <li>Crew cards — H2S, well control, CDL, medicals</li>
-              <li>A readiness check that won&apos;t say &ldquo;ready&rdquo; over dead paper — no override button</li>
+              <li>Crew cards: H2S, well control, CDL, medicals</li>
+              <li>A readiness check with no override button</li>
               <li>Where the gear was last seen, and who touched it</li>
-              <li>A live proof link for the operator — no binder</li>
+              <li>A live proof link to send the operator instead of a binder</li>
             </ul>
           </div>
           <div className="op-box">
             <h3>The math</h3>
             <div style={{ fontSize: "13.5px", lineHeight: 1.65 }}>
-              One prevented NPT day covers more than a year and a half of SYNNR. Flat per yard —
-              never per-seat, so you&apos;re never punished for adding crew or trucks. No contract,
-              cancel anytime, your data stays yours.
+              One lubricator miss is 16 months of SYNNR. It&apos;s a flat price per yard and never
+              per-seat, so adding crew or trucks costs nothing. No contract, cancel anytime, and your
+              data stays yours.
             </div>
           </div>
         </div>
@@ -103,17 +103,16 @@ export default function OnePager() {
         <div className="op-math">
           <div><div className="n">$10,000+</div><div className="k">one missed cert, one NPT day</div></div>
           <div><div className="n">$500</div><div className="k">per yard / month, flat</div></div>
-          <div><div className="n">1 evening</div><div className="k">alert lands before the truck rolls</div></div>
+          <div><div className="n">16 months</div><div className="k">of SYNNR for one lubricator miss</div></div>
         </div>
 
-        <div className="op-free">Setup is free for the first 10 yards — I&apos;ll do it with you in one afternoon. Bring the binder.</div>
+        <div className="op-free">Setup is free for the first 10 yards. I&apos;ll do it with you in one afternoon. Bring the binder.</div>
 
         <div className="op-foot">
           <div className="who">
-            <b>Built and run by one guy in the Permian. Call or text me.</b><br />
-            Five years on wireline — I&apos;ve eaten the 5am scramble, the hotshot bill, and the company
-            man&apos;s long memory. No fake logos, no made-up numbers.<br />
-            <b>{OWNER_PHONE}</b> — call or text · synnr.io
+            I ran wireline in the Permian for five years and built SYNNR because nobody else had.
+            Call or text me and I&apos;ll show you your own trucks in it.<br />
+            <b>{OWNER_PHONE}</b> · synnr.io
           </div>
           <div className="op-qr">
             {/* eslint-disable-next-line @next/next/no-img-element */}

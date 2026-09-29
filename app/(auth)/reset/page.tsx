@@ -1,7 +1,7 @@
 import ResetForm from "./reset-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Set new password · RollReady" };
+export const metadata = { title: "Set new password · SYNNR" };
 
 // The /auth/callback exchange establishes the session before this page loads.
 export default function ResetPage() {

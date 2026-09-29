@@ -61,13 +61,13 @@ export default async function CrewPage() {
 
   return (
     <div className="flex flex-col gap-7">
-      <PageHeader title="Crew" description="Your hands and their cards — H2S, well control, CDL, medicals. Current crew is what makes a truck actually ready." />
+      <PageHeader title="Crew" description="Your hands and their cards: H2S, well control, CDL, and medical. A truck is only ready if its crew is current." />
 
       {submittedByCrew.size > 0 && (
         <Card className="border-amber-500/30 bg-amber-500/[0.05] p-4">
           <p className="text-sm">
             <span className="font-semibold text-amber-400">{submittedByCrew.size} card photo{submittedByCrew.size === 1 ? "" : "s"}</span>{" "}
-            in from the field, waiting on review — open the hand&apos;s page below to see {submittedByCrew.size === 1 ? "it" : "them"}.
+            in from the field and waiting on review. Open the hand&apos;s page below to see {submittedByCrew.size === 1 ? "it" : "them"}.
           </p>
         </Card>
       )}

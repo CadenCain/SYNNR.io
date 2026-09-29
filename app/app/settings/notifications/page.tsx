@@ -98,7 +98,7 @@ export default async function NotificationsSettings() {
           <h2 className="text-sm font-semibold">Who gets the alerts</h2>
           <p className="mt-0.5 text-sm text-ink-dim">
             Expiring certs &amp; crew cards, NOT-ready overrides, and gear that didn&apos;t come back.
-            {!smsReady && " Text alerts activate once SMS credentials are connected — email works now."}
+            {!smsReady && " Text alerts aren't turned on yet. Email alerts work now."}
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export default async function NotificationsSettings() {
                   <div className="truncate font-medium">{r.name}</div>
                   <div className="truncate text-sm text-ink-dim">
                     {[r.email, r.phone].filter(Boolean).join(" · ")}
-                    {" — "}{r.yard_ids === null ? "all yards" : (r.yard_ids.map((y) => yardName.get(y) ?? "yard").join(", "))}
+                    {" · "}{r.yard_ids === null ? "all yards" : (r.yard_ids.map((y) => yardName.get(y) ?? "yard").join(", "))}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -131,7 +131,7 @@ export default async function NotificationsSettings() {
         )}
 
         <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add your first recipient — e.g. the foreman who rolls the trucks"}</h3>
+          <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add the first person to alert, like the foreman who rolls the trucks"}</h3>
           <form action={addRecipient} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 sm:flex-row">
               <input name="name" required placeholder="Name" className={`${fld} flex-1`} />

@@ -47,7 +47,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         ) : !user ? (
           <>
             <h1 className="text-lg font-semibold">Join {preview.company_name}</h1>
-            <p className="mt-1 text-sm text-ink-dim">You&apos;ve been invited as {preview.role}. Create your own login — your email, your password — and you&apos;ll land right back here to accept.</p>
+            <p className="mt-1 text-sm text-ink-dim">You&apos;ve been invited as {preview.role}. Make your own login with your email and a password, and you&apos;ll come right back here to accept.</p>
             <div className="mt-4 flex gap-2">
               <Link href={`/login?next=/invite/${token}`} className="flex-1"><Button className="w-full" variant="outline">Log in</Button></Link>
               <Link href={`/signup?next=/invite/${token}`} className="flex-1"><Button className="w-full">Create account</Button></Link>

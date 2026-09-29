@@ -28,7 +28,7 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
     const res = await submitDocUpdate(fd);
     setBusy(false);
     if (res.ok) setDone(true);
-    else setError(res.error ?? "something went wrong — try again");
+    else setError(res.error ?? "Something went wrong. Try again.");
   }
 
   if (done) {
@@ -38,7 +38,7 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
           <Check className="h-7 w-7 text-emerald-400" />
         </span>
         <p className="text-xl font-semibold">Got it. You&apos;re done.</p>
-        <p className="text-base text-ink-dim">Your card&apos;s in — the office takes it from here.</p>
+        <p className="text-base text-ink-dim">Your card is in. The office takes it from here.</p>
       </div>
     );
   }
@@ -47,7 +47,7 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {alreadySubmitted && (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          A photo already came through on this link — sending another replaces it.
+          A photo already came through on this link. Sending another replaces it.
         </p>
       )}
 
@@ -63,7 +63,7 @@ export default function SubmitForm({ token, kindHint, alreadySubmitted }: { toke
       <button type="button" onClick={() => fileRef.current?.click()}
         className={`flex min-h-16 items-center justify-center gap-2.5 rounded-xl text-lg font-semibold ${fileName ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300" : "bg-bone text-coal"}`}>
         <Camera className="h-6 w-6" />
-        {fileName ? "Photo attached — tap to retake" : "Take a photo of the card"}
+        {fileName ? "Photo attached. Tap to retake" : "Take a photo of the card"}
       </button>
       <input ref={fileRef} name="photo" type="file" accept="image/*" capture="environment" hidden
         onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)} />

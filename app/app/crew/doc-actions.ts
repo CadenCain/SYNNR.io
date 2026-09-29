@@ -38,7 +38,7 @@ export async function createDocRequest(args: { crewMemberId: string; kindHint?: 
   await db.from("saas_events").insert({
     company_id: company.id,
     kind: "doc_request_sent",
-    message: `Update link sent to ${(crew as { name: string }).name} — new card photo requested`,
+    message: `Asked ${(crew as { name: string }).name} for a photo of the new card`,
     actor,
   });
 

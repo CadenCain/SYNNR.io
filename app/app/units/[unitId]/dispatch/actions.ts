@@ -82,9 +82,9 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   if (comp.verdict === "ready") {
     void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} passed its readiness check${forJob}` });
   } else {
-    void logEvent({ companyId: company.id, kind: "check_not_ready", unitId, actor, message: `${comp.unitName} NOT ready${forJob} — ${failLine}` });
+    void logEvent({ companyId: company.id, kind: "check_not_ready", unitId, actor, message: `${comp.unitName} NOT ready${forJob}: ${failLine}` });
     void logEvent({ companyId: company.id, kind: "miss_caught", unitId, actor, message: `Caught before rollout on ${comp.unitName}${forJob}: ${failLine}` });
-    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message: `${comp.unitName} NOT ready${forJob} — ${failLine}` });
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message: `${comp.unitName} NOT ready${forJob}: ${failLine}` });
   }
 
   revalidatePath(`/app/units/${unitId}`);

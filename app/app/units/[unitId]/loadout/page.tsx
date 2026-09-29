@@ -47,16 +47,16 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: unit.name }}
-        title={`Gear list — ${unit.name}`}
-        description={`The standing list of what rides on this ${unitTypeLabel(unit.type).toLowerCase()}. Anything marked required that isn't in the asset book yet shows as a heads-up on the readiness check — this list is a reference, not a gate.`}
+        title={`Gear list: ${unit.name}`}
+        description={`The standing list of what rides on this ${unitTypeLabel(unit.type).toLowerCase()}. Anything marked required that isn't in the asset book yet shows as a warning on the readiness check. It never blocks a truck on its own.`}
       />
 
       {!editable && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <p className="text-sm text-ink-dim">
             {resolved
-              ? <>Using the shared <span className="text-ink">{resolved.name}</span> starter. Customize it and this truck gets its own copy — the shared one stays untouched.</>
-              : <>No loadout template for this unit type yet — customize to create one.</>}
+              ? <>Using the shared <span className="text-ink">{resolved.name}</span> starter. Customize it and this truck gets its own copy. The shared one stays the same.</>
+              : <>No gear list for this type of unit yet. Customize to make one.</>}
           </p>
           <form action={customizeTemplate}>
             <input type="hidden" name="unit_id" value={unitId} />

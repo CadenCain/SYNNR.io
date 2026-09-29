@@ -31,7 +31,7 @@ export default function SendUpdateLink({ crewMemberId, crewName, crewPhone }: { 
   }
 
   const smsBody = url
-    ? encodeURIComponent(`Hey ${crewName.split(" ")[0]} — your card's coming due. Snap a photo of the new one here (30 seconds): ${url}`)
+    ? encodeURIComponent(`Hey ${crewName.split(" ")[0]}, your card is coming due. Take a photo of the new one here: ${url}`)
     : "";
 
   if (!url) {
@@ -49,7 +49,7 @@ export default function SendUpdateLink({ crewMemberId, crewName, crewPhone }: { 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line-2 bg-elevated p-3">
       <p className="text-xs text-ink-dim">
-        Link for {crewName} — good for 7 days. They take a photo of the new card; it lands back here for review.
+        Link for {crewName}, good for 7 days. They take a photo of the new card and it comes back here for you to review.
       </p>
       <code className="block truncate rounded-md border border-line bg-coal px-2.5 py-2 text-xs text-ink-dim">{url}</code>
       <div className="flex gap-2">

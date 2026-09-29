@@ -8,7 +8,7 @@ import { requireCompany } from "@/lib/saas/auth";
 export async function POST() {
   const { company } = await requireCompany();
   if (company.is_demo) {
-    return NextResponse.json({ ok: false, error: "This is the demo yard — there's no billing here. Create your real account at synnr.io/signup." }, { status: 403 });
+    return NextResponse.json({ ok: false, error: "This is the demo yard, so there's no billing here. Call or text 432-250-0715 to set up your real yard." }, { status: 403 });
   }
   const stripe = getStripe();
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";

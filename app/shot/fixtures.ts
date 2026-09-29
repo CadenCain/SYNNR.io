@@ -21,8 +21,8 @@ const at = (n: number, h: number) => {
 };
 
 const units: UnitTile[] = [
-  { id: "u1", name: "CT-03", yardId: "y1", yardName: "Odessa Yard", state: "not_ready", why: "BOP pressure test (Quad BOP stack #3) — expired 6d ago", crewWorst: "valid" },
-  { id: "u2", name: "P-02", yardId: "y1", yardName: "Odessa Yard", state: "not_ready", why: "Annual DOT inspection — expired 23d ago", crewWorst: "valid" },
+  { id: "u1", name: "CT-03", yardId: "y1", yardName: "Odessa Yard", state: "not_ready", why: "BOP pressure test (Quad BOP stack #3): expired 6d ago", crewWorst: "valid" },
+  { id: "u2", name: "P-02", yardId: "y1", yardName: "Odessa Yard", state: "not_ready", why: "Annual DOT inspection: expired 23d ago", crewWorst: "valid" },
   { id: "u3", name: "CT-01", yardId: "y1", yardName: "Odessa Yard", state: "due_soon", why: "Lubricator pressure test expires in 9d", crewWorst: "valid" },
   { id: "u4", name: "CT-02", yardId: "y1", yardName: "Odessa Yard", state: "ready", why: "All paper current", crewWorst: "valid" },
   { id: "u5", name: "CR-01 Crane", yardId: "y1", yardName: "Odessa Yard", state: "ready", why: "All paper current", crewWorst: "valid" },
@@ -66,19 +66,19 @@ export function demoDashboardProps(): DashboardData {
     checksRunMonth: 8,
     hasSample: false,
     events: [
-      { kind: "check_not_ready", message: "CT-03 checked NOT READY — BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", created_at: at(0, 5) },
+      { kind: "check_not_ready", message: "CT-03 checked NOT READY: BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", created_at: at(0, 5) },
       { kind: "alert_sent", message: "Warning emailed: HS-01 Hotshot registration expires in 6 days", actor: null, created_at: at(0, 6) },
       { kind: "check_ready", message: "CT-02 checked READY for the Mabee Ranch pad", actor: "Ray Hinojosa", created_at: at(0, 4) },
-      { kind: "renewed", message: "BOP pressure test renewed on Quad BOP stack #7 — shot the new chart, good for 12 months", actor: "Freddy Carrasco", created_at: at(3, 9) },
-      { kind: "check_ready", message: "P-03 re-checked READY for the Diamondback pad — rolled at 4pm", actor: "Dale Wooten", created_at: at(3, 15) },
-      { kind: "asset_seen", message: "Lubricator #2 found in the pipe shop — back on T-1", actor: "Kevin Odom", created_at: at(3, 7) },
-      { kind: "renewed", message: "Sling quarterly inspection renewed — set A tagged", actor: "Cody Blackburn", created_at: at(6, 10) },
+      { kind: "renewed", message: "BOP pressure test renewed on Quad BOP stack #7 with a photo of the new chart, good for 12 months", actor: "Freddy Carrasco", created_at: at(3, 9) },
+      { kind: "check_ready", message: "P-03 re-checked READY for the Diamondback pad and rolled at 4pm", actor: "Dale Wooten", created_at: at(3, 15) },
+      { kind: "asset_seen", message: "Lubricator #2 found in the pipe shop and put back on T-1", actor: "Kevin Odom", created_at: at(3, 7) },
+      { kind: "renewed", message: "Sling quarterly inspection renewed, set A tagged", actor: "Cody Blackburn", created_at: at(6, 10) },
     ],
     actionList: [
       { id: "i1", title: "BOP pressure test", kind: "test", expiration_date: day(6), status: "expired", parent_type: "asset", parent_id: "a1" },
       { id: "i2", title: "Annual DOT inspection", kind: "inspection", expiration_date: day(23), status: "expired", parent_type: "unit", parent_id: "u2" },
-      { id: "i3", title: "H2S Clear — Marcus Villarreal", kind: "cert", expiration_date: day(1), status: "expired", parent_type: "crew", parent_id: "c1" },
-      { id: "i4", title: "Registration — HS-01 Hotshot", kind: "registration", expiration_date: day(-6), status: "expiring", parent_type: "unit", parent_id: "u7" },
+      { id: "i3", title: "H2S Clear, Marcus Villarreal", kind: "cert", expiration_date: day(1), status: "expired", parent_type: "crew", parent_id: "c1" },
+      { id: "i4", title: "Registration, HS-01 Hotshot", kind: "registration", expiration_date: day(-6), status: "expiring", parent_type: "unit", parent_id: "u7" },
       { id: "i5", title: "Lubricator pressure test", kind: "test", expiration_date: day(-9), status: "expiring", parent_type: "asset", parent_id: "a2" },
     ],
     spark: { readiness: snaps.map((s) => s.readiness), misses: snaps.map((s) => s.misses_caught) },

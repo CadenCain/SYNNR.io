@@ -47,7 +47,7 @@ export default function RenewControl({
     setFileName(file?.name ?? "");
     if (!file) return;
     if (file.size > 15 * 1024 * 1024) {
-      setErr("That photo is over 15 MB — take a normal-quality shot and try again.");
+      setErr("That photo is over 15 MB. Take a normal photo and try again.");
       setFileName("");
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -83,7 +83,7 @@ export default function RenewControl({
         const path = `${companyId}/compliance_item/${itemId}/${Date.now()}-${safe}`;
         const { error } = await sb.storage.from("proofs").upload(path, file, { upsert: false });
         if (error) {
-          setErr("Photo upload failed — saved the date without it.");
+          setErr("The photo didn't upload, but the date saved.");
         } else {
           storage_path = path;
           content_type = file.type || null;
@@ -130,7 +130,7 @@ export default function RenewControl({
           fileName ? "border-emerald-500/50 text-emerald-400" : "border-line-2 text-ink-dim hover:bg-elevated",
         )}
       >
-        {fileName ? <><Check className="h-4 w-4" /> Photo ready — tap to retake</> : <><Camera className="h-5 w-5" /> Shoot the new cert</>}
+        {fileName ? <><Check className="h-4 w-4" /> Photo added. Tap to retake</> : <><Camera className="h-5 w-5" /> Shoot the new cert</>}
       </button>
       <input
         ref={fileRef}
@@ -160,13 +160,13 @@ export default function RenewControl({
         />
       </label>
       {expiration && expiration < new Date().toISOString().slice(0, 10) ? (
-        <p className="text-xs text-amber-400">That date is already past — this item will show Expired the moment you save.</p>
+        <p className="text-xs text-amber-400">That date has already passed, so this item will show Expired when you save.</p>
       ) : null}
       {ocr === "reading" ? (
         <p className="flex items-center gap-1.5 text-xs text-ink-dim"><ScanLine className="h-3.5 w-3.5 animate-pulse" /> Reading the photo…</p>
       ) : ocr === "unconfirmed" ? (
         <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
-          <span className="text-xs text-amber-400">Read from the photo — confirm it&apos;s right before saving.</span>
+          <span className="text-xs text-amber-400">This date was read off the photo. Check it before saving.</span>
           <button type="button" onClick={() => setOcr("confirmed")}
             className="shrink-0 rounded-md border border-amber-500/50 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:bg-amber-500/15">
             Looks right
@@ -175,7 +175,7 @@ export default function RenewControl({
       ) : ocr === "confirmed" ? (
         <p className="text-xs text-emerald-400">✓ Date confirmed by you.</p>
       ) : ocr === "none" && fileName ? (
-        <p className="text-xs text-ink-faint">Couldn&apos;t read a date off the photo — set it yourself.</p>
+        <p className="text-xs text-ink-faint">Couldn&apos;t read a date off the photo. Enter it yourself.</p>
       ) : null}
       {err ? <p className="text-xs text-amber-400">{err}</p> : null}
       <div className="flex gap-2">

@@ -31,7 +31,7 @@ export default function JobDatePicker({ jobDate, today }: { jobDate: string; tod
       {jobDate > today ? (
         <span className="text-xs text-ink-faint">Certs must be current through this date.</span>
       ) : (
-        <span className="text-xs text-ink-faint">Rolling today — set a future date to check ahead.</span>
+        <span className="text-xs text-ink-faint">Checking for today. Pick a future date to check ahead.</span>
       )}
     </label>
   );

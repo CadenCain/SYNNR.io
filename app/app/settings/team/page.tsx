@@ -105,7 +105,7 @@ export default async function TeamSettings() {
                 <form action={transferOwnership}>
                   <input type="hidden" name="user_id" value={m.user_id} />
                   <button type="submit" className="rounded-lg border border-line-2 px-2.5 py-1 text-xs text-ink-dim hover:bg-elevated hover:text-ink"
-                    title="Hand ownership to this admin — you become an admin">
+                    title="Make this admin the owner. You become an admin.">
                     Make owner
                   </button>
                 </form>
@@ -140,7 +140,7 @@ export default async function TeamSettings() {
       )}
 
       {company.role === "member" ? (
-        <p className="text-sm text-ink-faint">Only admins can invite teammates — ask whoever runs your account.</p>
+        <p className="text-sm text-ink-faint">Only admins can invite teammates. Ask whoever runs your account.</p>
       ) : (
       <Card className="p-5">
         <h3 className="mb-3 text-sm font-medium text-ink">Invite a teammate</h3>
@@ -154,7 +154,7 @@ export default async function TeamSettings() {
           </select>
           <Button type="submit">Create invite link</Button>
         </form>
-        <p className="mt-2 text-xs text-ink-faint">Generates a shareable link — send it however you like. (Email delivery coming soon.)</p>
+        <p className="mt-2 text-xs text-ink-faint">Makes a link you can text or send however you like.</p>
       </Card>
       )}
     </div>

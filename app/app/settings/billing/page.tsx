@@ -118,7 +118,7 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
           </div>
           {err ? <p className="text-sm text-red-400">{err}</p> : null}
           <p className="text-xs text-ink-faint">
-            Raising adds $500/mo per yard, prorated from today. Lowering is refused while more yards are in use than the new plan — delete yards first; nothing is ever auto-deleted.
+            Raising adds $500/mo per yard, prorated from today. You can't lower it below the yards you're using. Delete yards first. Nothing gets deleted for you.
           </p>
         </Card>
       )}
@@ -130,14 +130,14 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
       ) : null}
 
       <p className="text-xs text-ink-faint">
-        You&apos;re on {company.yard_quantity} yard{company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime — $500/mo each, prorated. Cancel anytime, your data stays exportable.
+        You&apos;re on {company.yard_quantity} yard{company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime for $500/mo, prorated. Cancel anytime, your data stays exportable.
       </p>
 
       <Card className="flex flex-col gap-3 p-5">
         <div>
           <h2 className="text-sm font-medium text-ink">Your NPT day-rate</h2>
           <p className="mt-0.5 text-sm text-ink-dim">
-            Used on the dashboard to estimate avoided downtime from caught misses. This is <span className="text-ink">your estimate</span>, not a measured figure — set it to what a day of non-productive time actually costs your shop.
+            Used on the dashboard to estimate avoided downtime from caught misses. This is <span className="text-ink">your estimate</span>, not a measured figure. Set it to what a day of non-productive time actually costs your shop.
           </p>
         </div>
         <form action={saveNptRate} className="flex flex-wrap items-end gap-3">

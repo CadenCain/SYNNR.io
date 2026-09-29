@@ -7,7 +7,7 @@ import { computeReadiness, worstStatus, localToday, type UnitState } from "./sta
  * dashboard KPIs, the fleet board tiles, and the sidebar pill all read this.
  * Unit state vocabulary: Ready / Due soon / Not ready / Not set up.
  *
- * RollReady KEEPS UP WITH EVERYBODY'S RECORDS — certs, cards, gear status —
+ * SYNNR KEEPS UP WITH EVERYBODY'S RECORDS — certs, cards, gear status —
  * it is not a dispatch checklist. The gear list is reference only (it warns,
  * it never gates), so the tile and the readiness check agree by design:
  * both fail a unit only on real record problems. A unit is:
@@ -100,12 +100,12 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
 
     let state: UnitState; let why: string;
     if (missingAsset) {
-      state = "not_ready"; why = `${missingAsset.name} — missing`;
+      state = "not_ready"; why = `${missingAsset.name}: missing`;
     } else if (expired) {
       const d = expired.expiration_date ? Math.abs(daysUntil(expired.expiration_date)) : 0;
-      state = "not_ready"; why = `${expired.title} — expired${d ? ` ${d}d ago` : ""}`;
+      state = "not_ready"; why = `${expired.title}: expired${d ? ` ${d}d ago` : ""}`;
     } else if (noDate) {
-      state = "not_ready"; why = `${noDate.title} — no expiration on file`;
+      state = "not_ready"; why = `${noDate.title}: no expiration on file`;
     } else if (expiring) {
       const d = expiring.expiration_date ? daysUntil(expiring.expiration_date) : null;
       state = "due_soon"; why = `${expiring.title} expires${d !== null ? (d <= 0 ? " today" : ` in ${d}d`) : " soon"}`;

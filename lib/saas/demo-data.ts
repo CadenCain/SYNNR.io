@@ -31,7 +31,7 @@ export interface DemoCheck { unitKey: string; status: "ready" | "not_ready"; by:
 
 const H2S = (exp: number): DemoItem => ({ title: "H2S Clear", kind: "cert", exp, issued: exp - 365 });
 const WC = (exp: number): DemoItem => ({ title: "Well Control (IADC WellSharp)", kind: "cert", exp, issued: exp - 730 });
-const CDL = (exp: number): DemoItem => ({ title: "CDL — Class A", kind: "document", exp, issued: exp - 1460 });
+const CDL = (exp: number): DemoItem => ({ title: "CDL Class A", kind: "document", exp, issued: exp - 1460 });
 const MED = (exp: number): DemoItem => ({ title: "DOT medical card", kind: "cert", exp, issued: exp - 730 });
 const SAFE = (exp: number): DemoItem => ({ title: "SafeLandUSA", kind: "cert", exp, issued: exp - 365 });
 const AID = (exp: number): DemoItem => ({ title: "First aid / CPR", kind: "cert", exp, issued: exp - 730 });
@@ -100,7 +100,7 @@ const injector = (n: number, exp: number): DemoAsset => ({
   items: [{ title: "Injector service & inspection", kind: "inspection", exp, issued: exp - 365 }],
 });
 const reel = (n: number, size: string, len: string, exp: number): DemoAsset => ({
-  name: `Reel R-${n} — ${size} · ${len}`, category: "equipment",
+  name: `Reel R-${n}, ${size}, ${len}`, category: "equipment",
   items: [{ title: "Coil string fatigue inspection", kind: "inspection", exp, issued: exp - 180 }],
 });
 const lube = (n: number, exp: number, status?: string): DemoAsset => ({
@@ -116,7 +116,7 @@ export const DEMO_UNITS: DemoUnit[] = [
     crew: ["c9", "c27", "c35"] },
   { key: "p2", name: "P-02", type: "pump_truck", identifier: "2302", expect: "not_ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: -23 /* ← THE red: DOT lapsed */ }],
-    assets: [{ name: "Fluid end — P-02", category: "tool", items: [{ title: "Fluid end inspection", kind: "inspection", exp: 160 }] }],
+    assets: [{ name: "Fluid end, P-02", category: "tool", items: [{ title: "Fluid end inspection", kind: "inspection", exp: 160 }] }],
     crew: ["c18", "c29"] },
   { key: "ct6", name: "CT-06", type: "coil_tubing_unit", identifier: "1406", expect: "not_ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 200 }],
@@ -156,7 +156,7 @@ export const DEMO_UNITS: DemoUnit[] = [
     crew: [] /* no crew assigned — the check calls that out loud */ },
   { key: "p1", name: "P-01", type: "pump_truck", identifier: "2301", expect: "ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 240 }],
-    assets: [{ name: "Fluid end — P-01", category: "tool", items: [{ title: "Fluid end inspection", kind: "inspection", exp: 200 }] }],
+    assets: [{ name: "Fluid end, P-01", category: "tool", items: [{ title: "Fluid end inspection", kind: "inspection", exp: 200 }] }],
     crew: ["c17", "c32"] },
   { key: "p3", name: "P-03", type: "pump_truck", identifier: "2303", expect: "ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 210 }],
@@ -170,18 +170,18 @@ export const DEMO_UNITS: DemoUnit[] = [
   { key: "cr1", name: "CR-01 Crane", type: "crane_truck", identifier: "5501", expect: "ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 230 }],
     assets: [{ name: "Boom & block", category: "lifting", items: [{ title: "Crane annual inspection", kind: "inspection", exp: 210 }] },
-             { name: "Wire rope slings — set A", category: "lifting", items: [{ title: "Sling quarterly inspection", kind: "inspection", exp: 45 }] }],
+             { name: "Wire rope slings, set A", category: "lifting", items: [{ title: "Sling quarterly inspection", kind: "inspection", exp: 45 }] }],
     crew: ["c22", "c40"] },
   { key: "fp1", name: "FP-01 Fluid Pump", type: "cement_pump_unit", identifier: "4201", expect: "ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 280 }], crew: ["c23"] },
   { key: "bt1", name: "BOP Trailer T-1", type: "trailer", identifier: "T1", expect: "ready",
     items: [{ title: "Trailer registration", kind: "registration", exp: 320 }],
-    assets: [{ name: "Dual BOP stack — spare", category: "pressure_control", items: [{ title: "BOP pressure test", kind: "test", exp: 75 }] },
-             lube(2, 220), { name: "Crossover subs — basket", category: "tool" }],
+    assets: [{ name: "Spare dual BOP stack", category: "pressure_control", items: [{ title: "BOP pressure test", kind: "test", exp: 75 }] },
+             lube(2, 220), { name: "Crossover subs basket", category: "tool" }],
     crew: [] },
   { key: "st2", name: "Service Trailer T-2", type: "trailer", identifier: "T2", expect: "ready",
     items: [{ title: "Trailer registration", kind: "registration", exp: 290 }],
-    assets: [{ name: "Iron basket — 2\" 1502", category: "tool" }], crew: [] },
+    assets: [{ name: "Iron basket, 2\" 1502", category: "tool" }], crew: [] },
   { key: "cw1", name: "Crew Truck 1", type: "truck", identifier: "101", expect: "ready",
     items: [{ title: "Annual DOT inspection", kind: "inspection", exp: 200 }], crew: ["c24"] },
   { key: "cw2", name: "Crew Truck 2", type: "truck", identifier: "102", expect: "ready",
@@ -198,22 +198,22 @@ export const DEMO_UNITS: DemoUnit[] = [
 
 /** Activity feed — ten days of a working yard, hours a yard actually keeps. */
 export const DEMO_EVENTS: DemoEvent[] = [
-  { kind: "check_not_ready", message: "CT-03 checked NOT READY — BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", daysAgo: 0, hour: 5, minute: 5 },
+  { kind: "check_not_ready", message: "CT-03 checked NOT READY: BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", daysAgo: 0, hour: 5, minute: 5 },
   { kind: "alert_sent", message: "Warning emailed: HS-01 Hotshot registration expires in 6 days", actor: null, daysAgo: 0, hour: 6, minute: 32 },
   { kind: "check_ready", message: "CT-02 checked READY for the Mabee Ranch pad", actor: "Ray Hinojosa", daysAgo: 0, hour: 4, minute: 50 },
-  { kind: "asset_seen", message: "Lubricator #2 last seen: BOP Trailer T-1, rack 2 — per Beau Slaughter", actor: "Beau Slaughter", daysAgo: 1, hour: 19, minute: 30 },
-  { kind: "renewed", message: "H2S Clear renewed for Wyatt Sikes — good through next summer", actor: "Wyatt Sikes", daysAgo: 1, hour: 9, minute: 15 },
-  { kind: "check_ready", message: "CR-01 Crane checked READY — slings current", actor: "Cody Blackburn", daysAgo: 1, hour: 6, minute: 15 },
+  { kind: "asset_seen", message: "Lubricator #2 last seen on BOP Trailer T-1, rack 2, per Beau Slaughter", actor: "Beau Slaughter", daysAgo: 1, hour: 19, minute: 30 },
+  { kind: "renewed", message: "H2S Clear renewed for Wyatt Sikes, good through next summer", actor: "Wyatt Sikes", daysAgo: 1, hour: 9, minute: 15 },
+  { kind: "check_ready", message: "CR-01 Crane checked READY, slings current", actor: "Cody Blackburn", daysAgo: 1, hour: 6, minute: 15 },
   { kind: "alert_sent", message: "Warning emailed: Marcus Villarreal's H2S Clear expires tomorrow", actor: null, daysAgo: 2, hour: 6, minute: 30 },
-  { kind: "check_not_ready", message: "Card caught before the job: CT-06 held — operator H2S lapsing", actor: "Lupe Cardenas", daysAgo: 2, hour: 5, minute: 20 },
+  { kind: "check_not_ready", message: "Card caught before the job: CT-06 held because the operator's H2S was lapsing", actor: "Lupe Cardenas", daysAgo: 2, hour: 5, minute: 20 },
   // ── the win story: fail → fix → re-check, all in one working day ──
-  { kind: "check_not_ready", message: "P-03 checked NOT READY — BOP pressure test (Quad BOP stack #7) expired", actor: "Dale Wooten", daysAgo: 3, hour: 4, minute: 50 },
-  { kind: "renewed", message: "BOP pressure test renewed on Quad BOP stack #7 — shot the new chart, good for 12 months", actor: "Freddy Carrasco", daysAgo: 3, hour: 9, minute: 40 },
-  { kind: "check_ready", message: "P-03 re-checked READY for the Diamondback pad — rolled at 4pm", actor: "Dale Wooten", daysAgo: 3, hour: 15, minute: 20 },
-  { kind: "asset_flagged", message: "Lubricator #2 flagged MISSING at rig-down — last seen on 12", actor: "Kevin Odom", daysAgo: 4, hour: 18, minute: 45 },
-  { kind: "asset_seen", message: "Lubricator #2 found in the pipe shop — back on T-1", actor: "Kevin Odom", daysAgo: 3, hour: 7, minute: 10 },
+  { kind: "check_not_ready", message: "P-03 checked NOT READY: BOP pressure test (Quad BOP stack #7) expired", actor: "Dale Wooten", daysAgo: 3, hour: 4, minute: 50 },
+  { kind: "renewed", message: "BOP pressure test renewed on Quad BOP stack #7 with a photo of the new chart, good for 12 months", actor: "Freddy Carrasco", daysAgo: 3, hour: 9, minute: 40 },
+  { kind: "check_ready", message: "P-03 re-checked READY for the Diamondback pad and rolled at 4pm", actor: "Dale Wooten", daysAgo: 3, hour: 15, minute: 20 },
+  { kind: "asset_flagged", message: "Lubricator #2 flagged MISSING at rig-down, last seen on 12", actor: "Kevin Odom", daysAgo: 4, hour: 18, minute: 45 },
+  { kind: "asset_seen", message: "Lubricator #2 found in the pipe shop and put back on T-1", actor: "Kevin Odom", daysAgo: 3, hour: 7, minute: 10 },
   { kind: "check_ready", message: "P-01 checked READY", actor: "J.R. Stanton", daysAgo: 5, hour: 6, minute: 15 },
-  { kind: "renewed", message: "Sling quarterly inspection renewed — set A tagged", actor: "Cody Blackburn", daysAgo: 6, hour: 10, minute: 5 },
+  { kind: "renewed", message: "Sling quarterly inspection renewed, set A tagged", actor: "Cody Blackburn", daysAgo: 6, hour: 10, minute: 5 },
   { kind: "check_ready", message: "CT-05 checked READY for the Sale Ranch workover", actor: "Manuel Ortega", daysAgo: 8, hour: 4, minute: 55 },
 ];
 

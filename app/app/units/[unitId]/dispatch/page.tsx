@@ -27,7 +27,7 @@ const RESULT_UI: Record<string, string> = {
   expired: "border-red-500/40 bg-red-500/10 text-red-400",
 };
 const RESULT_LABEL: Record<string, string> = { ok: "OK", warn: "Heads-up", missing: "Missing", expired: "Expired" };
-const SECTION = "text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint";
+const SECTION = "text-sm font-semibold text-ink-dim";
 
 export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
   const { company } = await requireCompany();
@@ -56,7 +56,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
-        title={`Readiness check — ${comp.unitName}`}
+        title={`Readiness check: ${comp.unitName}`}
         description="Where this truck's records stand right now: paper current, crew cards current for the job, gear accounted for. Nothing to tap, nothing to override."
       />
 
@@ -70,7 +70,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <TriangleAlert className="h-7 w-7 text-ink-faint" />
           <p className="font-semibold">Nothing set up to check.</p>
           <p className="mx-auto max-w-md text-sm text-ink-dim">
-            This unit has no gear list, no assets, no certs, and no assigned crew — a check with nothing
+            This unit has no gear list, no assets, no certs, and no assigned crew. A check with nothing
             to verify can&apos;t pass. Set it up first.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -83,19 +83,19 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <div className={`flex items-center gap-2 text-lg font-semibold ${comp.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
             {comp.verdict === "ready" ? <Check className="h-5 w-5" /> : <TriangleAlert className="h-5 w-5" />}
             {comp.verdict === "ready"
-              ? comp.isFutureJob ? `Ready for the ${comp.jobDate} job — everything current through then` : "Ready — everything on record is current"
+              ? comp.isFutureJob ? `Ready for the ${comp.jobDate} job. Everything is current through then.` : "Ready. Everything on record is current."
               : comp.isFutureJob ? `NOT READY for the ${comp.jobDate} job` : "NOT READY"}
           </div>
           {failureGroups.length > 0 && (
             <div className="mt-3 flex flex-col gap-3">
               {failureGroups.map((g) => (
                 <div key={g.label}>
-                  <div className="text-xs font-mono font-semibold uppercase tracking-wider text-red-400/80">
+                  <div className="text-sm font-semibold text-red-400/80">
                     {g.label} · {g.rows.length}
                   </div>
                   <ul className="mt-1 flex flex-col gap-1 text-sm text-red-300">
                     {g.rows.map((l, i) => (
-                      <li key={`${l.source_id ?? i}`}>• {l.label}{l.detail ? <span className="text-red-300/70"> — {l.detail}</span> : null}</li>
+                      <li key={`${l.source_id ?? i}`}>• {l.label}{l.detail ? <span className="text-red-300/70">: {l.detail}</span> : null}</li>
                     ))}
                   </ul>
                 </div>
@@ -121,8 +121,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       )}
 
       {/* Lines */}
-      {[{ title: "Gear — in the asset book?", rows: gear },
-        { title: "Paper — certs, inspections & DOT", rows: paper },
+      {[{ title: "Gear in the asset book", rows: gear },
+        { title: "Certs, inspections, and DOT", rows: paper },
         { title: "Assigned crew cards", rows: crew }].map(({ title, rows }) =>
         rows.length === 0 ? null : (
           <section key={title} className="flex flex-col gap-2">
@@ -146,8 +146,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <input type="hidden" name="job_date" value={comp.jobDate} />
           <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${comp.jobDate}` : ""}`} />
           <p className="text-center text-xs text-ink-faint">
-            Records the verdict and every line, with your name and the time. Read-only after — the record is the proof.
-            {comp.verdict === "not_ready" ? " A NOT-ready result records as NOT ready. There is no override — fix the items and re-run." : ""}
+            Saves the result and every line with your name and the time. It can't be edited afterward.
+            {comp.verdict === "not_ready" ? " A NOT READY result is saved as NOT READY. There is no override. Fix the items and run it again." : ""}
           </p>
         </form>
       )}

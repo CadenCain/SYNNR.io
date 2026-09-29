@@ -161,7 +161,7 @@ export async function updateAssetLastSeen(fd: FormData) {
       kind: "asset_seen",
       unitId: row.unit_id,
       actor: by,
-      message: `${row.name} — last seen ${where}, per ${by}`,
+      message: `${row.name} last seen at ${where}, per ${by}`,
     });
   }
   revalidatePath(`/app/assets/${id}`);
@@ -262,7 +262,7 @@ export async function loadSampleYard() {
     { company_id: company.id, parent_type: "unit", parent_id: wl12, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-200), expiration_date: iso(165) },
     { company_id: company.id, parent_type: "unit", parent_id: wl12, title: "DOT sticker", kind: "dot_sticker", issued_date: iso(-353), expiration_date: iso(12) }, // due soon
     { company_id: company.id, parent_type: "asset", parent_id: bop5, title: "BOP test", kind: "test", issued_date: iso(-60), expiration_date: iso(120) },
-    { company_id: company.id, parent_type: "asset", parent_id: lub4, title: "Pressure test — 10k", kind: "test", issued_date: iso(-45), expiration_date: iso(135) },
+    { company_id: company.id, parent_type: "asset", parent_id: lub4, title: "Pressure test, 10k", kind: "test", issued_date: iso(-45), expiration_date: iso(135) },
     // Crane 3 — clean
     { company_id: company.id, parent_type: "unit", parent_id: cr3, title: "Annual DOT inspection", kind: "inspection", issued_date: iso(-100), expiration_date: iso(265) },
     { company_id: company.id, parent_type: "asset", parent_id: slings, title: "Rigging inspection", kind: "inspection", issued_date: iso(-30), expiration_date: iso(335) },
@@ -284,9 +284,9 @@ export async function loadSampleYard() {
 
   await db.from("saas_compliance_items").insert([
     { company_id: company.id, parent_type: "crew", parent_id: jerry, title: "H2S Clear", kind: "cert", issued_date: iso(-360), expiration_date: iso(6) },      // expiring
-    { company_id: company.id, parent_type: "crew", parent_id: jerry, title: "Well control — wireline", kind: "cert", issued_date: iso(-300), expiration_date: iso(430) },
+    { company_id: company.id, parent_type: "crew", parent_id: jerry, title: "Well control, wireline", kind: "cert", issued_date: iso(-300), expiration_date: iso(430) },
     { company_id: company.id, parent_type: "crew", parent_id: dale, title: "H2S Clear", kind: "cert", issued_date: iso(-200), expiration_date: iso(165) },
-    { company_id: company.id, parent_type: "crew", parent_id: dale, title: "Well control — wireline", kind: "cert", issued_date: iso(-800), expiration_date: iso(-70) }, // EXPIRED — blocks WL-7
+    { company_id: company.id, parent_type: "crew", parent_id: dale, title: "Well control, wireline", kind: "cert", issued_date: iso(-800), expiration_date: iso(-70) }, // EXPIRED — blocks WL-7
     { company_id: company.id, parent_type: "crew", parent_id: manny, title: "CDL", kind: "cert", issued_date: iso(-400), expiration_date: iso(500) },
     { company_id: company.id, parent_type: "crew", parent_id: manny, title: "DOT medical card", kind: "cert", issued_date: iso(-300), expiration_date: iso(65) },
     { company_id: company.id, parent_type: "crew", parent_id: colt, title: "Crane operator cert (NCCCO)", kind: "cert", issued_date: iso(-500), expiration_date: iso(230) },
@@ -395,7 +395,7 @@ export async function updateComplianceItem(fd: FormData) {
       companyId: company.id,
       kind: "renewed",
       actor,
-      message: `${title} date edited: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""} — NO PROOF ATTACHED`,
+      message: `${title} date edited: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""}. No proof attached.`,
     });
   }
 

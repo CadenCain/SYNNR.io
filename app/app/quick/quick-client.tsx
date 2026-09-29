@@ -92,7 +92,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     setFileName(file?.name ?? "");
     if (!file) return;
     if (file.size > 15 * 1024 * 1024) {
-      setErr("That photo is over 15 MB — take a normal-quality shot and try again.");
+      setErr("That photo is over 15 MB. Take a normal photo and try again.");
       setFileName("");
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -134,7 +134,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
     if (file) {
       const up = await uploadProof(companyId, picked.id, file);
       if (up) { storage_path = up.path; content_type = up.type; }
-      else setErr("Photo didn't upload — saved the date anyway.");
+      else setErr("The photo didn't upload, but the date saved.");
     }
     try {
       await renewComplianceItem({ itemId: picked.id, expiration_date: expiration, storage_path, content_type, redirectPath: "/app/quick" });
@@ -257,7 +257,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           <BackBar onBack={() => reset()} label="What are you renewing?" />
           {items.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface p-6 text-center">
-              <p className="text-ink-dim">Nothing tracked yet — add your first cert and it&apos;ll show up here to renew.</p>
+              <p className="text-ink-dim">Nothing tracked yet. Add your first cert and it&apos;ll show up here.</p>
               <button onClick={() => setMode("add")} className="flex min-h-12 items-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal">
                 <Plus className="h-5 w-5" /> Add a cert
               </button>
@@ -291,7 +291,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           <p className="text-sm text-ink-dim">Reading the photo…</p>
         ) : ocr === "unconfirmed" ? (
           <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5">
-            <span className="text-sm text-amber-400">Read from the photo — confirm it&apos;s right.</span>
+            <span className="text-sm text-amber-400">This date was read off the photo. Check that it&apos;s right.</span>
             <button type="button" onClick={() => setOcr("confirmed")}
               className="shrink-0 rounded-lg border border-amber-500/50 px-3 py-1.5 text-sm font-semibold text-amber-300">
               Looks right
@@ -300,12 +300,12 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         ) : ocr === "confirmed" ? (
           <p className="text-sm text-emerald-400">✓ Date confirmed by you.</p>
         ) : ocr === "none" && fileName ? (
-          <p className="text-sm text-ink-faint">Couldn&apos;t read a date off the photo — set it yourself.</p>
+          <p className="text-sm text-ink-faint">Couldn&apos;t read a date off the photo. Enter it yourself.</p>
         ) : null}
         {err ? <p className="text-sm text-amber-400">{err}</p> : null}
         <button type="submit" disabled={busy || ocr === "reading" || ocr === "unconfirmed"}
           className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
-          {busy ? "Saving…" : ocr === "unconfirmed" ? "Confirm the date first" : "Save — it's renewed"}
+          {busy ? "Saving…" : ocr === "unconfirmed" ? "Confirm the date first" : "Save renewal"}
         </button>
       </form>
     );
@@ -336,7 +336,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           Which truck / rig / shop?
           <select name="unit_id" required className={FIELD} defaultValue={addForUnit?.id ?? ""}>
             <option value="" disabled>Pick one…</option>
-            {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
+            {unitList.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` (${u.yardName})` : ""}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
@@ -385,7 +385,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         </button>
         <p className="text-center text-xs text-ink-faint">
           {unitList.length === 0
-            ? "First one — we'll start a yard called Main yard. Rename it any time in Yards."
+            ? "This is your first one, so we'll start a yard called Main yard. You can rename it in Yards."
             : "Goes in your first yard. Move it any time in Yards."}
         </p>
       </form>
@@ -418,7 +418,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
           On which truck / rig?
           <select name="unit_id" required className={FIELD} defaultValue={addForUnit && addForUnit.type !== "shop" ? addForUnit.id : ""}>
             <option value="" disabled>Pick one…</option>
-            {gearTargets.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` — ${u.yardName}` : ""}</option>)}
+            {gearTargets.map((u) => <option key={u.id} value={u.id}>{u.name}{u.yardName ? ` (${u.yardName})` : ""}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
@@ -437,7 +437,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
         </label>
         <CameraField fileRef={gearPhotoRef} fileName={gearPhotoName} setFileName={setGearPhotoName} label="Shoot the iron" />
         <CameraField fileRef={gearPaperRef} fileName={gearPaperName} setFileName={setGearPaperName} label="Shoot its paperwork" />
-        <p className="text-center text-xs text-ink-faint">No photos yet? Save anyway — it&apos;ll wear an amber flag until both are on file.</p>
+        <p className="text-center text-xs text-ink-faint">No photos yet? You can still save. It&apos;ll be flagged until both photos are added.</p>
         {err ? <p className="text-sm text-amber-400">{err}</p> : null}
         <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
           {busy ? "Saving…" : "Put it on the books"}
@@ -480,7 +480,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
       <form
         action={async (fd) => {
           setBusy(true);
-          try { await updateAssetLastSeen(fd); setDoneMsg(`${pickedAsset.name} — ${whereText}`); setMode("done"); }
+          try { await updateAssetLastSeen(fd); setDoneMsg(`${pickedAsset.name}: ${whereText}`); setMode("done"); }
           catch { setErr("Couldn't save that. Try again."); }
           finally { setBusy(false); }
         }}
@@ -542,7 +542,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
       {/* Setup work. Smaller on purpose — done once per truck, not daily —
           but it lives on the phone because that's where the truck is. */}
       <div className="mt-2 flex flex-col gap-2 border-t border-line pt-4">
-        <span className="font-mono text-xs font-semibold uppercase tracking-wider text-ink-faint">Put something new on the books</span>
+        <span className="text-sm font-semibold text-ink-dim">Put something new on the books</span>
         <div className="grid gap-2 sm:grid-cols-2">
         <button onClick={() => setMode("unit")}
           className="flex min-h-16 items-center gap-3 rounded-xl border border-line bg-surface px-4 text-left active:bg-elevated">

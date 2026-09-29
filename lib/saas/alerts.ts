@@ -119,7 +119,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     }
 
     const line = (i: DueItem) =>
-      `${i.title}${i.parent_type === "crew" ? " (crew card)" : ""} — ${
+      `${i.title}${i.parent_type === "crew" ? " (crew card)" : ""}: ${
         i.expiration_date === null ? "MISSING (no expiration on file)"
         : i.expiration_date < todayIso ? `EXPIRED ${i.expiration_date}` : `expires ${i.expiration_date}`}`;
 
@@ -137,13 +137,13 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       if (r.channels.includes("email") && r.email) {
         const ok = await sendEmail(
           [r.email],
-          `[RollReady] ${sorted.length} expiring — ${company.name}`,
-          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen RollReady to renew: ${appUrl}</pre>`,
+          `[SYNNR] ${company.name}: ${sorted.length} expiring`,
+          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen SYNNR to renew: ${appUrl}</pre>`,
         );
         if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else {
           res.errors.push(`email ${company.id} → ${r.name}`);
-          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert email to ${r.name} FAILED — ${sorted.length} item(s) not delivered. Will retry tomorrow.` });
+          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert email to ${r.name} failed. ${sorted.length} item(s) not delivered. Will retry tomorrow.` });
         }
       }
       // Without Twilio credentials there is nothing to attempt — trying anyway
@@ -152,12 +152,12 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       // channel; SMS wakes up when the env vars land.
       if (smsConfigured() && r.channels.includes("sms") && r.phone) {
         const worst = sorted[0];
-        const body = `RollReady: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} —${company.name}`;
+        const body = `SYNNR: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} - ${company.name}`;
         const ok = await sendSms(r.phone, body);
         if (ok) { res.sms_sent++; sorted.forEach((i) => smsedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else {
           res.errors.push(`sms ${company.id} → ${r.name}`);
-          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert TEXT to ${r.name} FAILED — check the phone number in Settings → Notifications. Will retry tomorrow.` });
+          await admin.from("saas_events").insert({ company_id: company.id, kind: "alert_failed", message: `Alert text to ${r.name} failed. Check the phone number in Settings → Notifications. Will retry tomorrow.` });
         }
       }
     }

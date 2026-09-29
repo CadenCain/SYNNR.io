@@ -7,7 +7,7 @@ import { saasDb } from "@/lib/saas/db";
 import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Subscribe · RollReady" };
+export const metadata = { title: "Subscribe · SYNNR" };
 
 async function switchCompanyFromWall(formData: FormData) {
   "use server";
@@ -80,7 +80,7 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
             belongs to other companies, offer the door right on the wall. */}
         <CompanySwitcherWall />
         <h1 className="text-xl font-semibold tracking-tight">Start your subscription</h1>
-        <p className="mt-1 text-sm text-ink-dim">One more step — add a card to activate {company.name}.</p>
+        <p className="mt-1 text-sm text-ink-dim">One more step: add a card to activate {company.name}.</p>
       </div>
       <SubscribeCard initialYards={Math.max(1, yardCount ?? 1)} />
     </div>
@@ -94,7 +94,7 @@ async function CompanySwitcherWall() {
   if (companies.length < 2) return null;
   return (
     <div className="mb-4 rounded-lg border border-line bg-surface p-3">
-      <p className="text-xs text-ink-faint">You belong to other companies — switch instead:</p>
+      <p className="text-xs text-ink-faint">You belong to other companies. Switch to one instead:</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {companies.map((c) => (
           <form key={c.id} action={switchCompanyFromWall}>

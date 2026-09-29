@@ -92,7 +92,7 @@ export async function renewComplianceItem(args: {
     companyId: company.id,
     kind: "renewed",
     actor,
-    message: `${before?.title ?? "Item"} renewed: ${before?.expiration_date ?? "no date"} → ${expiration}${actor ? `, by ${actor}` : ""}${hasProof ? " — proof photo attached" : " — NO PROOF ATTACHED"}`,
+    message: `${before?.title ?? "Item"} renewed: ${before?.expiration_date ?? "no date"} → ${expiration}${actor ? `, by ${actor}` : ""}${hasProof ? ", with a proof photo" : ". No proof attached."}`,
   });
 
   if (args.redirectPath) revalidatePath(args.redirectPath);

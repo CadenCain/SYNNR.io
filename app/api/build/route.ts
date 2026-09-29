@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     name, company: company || null, email: email || null, phone: phone || null,
     note: `[BUILD] ${note}`.slice(0, MAX_FIELD),
   });
-  if (error) return NextResponse.json({ ok: false, error: "Couldn't save — call or text 432-250-0715 instead." }, { status: 500 });
+  if (error) return NextResponse.json({ ok: false, error: "That didn't save. Call or text 432-250-0715 instead." }, { status: 500 });
 
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {

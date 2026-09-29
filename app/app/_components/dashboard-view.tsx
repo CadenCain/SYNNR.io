@@ -65,7 +65,7 @@ export default function DashboardView(d: DashboardData) {
     now === prev ? "even with last week" : now > prev ? `+${now - prev} vs last week` : `${now - prev} vs last week`;
 
   const kpis: { icon: typeof Gauge; label: string; value: string | number; accent: string; href: string; bar?: number; sub?: string; spark?: (number | null)[]; sparkColor?: string }[] = [
-    { icon: Truck, label: d.activeYard ? `Not ready — ${d.activeYard.name}` : "Not ready", value: d.notReadyUnits, accent: d.notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "#fleet", sub: d.notReadyUnits > 0 ? "units failing right now — fix these first" : "every unit current" },
+    { icon: Truck, label: d.activeYard ? `Not ready in ${d.activeYard.name}` : "Not ready", value: d.notReadyUnits, accent: d.notReadyUnits > 0 ? "text-red-400" : "text-emerald-400", href: "#fleet", sub: d.notReadyUnits > 0 ? "trucks that can't roll right now" : "every truck is current" },
     d.readiness === null
       ? { icon: Gauge, label: "Readiness", value: "Not set up yet", accent: "text-ink-faint", href: "/app/compliance", sub: "add gear & certs to score it" }
       : { icon: Gauge, label: "Readiness", value: `${d.readiness}%`, accent: d.readiness >= 90 ? "text-emerald-400" : d.readiness >= 60 ? "text-amber-400" : "text-red-400", bar: d.readiness, href: "/app/compliance", spark: d.spark.readiness, sparkColor: "#e7ddc7" },
@@ -78,8 +78,7 @@ export default function DashboardView(d: DashboardData) {
     <div className="flex flex-col gap-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[26px] font-semibold tracking-tight">Hello, {d.first}</h1>
-          <p className="mt-1 text-sm text-ink-dim">Here&apos;s where {d.companyName} stands right now.</p>
+          <h1 className="text-[26px] font-semibold tracking-tight">{d.companyName}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ShareProof scope="company" />
@@ -98,7 +97,7 @@ export default function DashboardView(d: DashboardData) {
           return (
             <section className="md:hidden">
               <Card className="border-red-500/40 bg-red-500/[0.06] p-5">
-                <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-red-400">Not ready</div>
+                <div className="text-sm font-semibold text-red-400">Not ready</div>
                 <p className="mt-2 text-2xl font-semibold leading-snug">
                   {d.notReadyUnits === 1 ? `${worst.name} can't roll.` : `${d.notReadyUnits} units can't roll.`}
                 </p>
@@ -121,11 +120,11 @@ export default function DashboardView(d: DashboardData) {
           return (
             <section className="md:hidden">
               <Card className="border-amber-500/30 bg-amber-500/[0.05] p-5">
-                <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-400">Rolling ready · {dueSoon.length} due soon</div>
-                <p className="mt-2 text-2xl font-semibold leading-snug">Nothing blocks a truck today.</p>
+                <div className="text-sm font-semibold text-amber-400">Ready, {dueSoon.length} due soon</div>
+                <p className="mt-2 text-2xl font-semibold leading-snug">No trucks are blocked today.</p>
                 <p className="mt-1 truncate text-sm text-ink-dim">{dueSoon[0].name}: {dueSoon[0].why}</p>
                 <Link href={`/app/units/${dueSoon[0].id}`} className="mt-4 flex min-h-12 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
-                  Renew before it bites
+                  Renew it
                 </Link>
               </Card>
             </section>
@@ -134,7 +133,7 @@ export default function DashboardView(d: DashboardData) {
         return (
           <section className="md:hidden">
             <Card className="border-emerald-500/30 bg-emerald-500/[0.05] p-5">
-              <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-400">Rolling ready</div>
+              <div className="text-sm font-semibold text-emerald-400">All ready</div>
               <p className="mt-2 text-2xl font-semibold leading-snug">
                 {d.boardUnits.length === 1 ? "Your unit is ready to roll." : `All ${d.boardUnits.length} units ready to roll.`}
               </p>
@@ -156,7 +155,7 @@ export default function DashboardView(d: DashboardData) {
             { k: "Caught", v: d.missesCaught, href: "#activity" },
           ].map((s) => (
             <Link key={s.k} href={s.href} className="flex flex-1 flex-col items-center gap-0.5 py-3">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">{s.k}</span>
+              <span className="text-xs text-ink-faint">{s.k}</span>
               <span className="text-lg font-semibold tabular-nums">{s.v}</span>
             </Link>
           ))}
@@ -203,7 +202,7 @@ export default function DashboardView(d: DashboardData) {
         <div className="hidden gap-3 md:grid md:grid-cols-3">
           <Card className="p-5 md:col-span-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Readiness — last 14 days</h2>
+              <h2 className="text-sm font-semibold text-ink-dim">Readiness, last 14 days</h2>
               <span className="text-xs text-ink-faint">daily 6:30am · today live</span>
             </div>
             <div className="mt-4">
@@ -218,7 +217,7 @@ export default function DashboardView(d: DashboardData) {
               { k: "Misses caught", v: d.missesCaught, tone: d.missesCaught > 0 ? "text-emerald-400" : "text-ink" },
             ].map((s) => (
               <div key={s.k}>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">{s.k}</div>
+                <div className="text-xs text-ink-faint">{s.k}</div>
                 <div className={`mt-1 text-2xl font-semibold tabular-nums ${s.tone}`}>{s.v}</div>
                 <div className="text-[11px] text-ink-faint">this month</div>
               </div>
@@ -232,7 +231,7 @@ export default function DashboardView(d: DashboardData) {
           <Warehouse className="h-8 w-8 text-ink-faint" />
           <div>
             <p className="font-medium">Your yard isn&apos;t set up yet.</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add a yard and a truck, or load a sample yard to see the whole system working — trucks, certs, crew, and the readiness check.</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-ink-dim">Add a yard and a truck, or load a sample yard to see how it works.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href="/app/yards" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add your yard</Link>
@@ -248,7 +247,7 @@ export default function DashboardView(d: DashboardData) {
           {d.boardUnits.length + (d.activeYard ? 1 : 0) > 0 && (
             <section id="fleet" className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Fleet readiness board{d.activeYard ? ` — ${d.activeYard.name}` : ""}</h2>
+                <h2 className="text-sm font-semibold text-ink-dim">Trucks{d.activeYard ? ` in ${d.activeYard.name}` : ""}</h2>
                 {d.hasSample && (
                   <form action={clearSampleYard}>
                     <button type="submit" className="flex items-center gap-1.5 text-xs text-ink-faint hover:text-red-400">
@@ -300,10 +299,10 @@ export default function DashboardView(d: DashboardData) {
           <div className="grid grid-cols-1 gap-7 xl:grid-cols-2">
             {/* Activity feed */}
             <section id="activity" className="flex flex-col gap-3">
-              <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Yard timeline</h2>
+              <h2 className="text-sm font-semibold text-ink-dim">Yard timeline</h2>
               {d.events.length === 0 ? (
                 <Card className="px-6 py-10 text-center text-sm text-ink-dim">
-                  Nothing yet — run your first readiness check and the feed starts here.
+                  Nothing here yet. Run a readiness check and it will show up here.
                 </Card>
               ) : (
                 <Card className="flex max-h-[420px] flex-col gap-0 overflow-y-auto p-2">
@@ -336,7 +335,7 @@ export default function DashboardView(d: DashboardData) {
             <div className="flex flex-col gap-7">
               <section className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Needs attention</h2>
+                  <h2 className="text-sm font-semibold text-ink-dim">Needs attention</h2>
                   <Link href="/app/compliance" className="text-sm text-ink-dim hover:text-ink">View all →</Link>
                 </div>
                 {d.actionList.length === 0 ? (

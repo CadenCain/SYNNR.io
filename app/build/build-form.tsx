@@ -17,9 +17,9 @@ export default function BuildForm() {
       const r = await fetch("/api/build", { method: "POST", body: new FormData(e.currentTarget) });
       const d = await r.json().catch(() => ({ ok: false, error: "Something went wrong." }));
       if (d.ok) setDone(true);
-      else setErr(d.error || "Something went wrong — call or text 432-250-0715.");
+      else setErr(d.error || "Something went wrong. Call or text 432-250-0715.");
     } catch {
-      setErr("Couldn't reach the server — call or text 432-250-0715.");
+      setErr("That didn't go through. Call or text 432-250-0715.");
     } finally {
       setBusy(false);
     }
@@ -28,7 +28,7 @@ export default function BuildForm() {
   if (done) {
     return (
       <div className="pt-done">
-        <p><b>Got it.</b> Caden will call you to scope it and give you a real number — no obligation.</p>
+        <p><b>Got it.</b> Caden will call you to scope it and give you a real number. No obligation.</p>
         <p className="muted">Faster: call or text <a href="tel:4322500715">432-250-0715</a>.</p>
       </div>
     );

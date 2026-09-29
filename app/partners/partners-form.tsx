@@ -17,9 +17,9 @@ export default function PartnersForm() {
       const r = await fetch("/api/partners", { method: "POST", body: new FormData(e.currentTarget) });
       const d = await r.json().catch(() => ({ ok: false, error: "Something went wrong." }));
       if (d.ok) setDone(true);
-      else setErr(d.error || "Something went wrong — call or text 432-250-0715.");
+      else setErr(d.error || "Something went wrong. Call or text 432-250-0715.");
     } catch {
-      setErr("Couldn't reach the server — call or text 432-250-0715.");
+      setErr("That didn't go through. Call or text 432-250-0715.");
     } finally {
       setBusy(false);
     }
@@ -45,7 +45,7 @@ export default function PartnersForm() {
         {busy ? "Sending…" : "Become a partner"}
       </button>
       {err ? <p className="pt-err">{err}</p> : null}
-      <p className="muted pt-fine">Phone or email — whichever you&apos;ll actually answer.</p>
+      <p className="muted pt-fine">Phone or email, whichever you&apos;ll actually answer.</p>
     </form>
   );
 }

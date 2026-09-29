@@ -15,7 +15,7 @@ import { getCompanyReadiness } from "@/lib/saas/readiness";
 // the "cancel anytime, your data stays exportable" promise on the checkout
 // page.
 export const metadata: Metadata = {
-  title: "RollReady",
+  title: "SYNNR",
   robots: { index: false, follow: false },
 };
 
@@ -67,14 +67,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             door. */}
         {company.is_demo ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            <span className="font-semibold">Demo yard</span> — this is fake data, click anything.{" "}
-            {/* /demo/exit signs the throwaway session out first — a plain
-                /signup link boomerangs signed-in users straight back here. */}
-            <a href="/demo/exit" className="font-medium underline underline-offset-2">Get your own yard →</a>
+            <span className="font-semibold">Demo yard.</span> The data is made up, so click anything.{" "}
+            {/* Signs the demo session out, then opens the free-setup form. */}
+            <a href="/demo/exit" className="font-medium underline underline-offset-2">Want this for your yard?</a>
           </div>
         ) : !writable && company.subscription_status === "none" ? (
           <div className="border-b border-line-2 bg-elevated px-4 py-2.5 text-sm text-ink-dim">
-            You&apos;re on the free view — look around all you like.{" "}
+            You&apos;re on the free view. Look around all you like.{" "}
             {company.role === "owner" ? (
               <Link href="/onboarding/billing" className="font-medium text-ink underline underline-offset-2">Start your subscription</Link>
             ) : (
@@ -84,7 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         ) : !writable ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            Your subscription has ended. Your records are safe and exportable —{" "}
+            Your subscription has ended. Your records are safe and you can still export them.{" "}
             {company.role === "owner" ? (
               <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">restart billing</Link>
             ) : (
@@ -94,7 +93,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         ) : company.subscription_status === "past_due" ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            Payment failed — everything still works while the card retries.{" "}
+            Your payment failed. Everything still works while the card retries.{" "}
             {company.role === "owner" ? (
               <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">Update your card</Link>
             ) : (

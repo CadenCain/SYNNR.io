@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import ImportClient from "./import-client";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Import a list · RollReady" };
+export const metadata = { title: "Import a list · SYNNR" };
 
 /**
  * Hardened import: dry-run preview, row-level errors, idempotent re-import,
@@ -24,7 +24,7 @@ export default async function ImportPage() {
       <PageHeader
         back={{ href: "/app/yards", label: "Yards" }}
         title="Import a list"
-        description="Paste a spreadsheet — units, assets, certs, and crew land in one shot. Preview first; re-imports update instead of duplicating."
+        description="Upload a spreadsheet of units, assets, certs, and crew. You see a preview first, and importing again updates dates instead of duplicating."
       />
       {isAdmin ? (
         <ImportClient yards={yards} />

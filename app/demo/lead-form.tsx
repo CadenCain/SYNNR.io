@@ -23,9 +23,9 @@ export default function DemoLeadForm() {
       const res = await fetch("/api/demo-lead", { method: "POST", body: new FormData(e.currentTarget) });
       const j = (await res.json()) as { ok: boolean; error?: string };
       if (j.ok) setDone(true);
-      else setErr(j.error ?? "Didn't go through — call me instead.");
+      else setErr(j.error ?? "That didn't go through. Call or text me instead.");
     } catch {
-      setErr("Didn't go through — call me instead.");
+      setErr("That didn't go through. Call or text me instead.");
     } finally {
       setBusy(false);
     }
@@ -37,8 +37,8 @@ export default function DemoLeadForm() {
         <span className="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10">
           <Check className="h-6 w-6 text-emerald-400" />
         </span>
-        <p className="text-lg font-semibold">Got it — I&apos;ll call you.</p>
-        <p className="text-sm text-ink-dim">Usually same day. Impatient? Call or text <a href={OWNER_PHONE_TEL} className="text-bone underline">{OWNER_PHONE}</a></p>
+        <p className="text-lg font-semibold">Got it. I&apos;ll call you.</p>
+        <p className="text-sm text-ink-dim">Usually the same day. You can also call or text me at <a href={OWNER_PHONE_TEL} className="text-bone underline">{OWNER_PHONE}</a>.</p>
       </div>
     );
   }
@@ -51,9 +51,9 @@ export default function DemoLeadForm() {
       {err && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">{err}</p>}
       <button type="submit" disabled={busy}
         className="flex min-h-12 items-center justify-center gap-2 rounded-lg bg-bone px-5 font-semibold text-coal hover:bg-bone-soft disabled:opacity-50">
-        <Phone className="h-4 w-4" /> {busy ? "Sending…" : "Have me set it up — free"}
+        <Phone className="h-4 w-4" /> {busy ? "Sending…" : "Have Caden call me"}
       </button>
-      <p className="text-center text-xs text-ink-faint">No card, no account. I call you, we load your yard together in one afternoon.</p>
+      <p className="text-center text-xs text-ink-faint">No card and no account. I&apos;ll call you back, usually the same day.</p>
     </form>
   );
 }

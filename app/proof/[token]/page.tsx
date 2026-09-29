@@ -59,12 +59,12 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   if (proof.scope === "unit" && proof.unit_id) {
     unitFilter = [proof.unit_id];
     const { data: u } = await admin.from("saas_units").select("name").eq("id", proof.unit_id).eq("company_id", proof.company_id).maybeSingle();
-    scopeName = `${companyName} — ${(u as { name: string } | null)?.name ?? "unit"}`;
+    scopeName = `${companyName}: ${(u as { name: string } | null)?.name ?? "unit"}`;
   } else if (proof.scope === "yard" && proof.yard_id) {
     const { data: us } = await admin.from("saas_units").select("id").eq("yard_id", proof.yard_id).eq("company_id", proof.company_id);
     unitFilter = ((us ?? []) as { id: string }[]).map((x) => x.id);
     const { data: y } = await admin.from("saas_yards").select("name").eq("id", proof.yard_id).eq("company_id", proof.company_id).maybeSingle();
-    scopeName = `${companyName} — ${(y as { name: string } | null)?.name ?? "yard"}`;
+    scopeName = `${companyName}: ${(y as { name: string } | null)?.name ?? "yard"}`;
   }
 
   // Assets in scope
@@ -175,7 +175,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           </div>
           <p className="mt-1 text-sm text-ink-dim">{scopeName}</p>
           {!configured ? (
-            <p className="mt-2 text-sm text-ink-dim">Nothing is being tracked in this scope yet — there&apos;s nothing to prove.</p>
+            <p className="mt-2 text-sm text-ink-dim">Nothing is being tracked here yet, so there&apos;s nothing to show.</p>
           ) : null}
           {!ready && configured ? (
             <p className="mt-2 text-sm text-red-300">
@@ -186,7 +186,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           ) : null}
           {notChecked.length > 0 ? (
             <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Not covered by this proof</p>
+              <p className="text-sm font-semibold text-amber-400">Not covered by this proof</p>
               <ul className="mt-1 flex flex-col gap-1 text-sm text-amber-300">
                 {notChecked.map((w) => <li key={w}>• {w}</li>)}
               </ul>
@@ -198,12 +198,12 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         {record ? (
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ink-faint">Last readiness check</h2>
+              <h2 className="text-sm font-semibold text-ink-dim">Last readiness check</h2>
               <span className="text-xs text-ink-faint">{new Date(record.started_at).toLocaleString()}</span>
             </div>
             <p className="mt-2 text-sm">
               <span className={record.status === "not_ready_override" ? "font-semibold text-red-400" : "font-semibold text-emerald-400"}>
-                {record.status === "not_ready_override" ? "Rolled out NOT ready — override" : "Rolled out Ready"}
+                {record.status === "not_ready_override" ? "Rolled out NOT ready on override" : "Rolled out Ready"}
               </span>
               <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "—"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
               {record.override_reason ? <span className="text-ink-dim"> · reason: &ldquo;{record.override_reason}&rdquo;</span> : null}
@@ -218,7 +218,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                     <span className="min-w-0 flex-1 truncate">{l.label}</span>
                     {l.photoUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <a href={l.photoUrl} target="_blank" rel="noreferrer"><img src={l.photoUrl} alt={`Photo — ${l.label}`} className="h-9 w-9 rounded-md border border-line-2 object-cover" /></a>
+                      <a href={l.photoUrl} target="_blank" rel="noreferrer"><img src={l.photoUrl} alt={`Photo of ${l.label}`} className="h-9 w-9 rounded-md border border-line-2 object-cover" /></a>
                     ) : null}
                   </li>
                 ))}
@@ -289,7 +289,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         )}
 
         <p className="text-center text-xs text-ink-faint">
-          Live snapshot from SYNNR — equipment &amp; cert readiness for oilfield service shops · synnr.io
+          Live from SYNNR, cert tracking for oilfield service yards · synnr.io
         </p>
       </div>
     </div>

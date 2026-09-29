@@ -19,13 +19,13 @@ export default function ReadinessAuditForm() {
       const r = await fetch("/api/readiness-audit", { method: "POST", body: fd });
       const d = await r.json();
       if (!r.ok || !d.ok) {
-        setErr(d.error || "Something went wrong — call or text 432-250-0715.");
+        setErr(d.error || "Something went wrong. Call or text 432-250-0715.");
         setBusy(false);
         return;
       }
       setDone(true);
     } catch {
-      setErr("Couldn't reach us — try again, or call or text 432-250-0715.");
+      setErr("That didn't go through. Try again, or call or text 432-250-0715.");
       setBusy(false);
     }
   }
@@ -35,7 +35,7 @@ export default function ReadinessAuditForm() {
       <div className="ra-form-done">
         <b>Got it ✓</b>
         <p>
-          I'll call or text you this week with your free readiness map — what's expired, expiring, and missing in your yard.
+          I'll call or text you this week with your free readiness map: what's expired, expiring, and missing in your yard.
           No pitch, just the facts. We'll follow up if it looks like a fit.
         </p>
       </div>

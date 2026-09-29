@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const t = termBySlug(slug);
   if (!t) return {};
   return {
-    title: `What is ${t.term}? — Field Operations Glossary | SYNNR`,
+    title: `What is ${t.term}? | Field Operations Glossary | SYNNR`,
     description: t.def.slice(0, 155),
   };
 }
@@ -69,10 +69,10 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
 
         <div className="cta">
           <div>
-            <b>Software for the boring operational stuff.</b>
-            <span>SYNNR builds purpose-built software for oilfield service companies. Start with TallyShot — photograph a handwritten tally sheet, get clean Excel back.</span>
+            <b>Stop getting turned around at the gate.</b>
+            <span>SYNNR tracks every cert, DOT date, and crew card in your yard and warns you before anything lapses.</span>
           </div>
-          <Link className="go" href="/ingest">Scan a sheet free →</Link>
+          <Link className="go" href="/demo">Open the live demo</Link>
         </div>
 
         <Link className="back" href="/glossary">← All terms</Link>

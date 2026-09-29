@@ -1,11 +1,10 @@
-import { OWNER_PHONE, OWNER_PHONE_TEL, FOUNDER_LINE } from "@/lib/contact";
+import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
-// RollReady marketing page (product by SYNNR) — "editorial industrial" v2.
-// Structure: dark hero with mono data block → light problem band → dark
-// product demo + check → light how-it-works + pricing → dark statement,
-// ledger, final CTA. Two-tone display type, hairline grids, square buttons.
-// Operator voice. CTAs → /signup. Rendered via dangerouslySetInnerHTML +
-// MarketingScripts + MarketingFx.
+// SYNNR homepage. One product (cert tracking that prevents NPT); readiness
+// checks, gear last-seen, and proof links ride along at the same price.
+// Plain on purpose: short sentences, real screenshots, no decorative motion.
+// The phone number shows in the nav, the hero button, the founder note, and
+// the footer, and nowhere else.
 export const MARKETING_HTML = `
 <header class="nav" id="nav">
   <div class="nav-pill">
@@ -13,31 +12,25 @@ export const MARKETING_HTML = `
       <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#ece5d7"/>
       </svg>
-      <span class="wordmark">SYNNR</span><span class="by-synnr">yard operations</span>
+      <span class="wordmark">SYNNR</span>
     </a>
     <nav class="nav-links">
-      <a href="#products">Products</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a href="/partners">Partners</a>
-      <a href="/build">Custom builds</a>
+      <a href="/demo">Live demo</a>
     </nav>
     <div class="nav-cta">
       <a href="${OWNER_PHONE_TEL}" class="nav-login">${OWNER_PHONE}</a>
       <a href="/login" class="nav-login">Log in</a>
-      <a href="/demo" class="btn btn-primary btn-sm">See a live yard</a>
+      <a href="/demo" class="btn btn-primary btn-sm">Open the live demo</a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>
     <nav class="nav-mobile">
-      <a href="#products">Products</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
-      <a href="/partners">Partners</a>
-      <a href="/build">Custom builds</a>
-      <a href="/demo">See a live yard</a>
-      <a href="${OWNER_PHONE_TEL}">Call ${OWNER_PHONE}</a>
-      <a href="/readiness-audit">Free readiness map</a>
+      <a href="/demo">Live demo</a>
+      <a href="${OWNER_PHONE_TEL}">Call or text ${OWNER_PHONE}</a>
       <a href="/login">Log in</a>
     </nav>
   </div>
@@ -45,269 +38,116 @@ export const MARKETING_HTML = `
 
 <main id="top">
 
-<!-- ═══ HERO — dark, left-anchored, mono data block ═══ -->
-<section class="band hero">
+<section class="band hero-plain">
   <div class="container">
-    <div class="hero-main">
-      <span class="eyebrow reveal">Yard operations · oilfield service shops</span>
-      <h1 class="display reveal" data-d="1"><span class="lt">Roll ready.</span><br/><span class="dim">Paper current.<br/>Gear found.</span></h1>
-      <p class="lede reveal" data-d="2">Everything in your yard that expires, walks off, or shuts you down — on one system. Four tools: whether the truck can roll Friday, whose cards are current, where the gear was last seen, and proof you can hand a customer. Start with the one that's costing you money. Built by a Permian wireline hand, not a software vendor.</p>
-      <div class="hero-cta reveal" data-d="3">
-        <a href="/demo" class="btn btn-primary">Open the live demo
-          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text — ${OWNER_PHONE}</a>
-      </div>
-      <p class="mono reveal" data-d="3" style="margin-top:14px;font-size:12.5px;color:var(--fg-faint)">${FOUNDER_LINE}</p>
+    <h1>An expired lubricator cert cost us $8,000 on a major's location.</h1>
+    <p class="lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. SYNNR watches every cert, DOT date, and crew card in your yard so that never happens again.</p>
+    <div class="cta-row">
+      <a href="/demo" class="btn btn-primary">Open the live demo</a>
+      <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
     </div>
-    <div class="hero-foot reveal" data-d="3">
-      <p class="fineprint">The demo needs no signup and no card — it's the real product with fake data. Billed monthly when you're ready. Your data stays yours, exportable.</p>
-      <div class="dt" role="table" aria-label="The math">
-        <div class="dt-row"><span class="k">One miss on location, NPT</span><span class="v bad">$10,000+ / day</span></div>
-        <div class="dt-row"><span class="k">SYNNR, per yard</span><span class="v">$500 / mo</span></div>
-        <div class="dt-row"><span class="k">Setup</span><span class="v">one afternoon</span></div>
-      </div>
-    </div>
+    <p class="small-note">The demo is the real app loaded with made-up trucks. No signup, no card.</p>
   </div>
 </section>
 
-<!-- ═══ PROBLEM — light paper band ═══ -->
 <section class="band band-light section" id="problem">
   <div class="container">
-    <div class="shead">
-      <span class="eyebrow">The problem</span>
-      <h2 class="h2">You don't lose money on the big stuff.<br/><span class="dim">You lose it at 5am.</span></h2>
-      <p class="lede">A crew's gotta roll and the gear's not there. Or it's the wrong one. Or the BOP cert expired and nobody knew. Your whole yard lives in somebody's head, a whiteboard, and three spreadsheets — so the failure isn't an if, it's a when. The crew rolls late or wrong, you eat the NPT, you pay the hotshot, and the operator remembers. He's got a long memory and a short vendor list.</p>
-      <p class="lede" style="margin-top:18px"><b style="color:var(--fg)">Every shop deals with this. The only question is how much it's quietly costing you.</b></p>
+    <h2 class="h2">How it goes wrong</h2>
+    <ul class="misses">
+      <li><b>Expired lubricator cert on a major's location.</b> $8,000 in NPT and the crew turned around at the gate.</li>
+      <li><b>BOP pressure test lapsed, found on location.</b> A $10,000+ NPT day.</li>
+      <li><b>Expired DOT sticker.</b> Truck sidelined, job rescheduled, and a hotshot bill on top.</li>
+      <li><b>One hand's H2S card expired.</b> The whole crew got sent home.</li>
+    </ul>
+    <p class="small-note">The first one happened to us. The rest are the misses every shop out here has seen.</p>
+  </div>
+</section>
+
+<section class="band section" id="product">
+  <div class="container">
+    <h2 class="h2">Every expiration date in your yard, on one list</h2>
+    <p class="lede">BOP and pressure tests, annual DOT, registrations, H2S, well control, CDLs, and medical cards all go on one register. Before anything lapses, an email goes to the people you pick for that yard, like the foreman who rolls the trucks. If something does lapse, that truck reads <b>NOT READY</b> until the record is fixed. There is no override button.</p>
+
+    <h3 class="also-head">Also included at the same price</h3>
+    <div class="also">
+      <div><h3>Readiness check</h3><p>Run a truck against the job date before it leaves. If anything on it or its crew is out of date, it says what.</p></div>
+      <div><h3>Gear last-seen</h3><p>Where each piece was last seen, who said so, and how long ago.</p></div>
+      <div><h3>Proof links</h3><p>A live, read-only page you send the operator instead of a binder.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ═══ THE LEAD PRODUCT — certs first; everything else rides along ═══ -->
-<section class="band band-light section" id="products">
+<section class="band section showcase" id="screens" style="padding-top:0">
   <div class="container">
-    <div class="shead">
-      <span class="eyebrow">The job it does</span>
-      <h2 class="h2">Nothing in your yard expires<br/><span class="dim">without you hearing about it first.</span></h2>
-      <p class="lede">Here's how the bad day actually happens: a BOP test or a DOT sticker quietly lapses, the truck rolls, the company man checks the paper, and the whole crew turns around at the gate. That's a $10,000+ NPT day for one date nobody was watching. SYNNR watches every cert, inspection, DOT item, and crew card in your yard — and the heads-up lands in your inbox the night before it would've bitten you, not after.</p>
-    </div>
-
-    <div class="prod-grid">
-      <div class="prod-card prod-lead">
-        <span class="prod-name">SYNNR <b>Cert Watch</b></span>
-        <p class="prod-what">Every expiration date in the yard, watched.</p>
-        <p class="prod-desc">BOP tests, annual DOT, pressure tests, H2S, well control, CDLs, medicals — one register, alerts before anything lapses, routed to whoever actually rolls that crew. And the readiness check won't call a truck "ready" over dead paper: ask it about Friday and it answers for Friday. No override button.</p>
-        <p class="prod-who"><b>For</b> the ops or safety manager whose name is on it when the truck gets turned around.</p>
-        <a class="prod-more" href="/demo">See it working in the live demo &rarr;</a>
-      </div>
-    </div>
-
-    <p class="prod-note" style="margin-top:34px"><b style="color:var(--fg)">Also in every yard — same price, no modules:</b></p>
-    <div class="prod-grid">
-      <div class="prod-card">
-        <span class="prod-name">Readiness checks</span>
-        <p class="prod-desc">Run the truck against the job date before it rolls. Red means red — no override.</p>
-        <a class="prod-more" href="/products/roll">More &rarr;</a>
-      </div>
-      <div class="prod-card">
-        <span class="prod-name">Gear last-seen</span>
-        <p class="prod-desc">Where each piece was last seen, who said so, how long ago — and honest about going stale.</p>
-        <a class="prod-more" href="/products/yard">More &rarr;</a>
-      </div>
-      <div class="prod-card">
-        <span class="prod-name">Proof links</span>
-        <p class="prod-desc">A live link for the operator or the auditor — no binder assembled at 9pm the night before.</p>
-        <a class="prod-more" href="/products/proof">More &rarr;</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ PRODUCT DEMO — dark, the living artifact ═══ -->
-<section class="band section showcase" id="showcase">
-  <div class="container">
-    <div class="shead">
-      <span class="eyebrow">Inside SYNNR</span>
-      <h2 class="h2">This is the actual screen.</h2>
-      <p class="lede">Not a mockup — the board a shop leaves open all day, photographed as-is. Every tile is a truck. CT-03 is red because its BOP pressure test expired six days ago, and it stays red until somebody fixes the record.</p>
-    </div>
-
+    <h2 class="h2">This is the actual app</h2>
+    <p class="lede">Screenshots of the real thing, not mockups. CT-03 is red because its BOP pressure test expired six days ago. It stays red until somebody renews it.</p>
     <div class="show-stage">
       <div class="show-frame">
-        <div class="show-bar" aria-hidden="true"><i></i><i></i><i></i><span>SYNNR — command center</span></div>
         <img class="show-shot" src="/screens/command-center.png" width="1360" height="860"
-          alt="SYNNR command center: KPI row, 14-day readiness chart, and the fleet board — CT-03 flagged NOT READY because its BOP pressure test expired" loading="lazy"/>
+          alt="SYNNR dashboard: readiness numbers, a 14-day chart, and the fleet board with CT-03 marked NOT READY" loading="lazy"/>
       </div>
       <img class="show-phone" src="/screens/mobile-verdict.png" width="250" height="512"
-        alt="The same yard on a phone: NOT READY — CT-03 can't roll, with one button to fix it" loading="lazy"/>
-
-      <div class="show-chip c1" aria-hidden="true">
-        <span class="cico">▮</span>
-        <span><b>SYNNR:</b> CT-03 NOT ready — BOP pressure test expired. —your shop</span>
-      </div>
-      <div class="show-chip c2" aria-hidden="true">
-        <span class="cok">✓</span>
-        <span>Readiness proof — <b>shared with operator</b></span>
-      </div>
+        alt="The same yard on a phone: CT-03 not ready, with a button to fix it" loading="lazy"/>
     </div>
-
-    <p class="show-caption">That red tile is the product. The miss caught in the yard at 5am, not on location at 9 with a company man watching.</p>
-    <div class="show-cta">
-      <a href="/demo" class="btn btn-primary">Poke around the live demo
-        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </a>
-      <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Or call me — ${OWNER_PHONE}</a>
+    <div class="cta-row">
+      <a href="/demo" class="btn btn-primary">Open the live demo</a>
     </div>
   </div>
 </section>
 
-<!-- ═══ THE CHECK — dark continues, hairline grid ═══ -->
-<section class="band section" id="dispatch" style="padding-top:0">
-  <div class="container">
-    <div class="shead">
-      <span class="eyebrow">The 5am check</span>
-      <h2 class="h2">No override button.<br/><span class="dim">You fix it or it stays red.</span></h2>
-      <p class="lede">A cert tracker tells you what expired last week. SYNNR answers it on the phone before the truck rolls: every cert and DOT item, every assigned hand's cards, every flagged piece of gear, pulled live. Anything off and the truck reads <b style="color:var(--fg)">Not ready</b> — and names every item.</p>
-    </div>
-    <div class="hairgrid">
-      <div class="cell"><span class="num">01</span><h3>Readiness check</h3><p>Right paper, right crew, gear accounted for. A green light or an itemized &ldquo;here&rsquo;s what&rsquo;s wrong.&rdquo;</p></div>
-      <div class="cell"><span class="num">02</span><h3>Immutable records</h3><p>Every check is recorded: who ran it, what it found, when. Read-only after. That record is your proof.</p></div>
-      <div class="cell"><span class="num">03</span><h3>Crew cards count</h3><p>The assigned hand&rsquo;s H2S, well control, and medical count toward ready. An expired card blocks the green light.</p></div>
-      <div class="cell"><span class="num">04</span><h3>Proof on demand</h3><p>One tap sends the operator a live, read-only proof page. No more building a binder every quarter.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ HOW IT WORKS — light band ═══ -->
 <section class="band band-light section" id="how">
   <div class="container">
-    <div class="shead">
-      <span class="eyebrow">How it works</span>
-      <h2 class="h2">Up and running in an afternoon.</h2>
-    </div>
-    <div class="hairgrid cols3">
-      <div class="cell"><span class="num">01</span><h3>Load your yard</h3><p>Add a yard, trucks, gear, and crew. Import your existing list in minutes, or add as you go from your phone.</p></div>
-      <div class="cell"><span class="num">02</span><h3>Run the check</h3><p>Before a truck leaves, run the readiness check: right paper, right crew, gear accounted for, all current. Not ready? The screen says exactly what's wrong.</p></div>
-      <div class="cell"><span class="num">03</span><h3>Get the heads-up</h3><p>We watch every date across every yard and crew. You get the text before it lapses, and hand the operator a proof link on demand.</p></div>
-    </div>
-    <div class="dt" style="margin-top:56px" role="table" aria-label="What we track">
-      <div class="dt-row"><span class="k">Equipment &amp; assets</span><span class="v">tools · BOPs · lubricators · trailers</span></div>
-      <div class="dt-row"><span class="k">Where the gear was last seen</span><span class="v">who touched it, when, searchable</span></div>
-      <div class="dt-row"><span class="k">Certs, inspections &amp; DOT</span><span class="v">BOP tests · annual DOT · safety</span></div>
-      <div class="dt-row"><span class="k">Crew &amp; crew cards</span><span class="v">H2S · well control · CDL · medical</span></div>
-      <div class="dt-row"><span class="k">Every date, watched</span><span class="v">flagged before it lapses, not after</span></div>
-    </div>
+    <h2 class="h2">Getting set up</h2>
+    <ol class="steps">
+      <li>Hand me your binder or spreadsheet. We load your trucks, gear, crew, and every date in one afternoon.</li>
+      <li>Pick who gets the alerts for each yard.</li>
+      <li>Before a truck rolls, run the readiness check from a phone. If something is off, it tells you what.</li>
+    </ol>
   </div>
 </section>
 
-<!-- ═══ COST OF A MISS — dark ledger ═══ -->
-<section class="band section" id="miss">
+<section class="band section" id="pricing">
   <div class="container">
-    <div class="shead">
-      <span class="eyebrow">Cost of a miss</span>
-      <h2 class="h2">Cheaper than one bad day.</h2>
-    </div>
-    <ul class="miss-list" aria-label="What a single miss costs">
-      <li class="miss-item"><span class="miss-what">A day of NPT sitting on location</span><span class="miss-cost">$10,000+</span></li>
-      <li class="miss-item"><span class="miss-what">A hotshot run to chase down what got left behind</span><span class="miss-cost">$500&ndash;$2,000</span></li>
-      <li class="miss-item"><span class="miss-what">A failed DOT inspection that sidelines a truck</span><span class="miss-cost">thousands + lost days</span></li>
-      <li class="miss-item"><span class="miss-what">A failed safety audit</span><span class="miss-cost">fines &amp; shutdowns</span></li>
-      <li class="miss-item"><span class="miss-what">Getting dropped from an operator's vendor list</span><span class="miss-cost">the whole account</span></li>
+    <h2 class="h2">Pricing</h2>
+    <div class="price-big">$500<span>per yard, per month</span></div>
+    <p class="price-why">One lubricator miss is 16 months of SYNNR.</p>
+    <p class="price-why" style="margin-top:8px">Early yards lock in $500 for as long as they stay on.</p>
+    <ul class="price-points">
+      <li>Your whole crew gets access. It's never per-seat.</li>
+      <li>No contract. Cancel anytime.</li>
+      <li>Setup is free for the first 10 yards. I'll do it with you in one afternoon.</li>
+      <li>Your data is yours. Export it as a spreadsheet anytime.</li>
     </ul>
-    <p class="miss-kicker"><b>One prevented NPT day covers more than a year and a half of SYNNR.</b> Everything after that is pure protection.</p>
-    <p class="miss-note">Typical industry cost ranges for illustration, not guarantees.</p>
-  </div>
-</section>
-
-<!-- ═══ PRICING — light paper, one giant number ═══ -->
-<section class="band band-light section" id="pricing">
-  <div class="container">
-    <div class="shead">
-      <span class="eyebrow">Pricing</span>
-      <h2 class="h2">One number. Per yard.</h2>
-      <p class="lede">Flat monthly, per yard. Never per-seat, so you're never punished for adding crew or trucks. No contracts. No annual lock-in.</p>
-    </div>
-    <div class="price-hero">
-      <div class="price-big">$500<span>per yard / month</span></div>
-      <p class="price-why">That's about half a day of one hand's wages. One miss it catches — one expired DOT, one lapsed BOP — costs you a truck for a day and $10,000+ in NPT. If it stops that once a year, it paid for itself twenty times over.</p>
-      <ul class="price-hero-features">
-        <li>Every hand on one account — never per-seat</li>
-        <li>Where the gear was last seen, and who touched it</li>
-        <li>Certs, DOT &amp; crew cards — alerts before they lapse</li>
-        <li>Readiness checks with no override button, plus proof links</li>
-      </ul>
-      <div class="hero-cta">
-        <a href="/demo" class="btn btn-primary">See it live first
-          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text — ${OWNER_PHONE}</a>
-      </div>
-      <p class="mono" style="margin-top:18px;font-size:12px;color:var(--fg-faint)">Billed monthly per active yard · cancel anytime · your data, exportable · or start with the <a href="/readiness-audit" style="color:var(--fg)">free readiness map</a>.</p>
-    </div>
-
-    <div class="setup-card">
-      <h3>Setup is free for the first 10 yards. I'll do it with you in one afternoon.</h3>
-      <p>Hand me your binder, your spreadsheets, whatever you've got — I load the yard with you, remote or in person anywhere in the Permian, and hand it back running the same day. ${FOUNDER_LINE}</p>
-      <p class="setup-note">Call or text <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> — fleets and custom needs are a conversation, not a price sheet.</p>
+    <p class="price-why">Running a lot of yards? Fleets are a conversation. <a href="${OWNER_PHONE_TEL}" style="color:var(--fg);text-decoration:underline;text-underline-offset:3px">Call or text me.</a></p>
+    <div class="cta-row">
+      <a href="/demo" class="btn btn-primary">Open the live demo</a>
     </div>
   </div>
 </section>
 
-<!-- ═══ FOUNDER STATEMENT — dark ═══ -->
-<section class="band section statement" id="why">
+<section class="band band-light section founder" id="about">
   <div class="container">
-    <span class="eyebrow" style="margin-bottom:26px">Why SYNNR exists</span>
-    <p>Five years on Permian wireline. I've eaten the 5am scramble, the hotshot bill, and the company man's long memory. <b>SYNNR is the tool I needed and nobody built.</b></p>
-    <div class="sig">Caden Cain · founder, SYNNR · Texas</div>
-    <p class="mono" style="margin-top:18px;font-size:13px"><a href="${OWNER_PHONE_TEL}" style="color:var(--fg)">${FOUNDER_LINE} ${OWNER_PHONE}</a></p>
-    <p class="mono" style="margin-top:34px;font-size:12px;color:var(--fg-ghost);max-width:52ch;line-height:1.7">No fake logos. No made-up numbers. We're onboarding our first shops now — real numbers go here the day they're real.</p>
-  </div>
-</section>
-
-<!-- ═══ CUSTOM BUILDS — dark strip ═══ -->
-<section class="band section tight build-strip" id="build">
-  <div class="container">
-    <div class="shead">
-      <span class="eyebrow">Custom builds · SYNNR</span>
-      <h2 class="h2" style="font-size:clamp(26px,3.4vw,40px)">Got a paper problem SYNNR doesn't cover?</h2>
-      <p class="lede">SYNNR also builds custom software for oilfield and blue-collar operations: field tickets, invoicing, rental tracking, dispatch boards, digital forms. Built by a hand who's run the yard, not an agency guessing at it.</p>
-      <div class="hero-cta" style="margin-top:28px">
-        <a href="/build" class="btn btn-ghost">See custom builds
-          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ FINAL CTA — dark, huge ═══ -->
-<section class="band section final" id="cta">
-  <div class="container">
-    <div class="final-card">
-      <span class="eyebrow" style="margin-bottom:24px">The next step</span>
-      <h2 class="display" style="font-size:clamp(40px,6.4vw,84px)"><span class="lt">Stop getting turned around</span> at the gate.</h2>
-      <p class="lede">Open the demo and poke at a working yard — no signup, no card. When it looks like your yard, call me and we'll load yours together, free.</p>
-      <div class="hero-cta">
-        <a href="/demo" class="btn btn-primary">Open the live demo
-          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
-        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call me — ${OWNER_PHONE}</a>
-      </div>
-      <p class="mono" style="margin-top:20px;font-size:12px;color:var(--fg-faint)">${FOUNDER_LINE} <a href="${OWNER_PHONE_TEL}" style="color:var(--fg)">${OWNER_PHONE}</a> · existing customers <a href="/login" style="color:var(--fg)">log in here</a></p>
-    </div>
+    <p>I ran wireline in the Permian for five years. I've been the hand on location when the paper was wrong, and I built SYNNR because nobody else had. If you want to see it with your own trucks in it, call or text me at <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a>.</p>
+    <p class="sign">Caden Cain</p>
+    <p class="small-note">You won't find fake logos or customer counts on this site. SYNNR is new, and I'd rather say so.</p>
   </div>
 </section>
 
 </main>
 
-<footer class="footer">
+<footer class="simple-footer">
   <div class="container">
-    <div class="footer-bottom">
-      <a class="brand" href="/" aria-label="SYNNR">
-        <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#e7ddc7"/></svg>
-        <span class="wordmark">SYNNR</span>
-      </a>
-      <span>Yard readiness for oilfield service shops · call or text <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a> · <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · ${FOUNDER_LINE}</span>
+    <div class="row">
+      <span class="brand-sm">SYNNR</span>
+      <a href="${OWNER_PHONE_TEL}">Call or text ${OWNER_PHONE}</a>
+      <a href="/demo">Live demo</a>
+      <a href="/readiness-audit">Free readiness map</a>
+      <a href="/partners">Partners</a>
+      <a href="/build">Custom builds</a>
+      <a href="/login">Log in</a>
+      <a href="/legal/terms">Terms</a>
+      <a href="/legal/privacy">Privacy</a>
+      <span class="copy">&copy; 2026 SYNNR</span>
     </div>
   </div>
 </footer>

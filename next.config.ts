@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
       // Old funnel URLs land directly on the live one (single hop — no chains).
       { source: "/readiness-map", destination: "/readiness-audit", permanent: false },
       { source: "/services", destination: "/readiness-audit", permanent: false },
+      // The four-tool product pages (Roll / Cards / Yard / Proof) are gone:
+      // SYNNR sells one thing now. Old shared links land on the homepage's
+      // product section instead of a 404.
+      { source: "/products", destination: "/#product", permanent: false },
+      { source: "/products/:slug*", destination: "/#product", permanent: false },
       // Park old SaaS marketplace/app/auth routes.
       ...PARKED.map((source) => ({ source, destination: "/", permanent: false })),
     ];

@@ -11,7 +11,7 @@ export default async function SettingsHub() {
     { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
     { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
-    { href: "/app/settings/proofs", icon: Share2, title: "Readiness proofs", desc: "Share links you've created — view or revoke", live: true },
+    { href: "/app/settings/proofs", icon: Share2, title: "Readiness proofs", desc: "Share links you've made. View or revoke them.", live: true },
   ];
   return (
     <div className="flex flex-col gap-6">
@@ -45,7 +45,7 @@ export default async function SettingsHub() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-medium">Export data</div>
-              <div className="truncate text-sm text-ink-dim">Download every item as CSV — your data, always yours</div>
+              <div className="truncate text-sm text-ink-dim">Download every item as a spreadsheet</div>
             </div>
             <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
           </Card>

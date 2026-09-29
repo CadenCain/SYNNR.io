@@ -24,8 +24,8 @@ export default async function ProofsSettings() {
   const proofs = ((data ?? []) as Row[]).map((p) => ({
     ...p,
     scopeLabel:
-      p.scope === "unit" ? `Unit — ${(Array.isArray(p.saas_units) ? p.saas_units[0]?.name : p.saas_units?.name) ?? ""}`
-      : p.scope === "yard" ? `Yard — ${(Array.isArray(p.saas_yards) ? p.saas_yards[0]?.name : p.saas_yards?.name) ?? ""}`
+      p.scope === "unit" ? `Unit: ${(Array.isArray(p.saas_units) ? p.saas_units[0]?.name : p.saas_units?.name) ?? ""}`
+      : p.scope === "yard" ? `Yard: ${(Array.isArray(p.saas_yards) ? p.saas_yards[0]?.name : p.saas_yards?.name) ?? ""}`
       : "Whole company",
   }));
 
@@ -34,12 +34,12 @@ export default async function ProofsSettings() {
       <PageHeader
         back={{ href: "/app/settings", label: "Settings" }}
         title="Readiness proofs"
-        description="Every share link you've created. Revoke anything you don't want out there — dead links show 'revoked'."
+        description="Every share link you've created. Revoke any you don't want out there, and it stops working."
       />
 
       {proofs.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
-          No proof links yet. Create one from the Dashboard, a yard, or a unit — &ldquo;Share readiness proof.&rdquo;
+          No proof links yet. Make one with the Share proof button on the dashboard, a yard, or a truck.
         </Card>
       ) : (
         <Table>

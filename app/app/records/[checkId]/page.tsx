@@ -60,13 +60,13 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
   const isOverride = c.status === "not_ready_override";
   const verdict =
     c.type === "checkin"
-      ? c.status === "partial" ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Checked in — items not returned" }
-        : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Checked in — all accounted for" }
+      ? c.status === "partial" ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Checked in: items not returned" }
+        : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Checked in: all accounted for" }
       : isOverride
-        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled out NOT READY — override (historical)" }
+        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled out NOT READY on override (old record)" }
         : c.status === "not_ready"
-          ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Readiness check — NOT READY" }
-          : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Readiness check — Ready" };
+          ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Readiness check: NOT READY" }
+          : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Readiness check: Ready" };
 
   const gearLines = items.filter((i) => i.source_type === "loadout_item" || i.source_type === "asset");
   const paperLines = items.filter((i) => i.source_type === "cert" || i.source_type === "crew_cert");
@@ -75,7 +75,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
-        title={`Check record — ${unitName}`}
+        title={`Check record: ${unitName}`}
         description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${new Date(c.started_at).toLocaleString()}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
       />
 
@@ -97,7 +97,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {gearLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Loadout &amp; assets</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Loadout &amp; assets</h2>
           {gearLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             const url = photoUrls.get(i.id);
@@ -110,7 +110,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
                 {url ? (
                   <a href={url} target="_blank" rel="noreferrer" className="shrink-0" title="Open photo proof">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`Photo proof — ${i.label}`} className="h-12 w-12 rounded-lg border border-line-2 object-cover" />
+                    <img src={url} alt={`Photo proof for ${i.label}`} className="h-12 w-12 rounded-lg border border-line-2 object-cover" />
                   </a>
                 ) : i.photo_path ? (
                   <span className="flex items-center gap-1 text-xs text-ink-faint"><Camera className="h-3.5 w-3.5" /> photo</span>
@@ -124,7 +124,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {paperLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Paper &amp; crew cards at roll-out</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Paper &amp; crew cards at roll-out</h2>
           {paperLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             return (
@@ -139,7 +139,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       <p className="flex items-center gap-2 text-xs text-ink-faint">
         <Truck className="h-3.5 w-3.5" />
-        This record was written at {new Date(c.completed_at ?? c.started_at).toLocaleString()} and cannot be edited — it&apos;s the proof the truck {c.type === "checkin" ? "came back accounted for" : "rolled ready (or who decided otherwise)"}.
+        This record was written at {new Date(c.completed_at ?? c.started_at).toLocaleString()} and can&apos;t be edited. It&apos;s the proof the truck {c.type === "checkin" ? "came back accounted for" : "rolled ready (or who decided otherwise)"}.
       </p>
     </div>
   );

@@ -17,9 +17,9 @@ import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
 export async function quickAddUnit(args: { name: string; type?: string }):
   Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string; type: string } }> {
   const { company } = await requireCompany();
-  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
+  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated." };
   const name = args.name.trim();
-  if (!name) return { ok: false, error: "Name it — truck, rig, or shop." };
+  if (!name) return { ok: false, error: "Give it a name, like Truck 12 or Main shop." };
 
   const db = await saasDb();
   const { data: yardRow } = await db.from("saas_yards")
@@ -29,10 +29,10 @@ export async function quickAddUnit(args: { name: string; type?: string }):
   if (!yard) {
     // Creating the first yard is still creating a yard: admin+ and under cap.
     if (!canPerform(company.role, "create_yard")) {
-      return { ok: false, error: "No yard yet — ask an admin to set one up first." };
+      return { ok: false, error: "There's no yard yet. Ask an admin to set one up first." };
     }
     if (yardCapState(0, company.yard_quantity, company.comped).atCap) {
-      return { ok: false, error: "Your plan has no yards on it yet — subscribe or raise the plan in Settings → Billing." };
+      return { ok: false, error: "Your plan has no yards on it yet. Subscribe or add a yard in Settings, Billing." };
     }
     const { data: made, error: yardErr } = await db.from("saas_yards")
       .insert({ company_id: company.id, name: "Main yard" }).select("id, name").single();
@@ -60,7 +60,7 @@ export async function quickAddAsset(args: {
   photo_path?: string | null; paper_path?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
-  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
+  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated." };
   const name = args.name.trim();
   if (!args.unit_id || !name) return { ok: false, error: "Pick a truck and name the gear." };
 
@@ -123,7 +123,7 @@ export async function quickAddCert(args: {
   content_type?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireCompany();
-  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Subscription paused — records are read-only until billing is updated." };
+  if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated." };
   const title = args.title.trim();
   if (!args.unit_id || !title) return { ok: false, error: "Pick a unit and name the item." };
 
@@ -159,7 +159,7 @@ export async function quickAddCert(args: {
     const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
     const { logEvent } = await import("@/lib/saas/notify");
     void logEvent({ companyId: company.id, kind: "cert_added", actor, unitId: args.unit_id,
-      message: `${title} added${actor ? ` by ${actor}` : ""}${args.expiration_date ? ` — expires ${args.expiration_date}` : ""}` });
+      message: `${title} added${actor ? ` by ${actor}` : ""}${args.expiration_date ? `, expires ${args.expiration_date}` : ""}` });
   }
   revalidatePath("/app/quick");
   revalidatePath("/app");

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const { user, company } = await requireCompany();
   if (company.is_demo) {
     return NextResponse.json(
-      { ok: false, error: "This is the demo yard — nothing here can be billed. Create your real account at synnr.io/signup." },
+      { ok: false, error: "This is the demo yard, so nothing here can be billed. Call or text 432-250-0715 to set up your real yard." },
       { status: 403 },
     );
   }

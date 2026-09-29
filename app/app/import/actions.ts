@@ -75,7 +75,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   // Preview is free (it writes nothing); committing rows needs a live
   // subscription — the importer is the bulk version of every gated creator.
   if (commit && !isWritable(company.subscription_status, company.comped)) {
-    return { ok: false, error: "Subscription paused — records are read-only until billing is updated.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
   // Role matrix: members may import into an EXISTING yard (daily work);
   // creating a yard through the new-yard field is admin+, and capped.
@@ -100,7 +100,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     const { count: inUseCount } = await db.from("saas_yards").select("id", { count: "exact", head: true })
       .eq("company_id", company.id).neq("name", "Sample Yard (demo)");
     if (yardCapState(inUseCount ?? 0, company.yard_quantity, company.comped).atCap) {
-      return { ok: false, error: `You're on ${company.yard_quantity} yard(s) — add one to your plan from the Yards page before importing into a new yard.`, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+      return { ok: false, error: `You're on ${company.yard_quantity} yard(s). Add one to your plan on the Yards page before importing into a new yard.`, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
     }
     yardOp = `create yard "${newYard.trim()}"`;
     if (commit) {
@@ -228,9 +228,9 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
       const issued = parseDate(get(r, col.issued));
       const expires = parseDate(get(r, col.expires));
 
-      if (!unitName && !crewName) throw new Error("row targets nothing — set unit or crew");
+      if (!unitName && !crewName) throw new Error("This row has no unit or crew. Fill one in.");
       if (assetName && !unitName) throw new Error("asset rows need a unit");
-      if (itemTitle && !expires) ops.push("note: no expiration — imports as 'no date'");
+      if (itemTitle && !expires) ops.push("note: no expiration, so it imports as 'no date'");
 
       if (crewName) {
         const crewId = await ensureCrew(crewName, ops);

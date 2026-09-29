@@ -54,7 +54,7 @@ describe("cert currency evaluated against the JOB DATE", () => {
 });
 
 /**
- * THE GEAR RULE (post-reframe): RollReady keeps up with records, it does not
+ * THE GEAR RULE (post-reframe): SYNNR keeps up with records, it does not
  * run a dispatch checklist. A gear-list line that simply isn't in the asset
  * book yet is a heads-up, never a failure. Only a matched asset the shop has
  * FLAGGED (missing / out of service) fails a truck. These pin that rule so a
@@ -158,7 +158,7 @@ describe("crewWithNoCards — an assigned hand with nothing on file fails", () =
 
   it("hand with zero cert rows → failing entry, by name", () => {
     expect(crewWithNoCards(["h1", "h2"], [{ parent_id: "h2" }], names)).toEqual([
-      { crewId: "h1", label: "Braden — no cards on file" },
+      { crewId: "h1", label: "Braden: no cards on file" },
     ]);
   });
 
@@ -173,6 +173,6 @@ describe("crewWithNoCards — an assigned hand with nothing on file fails", () =
   it("ALL assigned hands empty → every one fails; unknown ids still fail, unnamed", () => {
     const out = crewWithNoCards(["h1", "hX"], [], names);
     expect(out).toHaveLength(2);
-    expect(out[1].label).toBe("assigned hand — no cards on file");
+    expect(out[1].label).toBe("assigned hand: no cards on file");
   });
 });

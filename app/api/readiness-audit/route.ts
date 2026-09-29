@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ ok: false, error: "Name is required." }, { status: 400 });
   // Phone-first funnel: the buyer texts and calls. Email is optional extra.
   if (phone.replace(/\D/g, "").length < 7) return NextResponse.json({ ok: false, error: "A cell number I can reach you at." }, { status: 400 });
-  if (email && !EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "That email doesn't look right — or leave it blank." }, { status: 400 });
+  if (email && !EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "That email doesn't look right. You can leave it blank." }, { status: 400 });
   if (headache.length < 3) return NextResponse.json({ ok: false, error: "Tell us your biggest headache." }, { status: 400 });
   if (name.length > MAX_FIELD || company.length > MAX_FIELD || email.length > MAX_FIELD ||
       headache.length > MAX_FIELD || role.length > MAX_FIELD || runs.length > MAX_FIELD || phone.length > MAX_FIELD) {
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
   // Never break the funnel: as long as we stored OR emailed, it's a success.
   if (!stored && !emailed) {
-    return NextResponse.json({ ok: false, error: "Couldn't reach us — call or text 432-250-0715." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "That didn't go through. Call or text 432-250-0715." }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

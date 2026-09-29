@@ -94,8 +94,8 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete {y.name} — and everything in it?</AlertDialogTitle>
-                      <AlertDialogDescription>Every truck, every asset, every cert and record in this yard goes with it. Crew are company-wide — hands and their cards stay. This is the biggest delete in the app and there is no undo.</AlertDialogDescription>
+                      <AlertDialogTitle>Delete {y.name} and everything in it?</AlertDialogTitle>
+                      <AlertDialogDescription>Every truck, every asset, every cert and record in this yard goes with it. Crew belong to the whole company, so hands and their cards stay. This is the biggest delete in the app and there is no undo.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Keep it</AlertDialogCancel>

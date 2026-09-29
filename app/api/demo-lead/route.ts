@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   if (!name) return NextResponse.json({ ok: false, error: "Your name, so I know who I'm calling." }, { status: 400 });
   if (phone.replace(/\D/g, "").length < 7) return NextResponse.json({ ok: false, error: "A cell number I can actually reach you at." }, { status: 400 });
-  if (email && !EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "That email doesn't look right — or just leave it blank." }, { status: 400 });
+  if (email && !EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "That email doesn't look right. You can leave it blank." }, { status: 400 });
   if ([name, company, phone, email].some((f) => f.length > MAX_FIELD)) {
     return NextResponse.json({ ok: false, error: "Field too long." }, { status: 413 });
   }
@@ -72,6 +72,6 @@ export async function POST(req: Request) {
     }
   }
 
-  if (!stored && !resendKey) return NextResponse.json({ ok: false, error: "Couldn't save that — call or text me instead." }, { status: 500 });
+  if (!stored && !resendKey) return NextResponse.json({ ok: false, error: "That didn't save. Call or text me instead." }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

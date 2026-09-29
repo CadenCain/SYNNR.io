@@ -119,13 +119,13 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
       {/* Photos in from the field — review, renew the card, close it out. */}
       {docReqs.some((r) => r.status === "submitted") && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-amber-400">Waiting on your review</h2>
+          <h2 className="text-sm font-semibold text-amber-400">Waiting on your review</h2>
           {docReqs.filter((r) => r.status === "submitted").map((r) => (
             <Card key={r.id} className="flex flex-col gap-3 border-amber-500/30 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-medium">
                   New {r.submitted_kind ?? "card"} photo from {c.name}
-                  {r.submitted_expiration ? <span className="text-ink-dim"> — expires {fmtDate(r.submitted_expiration)}</span> : null}
+                  {r.submitted_expiration ? <span className="text-ink-dim">, expires {fmtDate(r.submitted_expiration)}</span> : null}
                 </p>
                 <span className="text-xs text-ink-faint">{r.submitted_at ? new Date(r.submitted_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span>
               </div>
@@ -141,7 +141,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                   <input type="hidden" name="id" value={r.id} />
                   <input type="hidden" name="crew_id" value={c.id} />
                   <button type="submit" className="flex min-h-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 px-4 text-[13px] text-ink hover:bg-elevated">
-                    Done — card updated below
+                    Done, card updated below
                   </button>
                 </form>
               </div>
@@ -152,7 +152,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew book — cards &amp; certs</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Cards and certs</h2>
         {certs.length > 0 && (
           <div className="flex flex-col gap-2">
             {certs.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
@@ -163,11 +163,11 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
         <SendUpdateLink crewMemberId={c.id} crewName={c.name} crewPhone={c.phone} />
         {docReqs.some((r) => r.status === "pending") && (
           <p className="text-xs text-ink-faint">
-            A link is already out with {c.name.split(" ")[0]} — good through {fmtDate(docReqs.find((r) => r.status === "pending")!.expires_at.slice(0, 10))}.
+            A link is already out with {c.name.split(" ")[0]}. It works through {fmtDate(docReqs.find((r) => r.status === "pending")!.expires_at.slice(0, 10))}.
           </p>
         )}
         <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{certs.length ? "Add another card" : "Add a card — H2S, well control, CDL, medical…"}</h3>
+          <h3 className="mb-3 text-sm font-medium text-ink">{certs.length ? "Add another card" : "Add a card: H2S, well control, CDL, medical"}</h3>
           <form action={addComplianceItem} className="flex flex-col gap-3">
             <input type="hidden" name="parent_type" value="crew" />
             <input type="hidden" name="parent_id" value={c.id} />

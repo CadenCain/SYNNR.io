@@ -34,8 +34,8 @@ export default function ComplianceRow({ item, companyId, redirectPath, canDelete
             <StatusBadge status={item.status} />
             {item.renewed_without_proof && (
               <span className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-400"
-                title="The date was changed without attaching the new cert — renew with a photo to clear this.">
-                renewed — no proof
+                title="The date was changed without a photo of the new cert. Renew with a photo to clear this.">
+                renewed, no proof
               </span>
             )}
           </div>

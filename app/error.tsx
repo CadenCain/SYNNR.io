@@ -22,7 +22,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           <span className="eyebrow">Something broke</span>
           <h1 className="h2" style={{ marginTop: 8 }}>That didn&apos;t go through.</h1>
           <p className="lede" style={{ marginInline: "auto" }}>
-            We hit an error on our end — your data is safe. Try again, and if it keeps happening, email{" "}
+            Something broke on our end. Your data is safe. Try again, and if it keeps happening, email{" "}
             <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>.
           </p>
           {error?.digest ? (

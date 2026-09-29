@@ -11,7 +11,7 @@ import { Minus, Plus, Check } from "lucide-react";
  */
 const PER_YARD = 500;
 const FEATURES = [
-  "Every asset, cert, DOT item & crew card — one place",
+  "Every asset, cert, DOT item, and crew card in one place",
   "Alerts before anything lapses",
   "Job-date readiness check, no override",
   "Readiness-proof links instead of binders",
@@ -66,7 +66,7 @@ export default function SubscribeCard({ initialYards }: { initialYards: number }
         <div className="flex items-center justify-between rounded-xl border border-line-2 bg-coal p-4">
           <div>
             <div className="text-sm font-medium text-ink">How many yards do you run?</div>
-            <div className="mt-0.5 text-xs text-ink-faint">Add or drop yards anytime — billing follows.</div>
+            <div className="mt-0.5 text-xs text-ink-faint">Add or drop yards anytime and billing follows.</div>
           </div>
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => step(-1)} disabled={yards <= 1} aria-label="Fewer yards"
@@ -88,11 +88,11 @@ export default function SubscribeCard({ initialYards }: { initialYards: number }
         </div>
         <button onClick={subscribe} disabled={busy}
           className="h-12 w-full rounded-xl bg-bone text-[15px] font-semibold text-coal transition-colors hover:bg-bone-soft disabled:opacity-60">
-          {busy ? "Opening checkout…" : `Subscribe — ${yards} yard${yards === 1 ? "" : "s"}`}
+          {busy ? "Opening checkout…" : `Subscribe for ${yards} yard${yards === 1 ? "" : "s"}`}
         </button>
         {err ? <p className="text-center text-sm text-amber-400">{err}</p> : null}
         <p className="text-center text-xs text-ink-faint">
-          Billed monthly, per active yard. Cancel anytime — your data stays exportable.
+          Billed monthly for each active yard. Cancel anytime, and your data stays exportable.
         </p>
       </div>
     </div>

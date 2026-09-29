@@ -45,7 +45,7 @@ export default function SignupForm() {
     }
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
-      setErr("Account created — please log in.");
+      setErr("Account created. Please log in.");
       setBusy(false);
       router.replace("/login");
       return;

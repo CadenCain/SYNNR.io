@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ ok: false, error: "Not configured." }, { status: 500 });
 
   const { error } = await admin.from("partner_leads").insert({ name, company: company || null, email: email || null, phone: phone || null, note: note || null });
-  if (error) return NextResponse.json({ ok: false, error: "Couldn't save — call or text 432-250-0715 instead." }, { status: 500 });
+  if (error) return NextResponse.json({ ok: false, error: "That didn't save. Call or text 432-250-0715 instead." }, { status: 500 });
 
   // Best-effort founder notification.
   const resendKey = process.env.RESEND_API_KEY;

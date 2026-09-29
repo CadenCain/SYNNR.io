@@ -3,9 +3,9 @@ import Link from "next/link";
 import { GLOSSARY, GLOSSARY_CATEGORIES } from "@/lib/content/glossary";
 
 export const metadata = {
-  title: "Field Operations Glossary — Tickets, Certs, Loadouts & Billing | SYNNR",
+  title: "Field Operations Glossary: Tickets, Certs, Loadouts, and Billing | SYNNR",
   description:
-    "Plain-English definitions of field-service operations terms — field tickets, MSAs, standby time, invoice backup, H2S certs, loadouts — and why each one matters before a job moves forward.",
+    "Plain-English definitions of field-service terms like field tickets, MSAs, standby time, invoice backup, H2S certs, and loadouts, and why each one matters before a job moves forward.",
 };
 
 const MARK = (
@@ -28,7 +28,7 @@ export default function GlossaryIndex() {
         <h1>Field operations glossary</h1>
         <p className="lede">
           Plain-English definitions for the terms that decide whether a job rolls, gets done,
-          and gets paid — written for service companies with crews, trucks, tools, and job packets.
+          and gets paid. Written for service companies with crews, trucks, tools, and job packets.
           Every entry ends with the part that matters: what it costs you when it&rsquo;s missed.
         </p>
 
@@ -49,10 +49,10 @@ export default function GlossaryIndex() {
 
         <div className="cta">
           <div>
-            <b>Software for the boring operational stuff.</b>
-            <span>SYNNR builds purpose-built software for oilfield service companies. Start with TallyShot — photograph a handwritten tally sheet, get clean Excel back.</span>
+            <b>Stop getting turned around at the gate.</b>
+            <span>SYNNR tracks every cert, DOT date, and crew card in your yard and warns you before anything lapses.</span>
           </div>
-          <Link className="go" href="/ingest">Scan a sheet free →</Link>
+          <Link className="go" href="/demo">Open the live demo</Link>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ import { localToday, addDaysIso } from "./status";
  * The gear list is a REFERENCE, not a gate: a line that isn't in the asset
  * book yet warns, it never fails a truck. And nobody is asked to confirm
  * they're physically holding an item — possession tracking was cut from
- * scope. RollReady keeps up with records.
+ * scope. SYNNR keeps up with records.
  *
  * Computed entirely server-side and used by both the page (display) and the
  * record action, so a client can never influence the verdict. No overrides:
@@ -89,7 +89,7 @@ export function crewWithNoCards(
   const withCards = new Set(crewCerts.map((c) => c.parent_id));
   return crewIds
     .filter((id) => !withCards.has(id))
-    .map((id) => ({ crewId: id, label: `${names.get(id) ?? "assigned hand"} — no cards on file` }));
+    .map((id) => ({ crewId: id, label: `${names.get(id) ?? "assigned hand"}: no cards on file` }));
 }
 
 export async function computeDispatchCheck(
@@ -156,7 +156,7 @@ export async function computeDispatchCheck(
 
   // 1) Gear list vs the asset book. The gear list is a REFERENCE, not a gate:
   //    a line that simply isn't in the book yet is a heads-up (warning), never
-  //    a failure — RollReady keeps up with everybody's records; it doesn't run
+  //    a failure — SYNNR keeps up with everybody's records; it doesn't run
   //    a checklist. A matched asset FLAGGED missing/out-of-service is a real
   //    problem and still fails.
   for (const li of loadout) {
@@ -165,11 +165,11 @@ export async function computeDispatchCheck(
       // A required line that isn't in the book must not wear green — a hand
       // scanning chips saw six OKs on a truck that wasn't ready. It still
       // doesn't FAIL the truck (the gear list warns, never gates).
-      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "warn" : "ok", detail: li.required ? "not in the asset book yet — heads-up" : "optional — not in the asset book" });
-      if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet — add it so it's tracked.`);
+      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "warn" : "ok", detail: li.required ? "not in the asset book yet" : "optional, not in the asset book" });
+      if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet. Add it so it's tracked.`);
     } else if (match.status !== "in_service") {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "missing" : "ok", detail: `${match.name} is flagged ${match.status.replace(/_/g, " ")}` });
-      if (li.required) failures.push(`${li.label} — ${match.name} flagged ${match.status.replace(/_/g, " ")}`);
+      if (li.required) failures.push(`${li.label}: ${match.name} flagged ${match.status.replace(/_/g, " ")}`);
     } else {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "ok", detail: `on the list (${match.name})` });
     }
@@ -179,7 +179,7 @@ export async function computeDispatchCheck(
   for (const a of assets) {
     if (a.status === "missing") {
       lines.push({ source_type: "asset", source_id: a.id, label: a.name, result: "missing", detail: "flagged missing on the asset list" });
-      failures.push(`${a.name} — flagged missing`);
+      failures.push(`${a.name}: flagged missing`);
     }
   }
 
@@ -189,27 +189,27 @@ export async function computeDispatchCheck(
   const pushCert = (c: Cert, label: string, sourceType: "cert" | "crew_cert") => {
     if (c.expiration_date === null) {
       lines.push({ source_type: sourceType, source_id: c.id, label, result: "missing", detail: "no expiration on file" });
-      failures.push(`${label} — no expiration on file`);
+      failures.push(`${label}: no expiration on file`);
     } else if (c.expiration_date < jobDate) {
       // lapsed by the job. Word it by whether the job is today or future.
       const detail = isFutureJob
-        ? `expires ${c.expiration_date} — before the ${jobDate} job`
+        ? `expires ${c.expiration_date}, before the ${jobDate} job`
         : `expired ${c.expiration_date}`;
       lines.push({ source_type: sourceType, source_id: c.id, label, result: "expired", detail });
-      failures.push(isFutureJob ? `${label} — expires ${c.expiration_date}, before the job` : `${label} — expired`);
+      failures.push(isFutureJob ? `${label}: expires ${c.expiration_date}, before the job` : `${label}: expired`);
     } else {
       // current through the job. Heads-up if it lapses shortly after.
       lines.push({ source_type: sourceType, source_id: c.id, label, result: "ok", detail: `good to ${c.expiration_date}` });
       if (c.expiration_date <= warnHorizon) {
         warnings.push(isFutureJob
-          ? `${label} — expires ${c.expiration_date}, just after the job. Renew soon.`
-          : `${label} — due soon (${c.expiration_date})`);
+          ? `${label}: expires ${c.expiration_date}, just after the job. Renew soon.`
+          : `${label}: due soon (${c.expiration_date})`);
       }
     }
   };
   for (const c of (unitCerts ?? []) as Cert[]) pushCert(c, c.title, "cert");
   for (const c of (assetCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${assetName.get(c.parent_id) ?? "asset"})`, "cert");
-  for (const c of (crewCerts ?? []) as Cert[]) pushCert(c, `${c.title} — ${crewName.get(c.parent_id) ?? "crew"}`, "crew_cert");
+  for (const c of (crewCerts ?? []) as Cert[]) pushCert(c, `${c.title} (${crewName.get(c.parent_id) ?? "crew"})`, "crew_cert");
 
   // An assigned hand with ZERO cards on file used to pass silently — "every
   // assigned hand's cards checked" was vacuously true. Same rule as a cert
@@ -217,7 +217,7 @@ export async function computeDispatchCheck(
   // paper in the yard.
   for (const f of crewWithNoCards(crewIds, (crewCerts ?? []) as { parent_id: string }[], crewName)) {
     lines.push({ source_type: "crew_cert", source_id: f.crewId, label: f.label, result: "missing", detail: "no cards on file" });
-    failures.push(`${f.label} — no cards on file`);
+    failures.push(f.label); // label already says "no cards on file"
   }
 
   // NO verdict on empty config — and "configured" means the SHOP put data in
@@ -235,7 +235,7 @@ export async function computeDispatchCheck(
   // the public proof link (both render these warnings).
   const notChecked: string[] = [];
   if (configured && crewIds.length === 0) {
-    notChecked.push("No crew assigned to this unit — crew cards weren't part of this check. Assign crew so their cards get checked.");
+    notChecked.push("No crew is assigned to this unit, so crew cards weren't part of this check. Assign crew so their cards get checked.");
   }
   warnings.push(...notChecked);
 

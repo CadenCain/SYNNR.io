@@ -64,7 +64,7 @@ export default function ShareProof({
   if (url) {
     return (
       <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] p-1.5 pl-2.5">
-        <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-wider text-emerald-400 sm:block">Proof link</span>
+        <span className="hidden text-xs font-semibold text-emerald-400 sm:block">Proof link</span>
         <input readOnly value={url} onFocus={(e) => e.currentTarget.select()}
           className="h-8 w-40 rounded-md border border-line-2 bg-coal px-2 text-xs text-ink outline-none sm:w-64" />
         <button onClick={copy} className="flex h-8 items-center gap-1 rounded-md border border-line-2 px-2 text-xs text-ink-dim hover:bg-elevated hover:text-ink">

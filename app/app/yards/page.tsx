@@ -98,7 +98,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           <p className="mt-1 text-sm text-ink-dim">
             Each yard holds your trucks, shops, assets, and certs.
             {company.comped
-              ? " Comped account — unlimited yards."
+              ? " Comped account, unlimited yards."
               : ` Using ${inUse} of ${company.yard_quantity} on your plan.`}
           </p>
         </div>
@@ -139,8 +139,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
             <>
               <p className="mt-1 text-sm text-ink-dim">
                 {hasSubscription
-                  ? "Restart billing to keep building your yard — everything you entered is still here."
-                  : "Yards live on a plan — $500/mo each. Start yours and this page opens up."}
+                  ? "Restart billing to keep adding to your yard. Everything you entered is still here."
+                  : "Each yard is $500 a month. Start your plan to add one."}
               </p>
               <Link href={hasSubscription ? "/app/settings/billing" : "/onboarding/billing"} className={`${buttonClass("default")} mt-3 inline-flex`}>
                 {hasSubscription ? "Restart billing" : "Start your subscription"}
@@ -158,13 +158,13 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
               <p className="mt-1 text-sm text-ink-dim">
                 Add {company.yard_quantity === 0 ? "your first" : `a ${company.yard_quantity + 1}th`} to your plan for $500/mo more, prorated from today.
               </p>
-              {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through — you were at your limit.</p> : null}
+              {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through because you were at your limit.</p> : null}
               <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 sm:flex-row">
                 <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
                 <input name="location" placeholder="Location (optional)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
-                <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard — $500/mo</Button>
+                <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard ($500/mo)</Button>
               </form>
             </>
           ) : (
@@ -183,8 +183,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           </form>
           <p className="mt-2 text-xs text-ink-faint">
             {company.comped
-              ? "Comped account — add what you need. The sample yard is always free."
-              : `You're on ${company.yard_quantity} yard${company.yard_quantity === 1 ? "" : "s"}. Need another past that? Add it to your plan anytime — $500/mo each, prorated. The sample yard is free and doesn't count.`}
+              ? "Comped account. Add what you need. The sample yard is always free."
+              : `You're on ${company.yard_quantity} yard${company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime for $500/mo, prorated. The sample yard is free and doesn't count.`}
           </p>
         </Card>
       )}

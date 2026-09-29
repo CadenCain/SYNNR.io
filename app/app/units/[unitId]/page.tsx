@@ -86,7 +86,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const photoGap = (a: { id: string; primary_photo_path: string | null }): string | null => {
     const noPhoto = !a.primary_photo_path;
     const noPaper = !hasPaper.has(a.id);
-    if (noPhoto && noPaper) return "no photos — shoot the iron & its paperwork";
+    if (noPhoto && noPaper) return "no photos yet: add the asset and its paperwork";
     if (noPaper) return "paperwork photo missing";
     if (noPhoto) return "asset photo missing";
     return null;
@@ -188,7 +188,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       {tile && tile.state === "not_ready" && (
         <section id="verdict">
           <div className="rounded-2xl bg-red-600 p-5 text-white sm:border sm:border-red-500/40 sm:bg-red-500/[0.08] sm:text-ink">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-red-100 sm:text-red-400">Not ready</div>
+            <div className="text-sm font-bold text-red-100 sm:text-red-400">Not ready</div>
             <h2 className="mt-1.5 text-2xl font-bold leading-tight sm:text-xl">
               {u.name} NOT READY: <span className="sm:text-red-300">{tile.why}</span>
             </h2>
@@ -196,7 +196,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <ul className="mt-3 flex flex-col gap-1.5">
                 {failingCerts.slice(0, 4).map((i) => (
                   <li key={i.id} className="text-base font-medium text-red-50 sm:text-sm sm:text-red-300">
-                    • {i.title} — {i.status === "expired" ? `expired ${i.expiration_date ?? ""}` : "no expiration on file"}
+                    • {i.title}: {i.status === "expired" ? `expired ${i.expiration_date ?? ""}` : "no expiration on file"}
                   </li>
                 ))}
                 {failingCerts.length > 4 && <li className="text-sm text-red-100 sm:text-red-300/80">+ {failingCerts.length - 4} more below</li>}
@@ -204,7 +204,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <a href="#book" className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-coal">
-                Fix it — open the truck book
+                Fix it in the truck book
               </a>
               <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
                 Run the check anyway
@@ -216,7 +216,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       {tile && tile.state === "due_soon" && (
         <section id="verdict">
           <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
-            <div className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-amber-400">Due soon</div>
+            <div className="text-sm font-bold text-amber-400">Due soon</div>
             <p className="mt-1.5 text-lg font-semibold leading-snug">{u.name} rolls today, but: {tile.why}</p>
             <a href="#book" className="mt-3 inline-flex min-h-12 items-center justify-center rounded-xl bg-bone px-5 text-sm font-semibold text-coal sm:min-h-10">
               Renew it before it bites
@@ -227,7 +227,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
 
       {/* Truck book */}
       <section id="book" className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Truck book — certs, inspections &amp; DOT</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Truck book: certs, inspections, and DOT</h2>
         {items.length > 0 && (
           <div className="flex flex-col gap-2">
             {items.map((it) => <ComplianceRow key={it.id} item={it} companyId={company.id} redirectPath={here} canDelete={company.role !== "member"} />)}
@@ -261,7 +261,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
           <div className="min-w-0 flex-1">
             <div className="font-medium">Gear list</div>
-            <div className="truncate text-sm text-ink-dim">What rides on this truck — edit items, required vs optional</div>
+            <div className="truncate text-sm text-ink-dim">What rides on this truck, and which items are required</div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
@@ -271,7 +271,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
       {/* Dispatch history — the immutable records (spec #1d) */}
       {history.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Dispatch history</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Dispatch history</h2>
           <div className="flex flex-col gap-2">
             {history.map((h) => (
               <Link key={h.id} href={`/app/records/${h.id}`}>
@@ -303,7 +303,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           thing for shops (buildings don't have a crew). */}
       {(!isShop || assignedCrew.length > 0) && (
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Crew on this unit</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Crew on this unit</h2>
         {assignedCrew.length > 0 && (
           <div className="flex flex-col gap-2">
             {assignedCrew.map((c) => (
@@ -331,7 +331,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <input type="hidden" name="unit_id" value={u.id} />
               <select name="crew_member_id" required defaultValue="" className={`${fld} flex-1`}>
                 <option value="" disabled>Pick a hand…</option>
-                {unassignedCrew.map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` — ${c.role}` : ""}</option>)}
+                {unassignedCrew.map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` (${c.role})` : ""}</option>)}
               </select>
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Assign</Button>
             </form>
@@ -349,7 +349,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           book above, which is the part an inspector actually asks for. */}
       {(!isShop || assets.length > 0) && (
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-faint">Assets on this unit</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Assets on this unit</h2>
         {assets.length > 0 && (
           <div className="flex flex-col gap-2">
             {assets.map((a) => (
