@@ -25,10 +25,10 @@ export default function OgImage() {
         <div style={{ display: "flex", fontSize: 40, fontWeight: 700, letterSpacing: -1 }}>SYNNR</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ display: "flex", fontSize: 68, fontWeight: 800, lineHeight: 1.06, letterSpacing: -2, maxWidth: 1000 }}>
-            Every cert in your yard, watched before it lapses.
+            Every piece of iron. Its serial, where it is, its next test.
           </div>
           <div style={{ display: "flex", fontSize: 30, color: "#c3cde3", maxWidth: 1000 }}>
-            BOP tests, DOT dates, and crew cards on one list. The truck reads NOT READY until the paper is fixed.
+            BOP stacks, lubricators, valves, and swivels on one list, with QR tags. A warning before anything lapses.
           </div>
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#9fb7ff", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>

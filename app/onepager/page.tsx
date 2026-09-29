@@ -63,7 +63,7 @@ export default function OnePager() {
 
       <div className="op-sheet">
         <div className="op-head">
-          <div className="op-brand">SYNNR<small>Yard readiness · Permian Basin</small></div>
+          <div className="op-brand">SYNNR<small>Equipment test tracking · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b>, founder<br />
             Call or text {OWNER_PHONE}
@@ -74,19 +74,19 @@ export default function OnePager() {
 
         <p className="op-p">
           Nobody knew until the company man checked the paper and turned the crew around at the gate.
-          SYNNR watches every cert, inspection, DOT date, and crew card in your yard and emails the right
-          person before anything lapses. If something does lapse, that truck reads NOT READY until the
-          record is fixed.
+          SYNNR keeps every piece of iron in your yard on one list, with its serial, where it is, and when
+          its next test is due, and emails the right person before anything lapses. If something does
+          lapse, the truck it rides on reads NOT READY until the record is fixed.
         </p>
 
         <div className="op-cols">
           <div className="op-box">
             <h3>What it catches</h3>
             <ul>
-              <li>BOP &amp; pressure tests, annual DOT, registrations</li>
-              <li>Crew cards: H2S, well control, CDL, medicals</li>
-              <li>A readiness check with no override button</li>
-              <li>Where the gear was last seen, and who touched it</li>
+              <li>BOP and lubricator tests, iron recerts (UT + hydro), annual DOT</li>
+              <li>A QR tag on every piece: scan it, see its tests and cert</li>
+              <li>Where each piece is, and every move with who and when</li>
+              <li>A truck check with no override button</li>
               <li>A live proof link to send the operator instead of a binder</li>
             </ul>
           </div>
@@ -94,7 +94,7 @@ export default function OnePager() {
             <h3>The math</h3>
             <div style={{ fontSize: "13.5px", lineHeight: 1.65 }}>
               One lubricator miss is 16 months of SYNNR. It&apos;s a flat price per yard and never
-              per-seat, so adding crew or trucks costs nothing. No contract, cancel anytime, and your
+              per-seat, so adding people or iron costs nothing. No contract, cancel anytime, and your
               data stays yours.
             </div>
           </div>

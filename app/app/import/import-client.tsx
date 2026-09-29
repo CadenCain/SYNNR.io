@@ -7,11 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { previewImport, commitImport, type ImportResult } from "./actions";
 
-const SAMPLE = `unit,unit_type,asset,category,crew,item,kind,issued,expires
-Rig 4,service rig,,,,Annual DOT inspection,inspection,2026-02-01,2027-02-01
-Rig 4,service rig,BOP #3,pressure control,,BOP test,test,2026-01-15,2026-07-15
-Truck 12,truck,,,,DOT sticker,dot_sticker,2026-03-01,2027-03-01
-,,,,Jerry Boles,H2S Clear,cert,2026-05-01,2027-05-01`;
+const SAMPLE = `unit,unit_type,asset,category,item,kind,issued,expires
+CT-04,coil tubing unit,Quad BOP stack #4,pressure control,BOP pressure test,test,2026-01-15,2027-01-15
+CT-04,coil tubing unit,Lubricator #1,pressure control,Lubricator pressure test,test,2026-03-02,2027-03-02
+CT-04,coil tubing unit,2in 1502 plug valve PV-2204,flow iron,Iron recert (UT + hydro),test,2026-04-10,2027-04-10
+CT-04,coil tubing unit,,,Annual DOT inspection,inspection,2026-02-01,2027-02-01`;
 
 export default function ImportClient({ yards }: { yards: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -108,8 +108,8 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
           <textarea value={csv} onChange={(e) => { setCsv(e.target.value); setFileName(""); }} rows={10}
             className="rounded-lg border border-line-2 bg-coal px-3 py-2 font-mono text-xs text-ink outline-none focus:border-bone" />
           <span className="text-xs text-ink-faint">
-            Columns (any order): <span className="font-mono">unit, unit_type, asset, category, crew, item, kind, issued, expires</span>.
-            Crew rows: leave unit blank, fill <span className="font-mono">crew</span>. Importing again updates dates without making duplicates.
+            Columns (any order): <span className="font-mono">unit, unit_type, asset, category, item, kind, issued, expires</span>.
+            Each piece of iron goes under the truck it rides on. Leave asset blank for the truck&apos;s own paper. Importing again updates dates without making duplicates.
             Working in Excel? File → Save As → CSV, then drop the file above.
           </span>
         </label>

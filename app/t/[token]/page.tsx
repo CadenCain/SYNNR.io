@@ -99,7 +99,7 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
     : a.status === "out_of_service" ? { title: "Red-tagged. Do not use.", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has pulled this from service." }
     : a.status === "missing" ? { title: "Flagged missing", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has this marked missing. Let them know where it is." }
     : items.length === 0 ? { title: "No test on file", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop hasn't put this piece's paper in SYNNR yet." }
-    : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: `${failing.length === 1 ? failing[0].i.title + " is" : failing.length + " tests are"} past due or missing a date.` }
+    : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due or missing a date.` }
     : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today." };
 
   return (

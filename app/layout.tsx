@@ -25,30 +25,30 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR: cert tracking for oilfield service yards",
+    default: "SYNNR: equipment test tracking for oilfield service yards",
     template: "%s",
   },
   description:
-    "SYNNR tracks every cert, DOT date, and crew card in an oilfield service yard and warns you before anything lapses, so a truck never gets turned around at the gate. $500 per yard, per month. Never per-seat.",
+    "SYNNR keeps every piece of iron in an oilfield service yard on one list, with its serial, where it is, and when its next test is due. QR tags, move history, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
   keywords: [
-    "SYNNR", "yard readiness", "equipment readiness", "cert tracking", "cert expiration alerts",
-    "crew card tracking", "equipment tracking", "where is my equipment", "oilfield service software", "wireline", "coil tubing", "cementing", "BOP testing",
-    "BOP recertification", "crew certs", "H2S certification", "well control", "DOT inspection",
+    "SYNNR", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
+    "QR equipment tags", "NDT recertification tracking", "equipment tracking", "where is my equipment", "oilfield service software",
+    "wireline", "coil tubing", "cementing", "BOP testing", "BOP recertification", "lubricator pressure test", "DOT inspection",
     "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
   ],
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR: cert tracking for oilfield service yards",
+    title: "SYNNR: equipment test tracking for oilfield service yards",
     description:
-      "Every cert, DOT date, and crew card in your yard on one list, with a warning before anything lapses. $500 per yard, per month.",
+      "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR: cert tracking for oilfield service yards",
+    title: "SYNNR: equipment test tracking for oilfield service yards",
     description:
-      "Every cert, DOT date, and crew card in your yard on one list, with a warning before anything lapses. $500 per yard, per month.",
+      "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
   },
 };
 
@@ -72,7 +72,7 @@ export default function RootLayout({
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Cert tracking for oilfield service yards. Every cert, DOT date, and crew card on one list, with a warning before anything lapses and a readiness check before a truck rolls.",
+                "Equipment test tracking for oilfield service yards. Every piece of iron on one list with its serial, location, and next test, QR tags, and a warning before anything lapses.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",

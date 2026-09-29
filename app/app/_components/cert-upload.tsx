@@ -302,7 +302,7 @@ export function AddCert({ parentType, parentId, redirectPath, isManager, default
   function clear() { setResult(null); setTitle(""); photo.reset(); }
 
   async function send(force = false) {
-    if (!title.trim()) { photo.setErr("Name the cert first (for example, H2S Clear)."); return; }
+    if (!title.trim()) { photo.setErr("Name the test or cert first (for example, BOP pressure test)."); return; }
     if (!photo.file) { photo.setErr("Take a photo of the cert first."); return; }
     if (!photo.expiration) { photo.setErr("Enter the expiration date printed on the cert."); return; }
     const fd = new FormData();

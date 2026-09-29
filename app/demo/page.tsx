@@ -32,11 +32,12 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div className="mt-8 flex flex-col gap-5">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try SYNNR with a demo yard</h1>
           <p className="text-base leading-relaxed text-ink-dim">
-            Tap the button and you get your own copy of a made-up Odessa coil tubing company: 20 trucks,
-            45 hands, and a few problems already on the board. CT‑03 has a dead BOP test, P‑02&apos;s annual
-            DOT lapsed, and one operator&apos;s H2S card expired yesterday. A hand already sent a photo of a new
-            BOP cert with a date that isn&apos;t on the paper, so it&apos;s waiting on you under Review uploads. Run a
-            readiness check, open the red trucks, and see what it takes to turn one green.
+            Tap the button and you get your own copy of a made-up Odessa coil tubing company: 62 pieces of
+            iron on 16 trucks and trailers, and a few problems already on the list. The BOP stack on CT‑03 is
+            past its pressure test, a plug valve on CT‑06 got red-tagged after UT, and another one has been
+            missing since a rig-down. A hand already sent a photo of a new BOP cert with a date that isn&apos;t on
+            the paper, so it&apos;s waiting on you under Review uploads. Open a piece of iron, look at its QR tag
+            and where it&apos;s been, and see what it takes to turn it green.
           </p>
           <p className="text-base leading-relaxed text-ink-dim">
             Nobody else sees your copy, and it deletes itself after 24 hours.
@@ -80,19 +81,19 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><Smartphone className="h-5 w-5 text-ink-dim" /></span>
             <h2 className="text-lg font-semibold">Works on a phone</h2>
             <p className="text-sm leading-relaxed text-ink-dim">
-              The same yard on a phone. A red truck shows what&apos;s wrong and a button to fix it. You can
-              open the demo on your phone too.
+              Every piece of iron on your phone, worst first. Tap one to see its paper, its QR tag, and
+              where it&apos;s been. You can open the demo on your phone too.
             </p>
-            <Image src="/screens/app-phone.webp" alt="SYNNR on a phone: 2 units can't roll, with a button to fix CT-03"
+            <Image src="/screens/app-phone.webp" alt="SYNNR on a phone: the equipment list with a red-tagged plug valve on top"
               width={750} height={1624} className="mx-auto mt-2 w-40 rounded-[22px] border-[5px] border-slate-900 shadow-lg" />
           </div>
         </div>
 
         <div id="your-yard" className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-6 text-center sm:p-8">
-          <h2 className="text-xl font-semibold">Want this set up with your trucks?</h2>
+          <h2 className="text-xl font-semibold">Want this set up with your iron?</h2>
           <p className="max-w-md text-sm leading-relaxed text-ink-dim">
             Setup is free for the first 10 yards. Bring your binder or spreadsheets and we&apos;ll load your
-            yard together in one afternoon. After that it&apos;s $500 a yard per month. No contract, and never
+            iron, serials, and test dates together in one afternoon. After that it&apos;s $500 a yard per month. No contract, and never
             per-seat.
           </p>
           <DemoLeadForm />
