@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCsv, norm, matchValue, parseDate, mapHeader } from "../import-parse";
+import { parseCsv, norm, matchValue, parseDate, mapHeader, guessCategory } from "../import-parse";
 import { UNIT_TYPES, COMPLIANCE_KINDS } from "../taxonomy";
 
 /**
@@ -57,6 +57,15 @@ describe("norm + matchValue — header and enum forgiveness", () => {
     // the shop's word for its own truck beats our enum
     expect(matchValue("swab rig", UNIT_TYPES, "truck")).toBe("swab_rig");
   });
+});
+
+describe("guessCategory: a type from the name when the sheet has none", () => {
+  it.each([
+    ["2in 1502 plug valve", "flow_iron"], ["2in 1502 Chiksan swivel", "flow_iron"], ["3in pup joint, 10 ft", "flow_iron"],
+    ["Lubricator #2", "pressure_control"], ["Quad BOP stack #3", "pressure_control"],
+    ["Wire rope slings, set A", "lifting"], ["Shackle 12T", "lifting"],
+    ["H2S gas monitor", "safety"], ["HP-0042", "other"], ["Injector head #3", "other"],
+  ])("%s → %s", (name, want) => expect(guessCategory(name)).toBe(want));
 });
 
 describe("mapHeader — the names real yard spreadsheets actually use", () => {

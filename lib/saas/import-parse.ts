@@ -70,6 +70,20 @@ export function mapHeader(rawHeader: string[]): HeaderMap {
   return out;
 }
 
+/**
+ * A type for iron when the sheet has no category column: what the name says
+ * it is. "2in 1502 plug valve" → flow iron, "Lubricator #2" → pressure
+ * control. Anything unrecognized stays "other" for someone to fix.
+ */
+export function guessCategory(name: string): string {
+  const n = name.toLowerCase();
+  if (/\b(sling|shackle|hook|crane|boom|block|rigging|spreader|chain)/.test(n)) return "lifting";
+  if (/\b(bop|lubricator|grease head|wellhead|pressure control|stuffing box|pack-?off)/.test(n)) return "pressure_control";
+  if (/\b(valve|swivel|chiksan|pup|union|hammer|tee|elbow|cross|1502|1002|2002|treating iron|flow ?iron|iron)/.test(n)) return "flow_iron";
+  if (/\b(h2s|gas monitor|detector|scba|harness|extinguisher)/.test(n)) return "safety";
+  return "other";
+}
+
 export const matchValue = (input: string, list: { value: string; label: string }[], fallback: string) => {
   const n = norm(input);
   return list.find((x) => x.value === n || norm(x.label) === n)?.value ?? (input ? n : fallback);

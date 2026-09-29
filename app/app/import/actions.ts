@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { UNIT_TYPES, ASSET_CATEGORIES, COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
-import { parseCsv, matchValue, parseDate, mapHeader } from "@/lib/saas/import-parse";
+import { parseCsv, matchValue, parseDate, mapHeader, guessCategory } from "@/lib/saas/import-parse";
 import { clearAlertLog } from "@/lib/saas/alert-log";
 import { isWritable, yardCapState, canPerform } from "@/lib/saas/entitlements";
 
@@ -170,7 +170,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     let id = `new-asset-${fakeId++}`;
     if (ctx.commit) {
       const { data, error } = await ctx.db.from("saas_assets")
-        .insert({ company_id: ctx.companyId, yard_id: resolvedYard, unit_id: unitId, name, identifier: serial || null, category: matchValue(category, ASSET_CATEGORIES, "other") })
+        .insert({ company_id: ctx.companyId, yard_id: resolvedYard, unit_id: unitId, name, identifier: serial || null, category: category ? matchValue(category, ASSET_CATEGORIES, "other") : guessCategory(name) })
         .select("id").single();
       if (error) throw new Error(error.message);
       id = (data as { id: string }).id;
