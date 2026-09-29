@@ -84,7 +84,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
           {MARK}
           <div className="min-w-0 flex-1 leading-tight">
             <div className="font-semibold tracking-tight">SYNNR</div>
-            {companyName ? <div className="truncate text-xs text-ink-faint" title={companyName}>{companyName}</div> : null}
+            {companyName ? <div className="line-clamp-2 text-xs leading-snug text-ink-faint" title={companyName}>{companyName}</div> : null}
           </div>
           {pill ? <span title="Overall readiness" className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         </div>

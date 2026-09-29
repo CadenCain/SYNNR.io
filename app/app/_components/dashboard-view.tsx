@@ -274,7 +274,7 @@ export default function DashboardView(d: DashboardData) {
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
                 {[...d.boardUnits].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]).map((u) => (
                   <Link key={u.id} href={`/app/units/${u.id}`}>
                     <Card className={`h-full p-4 transition-colors hover:border-line-2 hover:shadow-md ${u.state === "not_ready" ? "border-red-500/40 border-l-4 border-l-red-500" : u.state === "due_soon" ? "border-l-4 border-l-amber-500" : u.state === "ready" ? "border-l-4 border-l-emerald-500" : ""}`}>

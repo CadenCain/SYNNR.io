@@ -52,7 +52,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Icon className="h-4 w-4 text-ink-dim" /></span>
         <div className="min-w-0 flex-1">
           <div className="break-words font-medium">{title}</div>
-          {sub ? <div className="truncate text-sm text-ink-dim">{sub}</div> : null}
+          {sub ? <div className="text-sm text-ink-dim">{sub}</div> : null}
         </div>
         {right}
       </Card>

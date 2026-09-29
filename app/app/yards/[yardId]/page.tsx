@@ -121,8 +121,8 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
               <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-5 w-5 text-ink-dim" /></span>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{u.name}</div>
-                  <div className="truncate text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
+                  <div className="break-words font-medium">{u.name}</div>
+                  <div className="text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""}</div>
                 </div>
                 {(() => { const st = stateByUnit.get(u.id); const c = st ? UNIT_CHIP[st] : null;
                   return c ? <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${c.cls}`}>{c.label}</span> : null; })()}

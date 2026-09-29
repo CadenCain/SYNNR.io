@@ -13,7 +13,7 @@ export default function JobDatePicker({ jobDate, today }: { jobDate: string; tod
   const params = useSearchParams();
 
   return (
-    <label className="flex flex-col gap-1.5 text-sm text-ink-dim sm:flex-row sm:items-center sm:gap-3">
+    <label className="flex flex-col gap-1.5 text-sm text-ink-dim lg:flex-row lg:items-center lg:gap-3">
       <span>Checking for the job on</span>
       <input
         type="date"

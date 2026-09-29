@@ -49,7 +49,7 @@ export default async function DispatchPicker() {
                     <span className="font-medium">{u.name}</span>
                     <span className={`rounded-md border px-2 py-0.5 text-xs font-medium ${CHIP[u.state].cls}`}>{CHIP[u.state].label}</span>
                   </div>
-                  <div className={`truncate text-sm ${u.state === "not_ready" ? "text-red-400" : "text-ink-dim"}`}>
+                  <div className={`text-sm ${u.state === "not_ready" ? "text-red-400" : "text-ink-dim"}`}>
                     {u.state === "ready" ? `${unitTypeLabel(u.type)}${u.yardName ? ` · ${u.yardName}` : ""}` : u.why}
                   </div>
                 </div>

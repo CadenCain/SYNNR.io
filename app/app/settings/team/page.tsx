@@ -102,7 +102,7 @@ export default async function TeamSettings() {
         <h2 className="text-sm font-medium text-ink">Members</h2>
         {members.map((m) => (
           <Card key={m.user_id} className="flex items-center justify-between gap-3 p-4">
-            <span className="truncate">{emails.get(m.user_id) ?? m.user_id}{m.user_id === user.id ? " (you)" : ""}</span>
+            <span className="min-w-0 break-all">{emails.get(m.user_id) ?? m.user_id}{m.user_id === user.id ? " (you)" : ""}</span>
             <span className="flex items-center gap-2">
               {company.role === "owner" && m.role === "admin" && m.user_id !== user.id ? (
                 <form action={transferOwnership}>
@@ -125,7 +125,7 @@ export default async function TeamSettings() {
           {invites.filter((iv) => iv.status === "pending" && new Date(iv.expires_at) > new Date()).map((iv) => (
             <Card key={iv.id} className="flex flex-col gap-2 p-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm text-ink-dim">
+                <span className="min-w-0 break-all text-sm text-ink-dim">
                   {iv.email || "Anyone with the link"} · {ROLE_LABEL[iv.role] ?? iv.role} ·{" "}
                   <span className="text-ink-faint">expires {fmtDay(iv.expires_at)}</span>
                 </span>

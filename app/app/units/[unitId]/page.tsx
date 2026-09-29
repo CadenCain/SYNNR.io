@@ -308,7 +308,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                     <div className="font-medium">
                       {h.type === "checkin" ? "Checked in" : "Readiness check"} · {fmtWhen(h.started_at)}
                     </div>
-                    <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
+                    <div className="text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
                   </div>
                   {h.status === "not_ready" || h.status === "not_ready_override" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>
@@ -338,7 +338,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><HardHat className="h-4 w-4 text-ink-dim" /></span>
                 <Link href={`/app/crew/${c.id}`} className="min-w-0 flex-1 hover:underline">
                   <span className="block break-words font-medium">{c.name}</span>
-                  <span className="block truncate text-sm text-ink-dim">{c.role ?? "crew"}</span>
+                  <span className="block text-sm text-ink-dim">{c.role ?? "crew"}</span>
                 </Link>
                 {c.worst ? <StatusBadge status={c.worst} /> : <span className="text-xs text-ink-faint">no cards</span>}
                 <form action={unassignCrewFromUnit}>

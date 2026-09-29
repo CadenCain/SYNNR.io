@@ -31,7 +31,7 @@ export default async function SettingsHub() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{r.title}</div>
-                  <div className="truncate text-sm text-ink-dim">{r.desc}</div>
+                  <div className="text-sm text-ink-dim">{r.desc}</div>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
               </Card>
@@ -46,7 +46,7 @@ export default async function SettingsHub() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-medium">Export data</div>
-              <div className="truncate text-sm text-ink-dim">Download every item as a spreadsheet</div>
+              <div className="text-sm text-ink-dim">Download every item as a spreadsheet</div>
             </div>
             <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
           </Card>
