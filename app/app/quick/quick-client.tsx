@@ -512,7 +512,7 @@ export default function QuickClient({ items, units, assets, companyId }: { items
   const needsWork = items.filter((i) => i.status === "expired" || i.status === "expiring").length;
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
       <button onClick={() => setMode("renew")}
         className="flex min-h-24 items-center gap-4 rounded-2xl border border-line bg-surface px-5 text-left active:bg-elevated">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bone text-coal"><RefreshCw className="h-6 w-6" /></span>

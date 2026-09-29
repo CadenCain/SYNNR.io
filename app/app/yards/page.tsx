@@ -159,7 +159,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
                 Add {company.yard_quantity === 0 ? "your first" : `a ${company.yard_quantity + 1}th`} to your plan for $500/mo more, prorated from today.
               </p>
               {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through because you were at your limit.</p> : null}
-              <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 lg:flex-row">
                 <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
                 <input name="location" placeholder="Location (optional)"
@@ -174,7 +174,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
       ) : (
         <Card className="p-5">
           <h2 className="mb-3 text-sm font-medium text-ink">{yards.length ? "Add another yard" : "Add your first yard"}</h2>
-          <form action={createYard} className="flex flex-col gap-3 sm:flex-row">
+          <form action={createYard} className="flex flex-col gap-3 lg:flex-row">
             <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
               className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
             <input name="location" placeholder="Location (optional)"

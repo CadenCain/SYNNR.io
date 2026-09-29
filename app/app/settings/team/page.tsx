@@ -145,11 +145,11 @@ export default async function TeamSettings() {
       ) : (
       <Card className="p-5">
         <h3 className="mb-3 text-sm font-medium text-ink">Invite a teammate</h3>
-        <form action={createInvite} className="flex flex-col gap-3 sm:flex-row">
+        <form action={createInvite} className="flex flex-col gap-3 lg:flex-row">
           <input name="email" type="email" placeholder="email (optional)"
             className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7]" />
           <select name="role" defaultValue="member"
-            className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7] sm:w-36">
+            className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#e7ddc7] lg:w-36">
             <option value="member">Member</option>
             <option value="admin">Admin</option>
           </select>

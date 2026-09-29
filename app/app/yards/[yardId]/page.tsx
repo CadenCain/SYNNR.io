@@ -137,13 +137,13 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
         <h2 className="mb-3 text-sm font-medium text-ink">{units.length ? "Add another unit" : "Add a truck, rig, or shop"}</h2>
         <form action={createUnit} className="flex flex-col gap-3">
           <input type="hidden" name="yard_id" value={y.id} />
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 lg:flex-row">
             <input name="name" required placeholder="Name (e.g. Rig 4)" className={`${fld} flex-1`} />
             <select name="type" defaultValue="truck" className={`${fld} flex-1`}>
               {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 lg:flex-row">
             <input name="identifier" placeholder="VIN / unit # (optional)" className={`${fld} flex-1`} />
             <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add unit</Button>
           </div>

@@ -133,7 +133,7 @@ export default async function NotificationsSettings() {
         <Card className="p-5">
           <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add the first person to alert, like the foreman who rolls the trucks"}</h3>
           <form action={addRecipient} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-3 lg:flex-row">
               <input name="name" required placeholder="Name" className={`${fld} flex-1`} />
               <input name="email" type="email" placeholder="Email (optional)" className={`${fld} flex-1`} />
               <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} flex-1`} />
@@ -144,7 +144,7 @@ export default async function NotificationsSettings() {
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_sms" className="h-4 w-4 accent-[#e7ddc7]" /> Text (SMS)</label>
               )}
               {yards.length > 0 && (
-                <select name="yard_id" defaultValue="" className={`${fld} sm:w-52`}>
+                <select name="yard_id" defaultValue="" className={`${fld} lg:w-52`}>
                   <option value="">All yards</option>
                   {yards.map((y) => <option key={y.id} value={y.id}>Only {y.name}</option>)}
                 </select>
