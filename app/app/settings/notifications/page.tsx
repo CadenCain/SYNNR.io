@@ -104,7 +104,7 @@ export default async function NotificationsSettings() {
         <div>
           <h2 className="text-sm font-semibold">Who gets the alerts</h2>
           <p className="mt-0.5 text-sm text-ink-dim">
-            Certs and crew cards before they expire, trucks checked NOT READY, and uploads waiting on a manager.
+            Tests and certs before they come due, trucks checked NOT READY, and uploads waiting on a manager.
             {!smsReady && " Text alerts aren't turned on yet. Email alerts work now."}
           </p>
         </div>

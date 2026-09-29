@@ -188,7 +188,8 @@ export async function deleteAsset(fd: FormData) {
   const db = await saasDb();
   await purgeItemsFor(db, company.id, "asset", [id]); // its certs would alert forever
   await db.from("saas_assets").delete().eq("id", id).eq("company_id", company.id);
-  redirect(unit_id ? `/app/units/${unit_id}` : "/app/yards");
+  if (unit_id) revalidatePath(`/app/units/${unit_id}`);
+  redirect("/app");
 }
 
 // ── CREW ──

@@ -3,43 +3,33 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, Warehouse, ShieldCheck, Settings, Plus, LogOut, Search, HardHat, FileCheck, Menu, X } from "lucide-react";
+import { Boxes, Truck, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
-const GROUPS: { label: string; items: { href: string; label: string; icon: typeof LayoutGrid; exact?: boolean }[] }[] = [
-  {
-    label: "Overview",
-    items: [
-      { href: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
-      { href: "/app/compliance", label: "Compliance & Logs", icon: ShieldCheck },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { href: "/app/yards", label: "Yards", icon: Warehouse },
-      { href: "/app/crew", label: "Crew", icon: HardHat },
-    ],
-  },
-  {
-    label: "Account",
-    items: [{ href: "/app/settings", label: "Settings", icon: Settings }],
-  },
+type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolean; also?: string[] };
+
+// Equipment first. Trucks own the yard, unit, and truck-check pages too.
+const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records"];
+const MAIN: NavItem[] = [
+  { href: "/app", label: "Equipment", icon: Boxes, exact: true, also: ["/app/assets"] },
+  { href: "/app/trucks", label: "Trucks", icon: Truck, also: TRUCK_PAGES },
+  { href: "/app/compliance", label: "Tests due", icon: CalendarClock },
+  { href: "/app/tags", label: "QR tags", icon: QrCode },
 ];
 
-const TABS_LEFT = [
-  { href: "/app", label: "Home", icon: LayoutGrid, exact: true },
-  { href: "/app/yards", label: "Yards", icon: Warehouse },
+// Phones: the three places a yard lives in, plus the button and More.
+const TABS_LEFT: NavItem[] = [
+  { href: "/app", label: "Equipment", icon: Boxes, exact: true, also: ["/app/assets"] },
+  { href: "/app/trucks", label: "Trucks", icon: Truck, also: TRUCK_PAGES },
 ];
-// Phones: the four places a yard lives in, plus the button. Everything else
-// is one tap away under More.
-const TABS_RIGHT = [
-  { href: "/app/crew", label: "Crew", icon: HardHat },
+const TABS_RIGHT: NavItem[] = [
+  { href: "/app/compliance", label: "Due", icon: CalendarClock },
 ];
 
-function isActive(path: string, href: string, exact?: boolean) {
-  return exact ? path === href : path === href || path.startsWith(href + "/");
+function isActive(path: string, href: string, exact?: boolean, also: string[] = []) {
+  const hit = (h: string) => path === h || path.startsWith(h + "/");
+  return (exact ? path === href : hit(href)) || also.some(hit);
 }
 
 const MARK = (
@@ -48,26 +38,18 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName, userName, readiness, companies = [], activeCompanyId, switchAction, reviewCount = null }: {
-  companyName?: string; userName?: string; readiness?: number | null;
+export default function AppNav({ companyName, userName, companies = [], activeCompanyId, switchAction, reviewCount = null }: {
+  companyName?: string; userName?: string;
   /** Uploads waiting on a manager. null = not a manager, no Review link. */
   reviewCount?: number | null;
   companies?: { id: string; name: string }[];
   activeCompanyId?: string;
   switchAction?: (fd: FormData) => Promise<void>;
 }) {
-  const pill =
-    readiness == null
-      ? null
-      : readiness >= 90
-        ? { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", txt: `${readiness}%` }
-        : readiness >= 70
-          ? { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", txt: `${readiness}%` }
-          : { cls: "border-red-500/40 bg-red-500/10 text-red-400", txt: `${readiness}%` };
   const path = usePathname() || "/app";
   const router = useRouter();
   const [more, setMore] = useState(false);
-  const moreActive = ["/app/compliance", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
+  const moreActive = ["/app/tags", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
 
   async function signOut() {
     const sb = getBrowserSupabase();
@@ -86,7 +68,6 @@ export default function AppNav({ companyName, userName, readiness, companies = [
             <div className="font-semibold tracking-tight">SYNNR</div>
             {companyName ? <div className="line-clamp-2 text-xs leading-snug text-ink-faint" title={companyName}>{companyName}</div> : null}
           </div>
-          {pill ? <span title="Overall readiness" className={`shrink-0 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         </div>
 
         {/* Company switcher — hidden with one company. One user, many shops
@@ -113,41 +94,46 @@ export default function AppNav({ companyName, userName, readiness, companies = [
           <Search className="h-4 w-4" />
           <input
             name="q"
-            placeholder="Search trucks, gear, crew…"
+            placeholder="Search name or serial"
             className="w-full bg-transparent text-ink placeholder:text-ink-faint outline-none"
           />
           <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-ink-faint lg:inline">⌘K</kbd>
         </form>
 
-        <nav className="flex flex-1 flex-col gap-5 overflow-y-auto">
-          {(reviewCount === null ? GROUPS : GROUPS.map((g, i) => i === 0
-            ? { ...g, items: [...g.items, { href: "/app/review", label: "Review uploads", icon: FileCheck }] }
-            : g)).map((g) => (
-            <div key={g.label} className="flex flex-col gap-1">
-              <div className="px-3 pb-1 text-xs font-medium text-ink-faint">{g.label}</div>
-              {g.items.map((item) => {
-                const active = isActive(path, item.href, item.exact);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                      active ? "bg-bone/10 font-medium text-bone" : "text-ink-dim hover:bg-elevated hover:text-ink",
-                    )}
-                  >
-                    <Icon className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
-                    <span className="flex-1">{item.label}</span>
-                    {item.href === "/app/review" && reviewCount ? (
-                      <span className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-400">{reviewCount}</span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
+          {[...MAIN, ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck } as NavItem])].map((item) => {
+            const active = isActive(path, item.href, item.exact, item.also);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  active ? "bg-bone/10 font-medium text-bone" : "text-ink-dim hover:bg-elevated hover:text-ink",
+                )}
+              >
+                <Icon className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
+                <span className="flex-1">{item.label}</span>
+                {item.href === "/app/review" && reviewCount ? (
+                  <span className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-400">{reviewCount}</span>
+                ) : null}
+              </Link>
+            );
+          })}
+          <div className="my-2 border-t border-line" />
+          {(() => {
+            const active = isActive(path, "/app/settings");
+            return (
+              <Link href="/app/settings" aria-current={active ? "page" : undefined}
+                className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  active ? "bg-bone/10 font-medium text-bone" : "text-ink-dim hover:bg-elevated hover:text-ink")}>
+                <Settings className={cn("h-[18px] w-[18px]", active ? "text-bone" : "")} />
+                <span className="flex-1">Settings</span>
+              </Link>
+            );
+          })()}
         </nav>
 
         <Link
@@ -177,7 +163,6 @@ export default function AppNav({ companyName, userName, readiness, companies = [
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">SYNNR</span>
-        {pill ? <span className={`ml-1 rounded-sm border px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums ${pill.cls}`}>{pill.txt}</span> : null}
         <Link href="/app/search" aria-label="Search" className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
           <Search className="h-[18px] w-[18px]" />
         </Link>
@@ -193,13 +178,13 @@ export default function AppNav({ companyName, userName, readiness, companies = [
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-surface/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
-        {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact)} />)}
+        {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
         <Link href="/app/quick" className="flex flex-col items-center gap-1" aria-label="Quick action">
           <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-coal shadow-lg shadow-slate-900/20">
             <Plus className="h-6 w-6" />
           </span>
         </Link>
-        {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href)} />)}
+        {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
         <button type="button" onClick={() => setMore(true)} aria-label="More"
           className={cn("relative flex flex-col items-center gap-1 py-1 text-[11px]", moreActive ? "font-medium text-bone" : "text-ink-faint")}>
           <Menu className="h-5 w-5" />
@@ -220,7 +205,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
               </button>
             </div>
             {[
-              { href: "/app/compliance", label: "Compliance & Logs", icon: ShieldCheck },
+              { href: "/app/tags", label: "QR tags", icon: QrCode },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
               { href: "/app/search", label: "Search", icon: Search },
               { href: "/app/settings", label: "Settings", icon: Settings },
@@ -248,7 +233,7 @@ export default function AppNav({ companyName, userName, readiness, companies = [
   );
 }
 
-function Tab({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof LayoutGrid; active: boolean }) {
+function Tab({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Boxes; active: boolean }) {
   return (
     <Link href={href} aria-current={active ? "page" : undefined}
       className={cn("flex flex-col items-center gap-1 py-1 text-[11px]", active ? "font-medium text-bone" : "text-ink-faint")}>

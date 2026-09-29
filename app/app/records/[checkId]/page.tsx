@@ -125,7 +125,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {paperLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink-dim">Paper and crew cards at the check</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Paper at the check</h2>
           {paperLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             return (

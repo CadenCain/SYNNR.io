@@ -84,18 +84,19 @@ describe("Frankenstein fleet — a bad child asset breaks the healthy parent", (
 
 // ── 2. Alert sweep: aggregation + ledger dedup ──────────────────────────────
 
-function sweepTables(alreadySent: string[]) {
+function sweepTables(alreadySent: string[], extra: { items?: Record<string, unknown>[]; assets?: Record<string, unknown>[] } = {}) {
   return {
     saas_companies: [{ id: CO, name: "Spy Coil Tubing", subscription_status: "active", comped: false }],
     saas_notification_settings: [],
     saas_compliance_items: [
       { id: "i1", title: "BOP pressure test", kind: "test", expiration_date: PAST, parent_type: "unit", parent_id: "u1", company_id: CO },
-      { id: "i2", title: "H2S Clear", kind: "cert", expiration_date: PAST, parent_type: "crew", parent_id: "w1", company_id: CO },
+      { id: "i2", title: "Iron recert (UT + hydro)", kind: "test", expiration_date: PAST, parent_type: "asset", parent_id: "a1", company_id: CO },
       { id: "i3", title: "DOT sticker", kind: "inspection", expiration_date: null, parent_type: "unit", parent_id: "u1", company_id: CO },
+      ...(extra.items ?? []),
     ],
     saas_alerts_sent: alreadySent.map((id) => ({ compliance_item_id: id, company_id: CO })),
     saas_units: [{ id: "u1", yard_id: "y1", company_id: CO }],
-    saas_assets: [],
+    saas_assets: [{ id: "a1", yard_id: "y1", unit_id: "u1", status: "in_service", company_id: CO }, ...(extra.assets ?? [])],
     saas_alert_recipients: [
       { name: "Caden", email: "caden@example.com", phone: null, channels: ["email"], yard_ids: null, company_id: CO },
       { name: "Ryan", email: "ryan@example.com", phone: null, channels: ["email"], yard_ids: null, company_id: CO },
@@ -120,7 +121,7 @@ describe("alert sweep — one payload per recipient, one ledger row per item", (
     for (const call of vi.mocked(sendEmail).mock.calls) {
       const body = String(call[2]);
       expect(body).toContain("BOP pressure test");
-      expect(body).toContain("H2S Clear");
+      expect(body).toContain("Iron recert (UT + hydro)");
       expect(body).toContain("DOT sticker");
     }
     expect(vi.mocked(sendSms)).not.toHaveBeenCalled(); // smsConfigured() false → never attempted
@@ -148,6 +149,19 @@ describe("alert sweep — one payload per recipient, one ledger row per item", (
     expect(deletes[0].filters).toMatchObject({ company_id: CO, compliance_item_id: ["i1", "i2"] });
     // never a blanket wipe, never another table
     expect(writes.some((w) => w.kind === "delete" && w.table !== "saas_alerts_sent")).toBe(false);
+  });
+
+  it("equipment only: crew cards and retired iron never alert", async () => {
+    const { client } = fakeSupabase(sweepTables(["i1", "i2", "i3"], {
+      items: [
+        { id: "i4", title: "H2S Clear", kind: "cert", expiration_date: PAST, parent_type: "crew", parent_id: "w1", company_id: CO },
+        { id: "i5", title: "Iron recert (UT + hydro)", kind: "test", expiration_date: PAST, parent_type: "asset", parent_id: "a9", company_id: CO },
+      ],
+      assets: [{ id: "a9", yard_id: "y1", unit_id: null, status: "retired", company_id: CO }],
+    }));
+    const res = await sweepAlerts(client as unknown as SupabaseClient);
+    expect(res.items_due).toBe(0);
+    expect(vi.mocked(sendEmail)).not.toHaveBeenCalled();
   });
 
   it("second sweep over the same state sends NOTHING — the ledger dedupes", async () => {

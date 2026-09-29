@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComplianceStatus } from "./db";
-import { computeReadiness, worstStatus, localToday, type UnitState } from "./status";
+import { computeReadiness, localToday, type UnitState } from "./status";
 import { judgeUnit, pendingCovers, FAILING_GEAR, type JItem } from "./judge";
 
 /**
@@ -13,8 +13,7 @@ import { judgeUnit, pendingCovers, FAILING_GEAR, type JItem } from "./judge";
  * it never gates), so the tile and the readiness check agree by design:
  * both fail a unit only on real record problems. A unit is:
  *   not_ready — the rules in lib/saas/judge.ts: an expired or no-date cert
- *               on the unit, its gear, or its crew; gear flagged missing or
- *               red-tagged; an assigned hand with no cards.
+ *               on the unit or its iron; iron flagged missing or red-tagged.
  *               An item we can't prove is an item that fails.
  *   due_soon  — anything expiring inside its reminder window, or a cert on the way
  *   ready     — everything current
@@ -28,7 +27,7 @@ export interface UnitTile {
   yardName: string;
   state: UnitState;
   why: string;                        // one-line reason ("DOT expires in 8d")
-  crewWorst: ComplianceStatus | null; // assigned-crew mini indicator
+  crewWorst: ComplianceStatus | null; // always null now: crew cards aren't tracked
 }
 
 export interface CompanyReadiness {
@@ -39,18 +38,20 @@ export interface CompanyReadiness {
 }
 
 export async function getCompanyReadiness(db: SupabaseClient, companyId: string): Promise<CompanyReadiness> {
-  const [{ data: itemData }, { data: unitData }, { data: assetData }, { data: ucData }, { data: crewData }] = await Promise.all([
+  // Equipment only: crew cards aren't part of the call, and retired iron
+  // (scrapped or sold) is kept for the record but out of every count.
+  const [{ data: itemData }, { data: unitData }, { data: assetData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id").eq("company_id", companyId),
+      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id")
+      .eq("company_id", companyId).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
-    db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId),
-    db.from("saas_unit_crew").select("unit_id, crew_member_id").eq("company_id", companyId),
-    db.from("saas_crew_members").select("id, name").eq("company_id", companyId),
+    db.from("saas_assets").select("id, name, unit_id, status").eq("company_id", companyId).neq("status", "retired"),
   ]);
 
   type Item = JItem & { status: ComplianceStatus; parent_type: string; parent_id: string };
   const today = localToday();
-  const items = (itemData ?? []) as Item[];
+  const liveAssetIds = new Set(((assetData ?? []) as { id: string }[]).map((a) => a.id));
+  const items = ((itemData ?? []) as Item[]).filter((i) => i.parent_type !== "asset" || liveAssetIds.has(i.parent_id));
   // "Cert on the way" counts like due-soon everywhere: not failing, not
   // current. Once its window closes the view's own status takes over again.
   const effective = (i: Item): ComplianceStatus =>
@@ -61,8 +62,6 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   type UnitRow = { id: string; name: string; type: string; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const unitRows = (unitData ?? []) as UnitRow[];
   const assets = (assetData ?? []) as { id: string; name: string; unit_id: string | null; status: string }[];
-  const unitCrew = (ucData ?? []) as { unit_id: string; crew_member_id: string }[];
-  const crewNames = new Map(((crewData ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
   const group = <T,>(rows: T[], key: (r: T) => string | null) => {
     const m = new Map<string, T[]>();
@@ -71,24 +70,21 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   };
   const assetsByUnit = group(assets, (a) => a.unit_id);
   const itemsByParent = group(items, (i) => i.parent_id);
-  const crewByUnit = group(unitCrew, (uc) => uc.unit_id);
 
   const units: UnitTile[] = unitRows.map((u) => {
     const yardName = (Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name) ?? "";
     const unitAssets = assetsByUnit.get(u.id) ?? [];
-    const crewIds = (crewByUnit.get(u.id) ?? []).map((uc) => uc.crew_member_id);
-    const crewItems = crewIds.flatMap((cid) => itemsByParent.get(cid) ?? []);
     const j = judgeUnit({
       unitItems: itemsByParent.get(u.id) ?? [],
       assets: unitAssets,
       assetItems: unitAssets.flatMap((a) => itemsByParent.get(a.id) ?? []),
-      crew: crewIds.map((id) => ({ id, name: crewNames.get(id) ?? "A hand" })),
-      crewItems,
+      crew: [],
+      crewItems: [],
     }, today, today);
     const state: UnitState = j.verdict;
     return {
       id: u.id, yardId: u.yard_id, name: u.name, type: u.type, yardName, state, why: j.why,
-      crewWorst: worstStatus(crewItems.map(effective)),
+      crewWorst: null,
     };
   });
 
@@ -100,8 +96,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
     for (const i of items) if (pred(i)) { total++; if (effective(i) === "valid") valid++; }
     return { valid, total };
   };
-  const gear = split((i) => i.parent_type !== "crew");
-  const crew = split((i) => i.parent_type === "crew");
+  const gear = split(() => true);
 
   // Score = LIVE records only. Recorded checks don't feed it: a past check
   // can't make today's paperwork current. Hard cap when anything is
@@ -112,7 +107,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   const hardFail = counts.expired > 0 || counts.none > 0 || anyGearDown;
   const readiness = computeReadiness({
     certCurrency: gear.total > 0 ? gear.valid / gear.total : null,
-    crewCurrency: crew.total > 0 ? crew.valid / crew.total : null,
+    crewCurrency: null,
     hardFail,
   });
 

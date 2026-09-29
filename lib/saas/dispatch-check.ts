@@ -117,36 +117,28 @@ export async function computeDispatchCheck(
   const tpls = (templates ?? []) as TplLite[];
   const template = resolveLoadoutTemplate(tpls, companyId, unitId, unit.type);
 
-  const [{ data: tplItems }, { data: assetData }, { data: ucData }] = await Promise.all([
+  // Equipment only: the truck's own paper and the iron on it. Retired iron
+  // (scrapped or sold) isn't on the truck in any way that counts.
+  const [{ data: tplItems }, { data: assetData }] = await Promise.all([
     template
       ? db.from("saas_loadout_items").select("id, label, required, sort").eq("template_id", template.id).order("sort")
       : Promise.resolve({ data: [] }),
-    db.from("saas_assets").select("id, name, status").eq("unit_id", unitId).eq("company_id", companyId),
-    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId).eq("company_id", companyId),
+    db.from("saas_assets").select("id, name, status").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
   ]);
   const loadout = (tplItems ?? []) as { id: string; label: string; required: boolean; sort: number }[];
   const assets = (assetData ?? []) as { id: string; name: string; status: string }[];
-  const crewIds = ((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id);
 
-  // Certs: unit + its assets + assigned crew
+  // Certs: the unit + its iron
   const assetIds = assets.map((a) => a.id);
   const COLS = "id, title, expiration_date, pending_until, reminder_days, parent_id";
-  const [{ data: unitCerts }, { data: assetCerts }, { data: crewCerts }, { data: crewNames }] = await Promise.all([
+  const [{ data: unitCerts }, { data: assetCerts }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select(COLS).eq("company_id", companyId).eq("parent_type", "unit").eq("parent_id", unitId),
     assetIds.length
       ? db.from("saas_compliance_items_with_status")
           .select(COLS).eq("company_id", companyId).eq("parent_type", "asset").in("parent_id", assetIds)
       : Promise.resolve({ data: [] }),
-    crewIds.length
-      ? db.from("saas_compliance_items_with_status")
-          .select(COLS).eq("company_id", companyId).eq("parent_type", "crew").in("parent_id", crewIds)
-      : Promise.resolve({ data: [] }),
-    crewIds.length
-      ? db.from("saas_crew_members").select("id, name").eq("company_id", companyId).in("id", crewIds)
-      : Promise.resolve({ data: [] }),
   ]);
-  const crewName = new Map(((crewNames ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
 
   const lines: CheckLine[] = [];
   const warnings: string[] = [];
@@ -176,8 +168,8 @@ export async function computeDispatchCheck(
     unitItems: (unitCerts ?? []) as JItem[],
     assets,
     assetItems: (assetCerts ?? []) as JItem[],
-    crew: crewIds.map((id) => ({ id, name: crewName.get(id) ?? "assigned hand" })),
-    crewItems: (crewCerts ?? []) as JItem[],
+    crew: [],
+    crewItems: [],
   }, jobDate, today, { soonDays: 21 });
 
   const failures: string[] = [];
@@ -205,7 +197,7 @@ export async function computeDispatchCheck(
   }
 
   // NO verdict on empty config: "configured" means the SHOP put data in
-  // (certs or assigned crew), not merely that a seed template exists. A bare
+  // (certs on the truck or its iron), not merely that a seed template exists. A bare
   // unit used to read NOT ready and log miss_caught, inflating the counters
   // with value SYNNR never delivered.
   const verdict: DispatchComputation["verdict"] =
@@ -215,9 +207,6 @@ export async function computeDispatchCheck(
   // Anything this check skipped gets said out loud, on the app page AND on
   // the public proof link.
   const notChecked: string[] = [];
-  if (verdict !== "not_setup" && crewIds.length === 0) {
-    notChecked.push("No crew is assigned to this unit, so crew cards weren't part of this check. Assign crew so their cards get checked.");
-  }
   warnings.push(...notChecked);
 
   return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked };

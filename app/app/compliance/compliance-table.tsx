@@ -29,9 +29,9 @@ const STATUS_FILTERS: { key: string; label: string; match: (s: ComplianceStatus)
   { key: "valid", label: "Valid", match: (s) => s === "valid" },
 ];
 const KIND_FILTERS = [
-  { key: "all", label: "Gear + crew" },
-  { key: "gear", label: "Gear" },
-  { key: "crew", label: "Crew" },
+  { key: "all", label: "Iron + trucks" },
+  { key: "iron", label: "Iron" },
+  { key: "trucks", label: "Truck paper" },
 ];
 const RANK: Record<ComplianceStatus, number> = { expired: 0, none: 1, expiring: 2, valid: 3 };
 
@@ -39,7 +39,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
   const [status, setStatus] = useState("all");
   const [kind, setKind] = useState("all");
   const [customer, setCustomer] = useState("all");
-  const [sort, setSort] = useState<"severity" | "soonest" | "title">("severity");
+  const [sort, setSort] = useState<"severity" | "soonest" | "title">("soonest");
   const customerNames = useMemo(
     () => [...new Set(items.flatMap((i) => i.customers))].sort(),
     [items],
@@ -48,8 +48,8 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
   const filtered = useMemo(() => {
     const sf = STATUS_FILTERS.find((f) => f.key === status)!;
     let out = items.filter((i) => sf.match(i.status));
-    if (kind === "gear") out = out.filter((i) => i.parent_type !== "crew");
-    if (kind === "crew") out = out.filter((i) => i.parent_type === "crew");
+    if (kind === "iron") out = out.filter((i) => i.parent_type === "asset");
+    if (kind === "trucks") out = out.filter((i) => i.parent_type === "unit");
     // Customer relevance: tagged to the selected customer, PLUS untagged
     // items (untagged = required on every job — the safe default).
     if (customer !== "all") out = out.filter((i) => i.customers.length === 0 || i.customers.includes(customer));

@@ -40,50 +40,37 @@ export default async function ReviewPage() {
   const db = await saasDb();
   const since = new Date(Date.now() - 30 * 86400e3).toISOString();
 
-  const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: crewData }, { data: ucData }, { data: checkData }] = await Promise.all([
+  const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: checkData }] = await Promise.all([
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).eq("status", "waiting").order("created_at", { ascending: true }),
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).neq("status", "waiting").gte("created_at", since).order("created_at", { ascending: false }).limit(80),
-    db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, updated_at").eq("company_id", company.id).eq("renewed_without_proof", true).order("updated_at", { ascending: false }).limit(40),
+    db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, updated_at").eq("company_id", company.id).neq("parent_type", "crew").eq("renewed_without_proof", true).order("updated_at", { ascending: false }).limit(40),
     db.from("saas_compliance_items").select("id, title, parent_type, parent_id").eq("company_id", company.id),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_assets").select("id, name, unit_id").eq("company_id", company.id),
-    db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
-    db.from("saas_unit_crew").select("unit_id, crew_member_id").eq("company_id", company.id),
     db.from("saas_dispatch_checks").select("id, unit_id, started_at").eq("company_id", company.id).gte("started_at", since),
   ]);
   const waiting = (waitingData ?? []) as Upload[];
-  // Photos hands sent through their update link. They sit until a manager
-  // applies one to the right card on the hand's page.
-  const { data: sentData } = await db.from("saas_doc_requests")
-    .select("id, crew_member_id, submitted_at, submitted_kind, submitted_expiration, file_path")
-    .eq("company_id", company.id).eq("status", "submitted").order("submitted_at", { ascending: true });
-  const sent = (sentData ?? []) as { id: string; crew_member_id: string; submitted_at: string | null; submitted_kind: string | null; submitted_expiration: string | null; file_path: string | null }[];
   const recent = (recentData ?? []) as Upload[];
   const typed = (typedData ?? []) as { id: string; title: string; parent_type: string; parent_id: string; expiration_date: string | null; updated_at: string }[];
 
   const items = new Map(((itemData ?? []) as { id: string; title: string; parent_type: string; parent_id: string }[]).map((i) => [i.id, i]));
   const units = new Map(((unitData ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
   const assets = new Map(((assetData ?? []) as { id: string; name: string; unit_id: string | null }[]).map((a) => [a.id, a]));
-  const crew = new Map(((crewData ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
-  const unitsOfCrew = new Map<string, string[]>();
-  for (const uc of (ucData ?? []) as { unit_id: string; crew_member_id: string }[]) {
-    unitsOfCrew.set(uc.crew_member_id, [...(unitsOfCrew.get(uc.crew_member_id) ?? []), uc.unit_id]);
-  }
 
   const parentOf = (i: { parent_type: string; parent_id: string }) =>
     i.parent_type === "unit" ? { name: units.get(i.parent_id) ?? "truck", href: `/app/units/${i.parent_id}` }
     : i.parent_type === "asset" ? (() => {
         const a = assets.get(i.parent_id);
         const truck = a?.unit_id ? units.get(a.unit_id) : null;
-        return { name: `${a?.name ?? "gear"}${truck ? ` on ${truck}` : ""}`, href: `/app/assets/${i.parent_id}` };
+        return { name: `${a?.name ?? "iron"}${truck ? ` on ${truck}` : ""}`, href: `/app/assets/${i.parent_id}` };
       })()
-    : { name: crew.get(i.parent_id) ?? "hand", href: `/app/crew/${i.parent_id}` };
+    : { name: "crew card", href: "/app" };
   const trucksFor = (itemId: string): string[] => {
     const i = items.get(itemId);
     if (!i) return [];
     if (i.parent_type === "unit") return [i.parent_id];
     if (i.parent_type === "asset") { const u = assets.get(i.parent_id)?.unit_id; return u ? [u] : []; }
-    return unitsOfCrew.get(i.parent_id) ?? [];
+    return [];
   };
 
   // Cleared right before a truck rolled: a readiness check on that truck
@@ -99,8 +86,7 @@ export default async function ReviewPage() {
     return `Cleared ${hrs} hour${hrs === 1 ? "" : "s"} before a readiness check on ${units.get(hit.unit_id) ?? "the truck"}.`;
   };
 
-  const shots = [...waiting, ...recent].map((u) => ({ id: u.id, path: u.storage_path }))
-    .concat(sent.filter((r) => r.file_path).map((r) => ({ id: r.id, path: r.file_path as string })));
+  const shots = [...waiting, ...recent].map((u) => ({ id: u.id, path: u.storage_path }));
   const photo = new Map<string, string>();
   if (shots.length) {
     const { data: signed } = await db.storage.from("proofs").createSignedUrls(shots.map((x) => x.path), 3600);
@@ -123,28 +109,8 @@ export default async function ReviewPage() {
       <PageHeader title="Review uploads" description="Uploads the software couldn't confirm wait here. The item stays red until you say yes." />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-ink-dim">Waiting on you{waiting.length + sent.length ? ` (${waiting.length + sent.length})` : ""}</h2>
-        {sent.map((r) => (
-          <Card key={r.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
-            {photo.get(r.id) ? (
-              <a href={photo.get(r.id)} target="_blank" rel="noreferrer" className="shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.get(r.id)} alt="Photo a hand sent" className="h-24 w-full rounded-lg border border-line-2 bg-coal object-contain sm:w-36" />
-              </a>
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold">{crew.get(r.crew_member_id) ?? "A hand"} sent a {r.submitted_kind ?? "card"} photo</div>
-              <div className="text-sm text-ink-dim">
-                Through their update link · {r.submitted_at ? fmtWhen(r.submitted_at) : ""}
-                {r.submitted_expiration ? ` · says it expires ${fmtDate(r.submitted_expiration)}` : ""}
-              </div>
-            </div>
-            <Link href={`/app/crew/${r.crew_member_id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-bone px-4 text-sm font-semibold text-white hover:bg-bone-soft">
-              Check it and apply it
-            </Link>
-          </Card>
-        ))}
-        {waiting.length === 0 && sent.length === 0 ? (
+        <h2 className="text-sm font-semibold text-ink-dim">Waiting on you{waiting.length ? ` (${waiting.length})` : ""}</h2>
+        {waiting.length === 0 ? (
           <Card className="p-5 text-sm text-ink-dim">Nothing waiting. When a photo doesn&apos;t match what was typed, or someone sends retest paper, it shows up here.</Card>
         ) : waiting.map((u) => {
           const l = label(u.item_id);

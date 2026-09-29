@@ -76,7 +76,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
 
   // Assets in scope
-  let assetQ = admin.from("saas_assets").select("id, name, category, status, unit_id").eq("company_id", proof.company_id);
+  let assetQ = admin.from("saas_assets").select("id, name, category, identifier, status, unit_id").eq("company_id", proof.company_id).neq("status", "retired");
   if (proof.scope === "yard" && proof.yard_id) {
     const inYard = unitFilter ?? [];
     assetQ = inYard.length
@@ -85,33 +85,19 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
   if (proof.scope === "unit" && proof.unit_id) assetQ = assetQ.eq("unit_id", proof.unit_id);
   const { data: assetData } = await assetQ.order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; unit_id: string | null }[];
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; identifier: string | null; status: string; unit_id: string | null }[];
   const assetIds = new Set(assets.map((a) => a.id));
-
-  // Crew in scope: the hands assigned to the trucks in scope. Their cards are
-  // part of whether a truck can roll, so the proof shows them.
-  let crewInScope: Set<string> | null = null; // null = every hand (company scope)
-  if (unitFilter) {
-    const { data: ucData } = unitFilter.length
-      ? await admin.from("saas_unit_crew").select("crew_member_id").eq("company_id", proof.company_id).in("unit_id", unitFilter)
-      : { data: [] };
-    crewInScope = new Set(((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
-  }
 
   // Compliance items in scope
   const { data: itemData } = await admin
     .from("saas_compliance_items_with_status")
     .select("id, title, kind, expiration_date, pending_until, reminder_days, parent_type, parent_id, last_upload_id")
-    .eq("company_id", proof.company_id);
+    .eq("company_id", proof.company_id).neq("parent_type", "crew");
   type Item = { id: string; title: string; kind: string; expiration_date: string | null; pending_until: string | null; reminder_days: number | null; parent_type: string; parent_id: string; last_upload_id: string | null };
-  let items = (itemData ?? []) as Item[];
+  let items = ((itemData ?? []) as Item[]).filter((i) => i.parent_type !== "asset" || assetIds.has(i.parent_id));
   if (unitFilter) {
     const uf = new Set(unitFilter);
-    items = items.filter((i) =>
-      (i.parent_type === "unit" && uf.has(i.parent_id)) ||
-      (i.parent_type === "asset" && assetIds.has(i.parent_id)) ||
-      (i.parent_type === "crew" && crewInScope!.has(i.parent_id)),
-    );
+    items = items.filter((i) => (i.parent_type === "unit" && uf.has(i.parent_id)) || i.parent_type === "asset");
   }
   const today = localToday();
   const judged = new Map(items.map((i) => [i.id, judgeItem(i, today, today)]));
@@ -136,12 +122,9 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   const { data: unitNamesData } = await admin.from("saas_units").select("id, name").eq("company_id", proof.company_id);
   const unitNames = new Map(((unitNamesData ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
   const assetNames = new Map(assets.map((a) => [a.id, a.name]));
-  const { data: crewNamesData } = await admin.from("saas_crew_members").select("id, name").eq("company_id", proof.company_id);
-  const crewNames = new Map(((crewNamesData ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
   const onLabel = (i: Item) =>
-    i.parent_type === "unit" ? unitNames.get(i.parent_id) ?? "unit"
-    : i.parent_type === "crew" ? `${crewNames.get(i.parent_id) ?? "crew"} (crew)`
-    : assetNames.get(i.parent_id) ?? "asset";
+    i.parent_type === "unit" ? unitNames.get(i.parent_id) ?? "truck"
+    : assetNames.get(i.parent_id) ?? "iron";
 
   // The verdict comes from the same rules as the app (lib/saas/judge.ts).
   const gearDown = assets.filter((a) => FAILING_GEAR.has(a.status));
@@ -224,8 +207,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
             <p className="mt-2 text-sm text-red-300">
               {[
                 failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : "",
-                gearDown.length > 0 ? `${gearDown.length} piece${gearDown.length === 1 ? "" : "s"} of gear missing or red-tagged` : "",
-                failingCount === 0 && gearDown.length === 0 && blockedUnits > 0 ? "A hand on this crew has no cards on file" : "",
+                gearDown.length > 0 ? `${gearDown.length} piece${gearDown.length === 1 ? "" : "s"} of iron missing or red-tagged` : "",
               ].filter(Boolean).join(" · ")}
             </p>
           ) : null}
@@ -318,7 +300,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  {["Asset", "Category", "Status"].map((h) => (
+                  {["Equipment", "Serial", "Status"].map((h) => (
                     <th key={h} className="whitespace-nowrap border-b border-line px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-ink-faint">{h}</th>
                   ))}
                 </tr>
@@ -327,7 +309,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                 {assets.map((a) => (
                   <tr key={a.id} className="last:[&>td]:border-0">
                     <td className="border-b border-line/60 px-4 py-3 font-medium">{a.name}</td>
-                    <td className="border-b border-line/60 px-4 py-3 capitalize text-ink-dim">{a.category.replace(/_/g, " ")}</td>
+                    <td className="border-b border-line/60 px-4 py-3 text-ink-dim">{a.identifier ?? "None"}</td>
                     <td className="border-b border-line/60 px-4 py-3">
                       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${a.status === "in_service" ? CHIP.valid : CHIP.expired}`}>
                         {a.status === "out_of_service" ? "red-tagged" : a.status.replace(/_/g, " ")}
@@ -341,7 +323,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         )}
 
         <p className="text-center text-xs text-ink-faint">
-          Live from SYNNR, cert tracking for oilfield service yards · synnr.io
+          Live from SYNNR, equipment test tracking for oilfield service yards · synnr.io
         </p>
       </div>
     </div>

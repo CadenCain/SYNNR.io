@@ -33,6 +33,10 @@ class QueryBuilder {
     else this.rows = this.rows.filter((r) => r[col] === val);
     return this;
   }
+  neq(col: string, val: unknown) {
+    if (!this.write) this.rows = this.rows.filter((r) => r[col] !== val);
+    return this;
+  }
   in(col: string, vals: unknown[]) {
     if (this.write) this.write.filters[col] = vals;
     else this.rows = this.rows.filter((r) => (vals as unknown[]).includes(r[col]));

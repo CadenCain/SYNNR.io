@@ -20,6 +20,7 @@ export const UNIT_TYPES: { value: string; label: string }[] = [
 ];
 
 export const ASSET_CATEGORIES: { value: string; label: string }[] = [
+  { value: "flow_iron", label: "Flow iron" },
   { value: "pressure_control", label: "Pressure control" },
   { value: "lifting", label: "Lifting & rigging" },
   { value: "tool", label: "Tools & equipment" },

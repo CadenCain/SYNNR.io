@@ -29,13 +29,12 @@ interface Item {
 export default async function CompliancePage() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data }, { data: unitData }, { data: assetData }, { data: crewData }, { data: settingsData }, { data: sentData }, { data: recipData }, { data: failedData }] = await Promise.all([
+  const [{ data }, { data: unitData }, { data: assetData }, { data: settingsData }, { data: sentData }, { data: recipData }, { data: failedData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select("id, title, kind, expiration_date, status, parent_type, parent_id")
-      .eq("company_id", company.id),
+      .eq("company_id", company.id).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
-    db.from("saas_assets").select("id, name").eq("company_id", company.id),
-    db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
+    db.from("saas_assets").select("id, name, status").eq("company_id", company.id),
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_alerts_sent")
       .select("sent_at, channel, recipient, label, saas_compliance_items(title)")
@@ -47,7 +46,9 @@ export default async function CompliancePage() {
       .gte("created_at", new Date(Date.now() - 7 * 86400e3).toISOString())
       .order("created_at", { ascending: false }).limit(5),
   ]);
-  const items = (data ?? []) as Item[];
+  // Retired iron is kept for the record but isn't due for anything.
+  const retired = new Set(((assetData ?? []) as { id: string; status: string }[]).filter((a) => a.status === "retired").map((a) => a.id));
+  const items = ((data ?? []) as Item[]).filter((i) => !(i.parent_type === "asset" && retired.has(i.parent_id)));
   const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
   const name = (rows: unknown, id: string) =>
     (((rows ?? []) as { id: string; name: string }[]).find((r) => r.id === id)?.name) ?? "";
@@ -60,16 +61,13 @@ export default async function CompliancePage() {
     expiration_date: i.expiration_date,
     status: i.status,
     parent_type: i.parent_type,
-    parentLabel:
-      i.parent_type === "unit" ? name(unitData, i.parent_id)
-      : i.parent_type === "crew" ? `${name(crewData, i.parent_id)} (crew)`
-      : name(assetData, i.parent_id),
-    href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : i.parent_type === "crew" ? `/app/crew/${i.parent_id}` : `/app/assets/${i.parent_id}`,
+    parentLabel: i.parent_type === "unit" ? name(unitData, i.parent_id) : name(assetData, i.parent_id),
+    href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : `/app/assets/${i.parent_id}`,
     customers: itemCustomers.get(i.id) ?? [],
   }));
 
-  const gearCount = items.filter((i) => i.parent_type !== "crew").length;
-  const crewCount = items.filter((i) => i.parent_type === "crew").length;
+  const ironCount = items.filter((i) => i.parent_type === "asset").length;
+  const truckCount = items.filter((i) => i.parent_type === "unit").length;
   const failing = items.filter((i) => i.status === "expired" || i.status === "none").length;
 
   // Alert plumbing state + the sent ledger (moved here from /app/alerts).
@@ -93,10 +91,30 @@ export default async function CompliancePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Compliance & Logs"
-        description="Everything with an expiration date, and every alert that went out about it."
+        title="Tests due"
+        description="Every test, cert, and inspection on your iron and trucks, soonest first. Then every alert that went out about them."
         actions={<Link href="/app/settings/notifications" className={buttonClass("outline", "sm")}><Settings2 className="h-4 w-4" /> Alert settings</Link>}
       />
+
+      {items.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{ironCount} on iron</span>
+          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{truckCount} truck paper</span>
+          <span className={`rounded-sm border px-2.5 py-1 ${failing > 0 ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>
+            {failing > 0 ? `${failing} failing (expired or missing date)` : "nothing failing"}
+          </span>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <Card className="px-6 py-12 text-center text-sm text-ink-dim">
+          Nothing with a date yet. Open a piece of{" "}
+          <Link href="/app" className="text-ink underline underline-offset-2 hover:text-bone">equipment</Link> or a{" "}
+          <Link href="/app/trucks" className="text-ink underline underline-offset-2 hover:text-bone">truck</Link> and add its test or cert.
+        </Card>
+      ) : (
+        <ComplianceTable items={rows} />
+      )}
 
       <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 p-5">
         <div className="flex items-center gap-3">
@@ -122,26 +140,6 @@ export default async function CompliancePage() {
             ))}
           </ul>
         </Card>
-      )}
-
-      {items.length > 0 && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{gearCount} gear cert{gearCount === 1 ? "" : "s"} &amp; inspections</span>
-          <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{crewCount} crew card{crewCount === 1 ? "" : "s"}</span>
-          <span className={`rounded-sm border px-2.5 py-1 ${failing > 0 ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>
-            {failing > 0 ? `${failing} failing (expired or missing date)` : "nothing failing"}
-          </span>
-        </div>
-      )}
-
-      {items.length === 0 ? (
-        <Card className="px-6 py-12 text-center text-sm text-ink-dim">
-          No compliance items yet. Add certs and inspections from a{" "}
-          <Link href="/app/yards" className="text-ink underline underline-offset-2 hover:text-bone">unit or asset</Link>, or from a{" "}
-          <Link href="/app/crew" className="text-ink underline underline-offset-2 hover:text-bone">crew member</Link>.
-        </Card>
-      ) : (
-        <ComplianceTable items={rows} />
       )}
 
       {/* The receipt layer: when / what / to / channel, scrolling under the

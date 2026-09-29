@@ -61,6 +61,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       .from("saas_compliance_items")
       .select("id, title, kind, expiration_date, parent_type, parent_id")
       .eq("company_id", company.id)
+      .neq("parent_type", "crew") // equipment only: crew cards aren't tracked
       .or(`expiration_date.lte.${horizonIso},expiration_date.is.null`);
     if (itemsErr) { res.errors.push(`items query ${company.name}: ${itemsErr.message}`); continue; }
     let due: DueItem[] = ((itemsData ?? []) as Omit<DueItem, "yard_id">[]).map((i) => ({ ...i, yard_id: null }));
@@ -75,15 +76,19 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     const sentIds = new Set(((sentData ?? []) as { compliance_item_id: string }[]).map((r) => r.compliance_item_id));
     due = due.filter((i) => isAlertDue(i.expiration_date, todayIso, leadDays, sentIds.has(i.id)));
     if (due.length === 0) continue;
-    res.items_due += due.length;
 
     // Resolve each item's yard for recipient scoping (crew cards → all yards).
     const [{ data: unitsData }, { data: assetsData }] = await Promise.all([
       admin.from("saas_units").select("id, yard_id").eq("company_id", company.id),
-      admin.from("saas_assets").select("id, yard_id, unit_id").eq("company_id", company.id),
+      admin.from("saas_assets").select("id, yard_id, unit_id, status").eq("company_id", company.id),
     ]);
     const unitYard = new Map(((unitsData ?? []) as { id: string; yard_id: string }[]).map((u) => [u.id, u.yard_id]));
-    const assetRows = (assetsData ?? []) as { id: string; yard_id: string | null; unit_id: string | null }[];
+    const assetRows = (assetsData ?? []) as { id: string; yard_id: string | null; unit_id: string | null; status: string }[];
+    // Retired iron (scrapped or sold) never alerts.
+    const retiredIds = new Set(assetRows.filter((a) => a.status === "retired").map((a) => a.id));
+    due = due.filter((i) => !(i.parent_type === "asset" && retiredIds.has(i.parent_id)));
+    if (due.length === 0) continue;
+    res.items_due += due.length;
     const assetYard = new Map(assetRows.map((a) => [a.id, a.yard_id ?? (a.unit_id ? unitYard.get(a.unit_id) ?? null : null)]));
     for (const i of due) {
       i.yard_id = i.parent_type === "unit" ? unitYard.get(i.parent_id) ?? null

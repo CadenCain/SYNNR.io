@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, HardHat, X } from "lucide-react";
+import { Plus, Box, Settings2, Trash2, ChevronRight, Truck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { seenAge, fmtWhen, fmtDate } from "@/lib/saas/format";
-import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
+import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
@@ -24,7 +24,7 @@ import { AddDisclosure } from "@/components/ui/disclosure";
 import PhotoForm from "@/components/photo-form";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { addAsset } from "./actions";
-import { updateUnit, deleteUnit, assignCrewToUnit, unassignCrewFromUnit } from "@/app/app/_actions";
+import { updateUnit, deleteUnit } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { worstStatus } from "@/lib/saas/status";
@@ -100,24 +100,6 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     return null;
   };
 
-  // Crew: standing assignments + everyone else, with worst-card status chips.
-  const [{ data: ucData }, { data: crewListData }, { data: crewCertData }] = await Promise.all([
-    db.from("saas_unit_crew").select("crew_member_id").eq("unit_id", unitId),
-    db.from("saas_crew_members").select("id, name, role").eq("company_id", company.id).eq("status", "active").order("name"),
-    db.from("saas_compliance_items_with_status").select("parent_id, status").eq("company_id", company.id).eq("parent_type", "crew"),
-  ]);
-  const assignedIds = new Set(((ucData ?? []) as { crew_member_id: string }[]).map((r) => r.crew_member_id));
-  const certsByCrew = new Map<string, ComplianceStatus[]>();
-  for (const c of (crewCertData ?? []) as { parent_id: string; status: ComplianceStatus }[]) {
-    certsByCrew.set(c.parent_id, [...(certsByCrew.get(c.parent_id) ?? []), c.status]);
-  }
-  const worstByCrew = new Map<string, ComplianceStatus>();
-  for (const [id, list] of certsByCrew) { const w = worstStatus(list); if (w) worstByCrew.set(id, w); }
-  const allCrew = ((crewListData ?? []) as { id: string; name: string; role: string | null }[])
-    .map((c) => ({ ...c, worst: worstByCrew.get(c.id) ?? null }));
-  const assignedCrew = allCrew.filter((c) => assignedIds.has(c.id));
-  const unassignedCrew = allCrew.filter((c) => !assignedIds.has(c.id));
-
   // Dispatch history — immutable records, newest first.
   const { data: historyData } = await db
     .from("saas_dispatch_checks")
@@ -133,7 +115,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const tile = rd.units.find((t) => t.id === unitId) ?? null;
   // An upload for one of this truck's certs may already be sitting with a
   // manager; say so on the red banner so nobody chases the same paper twice.
-  const scopeIds = [u.id, ...assets.map((a) => a.id), ...assignedIds];
+  const scopeIds = [u.id, ...assets.map((a) => a.id)];
   const { data: waitData } = await db.from("saas_compliance_items").select("title")
     .eq("company_id", company.id).in("parent_id", scopeIds).not("waiting_upload_id", "is", null);
   const waitingTitles = [...new Set(((waitData ?? []) as { title: string }[]).map((r) => r.title))];
@@ -146,15 +128,11 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     : (() => {
         const a = assets.find((x) => bad(worstByAsset.get(x.id)));
         if (a) return `/app/assets/${a.id}`;
-        const c = assignedCrew.find((x) => bad(x.worst));
-        if (c) return `/app/crew/${c.id}`;
         return "#book";
       })();
   const dueHref = (() => {
     const a = assets.find((x) => worstByAsset.get(x.id) === "expiring");
     if (a) return `/app/assets/${a.id}`;
-    const c = assignedCrew.find((x) => x.worst === "expiring");
-    if (c && !items.some((i) => i.status === "expiring")) return `/app/crew/${c.id}`;
     return "#book";
   })();
 
@@ -325,58 +303,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         </section>
       )}
 
-      {/* Crew on this unit — standing assignment; their cards decide this
-          truck's ready call and pre-select on the readiness check. Not a
-          thing for shops (buildings don't have a crew). */}
-      {(!isShop || assignedCrew.length > 0) && (
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-ink-dim">Crew on this unit</h2>
-        {assignedCrew.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {assignedCrew.map((c) => (
-              <Card key={c.id} className="flex items-center gap-3 p-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><HardHat className="h-4 w-4 text-ink-dim" /></span>
-                <Link href={`/app/crew/${c.id}`} className="min-w-0 flex-1 hover:underline">
-                  <span className="block break-words font-medium">{c.name}</span>
-                  <span className="block text-sm text-ink-dim">{c.role ?? "crew"}</span>
-                </Link>
-                {c.worst ? <StatusBadge status={c.worst} /> : <span className="text-xs text-ink-faint">no cards</span>}
-                <form action={unassignCrewFromUnit}>
-                  <input type="hidden" name="unit_id" value={u.id} />
-                  <input type="hidden" name="crew_member_id" value={c.id} />
-                  <button type="submit" title="Unassign" className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-faint hover:bg-red-500/10 hover:text-red-400">
-                    <X className="h-4 w-4" />
-                  </button>
-                </form>
-              </Card>
-            ))}
-          </div>
-        )}
-        {!isShop && unassignedCrew.length > 0 ? (
-          <AddDisclosure label={assignedCrew.length ? "Assign another hand" : "Assign a hand to this unit"} defaultOpen={assignedCrew.length === 0}>
-            <form action={assignCrewToUnit} className="flex flex-col gap-3 sm:flex-row">
-              <input type="hidden" name="unit_id" value={u.id} />
-              <select name="crew_member_id" required defaultValue="" className={`${fld} min-w-0 flex-1`}>
-                <option value="" disabled>Pick a hand…</option>
-                {unassignedCrew.map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` (${c.role})` : ""}</option>)}
-              </select>
-              <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Assign</Button>
-            </form>
-          </AddDisclosure>
-        ) : !isShop && assignedCrew.length === 0 ? (
-          <Card className="px-6 py-8 text-center text-sm text-ink-dim">
-            No crew yet. <Link href="/app/crew" className="text-bone hover:underline">Add your hands</Link> first, then assign them here.
-          </Card>
-        ) : null}
-      </section>
-      )}
-
       {/* Assets — not a thing for shops either: gear lives ON trucks; a
           shop's own equipment (crane, compressor) is tracked as CERTS in its
           book above, which is the part an inspector actually asks for. */}
       {(!isShop || assets.length > 0) && (
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-ink-dim">Assets on this unit</h2>
+        <h2 className="text-sm font-semibold text-ink-dim">Iron on this truck</h2>
         {assets.length > 0 && (
           <div className="flex flex-col gap-2">
             {assets.map((a) => (
@@ -411,7 +343,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           </div>
         )}
         {!isShop && (
-        <AddDisclosure label="Add an asset to this unit" defaultOpen={assets.length === 0}>
+        <AddDisclosure label="Add iron to this truck" defaultOpen={assets.length === 0}>
           <PhotoForm action={addAsset} className="flex flex-col gap-3">
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />

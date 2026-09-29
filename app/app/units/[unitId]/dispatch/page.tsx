@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 /**
  * Readiness check — a computed record-currency check, not a possession
  * checklist. The verdict comes straight from the live records (cert/DOT
- * currency, assigned crew cards, flagged gear); the gear list only warns.
+ * currency on the truck and its iron, flagged iron); the gear list only warns.
  * Nobody taps lines, nothing can be overridden. One button records the
  * result as an immutable check with every line and reason.
  */
@@ -42,15 +42,13 @@ export default async function DispatchPage({ params, searchParams }: { params: P
 
   const gear = comp.lines.filter((l) => l.source_type === "loadout_item" || l.source_type === "asset");
   const paper = comp.lines.filter((l) => l.source_type === "cert");
-  const crew = comp.lines.filter((l) => l.source_type === "crew_cert");
 
   // Verdict banner groups failures by kind — eight identical red bullets read
   // as noise; three labeled clusters read as a fix-list.
   const failing = (rows: typeof comp.lines) => rows.filter((l) => l.result !== "ok" && l.result !== "warn");
   const failureGroups = [
-    { label: "Gear", rows: failing(gear) },
+    { label: "Iron", rows: failing(gear) },
     { label: "Paper", rows: failing(paper) },
-    { label: "Crew", rows: failing(crew) },
   ].filter((g) => g.rows.length > 0);
 
   return (
@@ -58,7 +56,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
         title={`Readiness check: ${comp.unitName}`}
-        description="Checks this truck's certs, its crew's cards, and its gear against the job date. There's no override."
+        description="Checks this truck's own paper and every piece of iron on it against the job date. There's no override."
       />
 
       <Card className="p-4">
@@ -71,7 +69,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <TriangleAlert className="h-7 w-7 text-ink-faint" />
           <p className="font-semibold">Nothing set up to check.</p>
           <p className="mx-auto max-w-md text-sm text-ink-dim">
-            This unit has no gear list, no assets, no certs, and no assigned crew. A check with nothing
+            This truck has no gear list, no iron, and no certs. A check with nothing
             to verify can&apos;t pass. Set it up first.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -104,12 +102,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
               {/* The verdict names the failures — these take you straight to
                   where each kind gets fixed, instead of leaving you to hunt. */}
               <div className="flex flex-wrap gap-2 border-t border-red-500/20 pt-3">
-                {failureGroups.some((g) => g.label !== "Crew") && (
-                  <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-sm bg-bone px-4 text-sm font-semibold text-coal">Fix gear &amp; renew paper</Link>
-                )}
-                {failureGroups.some((g) => g.label === "Crew") && (
-                  <Link href="/app/crew" className="inline-flex h-10 items-center rounded-sm border border-line-2 px-4 text-sm text-ink">Fix crew cards</Link>
-                )}
+                <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg bg-bone px-4 text-sm font-semibold text-white">Fix the iron &amp; renew paper</Link>
               </div>
             </div>
           )}
@@ -122,9 +115,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       )}
 
       {/* Lines */}
-      {[{ title: "Gear in the asset book", rows: gear },
-        { title: "Certs, inspections, and DOT", rows: paper },
-        { title: "Assigned crew cards", rows: crew }].map(({ title, rows }) =>
+      {[{ title: "Iron on the truck", rows: gear },
+        { title: "Tests, certs, inspections, and DOT", rows: paper }].map(({ title, rows }) =>
         rows.length === 0 ? null : (
           <section key={title} className="flex flex-col gap-2">
             <h2 className={SECTION}>{title}</h2>

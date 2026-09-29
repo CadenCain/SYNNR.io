@@ -7,7 +7,6 @@ import ReviewBanner from "./_components/review-banner";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { getCompanyReadiness } from "@/lib/saas/readiness";
 
 // The signed-in SaaS surface. Authenticated + belongs to a company. A lapsed
 // subscription is READ-ONLY, never locked out (spec §3): every page renders,
@@ -35,34 +34,31 @@ async function switchCompany(formData: FormData) {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { company, user } = await requireCompany();
   const writable = isWritable(company.subscription_status, company.comped);
-  const companies = await getUserCompanies(user.id);
 
   const userName =
     (user.user_metadata?.full_name as string | undefined)?.trim() ||
     user.email?.split("@")[0] ||
     "Operator";
 
-  // Overall readiness pill in the sidebar on every page (spec 2.3) — same
-  // engine as the dashboard, never a second opinion.
+  // Everything the frame needs, in one round of parallel calls: every tap
+  // waits on this layout, so nothing here runs one after another.
   const db = await saasDb();
-  const { readiness } = await getCompanyReadiness(db, company.id);
   // Managers see how many uploads are waiting on them, everywhere.
   const manager = company.role === "owner" || company.role === "admin";
-  // Two kinds: in-app uploads the software couldn't confirm, and photos hands
-  // sent through their update link (those never change a record on their own).
-  const [{ count: waitingCount }, { count: sentCount }] = manager
-    ? await Promise.all([
-        db.from("saas_cert_uploads").select("id", { count: "exact", head: true })
-          .eq("company_id", company.id).eq("status", "waiting"),
-        db.from("saas_doc_requests").select("id", { count: "exact", head: true })
-          .eq("company_id", company.id).eq("status", "submitted"),
-      ])
-    : [{ count: null }, { count: null }];
-  const reviewCount = manager ? (waitingCount ?? 0) + (sentCount ?? 0) : null;
+  // Uploads the software couldn't confirm.
+  const none = Promise.resolve({ count: null as number | null });
+  const [companies, { count: waitingCount }] = await Promise.all([
+    getUserCompanies(user.id),
+    manager
+      ? db.from("saas_cert_uploads").select("id", { count: "exact", head: true })
+          .eq("company_id", company.id).eq("status", "waiting")
+      : none,
+  ]);
+  const reviewCount = manager ? (waitingCount ?? 0) : null;
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
-      <AppNav companyName={company.name} userName={userName} readiness={readiness}
+      <AppNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
         switchAction={switchCompany} reviewCount={reviewCount} />
       <div className="relative z-10 min-w-0 flex-1">
