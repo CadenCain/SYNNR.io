@@ -160,7 +160,7 @@ export default async function CompliancePage() {
                       {h.title}
                       <div className="text-xs font-normal text-ink-faint sm:hidden">{h.channel} to {h.recipient ?? "no one"}</div>
                     </Td>
-                    <Td className="hidden text-ink-dim sm:table-cell">{h.recipient ?? "—"}</Td>
+                    <Td className="hidden text-ink-dim sm:table-cell">{h.recipient ?? "not recorded"}</Td>
                     <Td className="hidden text-right capitalize text-ink-dim sm:table-cell">{h.channel}</Td>
                   </Tr>
                 ))}

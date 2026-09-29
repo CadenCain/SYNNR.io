@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import type { UnitState } from "@/lib/saas/status";
+import ShareProof from "@/app/app/_components/share-proof";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function Trucks() {
         actions={
           <>
             <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; adding trucks</Link>
+            {units.length > 0 && <ShareProof scope="company" warn={notReady ? `${notReady} ${notReady === 1 ? "truck is" : "trucks are"} NOT READY right now, and the link will say so.` : undefined} />}
             {units.length > 0 && <Link href="/app/dispatch" className={buttonClass("default", "sm")}><ClipboardCheck className="h-4 w-4" /> Check a truck for a job</Link>}
           </>
         }

@@ -12,15 +12,17 @@ import { isWritable, yardCapState, canPerform } from "@/lib/saas/entitlements";
  * Hardened import: dry-run preview → commit. Idempotent — re-importing the
  * same sheet UPDATES instead of duplicating:
  *   units keyed by name (case-insensitive, within the yard)
- *   assets keyed by name within their unit (or yard)
- *   crew   keyed by name (within company)
+ *   iron   keyed by serial (company-wide) when there is one, else by name
+ *          within its truck (or the yard)
  *   certs  keyed by (parent, title) — dates get updated
  * Admin-gated: import writes company-wide, so members can look but not load.
  *
  * CSV columns (any order, header row required):
- *   unit, unit_type, asset, category, crew, item, kind, issued, expires
- * A row may target a unit (unit set), an asset (unit+asset), or a crew member
- * (crew set). `item` empty = just ensure the unit/asset/crew exists.
+ *   unit, unit_type, asset, serial, category, item, kind, issued, expires
+ * A row may target a truck (unit set), iron on a truck (unit + asset or
+ * serial), or iron in the yard (asset or serial, no unit). `item` empty =
+ * just make sure the truck or iron exists. Equipment only: crew rows are
+ * skipped with a note.
  */
 
 export interface PlanRow {
@@ -49,22 +51,22 @@ interface Ctx {
   // caches: existing + created-this-run, keyed lowercase
   units: Map<string, string>;
   assets: Map<string, string>;      // "unitId|name" or "yard|name"
-  crew: Map<string, string>;
+  serials: Map<string, string>;     // serial (lowercase) → asset id
   certs: Map<string, string>;       // "parentType|parentId|title"
 }
 
 async function loadCtx(db: SupabaseClient, companyId: string, yardId: string, commit: boolean): Promise<Ctx> {
-  const [{ data: units }, { data: assets }, { data: crew }, { data: certs }] = await Promise.all([
+  const [{ data: units }, { data: assets }, { data: certs }] = await Promise.all([
     db.from("saas_units").select("id, name").eq("yard_id", yardId),
-    db.from("saas_assets").select("id, name, unit_id").eq("company_id", companyId),
-    db.from("saas_crew_members").select("id, name").eq("company_id", companyId),
+    db.from("saas_assets").select("id, name, unit_id, identifier").eq("company_id", companyId),
     db.from("saas_compliance_items").select("id, title, parent_type, parent_id").eq("company_id", companyId),
   ]);
   return {
     db, companyId, yardId, commit,
     units: new Map(((units ?? []) as { id: string; name: string }[]).map((u) => [u.name.toLowerCase(), u.id])),
     assets: new Map(((assets ?? []) as { id: string; name: string; unit_id: string | null }[]).map((a) => [`${a.unit_id ?? "yard"}|${a.name.toLowerCase()}`, a.id])),
-    crew: new Map(((crew ?? []) as { id: string; name: string }[]).map((c) => [c.name.toLowerCase(), c.id])),
+    serials: new Map(((assets ?? []) as { id: string; identifier: string | null }[])
+      .filter((a) => a.identifier).map((a) => [(a.identifier as string).toLowerCase(), a.id])),
     certs: new Map(((certs ?? []) as { id: string; title: string; parent_type: string; parent_id: string }[]).map((c) => [`${c.parent_type}|${c.parent_id}|${c.title.toLowerCase()}`, c.id])),
   };
 }
@@ -80,7 +82,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   // A spreadsheet full of expiration dates is a pile of typed-in dates, so
   // importing is a manager's job (a hand's dates come from photos).
   if (!canPerform(company.role, "import_existing_yard")) {
-    return { ok: false, error: "Only a manager can import a spreadsheet of certs. Hands upload photos of the new certs instead.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    return { ok: false, error: "Only a manager can import a spreadsheet of test dates. Hands upload photos of the new certs instead.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
   // Creating a yard through the new-yard field is admin+, and capped.
   if (newYard.trim() && !canPerform(company.role, "import_new_yard")) {
@@ -125,8 +127,8 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   // Column resolution lives in import-parse (pure, alias-tested) — "Unit #",
   // "Serial Number", and "Equipment Tag" all land without a template rewrite.
   const col = mapHeader(parsed[0]);
-  if (col.unit < 0 && col.crew < 0) {
-    return { ok: false, error: 'Header must include a unit column (unit / truck / vehicle) or a crew column (crew / hand / employee). Download the template below.', rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+  if (col.unit < 0 && col.asset < 0 && col.serial < 0) {
+    return { ok: false, error: "Header needs a truck column (unit / truck), an equipment column (asset / equipment / description), or a serial column. Download the template below.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
   }
 
   // Preview uses placeholder ids for would-be creations so keys still dedupe.
@@ -155,37 +157,26 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     ctx.units.set(key, id);
     return id;
   }
-  async function ensureAsset(name: string, unitId: string | null, category: string, ops: string[]): Promise<string> {
+  async function ensureAsset(name: string, serial: string, unitId: string | null, category: string, ops: string[]): Promise<string> {
+    // The serial is the piece's identity: the same serial on another row (or
+    // already in SYNNR) is the same iron, wherever the sheet says it sits.
+    const bySerial = serial ? ctx.serials.get(serial.toLowerCase()) : undefined;
+    if (bySerial) return bySerial;
     const key = `${unitId ?? "yard"}|${name.toLowerCase()}`;
-    const hit = ctx.assets.get(key);
+    const hit = serial ? undefined : ctx.assets.get(key);
     if (hit) return hit;
-    ops.push(`create asset "${name}"`);
+    ops.push(`add "${name}"${serial && serial !== name ? ` (serial ${serial})` : ""}${unitId ? "" : " in the yard"}`);
     creates++;
     let id = `new-asset-${fakeId++}`;
     if (ctx.commit) {
       const { data, error } = await ctx.db.from("saas_assets")
-        .insert({ company_id: ctx.companyId, yard_id: resolvedYard, unit_id: unitId, name, category: matchValue(category, ASSET_CATEGORIES, "other") })
+        .insert({ company_id: ctx.companyId, yard_id: resolvedYard, unit_id: unitId, name, identifier: serial || null, category: matchValue(category, ASSET_CATEGORIES, "other") })
         .select("id").single();
       if (error) throw new Error(error.message);
       id = (data as { id: string }).id;
     }
     ctx.assets.set(key, id);
-    return id;
-  }
-  async function ensureCrew(name: string, ops: string[]): Promise<string> {
-    const key = name.toLowerCase();
-    const hit = ctx.crew.get(key);
-    if (hit) return hit;
-    ops.push(`create crew "${name}"`);
-    creates++;
-    let id = `new-crew-${fakeId++}`;
-    if (ctx.commit) {
-      const { data, error } = await ctx.db.from("saas_crew_members")
-        .insert({ company_id: ctx.companyId, name }).select("id").single();
-      if (error) throw new Error(error.message);
-      id = (data as { id: string }).id;
-    }
-    ctx.crew.set(key, id);
+    if (serial) ctx.serials.set(serial.toLowerCase(), id);
     return id;
   }
   async function upsertCert(parentType: string, parentId: string, title: string, kind: string, issued: string | null, expires: string | null, ops: string[]) {
@@ -226,28 +217,26 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     const ops: string[] = [];
     try {
       const unitName = get(r, col.unit);
-      const assetName = get(r, col.asset);
+      const serial = get(r, col.serial);
+      const assetName = get(r, col.asset) || serial;
       const crewName = get(r, col.crew);
       const itemTitle = get(r, col.item);
       const issued = parseDate(get(r, col.issued));
       const expires = parseDate(get(r, col.expires));
 
-      if (!unitName && !crewName) throw new Error("This row has no unit or crew. Fill one in.");
-      if (assetName && !unitName) throw new Error("asset rows need a unit");
+      if (!unitName && !assetName) {
+        if (crewName) { ops.push("skipped: crew cards aren't tracked in SYNNR"); rows.push({ line: li + 1, ops, error: null }); continue; }
+        throw new Error("This row has no truck, equipment, or serial. Fill one in.");
+      }
       if (itemTitle && !expires) ops.push("note: no expiration, so it imports as 'no date'");
 
-      if (crewName) {
-        const crewId = await ensureCrew(crewName, ops);
-        if (itemTitle) await upsertCert("crew", crewId, itemTitle, get(r, col.kind), issued, expires, ops);
-      } else {
-        const unitId = await ensureUnit(unitName, get(r, col.unitType), ops);
-        let parentType = "unit", parentId = unitId;
-        if (assetName) {
-          parentId = await ensureAsset(assetName, unitId, get(r, col.category), ops);
-          parentType = "asset";
-        }
-        if (itemTitle) await upsertCert(parentType, parentId, itemTitle, get(r, col.kind), issued, expires, ops);
+      const unitId = unitName ? await ensureUnit(unitName, get(r, col.unitType), ops) : null;
+      let parentType = "unit", parentId = unitId as string;
+      if (assetName) {
+        parentId = await ensureAsset(assetName, serial, unitId, get(r, col.category), ops);
+        parentType = "asset";
       }
+      if (itemTitle) await upsertCert(parentType, parentId, itemTitle, get(r, col.kind), issued, expires, ops);
       if (ops.length === 0) ops.push("no change (already exists)");
       rows.push({ line: li + 1, ops, error: null });
     } catch (e) {

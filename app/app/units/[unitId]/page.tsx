@@ -286,7 +286,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                     <div className="font-medium">
                       {h.type === "checkin" ? "Checked in" : "Readiness check"} · {fmtWhen(h.started_at)}
                     </div>
-                    <div className="text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
+                    <div className="text-sm text-ink-dim">by {h.performed_by_name ?? "unknown"}</div>
                   </div>
                   {h.status === "not_ready" || h.status === "not_ready_override" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>

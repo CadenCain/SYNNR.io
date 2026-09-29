@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSaasUser, getFirstActiveCompany } from "@/lib/saas/auth";
+import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 
 /**
- * "Your data, exportable" — one-click CSV of every compliance item with its
- * yard/unit/asset context. RLS-scoped via the caller's session.
+ * "Your data, exportable": one-click CSV of every test, cert, and truck
+ * paper item with its yard, truck, equipment, and serial. RLS-scoped via the
+ * caller's session, for the company they have open (not just their first).
+ * Equipment only: crew cards aren't part of the product anymore.
  */
 export const dynamic = "force-dynamic";
 
@@ -14,47 +16,40 @@ const esc = (v: unknown) => {
 };
 
 export async function GET() {
-  const user = await getSaasUser();
-  if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  const company = await getFirstActiveCompany(user.id);
-  if (!company) return NextResponse.json({ ok: false, error: "no company" }, { status: 400 });
-
+  const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data: items }, { data: units }, { data: assets }, { data: yards }, { data: crew }] = await Promise.all([
+  const [{ data: items }, { data: units }, { data: assets }, { data: yards }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select("title, kind, status, issued_date, expiration_date, reminder_days, parent_type, parent_id")
-      .eq("company_id", company.id),
+      .eq("company_id", company.id).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", company.id),
-    db.from("saas_assets").select("id, name, unit_id, yard_id").eq("company_id", company.id),
+    db.from("saas_assets").select("id, name, identifier, status, unit_id, yard_id").eq("company_id", company.id),
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
-    db.from("saas_crew_members").select("id, name").eq("company_id", company.id),
   ]);
 
   const yardName = new Map(((yards ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
   const unitRows = (units ?? []) as { id: string; name: string; yard_id: string }[];
   const unitName = new Map(unitRows.map((u) => [u.id, u.name]));
   const unitYard = new Map(unitRows.map((u) => [u.id, yardName.get(u.yard_id) ?? ""]));
-  const assetRows = (assets ?? []) as { id: string; name: string; unit_id: string | null; yard_id: string | null }[];
-  const assetInfo = new Map(assetRows.map((a) => [a.id, a]));
-  const crewName = new Map(((crew ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name]));
+  const assetInfo = new Map(((assets ?? []) as { id: string; name: string; identifier: string | null; status: string; unit_id: string | null; yard_id: string | null }[]).map((a) => [a.id, a]));
 
   type Row = { title: string; kind: string; status: string; issued_date: string | null; expiration_date: string | null; reminder_days: number; parent_type: string; parent_id: string };
-  const header = ["yard", "unit", "asset", "crew", "item", "kind", "status", "issued", "expires", "reminder_days"];
+  const header = ["yard", "truck", "equipment", "serial", "equipment_status", "item", "kind", "status", "issued", "expires", "reminder_days"];
   const lines = [header.join(",")];
   for (const i of ((items ?? []) as Row[])) {
-    let yard = "", unit = "", asset = "", crewMember = "";
-    if (i.parent_type === "crew") {
-      crewMember = crewName.get(i.parent_id) ?? "";
-    } else if (i.parent_type === "unit") {
-      unit = unitName.get(i.parent_id) ?? "";
+    let yard = "", truck = "", equipment = "", serial = "", eqStatus = "";
+    if (i.parent_type === "unit") {
+      truck = unitName.get(i.parent_id) ?? "";
       yard = unitYard.get(i.parent_id) ?? "";
     } else {
       const a = assetInfo.get(i.parent_id);
-      asset = a?.name ?? "";
-      unit = a?.unit_id ? unitName.get(a.unit_id) ?? "" : "";
-      yard = a?.yard_id ? yardName.get(a.yard_id) ?? "" : a?.unit_id ? unitYard.get(a.unit_id) ?? "" : "";
+      equipment = a?.name ?? "";
+      serial = a?.identifier ?? "";
+      eqStatus = a ? (a.status === "out_of_service" ? "red-tagged" : a.status.replace(/_/g, " ")) : "";
+      truck = a?.unit_id ? unitName.get(a.unit_id) ?? "" : "";
+      yard = a?.unit_id ? unitYard.get(a.unit_id) ?? "" : a?.yard_id ? yardName.get(a.yard_id) ?? "" : "";
     }
-    lines.push([yard, unit, asset, crewMember, i.title, i.kind, i.status, i.issued_date ?? "", i.expiration_date ?? "", i.reminder_days].map(esc).join(","));
+    lines.push([yard, truck, equipment, serial, eqStatus, i.title, i.kind, i.status, i.issued_date ?? "", i.expiration_date ?? "", i.reminder_days].map(esc).join(","));
   }
 
   const today = new Date().toISOString().slice(0, 10);

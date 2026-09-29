@@ -89,7 +89,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       </div>
 
       <Card className="flex flex-wrap items-center gap-x-8 gap-y-2 p-4 text-sm">
-        <span><span className="text-ink-faint">Checked by</span> <span className="font-medium">{c.performed_by_name ?? "—"}</span></span>
+        <span><span className="text-ink-faint">Checked by</span> <span className="font-medium">{c.performed_by_name ?? "unknown"}</span></span>
         {c.cosigner_name ? (
           <span><span className="text-ink-faint">Co-signed by</span> <span className="font-medium">{c.cosigner_name}</span>{c.cosigned_at ? <span className="text-ink-faint"> · {new Date(c.cosigned_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span> : null}</span>
         ) : null}

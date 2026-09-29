@@ -25,7 +25,7 @@ export default async function ProofsSettings() {
   const proofs = ((data ?? []) as Row[]).map((p) => ({
     ...p,
     scopeLabel:
-      p.scope === "unit" ? `Unit: ${(Array.isArray(p.saas_units) ? p.saas_units[0]?.name : p.saas_units?.name) ?? ""}`
+      p.scope === "unit" ? `Truck: ${(Array.isArray(p.saas_units) ? p.saas_units[0]?.name : p.saas_units?.name) ?? ""}`
       : p.scope === "yard" ? `Yard: ${(Array.isArray(p.saas_yards) ? p.saas_yards[0]?.name : p.saas_yards?.name) ?? ""}`
       : "Whole company",
   }));
@@ -34,13 +34,13 @@ export default async function ProofsSettings() {
     <div className="flex flex-col gap-7">
       <PageHeader
         back={{ href: "/app/settings", label: "Settings" }}
-        title="Readiness proofs"
-        description="Every share link you've created. Revoke any you don't want out there, and it stops working."
+        title="Proof links"
+        description="Every link you've sent an operator. Shut one off and it stops working right away."
       />
 
       {proofs.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
-          No proof links yet. Make one with the Share proof button on the dashboard, a yard, or a truck.
+          No proof links yet. Make one with the Share proof button on the Trucks page, a yard, or a truck.
         </Card>
       ) : (
         <Table>
@@ -59,7 +59,7 @@ export default async function ProofsSettings() {
                 </Td>
                 <Td className="hidden tabular-nums text-ink-dim sm:table-cell">{fmtDay(p.created_at)}</Td>
                 <Td className="hidden sm:table-cell">
-                  {p.revoked_at ? <span className="text-ink-faint">—</span> : (
+                  {p.revoked_at ? <span className="text-ink-faint">Shut off</span> : (
                     <Link href={`/proof/${p.token}`} target="_blank" className="text-bone hover:underline">
                       {origin.replace(/^https?:\/\//, "")}/proof/{p.token.slice(0, 8)}…
                     </Link>
@@ -67,12 +67,12 @@ export default async function ProofsSettings() {
                 </Td>
                 <Td className="text-right">
                   {p.revoked_at ? (
-                    <span className="rounded-sm border border-line-2 bg-elevated px-2.5 py-0.5 text-xs text-ink-faint">Revoked</span>
+                    <span className="rounded-sm border border-line-2 bg-elevated px-2.5 py-0.5 text-xs text-ink-faint">Shut off</span>
                   ) : (
                     <form action={revokeReadinessProof} className="inline">
                       <input type="hidden" name="id" value={p.id} />
                       <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10">
-                        <Ban className="h-3 w-3" /> Revoke
+                        <Ban className="h-3 w-3" /> Shut off
                       </button>
                     </form>
                   )}

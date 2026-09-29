@@ -234,7 +234,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                   : record.status === "not_ready_override" ? "Rolled out NOT ready on override"
                   : "Checked: NOT READY"}
               </span>
-              <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "—"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
+              <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "unknown"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
               {record.override_reason ? <span className="text-ink-dim"> · reason: &ldquo;{record.override_reason}&rdquo;</span> : null}
             </p>
             {record.lines.length > 0 && (

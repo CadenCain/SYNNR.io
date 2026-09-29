@@ -8,11 +8,11 @@ export const dynamic = "force-dynamic";
 export default async function SettingsHub() {
   const { company } = await requireCompany();
   const rows = [
-    { href: "/app/settings/rules", icon: ShieldCheck, title: "Rules", desc: "How certs get cleared, and who can change what", live: true },
+    { href: "/app/settings/rules", icon: ShieldCheck, title: "Rules", desc: "How tests get cleared, and who can change what", live: true },
     { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
     { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
-    { href: "/app/settings/proofs", icon: Share2, title: "Readiness proofs", desc: "Share links you've made. View or revoke them.", live: true },
+    { href: "/app/settings/proofs", icon: Share2, title: "Proof links", desc: "Links you've sent operators. See them or shut them off.", live: true },
   ];
   return (
     <div className="flex flex-col gap-6">
@@ -46,7 +46,7 @@ export default async function SettingsHub() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-medium">Export data</div>
-              <div className="text-sm text-ink-dim">Download every item as a spreadsheet</div>
+              <div className="text-sm text-ink-dim">Every test, cert, and truck paper item, with serials, as a spreadsheet</div>
             </div>
             <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
           </Card>

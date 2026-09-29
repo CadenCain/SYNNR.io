@@ -24,7 +24,7 @@ export default async function ImportPage() {
       <PageHeader
         back={{ href: "/app/yards", label: "Yards" }}
         title="Import a list"
-        description="Upload a spreadsheet of units, assets, certs, and crew. You see a preview first, and importing again updates dates instead of duplicating."
+        description="Upload your iron list: trucks, equipment, serials, and test dates. You see a preview first, and importing again updates dates instead of duplicating."
       />
       {isAdmin ? (
         <ImportClient yards={yards} />

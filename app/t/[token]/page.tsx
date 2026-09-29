@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, TriangleAlert, FileImage } from "lucide-react";
+import { ShieldCheck, TriangleAlert, FileImage, ArrowRight } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
+import { getSaasUser } from "@/lib/saas/auth";
 import { judgeItem, type LineResult } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { categoryLabel } from "@/lib/saas/taxonomy";
@@ -65,11 +66,22 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
     return <Shell><div className="rounded-2xl border border-line bg-surface p-6 text-center"><p className="font-semibold">This tag isn&apos;t in SYNNR.</p><p className="mt-1 text-sm text-ink-dim">The iron may have been removed from the shop&apos;s records. Ask the shop.</p></div></Shell>;
   }
 
-  const [{ data: co }, { data: itemData }] = await Promise.all([
+  // Someone from the shop scanning its own iron gets a way into the app to
+  // move it or upload its new cert. Everyone else sees the public view only.
+  const memberCheck = (async () => {
+    const user = await getSaasUser();
+    if (!user) return false;
+    const { data } = await admin.from("saas_memberships").select("user_id")
+      .eq("company_id", a.company_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+    return Boolean(data);
+  })();
+
+  const [{ data: co }, { data: itemData }, isMember] = await Promise.all([
     admin.from("saas_companies").select("name").eq("id", a.company_id).maybeSingle(),
     admin.from("saas_compliance_items")
       .select("id, title, issued_date, expiration_date, reminder_days, pending_until, last_upload_id")
       .eq("company_id", a.company_id).eq("parent_type", "asset").eq("parent_id", a.id),
+    memberCheck,
   ]);
   const companyName = (co as { name: string } | null)?.name ?? "";
   type I = { id: string; title: string; issued_date: string | null; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null };
@@ -104,6 +116,13 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
 
   return (
     <Shell>
+      {isMember ? (
+        <Link href={`/app/assets/${a.id}`}
+          className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-bone px-5 py-3 font-semibold text-white hover:bg-bone-soft">
+          <span>Open it in SYNNR to move it or upload a new cert</span>
+          <ArrowRight className="h-5 w-5 shrink-0" />
+        </Link>
+      ) : null}
       <div className="rounded-2xl border border-line bg-surface p-5">
         <div className="text-sm text-ink-faint">{companyName}</div>
         <h1 className="mt-0.5 break-words text-2xl font-semibold tracking-tight">{a.name}</h1>

@@ -62,13 +62,14 @@ describe("norm + matchValue — header and enum forgiveness", () => {
 describe("mapHeader — the names real yard spreadsheets actually use", () => {
   it("canonical template headers map straight through", () => {
     const col = mapHeader(["unit", "unit_type", "asset", "category", "crew", "item", "kind", "issued", "expires"]);
-    expect(col).toEqual({ unit: 0, unitType: 1, asset: 2, category: 3, crew: 4, item: 5, kind: 6, issued: 7, expires: 8 });
+    expect(col).toEqual({ unit: 0, unitType: 1, asset: 2, category: 3, crew: 4, item: 5, kind: 6, issued: 7, expires: 8, serial: -1 });
   });
 
   it('"Unit #", "Serial Number", "Equipment Tag", "Expiry Date" — the wild ones land', () => {
     const col = mapHeader(["Unit #", "Serial Number", "Certification", "Expiry Date", "Issue Date"]);
     expect(col.unit).toBe(0);
-    expect(col.asset).toBe(1);
+    expect(col.serial).toBe(1);
+    expect(col.asset).toBe(-1);
     expect(col.item).toBe(2);
     expect(col.expires).toBe(3);
     expect(col.issued).toBe(4);
@@ -80,6 +81,14 @@ describe("mapHeader — the names real yard spreadsheets actually use", () => {
     expect(col.asset).toBe(1);
     expect(col.expires).toBe(2);
     expect(col.crew).toBe(3);
+  });
+
+  it("an iron list: Description + Serial Number are two columns, not one", () => {
+    const col = mapHeader(["Description", "Serial Number", "Location", "Test", "Due Date"]);
+    expect(col.asset).toBe(0);
+    expect(col.serial).toBe(1);
+    expect(col.item).toBe(3);
+    expect(col.expires).toBe(4);
   });
 
   it("unknown headers are ignored (-1), never a crash", () => {

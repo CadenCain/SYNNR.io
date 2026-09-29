@@ -33,12 +33,12 @@ async function saveRules(fd: FormData) {
 }
 
 const FIXED = [
-  "Hands can't type or change a cert date. They upload a photo of the new cert.",
-  "The server reads the photo. The expiration typed in has to be printed on it, the hand's name has to be on their card, the serial has to be on the gear's cert, and it has to be the right kind of cert. A photo can only clear one thing.",
+  "Hands can't type or change a test date. They upload a photo of the new cert.",
+  "The server reads the photo. The expiration typed in has to be printed on it, the serial on the cert has to match the iron, and it has to be the right kind of test. A photo can only clear one thing.",
   "If everything matches, it goes green. If anything doesn't, it waits for a manager and the item stays red until a manager approves it.",
   "Managers can type a date in, for setting up from the binder or fixing a typo. Those show \"date typed in, no photo\" and are listed on the Review page.",
-  "Readiness check records, uploads, and the feed can't be edited or deleted by anyone, managers included.",
-  "Only a manager can put red-tagged gear back in service, rename a hand or a cert, change a serial or unit number, mark a hand inactive, or delete anything. Each of those lands in the feed with a name on it.",
+  "Truck check records, uploads, where-it's-been history, and the feed can't be edited or deleted by anyone, managers included.",
+  "Anyone can move iron or red-tag it. Only a manager can put red-tagged iron back in service, retire it, rename a test, change a serial or unit number, or delete anything. Each of those lands in the feed with a name on it.",
 ];
 
 export default async function RulesPage() {
@@ -49,7 +49,7 @@ export default async function RulesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Rules" description="How a cert gets cleared, and who can change what." />
+      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Rules" description="How a test gets cleared, and who can change what." />
 
       <Card className="flex flex-col gap-3 p-5">
         <h2 className="font-semibold">Always on</h2>

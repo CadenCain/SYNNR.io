@@ -44,10 +44,14 @@ export const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").r
 export const HEADER_ALIASES = {
   unit: ["unit", "unit_name", "unit_number", "unit_no", "unit_id", "truck", "truck_number", "truck_no", "vehicle", "vehicle_number", "rig", "rig_number"],
   unitType: ["unit_type", "type"],
-  asset: ["asset", "asset_name", "asset_id", "asset_tag", "asset_number", "equipment", "equipment_tag", "equipment_id", "equipment_number", "serial", "serial_number", "serial_no", "sn", "tag", "tag_number"],
+  asset: ["asset", "asset_name", "asset_id", "asset_tag", "asset_number", "equipment", "equipment_name", "equipment_tag", "equipment_id", "equipment_number", "description", "item_description", "iron", "tag", "tag_number"],
+  // The number stamped on the iron. Its own column so a sheet with both a
+  // description and a serial keeps both; a sheet with only serials still
+  // imports (the serial becomes the name).
+  serial: ["serial", "serial_number", "serial_no", "sn", "s_n", "serial_num"],
   category: ["category", "asset_category", "class"],
   crew: ["crew", "crew_member", "hand", "employee", "worker", "driver", "operator", "technician", "tech"],
-  item: ["item", "cert", "certification", "certificate", "title", "inspection", "document", "doc", "card"],
+  item: ["item", "cert", "certification", "certificate", "title", "inspection", "test", "test_name", "document", "doc", "card"],
   kind: ["kind", "item_kind", "cert_kind", "item_type", "cert_type"],
   issued: ["issued", "issued_date", "issue_date", "issued_on", "date_issued", "effective_date"],
   expires: ["expires", "expiration", "expiration_date", "expires_at", "expiry", "expiry_date", "exp_date", "due", "due_date", "renewal", "renewal_date", "valid_until", "valid_through", "good_through"],
