@@ -32,30 +32,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Field too long." }, { status: 413 });
   }
 
-  let stored = false;
+  let insertedId: string | null = null;
   const admin = getAdminSupabase();
   if (admin) {
-    const { error } = await admin.from("audit_requests").insert({
+    const { data, error } = await admin.from("audit_requests").insert({
       name,
       company: company || null,
       email, // "" when not given — phone is the contact channel for these
       phone,
       bottleneck: "Demo lead: wants SYNNR loaded with their yard's data (free setup).",
       source: "demo",
-    } as never);
+    } as never).select("id").single();
     if (error) console.error("[demo-lead] store failed:", error.message);
-    else stored = true;
+    insertedId = (data as { id: string } | null)?.id ?? null;
   }
+  const stored = !!insertedId;
 
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(resendKey);
-      await resend.emails.send({
+      // Resend reports failures in the result instead of throwing. Check it
+      // and record it, so a lead that never reached the inbox is visible.
+      const { error: sendErr } = await resend.emails.send({
         from: FROM,
         to: [TO],
-        subject: `DEMO LEAD: ${name}${company ? ` — ${company}` : ""} — CALL THEM`,
+        subject: `DEMO LEAD: ${name}${company ? `, ${company}` : ""}. Call them.`,
         text: [
           "Someone in the demo wants it loaded with their yard.",
           "",
@@ -64,9 +67,11 @@ export async function POST(req: Request) {
           `Cell:    ${phone}`,
           `Email:   ${email || "—"}`,
           "",
-          stored ? "Stored in audit_requests (source: demo)." : "WARNING: DB store failed — this email is the only copy.",
+          stored ? "Stored in audit_requests (source: demo)." : "WARNING: DB store failed. This email is the only copy.",
         ].join("\n"),
       });
+      if (sendErr) console.error("[demo-lead] email failed:", sendErr);
+      else if (admin && insertedId) await admin.from("audit_requests").update({ emailed: true } as never).eq("id", insertedId);
     } catch (e) {
       console.error("[demo-lead] email failed:", e instanceof Error ? e.message : e);
     }
