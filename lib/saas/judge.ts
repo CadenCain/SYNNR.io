@@ -63,6 +63,13 @@ export interface Judgment {
 
 export const FAILING_GEAR = new Set(["missing", "out_of_service"]);
 
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "2026-09-23" → "Sep 23, 2026": how dates read everywhere a person sees them. */
+export function plainDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return m && d ? `${MON[m - 1]} ${d}, ${y}` : iso;
+}
+
 const days = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400e3);
 
@@ -82,20 +89,20 @@ export function judgeItem(item: JItem, asOf: string, today: string, soonDays?: n
   const exp = item.expiration_date;
   const failing = exp === null || exp < asOf;
   if (failing && pendingCovers(item, asOf)) {
-    return { result: "pending", detail: `retested, cert on the way (counts through ${item.pending_until})` };
+    return { result: "pending", detail: `retested, cert on the way (counts through ${plainDate(item.pending_until as string)})` };
   }
   if (exp === null) return { result: "missing", detail: "no expiration on file" };
   if (exp < asOf) {
-    if (asOf > today && exp >= today) return { result: "expired", detail: `expires ${exp}, before the ${asOf} job` };
+    if (asOf > today && exp >= today) return { result: "expired", detail: `expires ${plainDate(exp)}, before the ${plainDate(asOf)} job` };
     const ago = days(exp, today);
-    return { result: "expired", detail: `expired ${exp}${ago > 0 ? ` (${ago}d ago)` : ""}` };
+    return { result: "expired", detail: `expired ${plainDate(exp)}${ago > 0 ? ` (${ago}d ago)` : ""}` };
   }
   const window = soonDays ?? item.reminder_days ?? 30;
   if (exp <= addDaysIso(asOf, window)) {
     const d = days(today, exp);
-    return { result: "due_soon", detail: d <= 0 ? "expires today" : `expires ${exp} (in ${d}d)` };
+    return { result: "due_soon", detail: d <= 0 ? "expires today" : `expires ${plainDate(exp)} (in ${d}d)` };
   }
-  return { result: "ok", detail: `good to ${exp}` };
+  return { result: "ok", detail: `good to ${plainDate(exp)}` };
 }
 
 /** Short wording for a tile: "BOP test: expired 6d ago". */

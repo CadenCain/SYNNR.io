@@ -41,7 +41,9 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
       .eq("template_id", resolved.id).order("sort");
     items = (data ?? []) as typeof items;
   }
-  const editable = own !== null;
+  // Only a manager edits the gear list (the database agrees); hands read it.
+  const manager = company.role === "owner" || company.role === "admin";
+  const editable = own !== null && manager;
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,7 +53,9 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
         description={`The standing list of what rides on this ${unitTypeLabel(unit.type).toLowerCase()}. Anything marked required that isn't in the asset book yet shows as a warning on the readiness check. It never blocks a truck on its own.`}
       />
 
-      {!editable && (
+      {!manager ? (
+        <Card className="p-4 text-sm text-ink-dim">A manager keeps this list. Ask one if something should be on it.</Card>
+      ) : !editable && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <p className="text-sm text-ink-dim">
             {resolved
@@ -70,7 +74,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
           {items.map((it, idx) => (
             <Card key={it.id} className="flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{it.label}</div>
+                <div className="font-medium">{it.label}</div>
                 {it.category ? <div className="truncate text-sm text-ink-dim">{it.category.replace(/_/g, " ")}</div> : null}
               </div>
               {editable ? (
@@ -107,7 +111,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
         </div>
       )}
 
-      <Card className="p-5">
+      {manager && <Card className="p-5">
         <h3 className="mb-3 text-sm font-medium text-ink">
           {editable ? "Add an item" : "Add an item (creates this truck's own copy)"}
         </h3>
@@ -118,7 +122,7 @@ export default async function LoadoutEditor({ params }: { params: Promise<{ unit
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="required" defaultChecked className="h-4 w-4 accent-[#1d4ed8]" /> Required</label>
           <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
         </form>
-      </Card>
+      </Card>}
     </div>
   );
 }

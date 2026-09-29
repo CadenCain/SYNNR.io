@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireBillableCompany as requireCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 
 /**
@@ -16,6 +16,7 @@ const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 /** Ensure this unit has its own editable template; returns its id. */
 async function ensureOwnTemplate(unitId: string): Promise<{ templateId?: string; error?: string }> {
   const { company } = await requireCompany();
+  assertCan(company, "edit_records"); // the gear list is a manager's
   const db = await saasDb();
 
   const { data: unit } = await db.from("saas_units").select("id, name, type").eq("id", unitId).eq("company_id", company.id).maybeSingle();
@@ -92,6 +93,7 @@ async function ownsLoadoutItem(db: Awaited<ReturnType<typeof saasDb>>, companyId
 
 export async function deleteLoadoutItem(fd: FormData) {
   const { company } = await requireCompany();
+  assertCan(company, "edit_records"); // the gear list is a manager's
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const db = await saasDb();
@@ -102,6 +104,7 @@ export async function deleteLoadoutItem(fd: FormData) {
 
 export async function toggleLoadoutRequired(fd: FormData) {
   const { company } = await requireCompany();
+  assertCan(company, "edit_records"); // the gear list is a manager's
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const required = str(fd, "required") === "true";
@@ -113,6 +116,7 @@ export async function toggleLoadoutRequired(fd: FormData) {
 
 export async function moveLoadoutItem(fd: FormData) {
   const { company } = await requireCompany();
+  assertCan(company, "edit_records"); // the gear list is a manager's
   const unitId = str(fd, "unit_id");
   const id = str(fd, "id");
   const dir = str(fd, "dir") === "up" ? -1 : 1;

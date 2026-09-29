@@ -6,6 +6,7 @@ import { localToday } from "@/lib/saas/status";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
+import { plainDate } from "@/lib/saas/judge";
 import { notifyEvent, logEvent } from "@/lib/saas/notify";
 
 /**
@@ -83,7 +84,7 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
     );
   }
 
-  const forJob = comp.isFutureJob ? ` (for the ${comp.jobDate} job)` : "";
+  const forJob = comp.isFutureJob ? ` (for the ${plainDate(comp.jobDate)} job)` : "";
   const failLine = comp.failures.slice(0, 3).join("; ");
   if (comp.verdict === "ready") {
     void logEvent({ companyId: company.id, kind: "check_ready", unitId, actor, message: `${comp.unitName} checked READY${forJob}` });

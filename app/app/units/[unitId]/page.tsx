@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, HardHat, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
-import { seenAge, fmtWhen } from "@/lib/saas/format";
+import { seenAge, fmtWhen, fmtDate } from "@/lib/saas/format";
 import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -94,9 +94,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const photoGap = (a: { id: string; primary_photo_path: string | null }): string | null => {
     const noPhoto = !a.primary_photo_path;
     const noPaper = !hasPaper.has(a.id);
-    if (noPhoto && noPaper) return "no photos yet: add the asset and its paperwork";
-    if (noPaper) return "paperwork photo missing";
-    if (noPhoto) return "asset photo missing";
+    if (noPhoto && noPaper) return "No photos yet";
+    if (noPaper) return "Paperwork photo missing";
+    if (noPhoto) return "Gear photo missing";
     return null;
   };
 
@@ -237,7 +237,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <ul className="mt-3 flex flex-col gap-1.5">
                 {failingCerts.slice(0, 4).map((i) => (
                   <li key={i.id} className="text-base font-medium text-red-50 sm:text-sm sm:text-red-300">
-                    • {i.title}: {i.status === "expired" ? `expired ${i.expiration_date ?? ""}` : "no expiration on file"}
+                    • {i.title}: {i.status === "expired" ? `expired ${fmtDate(i.expiration_date)}` : "no expiration on file"}
                   </li>
                 ))}
                 {failingCerts.length > 4 && <li className="text-sm text-red-100 sm:text-red-300/80">+ {failingCerts.length - 4} more below</li>}
@@ -288,7 +288,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
           <div className="min-w-0 flex-1">
             <div className="font-medium">Gear list</div>
-            <div className="truncate text-sm text-ink-dim">What rides on this truck, and which items are required</div>
+            <div className="text-sm text-ink-dim">What rides on this truck, and which items are required</div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
@@ -303,9 +303,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             {history.map((h) => (
               <Link key={h.id} href={`/app/records/${h.id}`}>
                 <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
+                  <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal sm:flex"><Truck className="h-4 w-4 text-ink-dim" /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">
+                    <div className="font-medium">
                       {h.type === "checkin" ? "Checked in" : "Readiness check"} · {fmtWhen(h.started_at)}
                     </div>
                     <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
@@ -337,7 +337,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <Card key={c.id} className="flex items-center gap-3 p-4">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><HardHat className="h-4 w-4 text-ink-dim" /></span>
                 <Link href={`/app/crew/${c.id}`} className="min-w-0 flex-1 hover:underline">
-                  <span className="block truncate font-medium">{c.name}</span>
+                  <span className="block break-words font-medium">{c.name}</span>
                   <span className="block truncate text-sm text-ink-dim">{c.role ?? "crew"}</span>
                 </Link>
                 {c.worst ? <StatusBadge status={c.worst} /> : <span className="text-xs text-ink-faint">no cards</span>}
@@ -382,9 +382,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             {assets.map((a) => (
               <Link key={a.id} href={`/app/assets/${a.id}`}>
                 <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Box className="h-4 w-4 text-ink-dim" /></span>
+                  <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal sm:flex"><Box className="h-4 w-4 text-ink-dim" /></span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{a.name}</span>
+                    <span className="block break-words font-medium">{a.name}</span>
                     {a.last_seen_where ? (() => {
                       const age = seenAge(a.last_seen_at);
                       return (

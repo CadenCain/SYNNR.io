@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { localToday } from "./status";
-import { judgeUnit, FAILING_GEAR, type JItem } from "./judge";
+import { judgeUnit, FAILING_GEAR, plainDate, type JItem } from "./judge";
 
 /**
  * The readiness check: a RECORD-CURRENCY check, not a dispatch checklist.
@@ -184,11 +184,12 @@ export async function computeDispatchCheck(
   for (const l of j.lines) {
     const source_type: CheckLine["source_type"] = l.kind === "asset" ? "asset" : l.kind === "cert" ? "cert" : "crew_cert";
     if (l.result === "ok" || l.result === "due_soon") {
-      lines.push({ source_type, source_id: l.id, label: l.label, result: "ok", detail: `good to ${l.expiration_date}` });
+      const exp = plainDate(l.expiration_date as string);
+      lines.push({ source_type, source_id: l.id, label: l.label, result: "ok", detail: `good to ${exp}` });
       if (l.result === "due_soon") {
         warnings.push(isFutureJob
-          ? `${l.label}: expires ${l.expiration_date}, just after the job. Renew soon.`
-          : `${l.label}: due soon (${l.expiration_date})`);
+          ? `${l.label}: expires ${exp}, just after the job. Renew soon.`
+          : `${l.label}: due soon (${exp})`);
       }
     } else if (l.result === "pending") {
       lines.push({ source_type, source_id: l.id, label: l.label, result: "warn", detail: l.detail });
@@ -198,7 +199,7 @@ export async function computeDispatchCheck(
       failures.push(l.kind === "crew" ? l.label
         : l.kind === "asset" ? `${l.label}: ${l.detail}`
         : l.result === "missing" ? `${l.label}: no expiration on file`
-        : isFutureJob && l.expiration_date && l.expiration_date >= today ? `${l.label}: expires ${l.expiration_date}, before the job`
+        : isFutureJob && l.expiration_date && l.expiration_date >= today ? `${l.label}: expires ${plainDate(l.expiration_date)}, before the job`
         : `${l.label}: expired`);
     }
   }

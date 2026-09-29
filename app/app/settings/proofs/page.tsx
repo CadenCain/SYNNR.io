@@ -45,14 +45,20 @@ export default async function ProofsSettings() {
       ) : (
         <Table>
           <thead>
-            <tr><Th>Scope</Th><Th>Created</Th><Th>Link</Th><Th className="text-right">Status</Th></tr>
+            <tr><Th>Scope</Th><Th className="hidden sm:table-cell">Created</Th><Th className="hidden sm:table-cell">Link</Th><Th className="text-right">Status</Th></tr>
           </thead>
           <tbody>
             {proofs.map((p) => (
               <Tr key={p.id}>
-                <Td className="font-medium">{p.scopeLabel}</Td>
-                <Td className="tabular-nums text-ink-dim">{fmtDay(p.created_at)}</Td>
-                <Td>
+                <Td className="font-medium">
+                  {p.scopeLabel}
+                  <div className="text-xs font-normal text-ink-faint sm:hidden">
+                    Made {fmtDay(p.created_at)}
+                    {!p.revoked_at ? <> · <Link href={`/proof/${p.token}`} target="_blank" className="text-bone">open it</Link></> : null}
+                  </div>
+                </Td>
+                <Td className="hidden tabular-nums text-ink-dim sm:table-cell">{fmtDay(p.created_at)}</Td>
+                <Td className="hidden sm:table-cell">
                   {p.revoked_at ? <span className="text-ink-faint">—</span> : (
                     <Link href={`/proof/${p.token}`} target="_blank" className="text-bone hover:underline">
                       {origin.replace(/^https?:\/\//, "")}/proof/{p.token.slice(0, 8)}…

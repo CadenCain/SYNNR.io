@@ -153,14 +153,17 @@ export default async function CompliancePage() {
         ) : (
           <Card className="max-h-[380px] overflow-y-auto p-0">
             <Table>
-              <thead><tr><Th>When</Th><Th>What</Th><Th>To</Th><Th className="text-right">Channel</Th></tr></thead>
+              <thead><tr><Th>When</Th><Th>What</Th><Th className="hidden sm:table-cell">To</Th><Th className="hidden text-right sm:table-cell">Channel</Th></tr></thead>
               <tbody>
                 {history.map((h, idx) => (
                   <Tr key={idx}>
-                    <Td className="tabular-nums text-ink-dim">{fmtWhen(h.when)}</Td>
-                    <Td className="font-medium">{h.title}</Td>
-                    <Td className="text-ink-dim">{h.recipient ?? "—"}</Td>
-                    <Td className="text-right capitalize text-ink-dim">{h.channel}</Td>
+                    <Td className="whitespace-nowrap align-top tabular-nums text-ink-dim">{fmtWhen(h.when)}</Td>
+                    <Td className="font-medium">
+                      {h.title}
+                      <div className="text-xs font-normal text-ink-faint sm:hidden">{h.channel} to {h.recipient ?? "no one"}</div>
+                    </Td>
+                    <Td className="hidden text-ink-dim sm:table-cell">{h.recipient ?? "—"}</Td>
+                    <Td className="hidden text-right capitalize text-ink-dim sm:table-cell">{h.channel}</Td>
                   </Tr>
                 ))}
               </tbody>

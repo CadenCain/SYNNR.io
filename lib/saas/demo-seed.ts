@@ -4,6 +4,7 @@ import {
   DEMO_MISSES, DEMO_CHECKS, DEMO_SNAPSHOTS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD,
 } from "./demo-data";
 import { verifyUpload } from "./cert-verify";
+import { computeDispatchCheck } from "./dispatch-check";
 import { localToday, addDaysIso } from "./status";
 
 /**
@@ -176,10 +177,22 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
   }
 
   // Immutable check records → dispatch history + the month tape
-  await admin.from("saas_dispatch_checks").insert(DEMO_CHECKS.map((c) => ({
+  const { data: checkRows } = await admin.from("saas_dispatch_checks").insert(DEMO_CHECKS.map((c) => ({
     company_id: companyId, unit_id: unitId(c.unitKey), type: "checkout",
     status: c.status, performed_by_name: c.by, started_at: tsAgo(c.daysAgo, c.hour, c.minute),
-  })));
+  }))).select("id, unit_id, status");
+  // Give each record its lines, from the same check a visitor can run, so
+  // "NOT READY" on a record always says why. Only where today's answer
+  // matches what was recorded (an old red record for a truck that's been
+  // fixed since keeps no lines rather than showing green lines under red).
+  await Promise.all(((checkRows ?? []) as { id: string; unit_id: string; status: string }[]).map(async (r) => {
+    const comp = await computeDispatchCheck(admin, companyId, r.unit_id);
+    if (!comp || comp.verdict !== r.status || comp.lines.length === 0) return;
+    await admin.from("saas_dispatch_check_items").insert(comp.lines.map((l) => ({
+      check_id: r.id, company_id: companyId, source_type: l.source_type, source_id: l.source_id,
+      label: l.label, result: l.result, note: l.detail ?? null,
+    })));
+  }));
 
   // 14 days of readiness history for the trend chart
   await admin.from("saas_readiness_snapshots").insert(DEMO_SNAPSHOTS.map((s) => ({

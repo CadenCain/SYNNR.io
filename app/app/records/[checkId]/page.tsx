@@ -1,4 +1,4 @@
-import { fmtWhen } from "@/lib/saas/format";
+import { fmtDate, fmtWhen } from "@/lib/saas/format";
 import { notFound } from "next/navigation";
 import { Check, TriangleAlert, Camera, Lock, Truck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
@@ -77,7 +77,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
         title={`Check record: ${unitName}`}
-        description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${fmtWhen(c.started_at)}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
+        description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${fmtWhen(c.started_at)}${c.job_date ? ` · for the job on ${fmtDate(c.job_date)}` : ""}`}
       />
 
       <div className={`flex items-center gap-3 rounded-2xl border p-4 ${verdict.cls}`}>
@@ -98,15 +98,15 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {gearLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink-dim">Loadout &amp; assets</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Gear list and gear</h2>
           {gearLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             const url = photoUrls.get(i.id);
             return (
               <Card key={i.id} className="flex items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{i.label}</div>
-                  {i.note ? <div className="truncate text-sm text-ink-dim">{i.note}</div> : null}
+                  <div className="break-words font-medium">{i.label}</div>
+                  {i.note ? <div className="break-words text-sm text-ink-dim">{i.note}</div> : null}
                 </div>
                 {url ? (
                   <a href={url} target="_blank" rel="noreferrer" className="shrink-0" title="Open photo proof">
@@ -125,12 +125,12 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       {paperLines.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink-dim">Paper &amp; crew cards at roll-out</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Paper and crew cards at the check</h2>
           {paperLines.map((i) => {
             const ui = RESULT_UI[i.result] ?? RESULT_UI.na;
             return (
               <Card key={i.id} className="flex items-center gap-3 p-4">
-                <span className="min-w-0 flex-1 truncate font-medium">{i.label}</span>
+                <span className="min-w-0 flex-1 break-words font-medium">{i.label}</span>
                 <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${ui.cls}`}>{ui.label}</span>
               </Card>
             );
@@ -138,8 +138,12 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
         </section>
       )}
 
+      {gearLines.length === 0 && paperLines.length === 0 ? (
+        <Card className="p-4 text-sm text-ink-dim">No line-by-line detail was saved with this check.</Card>
+      ) : null}
+
       <p className="flex items-center gap-2 text-xs text-ink-faint">
-        <Truck className="h-3.5 w-3.5" />
+        <Truck className="h-3.5 w-3.5 shrink-0" />
         This record was written at {fmtWhen(c.completed_at ?? c.started_at)} and can&apos;t be edited. It&apos;s the proof of {c.type === "checkin" ? "what came back on the truck" : "what the truck's paper said when it was checked"}.
       </p>
     </div>

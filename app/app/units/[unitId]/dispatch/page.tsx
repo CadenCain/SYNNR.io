@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Check, TriangleAlert, PencilRuler } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
+import { plainDate } from "@/lib/saas/judge";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { localToday } from "@/lib/saas/status";
 import { Card } from "@/components/ui/card";
@@ -83,8 +84,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <div className={`flex items-center gap-2 text-lg font-semibold ${comp.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
             {comp.verdict === "ready" ? <Check className="h-5 w-5" /> : <TriangleAlert className="h-5 w-5" />}
             {comp.verdict === "ready"
-              ? comp.isFutureJob ? `Ready for the ${comp.jobDate} job. Everything is current through then.` : "Ready. Everything on record is current."
-              : comp.isFutureJob ? `NOT READY for the ${comp.jobDate} job` : "NOT READY"}
+              ? comp.isFutureJob ? `Ready for the ${plainDate(comp.jobDate)} job. Everything is current through then.` : "Ready. Everything on record is current."
+              : comp.isFutureJob ? `NOT READY for the ${plainDate(comp.jobDate)} job` : "NOT READY"}
           </div>
           {failureGroups.length > 0 && (
             <div className="mt-3 flex flex-col gap-3">
@@ -130,8 +131,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
             {rows.map((l, i) => (
               <Card key={`${l.source_type}-${l.source_id ?? i}`} className="flex items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{l.label}</div>
-                  {l.detail ? <div className="truncate text-sm text-ink-dim">{l.detail}</div> : null}
+                  <div className="break-words font-medium">{l.label}</div>
+                  {l.detail ? <div className="break-words text-sm text-ink-dim">{l.detail}</div> : null}
                 </div>
                 <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${RESULT_UI[l.result]}`}>{RESULT_LABEL[l.result]}</span>
               </Card>
@@ -144,7 +145,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
         <form action={recordDispatchCheck} className="flex flex-col gap-2">
           <input type="hidden" name="unit_id" value={unitId} />
           <input type="hidden" name="job_date" value={comp.jobDate} />
-          <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${comp.jobDate}` : ""}`} />
+          <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${plainDate(comp.jobDate)}` : ""}`} />
           <p className="text-center text-xs text-ink-faint">
             Saves the result and every line with your name and the time. It can&apos;t be edited afterward.
             {comp.verdict === "not_ready" ? " A NOT READY result is saved as NOT READY. There is no override. Fix the items and run it again." : ""}

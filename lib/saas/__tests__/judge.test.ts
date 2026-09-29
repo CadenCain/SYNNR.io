@@ -32,7 +32,7 @@ describe("judgeItem", () => {
   it("fine today but lapses before a future job → expired for that job", () => {
     const j = judgeItem(item("a", "DOT", "2026-10-02"), "2026-10-05", TODAY);
     expect(j.result).toBe("expired");
-    expect(j.detail).toContain("before the 2026-10-05 job");
+    expect(j.detail).toContain("before the Oct 5, 2026 job");
   });
   it("cert on the way covers a lapsed item while the window is open", () => {
     expect(judgeItem(item("a", "BOP", "2026-09-20", { pending_until: "2026-10-03" }), TODAY, TODAY).result).toBe("pending");

@@ -6,7 +6,7 @@ import { Box, Camera, Check, ChevronLeft, MapPin, Plus, RefreshCw, Truck } from 
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { StatusBadge, type ComplianceStatus } from "@/components/ui/status-badge";
-import { ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
+import { ASSET_CATEGORIES, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { updateAssetLastSeen } from "../_actions";
 import { fmtDate } from "@/lib/saas/format";
 import { quickAddUnit, quickAddAsset } from "./actions";
@@ -63,6 +63,10 @@ export default function QuickClient({ items, units, assets, companyId, isManager
   const [err, setErr] = useState("");
   const [doneMsg, setDoneMsg] = useState("");
   const [addUnitId, setAddUnitId] = useState("");
+  const [find, setFind] = useState("");
+  const q = find.trim().toLowerCase();
+  const matching = q ? items.filter((it) => `${it.title} ${it.parentLabel}`.toLowerCase().includes(q)) : items;
+  const shown = matching.slice(0, 60);
   // Gear intake carries TWO shots — the iron and its paperwork — each with
   // its own camera field. Optional in a hurry; the asset flags amber without them.
   const gearPhotoRef = useRef<HTMLInputElement>(null);
@@ -176,16 +180,26 @@ export default function QuickClient({ items, units, assets, companyId, isManager
               </button>
             </div>
           ) : (
-            items.map((it) => (
-              <button key={it.id} onClick={() => setPicked(it)}
-                className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left active:bg-elevated">
-                <span className="min-w-0">
-                  <span className="block truncate text-base font-medium">{it.title}</span>
-                  <span className="block truncate text-sm text-ink-dim">{it.parentLabel}{it.expiration_date ? ` · ${fmtDate(it.expiration_date)}` : ""}</span>
-                </span>
-                <StatusBadge status={it.status} />
-              </button>
-            ))
+            <>
+              {/* A yard has hundreds of certs: type a truck, a hand, or a cert. */}
+              <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Find it: CT-03, Marcus, H2S…"
+                aria-label="Find a cert" className={FIELD} />
+              {shown.length === 0 ? (
+                <p className="px-1 text-sm text-ink-dim">Nothing matches that.</p>
+              ) : shown.map((it) => (
+                <button key={it.id} onClick={() => setPicked(it)}
+                  className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left active:bg-elevated">
+                  <span className="min-w-0">
+                    <span className="block text-base font-medium">{it.title}</span>
+                    <span className="block text-sm text-ink-dim">{it.parentLabel}{it.expiration_date ? ` · ${fmtDate(it.expiration_date)}` : ""}</span>
+                  </span>
+                  <StatusBadge status={it.status} />
+                </button>
+              ))}
+              {shown.length < matching.length ? (
+                <p className="px-1 text-sm text-ink-faint">Showing the first {shown.length} of {matching.length}. Type to narrow it down.</p>
+              ) : null}
+            </>
           )}
         </div>
       );

@@ -99,14 +99,31 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
           Nothing matches this filter.
         </div>
       ) : (
-        <Table>
+        <>
+        {/* Phones: a stacked list, so the status is on screen without a
+            sideways scroll through a four-column table. */}
+        <div className="flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface sm:hidden">
+          {filtered.map((i) => (
+            <Link key={i.id} href={i.href} className="flex items-start justify-between gap-3 px-4 py-3 active:bg-elevated">
+              <div className="min-w-0">
+                <div className="font-semibold text-ink">{i.title}</div>
+                <div className="text-sm text-ink-dim">
+                  {i.parentLabel}{i.customers.length > 0 ? ` (${i.customers.join(", ")})` : ""}
+                </div>
+                <div className="text-xs text-ink-faint">{i.expiration_date ? `Expires ${fmtDate(i.expiration_date)}` : "No expiration on file"}</div>
+              </div>
+              <StatusBadge status={i.status} className="mt-0.5 shrink-0" />
+            </Link>
+          ))}
+        </div>
+        <Table className="hidden sm:block">
           <thead><tr><Th>Item</Th><Th>On</Th><Th>Expires</Th><Th className="text-right">Status</Th></tr></thead>
           <tbody>
             {filtered.map((i) => (
               <Tr key={i.id}>
                 <Td>
                   <Link href={i.href} className="font-semibold text-ink hover:underline">{i.title}</Link>
-                  <span className="ml-2 text-xs text-ink-faint">{i.kindLabel}</span>
+                  <span className="ml-2 text-xs text-ink-faint">{i.kindLabel.replace(/\s*\(.*$/, "")}</span>
                 </Td>
                 <Td className="text-ink-dim">
                   {i.parentLabel}
@@ -118,6 +135,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
             ))}
           </tbody>
         </Table>
+        </>
       )}
     </div>
   );

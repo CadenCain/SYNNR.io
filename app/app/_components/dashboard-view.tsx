@@ -100,7 +100,7 @@ export default function DashboardView(d: DashboardData) {
                 <p className="mt-2 text-2xl font-semibold leading-snug">
                   {d.notReadyUnits === 1 ? `${worst.name} can't roll.` : `${d.notReadyUnits} units can't roll.`}
                 </p>
-                <p className="mt-1 truncate text-sm text-red-300">{worst.why}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-red-300">{worst.why}</p>
                 <div className="mt-4 flex gap-2">
                   <Link href={`/app/units/${worst.id}`} className="flex min-h-12 min-w-0 flex-1 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
                     <span className="truncate">Fix {worst.name}</span>
@@ -121,7 +121,7 @@ export default function DashboardView(d: DashboardData) {
               <Card className="border-amber-500/30 bg-amber-500/[0.05] p-5">
                 <div className="text-sm font-semibold text-amber-400">Ready, {dueSoon.length} due soon</div>
                 <p className="mt-2 text-2xl font-semibold leading-snug">No trucks are blocked today.</p>
-                <p className="mt-1 truncate text-sm text-ink-dim">{dueSoon[0].name}: {dueSoon[0].why}</p>
+                <p className="mt-1 line-clamp-2 text-sm text-ink-dim">{dueSoon[0].name}: {dueSoon[0].why}</p>
                 <Link href={`/app/units/${dueSoon[0].id}`} className="mt-4 flex min-h-12 items-center justify-center rounded-lg bg-bone px-4 font-semibold text-coal">
                   Open {dueSoon[0].name}
                 </Link>
@@ -285,8 +285,8 @@ export default function DashboardView(d: DashboardData) {
                         </div>
                         <span className={`shrink-0 rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${STATE_UI[u.state].chip}`}>{STATE_UI[u.state].label}</span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className={`truncate text-sm ${u.state === "not_ready" ? "font-medium text-red-400" : "text-ink-dim"}`}>{u.why}</span>
+                      <div className="mt-2 flex items-start justify-between gap-2">
+                        <span className={`line-clamp-2 text-sm ${u.state === "not_ready" ? "font-medium text-red-400" : "text-ink-dim"}`}>{u.why}</span>
                         {u.crewWorst ? (
                           <span className="flex shrink-0 items-center gap-1 text-xs text-ink-faint" title="Assigned crew cards">
                             <HardHat className="h-3 w-3" /> <StatusDot status={u.crewWorst} />
@@ -355,9 +355,9 @@ export default function DashboardView(d: DashboardData) {
                         <Tr key={i.id}>
                           <Td>
                             <Link href={hrefFor(i)} className="font-medium hover:underline">{i.title}</Link>
-                            <span className="ml-2 text-xs text-ink-faint">{kindLabel(i.kind)}{i.parent_type === "crew" ? " · crew" : ""}</span>
+                            <span className="ml-2 text-xs text-ink-faint">{kindLabel(i.kind).replace(/\s*\(.*$/, "")}{i.parent_type === "crew" ? " · crew" : ""}</span>
                           </Td>
-                          <Td className="tabular-nums text-ink-dim">{fmtDate(i.expiration_date)}</Td>
+                          <Td className="whitespace-nowrap tabular-nums text-ink-dim">{fmtDate(i.expiration_date)}</Td>
                           <Td className="text-right"><StatusBadge status={i.status} /></Td>
                         </Tr>
                       ))}
