@@ -219,15 +219,15 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
         </AddDisclosure>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         {/* Where it is and where it's been. The database writes the history
             itself on every move (migration 0010), so it can't be skipped. */}
-        <Card className="flex flex-col gap-4 p-5 lg:col-span-3">
+        <Card className="flex min-w-0 flex-col gap-4 p-5 lg:col-span-3">
           <h2 className="text-sm font-semibold text-ink-dim">Move it</h2>
           <form action={moveEquipment} className="flex flex-col gap-2">
             <input type="hidden" name="id" value={a.id} />
             <div className="flex flex-col gap-2 sm:flex-row">
-              <select name="where" defaultValue={whereValue} aria-label="Where to" className={`${fld} min-w-0 flex-1`}>
+              <select name="where" defaultValue={whereValue} aria-label="Where to" className={`${fld} w-full min-w-0 grow`}>
                 {whereValue === "" && <option value="">No location</option>}
                 {yards.map((y) => (
                   <optgroup key={y.id} label={y.name}>
@@ -236,7 +236,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
                   </optgroup>
                 ))}
               </select>
-              <input name="note" maxLength={120} placeholder="Note, e.g. rack 2, shop bench" className={`${fld} min-w-0 flex-1`} />
+              <input name="note" maxLength={120} placeholder="Note, e.g. rack 2, shop bench" className={`${fld} w-full min-w-0 grow`} />
             </div>
             <Button type="submit" className="sm:self-start"><MapPin className="h-4 w-4" /> Save where it is</Button>
           </form>

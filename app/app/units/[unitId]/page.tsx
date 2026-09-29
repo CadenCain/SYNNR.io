@@ -349,7 +349,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} min-w-0 flex-1`} />
+              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} w-full min-w-0 grow`} />
               <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
                 {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>

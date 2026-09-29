@@ -76,13 +76,13 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
           No equipment to tag yet. <Link href="/app" className="text-bone hover:underline">Add equipment</Link> first.
         </Card>
       ) : (
-        <div className={cn("grid gap-3 print:gap-2", small ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2")}>
+        <div className={cn("grid grid-cols-1 gap-3 print:gap-2", small ? "sm:grid-cols-2 xl:grid-cols-3 print:grid-cols-3" : "lg:grid-cols-2 print:grid-cols-2")}>
           {rows.map((r, i) => (
             <div key={r.id} className={cn("flex items-center gap-3 rounded-xl border border-dashed border-line-2 bg-white p-3 text-slate-900 [break-inside:avoid]", small ? "gap-2 p-2" : "")}>
-              <div className={cn("shrink-0 [&_svg]:h-full [&_svg]:w-full", small ? "h-[0.95in] w-[0.95in]" : "h-[1.6in] w-[1.6in]")}
+              <div className={cn("shrink-0 [&_svg]:h-full [&_svg]:w-full", small ? "h-20 w-20 print:h-[0.95in] print:w-[0.95in]" : "h-28 w-28 sm:h-[1.6in] sm:w-[1.6in] print:h-[1.6in] print:w-[1.6in]")}
                 dangerouslySetInnerHTML={{ __html: codes[i] }} />
               <div className="min-w-0">
-                <div className={cn("truncate font-semibold uppercase tracking-wide text-slate-500", small ? "text-[8px]" : "text-[10px]")}>{company.name}</div>
+                <div className={cn("break-words font-semibold uppercase leading-tight tracking-wide text-slate-500", small ? "text-[8px]" : "text-[10px]")}>{company.name}</div>
                 <div className={cn("break-words font-bold leading-tight", small ? "text-[11px]" : "text-base")}>{r.name}</div>
                 {r.identifier ? <div className={cn("font-semibold tabular-nums", small ? "text-[10px]" : "text-sm")}>SN {r.identifier}</div> : null}
                 <div className={cn("mt-1 text-slate-500", small ? "text-[8px]" : "text-[11px]")}>Scan for test dates</div>

@@ -186,11 +186,11 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
           ) : (
             <>
               {/* Phones: one card per piece */}
-              <div className="flex flex-col gap-2 md:hidden">
+              <div className="flex flex-col gap-2 lg:hidden">
                 {shown.map((r) => <PhoneRow key={r.id} r={r} />)}
               </div>
-              {/* Tablet and up: the table */}
-              <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.05)] md:block">
+              {/* Laptop and up: the table */}
+              <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.05)] lg:block">
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr>
