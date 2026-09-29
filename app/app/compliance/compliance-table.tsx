@@ -61,7 +61,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
   }, [items, status, kind, customer, sort]);
 
   const chip = (active: boolean) =>
-    cn("rounded-sm border px-2.5 py-1 text-xs font-medium transition-colors",
+    cn("inline-flex min-h-10 items-center rounded-md border px-3 text-sm font-medium transition-colors sm:min-h-8 sm:px-2.5 sm:text-xs",
       active ? "border-bone/60 bg-bone/10 text-bone" : "border-line-2 text-ink-dim hover:text-ink");
 
   return (
