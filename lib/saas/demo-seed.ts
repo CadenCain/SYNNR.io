@@ -26,7 +26,8 @@ const tsAgo = (daysAgo: number, hour: number, minute: number) => {
   const zone = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", timeZoneName: "shortOffset" })
     .formatToParts(asUtc).find((p) => p.type === "timeZoneName")?.value ?? "GMT-6";
   const offsetHours = Number(zone.match(/GMT([+-]\d+)/)?.[1] ?? -6);
-  return new Date(asUtc.getTime() - offsetHours * 3600e3).toISOString();
+  // A visitor at 3am shouldn't see this morning's 5am check in the future.
+  return new Date(Math.min(asUtc.getTime() - offsetHours * 3600e3, Date.now() - 60e3)).toISOString();
 };
 
 export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string): Promise<string> {

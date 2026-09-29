@@ -140,7 +140,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       <p className="flex items-center gap-2 text-xs text-ink-faint">
         <Truck className="h-3.5 w-3.5" />
-        This record was written at {fmtWhen(c.completed_at ?? c.started_at)} and can&apos;t be edited. It&apos;s the proof the truck {c.type === "checkin" ? "came back accounted for" : "rolled ready (or who decided otherwise)"}.
+        This record was written at {fmtWhen(c.completed_at ?? c.started_at)} and can&apos;t be edited. It&apos;s the proof of {c.type === "checkin" ? "what came back on the truck" : "what the truck's paper said when it was checked"}.
       </p>
     </div>
   );

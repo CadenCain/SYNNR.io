@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   try {
     const { data: created, error: userErr } = await admin.auth.admin.createUser({
       email, password, email_confirm: true,
-      user_metadata: { full_name: "Boss", is_demo: true },
+      user_metadata: { full_name: "Demo manager", is_demo: true },
     });
     if (userErr || !created.user) throw new Error(userErr?.message ?? "user create failed");
 

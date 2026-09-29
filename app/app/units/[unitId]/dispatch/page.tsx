@@ -57,7 +57,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
         title={`Readiness check: ${comp.unitName}`}
-        description="Where this truck's records stand right now: paper current, crew cards current for the job, gear accounted for. Nothing to tap, nothing to override."
+        description="Checks this truck's certs, its crew's cards, and its gear against the job date. There's no override."
       />
 
       <Card className="p-4">
