@@ -1,3 +1,4 @@
+import { fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireCompany , assertCan } from "@/lib/saas/auth";
@@ -77,7 +78,7 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
             <div className="text-sm text-ink-dim">Status</div>
             <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}</div>
             {status === "trialing" && c?.trial_ends_at ? (
-              <div className="mt-0.5 text-sm text-ink-faint">Trial ends {new Date(c.trial_ends_at).toLocaleDateString()}</div>
+              <div className="mt-0.5 text-sm text-ink-faint">Trial ends {fmtDay(c.trial_ends_at)}</div>
             ) : null}
           </div>
           <BillingActions mode={mode as "portal" | "subscribe" | "comped"} />

@@ -3,6 +3,7 @@ import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_CREW, DEMO_EVENTS,
   DEMO_MISSES, DEMO_CHECKS, DEMO_SNAPSHOTS, DEMO_ALERTS_SENT,
 } from "./demo-data";
+import { localToday, addDaysIso } from "./status";
 
 /**
  * Seed one private copy of the Caprock demo yard for one visitor — batched
@@ -12,16 +13,20 @@ import {
  * their throwaway users after 24h.
  */
 
-const iso = (daysFromNow: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + daysFromNow);
-  return d.toISOString().slice(0, 10);
-};
+// Every date is counted from the yard's own calendar day (Central), the same
+// day the status view and the readiness engine use. Counting from the UTC day
+// shifted the whole yard by one after 7pm Central: the H2S card that "expired
+// yesterday" hadn't expired yet, and the board showed 2 red trucks instead of 3.
+const iso = (daysFromNow: number) => addDaysIso(localToday(), daysFromNow);
+
+/** The UTC instant for a Central wall-clock time, n days back. */
 const tsAgo = (daysAgo: number, hour: number, minute: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
+  const day = addDaysIso(localToday(), -daysAgo);
+  const asUtc = new Date(`${day}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`);
+  const zone = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", timeZoneName: "shortOffset" })
+    .formatToParts(asUtc).find((p) => p.type === "timeZoneName")?.value ?? "GMT-6";
+  const offsetHours = Number(zone.match(/GMT([+-]\d+)/)?.[1] ?? -6);
+  return new Date(asUtc.getTime() - offsetHours * 3600e3).toISOString();
 };
 
 export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string): Promise<string> {

@@ -35,3 +35,22 @@ export function fmtDate(d: string | null | undefined): string {
   if (isNaN(dt.getTime())) return d;
   return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
+
+/** Timestamps show in the yard's time. The Permian runs on Central, and these
+ *  pages render on the server, which runs on UTC. Without the zone a check run
+ *  at 5am showed as 10am. */
+export const YARD_TZ = "America/Chicago";
+
+export function fmtWhen(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return iso;
+  return dt.toLocaleString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+export function fmtDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", year: "numeric" });
+}

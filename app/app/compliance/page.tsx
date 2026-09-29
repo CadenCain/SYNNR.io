@@ -1,3 +1,4 @@
+import { fmtWhen, fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { Bell, Settings2 } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
@@ -117,7 +118,7 @@ export default async function CompliancePage() {
           <p className="text-sm font-semibold text-red-400">Some alerts failed to deliver in the last 7 days</p>
           <ul className="mt-1.5 flex flex-col gap-1 text-sm text-red-300">
             {failedAlerts.map((f, i) => (
-              <li key={i}>• {f.message} <span className="text-ink-faint">({new Date(f.created_at).toLocaleDateString()})</span></li>
+              <li key={i}>• {f.message} <span className="text-ink-faint">({fmtDay(f.created_at)})</span></li>
             ))}
           </ul>
         </Card>
@@ -156,7 +157,7 @@ export default async function CompliancePage() {
               <tbody>
                 {history.map((h, idx) => (
                   <Tr key={idx}>
-                    <Td className="tabular-nums text-ink-dim">{new Date(h.when).toLocaleString()}</Td>
+                    <Td className="tabular-nums text-ink-dim">{fmtWhen(h.when)}</Td>
                     <Td className="font-medium">{h.title}</Td>
                     <Td className="text-ink-dim">{h.recipient ?? "—"}</Td>
                     <Td className="text-right capitalize text-ink-dim">{h.channel}</Td>

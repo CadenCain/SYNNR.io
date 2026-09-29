@@ -1,3 +1,4 @@
+import { fmtWhen } from "@/lib/saas/format";
 import type { Metadata } from "next";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
@@ -108,7 +109,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // Nothing tracked = nothing proven. An empty scope must never read "Ready".
   const configured = items.length > 0 || assets.length > 0;
   const ready = configured && failingCount === 0 && missingAssets.length === 0;
-  const generatedAt = new Date().toLocaleString();
+  const generatedAt = fmtWhen(new Date().toISOString());
 
   // Unit scope: a "Ready" must carry what it did NOT check. The operator sees
   // the same caveats the shop sees — an all-optional loadout or an unmanned
@@ -199,7 +200,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold text-ink-dim">Last readiness check</h2>
-              <span className="text-xs text-ink-faint">{new Date(record.started_at).toLocaleString()}</span>
+              <span className="text-xs text-ink-faint">{fmtWhen(record.started_at)}</span>
             </div>
             <p className="mt-2 text-sm">
               <span className={record.status === "not_ready_override" ? "font-semibold text-red-400" : "font-semibold text-emerald-400"}>

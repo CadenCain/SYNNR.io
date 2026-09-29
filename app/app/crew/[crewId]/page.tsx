@@ -18,7 +18,7 @@ import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 import { updateCrewMember, deleteCrewMember } from "@/app/app/_actions";
 import { closeDocRequest } from "../doc-actions";
 import SendUpdateLink from "./send-update-link";
-import { fmtDate } from "@/lib/saas/format";
+import { fmtDate, fmtWhen } from "@/lib/saas/format";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +127,7 @@ export default async function CrewDetail({ params }: { params: Promise<{ crewId:
                   New {r.submitted_kind ?? "card"} photo from {c.name}
                   {r.submitted_expiration ? <span className="text-ink-dim">, expires {fmtDate(r.submitted_expiration)}</span> : null}
                 </p>
-                <span className="text-xs text-ink-faint">{r.submitted_at ? new Date(r.submitted_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span>
+                <span className="text-xs text-ink-faint">{r.submitted_at ? fmtWhen(r.submitted_at) : ""}</span>
               </div>
               {r.submitted_note && <p className="text-sm text-ink-dim">&ldquo;{r.submitted_note}&rdquo;</p>}
               <div className="flex flex-wrap gap-2">

@@ -13,7 +13,7 @@ import { Table, Th, Td, Tr } from "@/components/ui/table";
 import ShareProof from "./share-proof";
 import { loadSampleYard, clearSampleYard } from "../_actions";
 import { Sparkline } from "@/components/ui/sparkline";
-import { fmtDate } from "@/lib/saas/format";
+import { fmtDate, fmtWhen } from "@/lib/saas/format";
 import { TrendChart } from "./trend-chart";
 
 /**
@@ -318,7 +318,7 @@ export default function DashboardView(d: DashboardData) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm">{e.message}</p>
                         <p className="text-xs text-ink-faint">
-                          {new Date(e.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                          {fmtWhen(e.created_at)}
                           {e.actor && !e.message.includes(e.actor) ? <> · {e.actor}</> : null}
                         </p>
                       </div>

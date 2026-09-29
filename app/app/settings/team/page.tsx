@@ -1,3 +1,4 @@
+import { fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireCompany } from "@/lib/saas/auth";
@@ -124,7 +125,7 @@ export default async function TeamSettings() {
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate text-sm text-ink-dim">
                   {iv.email || "Anyone with the link"} · {iv.role} ·{" "}
-                  <span className="text-ink-faint">expires {new Date(iv.expires_at).toLocaleDateString()}</span>
+                  <span className="text-ink-faint">expires {fmtDay(iv.expires_at)}</span>
                 </span>
                 <form action={revokeInvite}>
                   <input type="hidden" name="id" value={iv.id} />

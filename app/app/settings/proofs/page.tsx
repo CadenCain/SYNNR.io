@@ -1,3 +1,4 @@
+import { fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { Ban } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
@@ -50,7 +51,7 @@ export default async function ProofsSettings() {
             {proofs.map((p) => (
               <Tr key={p.id}>
                 <Td className="font-medium">{p.scopeLabel}</Td>
-                <Td className="tabular-nums text-ink-dim">{new Date(p.created_at).toLocaleDateString()}</Td>
+                <Td className="tabular-nums text-ink-dim">{fmtDay(p.created_at)}</Td>
                 <Td>
                   {p.revoked_at ? <span className="text-ink-faint">—</span> : (
                     <Link href={`/proof/${p.token}`} target="_blank" className="text-bone hover:underline">

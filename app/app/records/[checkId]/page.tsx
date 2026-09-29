@@ -1,3 +1,4 @@
+import { fmtWhen } from "@/lib/saas/format";
 import { notFound } from "next/navigation";
 import { Check, TriangleAlert, Camera, Lock, Truck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
@@ -76,7 +77,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
         title={`Check record: ${unitName}`}
-        description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${new Date(c.started_at).toLocaleString()}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
+        description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${fmtWhen(c.started_at)}${c.job_date ? ` · for the job on ${c.job_date}` : ""}`}
       />
 
       <div className={`flex items-center gap-3 rounded-2xl border p-4 ${verdict.cls}`}>
@@ -139,7 +140,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
 
       <p className="flex items-center gap-2 text-xs text-ink-faint">
         <Truck className="h-3.5 w-3.5" />
-        This record was written at {new Date(c.completed_at ?? c.started_at).toLocaleString()} and can&apos;t be edited. It&apos;s the proof the truck {c.type === "checkin" ? "came back accounted for" : "rolled ready (or who decided otherwise)"}.
+        This record was written at {fmtWhen(c.completed_at ?? c.started_at)} and can&apos;t be edited. It&apos;s the proof the truck {c.type === "checkin" ? "came back accounted for" : "rolled ready (or who decided otherwise)"}.
       </p>
     </div>
   );

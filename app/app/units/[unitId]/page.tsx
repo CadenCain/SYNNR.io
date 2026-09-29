@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, HardHat, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
-import { seenAge } from "@/lib/saas/format";
+import { seenAge, fmtWhen } from "@/lib/saas/format";
 import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, COMPLIANCE_KINDS, UNIT_TYPES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -279,7 +279,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">
-                      {h.type === "checkin" ? "Checked in" : "Readiness check"} · {new Date(h.started_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                      {h.type === "checkin" ? "Checked in" : "Readiness check"} · {fmtWhen(h.started_at)}
                     </div>
                     <div className="truncate text-sm text-ink-dim">by {h.performed_by_name ?? "—"}</div>
                   </div>
