@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
 
-/** PWA manifest — installs SYNNR to the home screen. */
+/** PWA manifest: installs RollReady to the home screen. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SYNNR",
-    short_name: "SYNNR",
+    name: "RollReady by SYNNR",
+    short_name: "RollReady",
     description:
       "Equipment & cert readiness for oilfield service shops. Track every asset and cert; get a text before anything expires.",
     start_url: "/app",

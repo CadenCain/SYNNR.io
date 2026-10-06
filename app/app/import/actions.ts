@@ -159,7 +159,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   }
   async function ensureAsset(name: string, serial: string, unitId: string | null, category: string, ops: string[]): Promise<string> {
     // The serial is the piece's identity: the same serial on another row (or
-    // already in SYNNR) is the same iron, wherever the sheet says it sits.
+    // already in RollReady) is the same iron, wherever the sheet says it sits.
     const bySerial = serial ? ctx.serials.get(serial.toLowerCase()) : undefined;
     if (bySerial) return bySerial;
     const key = `${unitId ?? "yard"}|${name.toLowerCase()}`;
@@ -225,7 +225,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
       const expires = parseDate(get(r, col.expires));
 
       if (!unitName && !assetName) {
-        if (crewName) { ops.push("skipped: crew cards aren't tracked in SYNNR"); rows.push({ line: li + 1, ops, error: null }); continue; }
+        if (crewName) { ops.push("skipped: crew cards aren't tracked in RollReady"); rows.push({ line: li + 1, ops, error: null }); continue; }
         throw new Error("This row has no truck, equipment, or serial. Fill one in.");
       }
       if (itemTitle && !expires) ops.push("note: no expiration, so it imports as 'no date'");

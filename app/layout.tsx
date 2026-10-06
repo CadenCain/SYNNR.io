@@ -25,28 +25,28 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR: equipment test tracking for oilfield service yards",
+    default: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
     template: "%s",
   },
   description:
-    "SYNNR keeps every piece of iron in an oilfield service yard on one list, with its serial, where it is, and when its next test is due. QR tags, move history, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
+    "RollReady keeps every piece of iron in an oilfield service yard on one list, with its serial, where it is, and when its next test is due. QR tags, move history, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
   keywords: [
-    "SYNNR", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
+    "RollReady", "SYNNR", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
     "QR equipment tags", "NDT recertification tracking", "equipment tracking", "where is my equipment", "oilfield service software",
     "wireline", "coil tubing", "cementing", "BOP testing", "BOP recertification", "lubricator pressure test", "DOT inspection",
     "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
   ],
   openGraph: {
     type: "website",
-    siteName: "SYNNR",
-    title: "SYNNR: equipment test tracking for oilfield service yards",
+    siteName: "RollReady by SYNNR",
+    title: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
     description:
       "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR: equipment test tracking for oilfield service yards",
+    title: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
     description:
       "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
   },
@@ -60,14 +60,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
-        {/* Structured data for a "SYNNR" brand search. */}
+        {/* Structured data for a "RollReady" / "SYNNR" brand search. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "SYNNR",
+              name: "RollReady",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
               url: "https://www.synnr.io",
@@ -76,7 +76,7 @@ export default function RootLayout({
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",
-                name: "SYNNR",
+                name: "RollReady",
                 url: "https://www.synnr.io",
                 areaServed: "Permian Basin, West Texas",
               },

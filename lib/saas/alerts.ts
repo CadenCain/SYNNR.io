@@ -142,8 +142,8 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       if (r.channels.includes("email") && r.email) {
         const ok = await sendEmail(
           [r.email],
-          `[SYNNR] ${company.name}: ${sorted.length} expiring`,
-          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen SYNNR to renew: ${appUrl}</pre>`,
+          `[RollReady] ${company.name}: ${sorted.length} expiring`,
+          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen RollReady to renew: ${appUrl}</pre>`,
         );
         if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else {
@@ -157,7 +157,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
       // channel; SMS wakes up when the env vars land.
       if (smsConfigured() && r.channels.includes("sms") && r.phone) {
         const worst = sorted[0];
-        const body = `SYNNR: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} - ${company.name}`;
+        const body = `RollReady: ${line(worst)}${sorted.length > 1 ? ` +${sorted.length - 1} more` : ""}. ${appUrl} - ${company.name}`;
         const ok = await sendSms(r.phone, body);
         if (ok) { res.sms_sent++; sorted.forEach((i) => smsedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else {

@@ -2,7 +2,7 @@ import "./marketing.css";
 import Link from "next/link";
 
 /** Friendly 404 — keeps people in the product instead of dumping a bare error. */
-export const metadata = { title: "Not found · SYNNR" };
+export const metadata = { title: "Not found · RollReady" };
 
 export default function NotFound() {
   return (

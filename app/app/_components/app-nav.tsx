@@ -65,7 +65,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
         <div className="flex items-center gap-2.5 px-2 pb-4">
           {MARK}
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="font-semibold tracking-tight">SYNNR</div>
+            <div className="font-semibold tracking-tight">RollReady</div>
             {companyName ? <div className="line-clamp-2 text-xs leading-snug text-ink-faint" title={companyName}>{companyName}</div> : null}
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
           wordmark doesn't jam the top edge on a real phone. */}
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
-        <span className="font-semibold tracking-tight">SYNNR</span>
+        <span className="font-semibold tracking-tight">RollReady</span>
         <Link href="/app/search" aria-label="Search" className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
           <Search className="h-[18px] w-[18px]" />
         </Link>

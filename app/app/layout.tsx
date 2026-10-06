@@ -15,7 +15,7 @@ import { saasDb } from "@/lib/saas/db";
 // the "cancel anytime, your data stays exportable" promise on the checkout
 // page.
 export const metadata: Metadata = {
-  title: "SYNNR",
+  title: "RollReady",
   robots: { index: false, follow: false },
 };
 

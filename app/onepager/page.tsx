@@ -10,7 +10,7 @@ import PrintButton from "./print-button";
  */
 
 export const metadata: Metadata = {
-  title: "SYNNR one-pager",
+  title: "RollReady one-pager",
   robots: { index: false, follow: false },
 };
 
@@ -57,13 +57,13 @@ export default function OnePager() {
       `}</style>
 
       <div className="op-toolbar">
-        <span>SYNNR one-pager. Prints on one sheet, black on white.</span>
+        <span>RollReady one-pager. Prints on one sheet, black on white.</span>
         <PrintButton />
       </div>
 
       <div className="op-sheet">
         <div className="op-head">
-          <div className="op-brand">SYNNR<small>Equipment test tracking · Permian Basin</small></div>
+          <div className="op-brand">RollReady<small>by SYNNR · Equipment test tracking · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b>, founder<br />
             Call or text {OWNER_PHONE}
@@ -74,7 +74,7 @@ export default function OnePager() {
 
         <p className="op-p">
           Nobody knew until the company man checked the paper and turned the crew around at the gate.
-          SYNNR keeps every piece of iron in your yard on one list, with its serial, where it is, and when
+          RollReady keeps every piece of iron in your yard on one list, with its serial, where it is, and when
           its next test is due, and emails the right person before anything lapses. If something does
           lapse, the truck it rides on reads NOT READY until the record is fixed.
         </p>
@@ -93,7 +93,7 @@ export default function OnePager() {
           <div className="op-box">
             <h3>The math</h3>
             <div style={{ fontSize: "13.5px", lineHeight: 1.65 }}>
-              One lubricator miss is 16 months of SYNNR. It&apos;s a flat price per yard and never
+              One lubricator miss is 16 months of RollReady. It&apos;s a flat price per yard and never
               per-seat, so adding people or iron costs nothing. No contract, cancel anytime, and your
               data stays yours.
             </div>
@@ -103,14 +103,14 @@ export default function OnePager() {
         <div className="op-math">
           <div><div className="n">$10,000+</div><div className="k">one missed cert, one NPT day</div></div>
           <div><div className="n">$500</div><div className="k">per yard / month, flat</div></div>
-          <div><div className="n">16 months</div><div className="k">of SYNNR for one lubricator miss</div></div>
+          <div><div className="n">16 months</div><div className="k">of RollReady for one lubricator miss</div></div>
         </div>
 
         <div className="op-free">Setup is free for the first 10 yards. I&apos;ll do it with you in one afternoon. Bring the binder.</div>
 
         <div className="op-foot">
           <div className="who">
-            I ran wireline in the Permian for five years and built SYNNR because nobody else had.
+            I ran wireline in the Permian for five years and built RollReady because nobody else had.
             Call or text me and I&apos;ll show you your own trucks in it.<br />
             <b>{OWNER_PHONE}</b> · synnr.io
           </div>

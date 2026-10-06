@@ -16,8 +16,8 @@ import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "SYNNR live demo",
-  description: "Try SYNNR with a demo yard. Your own private copy of a working coil tubing yard, no signup, no card.",
+  title: "RollReady live demo",
+  description: "Try RollReady with a demo yard. Your own private copy of a working coil tubing yard, no signup, no card.",
 };
 
 const DEMO_PROOF = `/proof/${SHOWCASE_PROOF_TOKEN}`;
@@ -27,10 +27,10 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
   return (
     <div className="saas min-h-dvh bg-coal text-ink antialiased">
       <main className="mx-auto w-full max-w-3xl px-4 pb-20 pt-6 sm:px-6 md:pt-10">
-        <a href="/" className="inline-block text-sm font-semibold text-ink hover:text-bone">SYNNR</a>
+        <a href="/" className="inline-block text-sm font-semibold text-ink hover:text-bone">RollReady <span className="font-normal text-ink-faint">by SYNNR</span></a>
 
         <div className="mt-8 flex flex-col gap-5">
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try SYNNR with a demo yard</h1>
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try RollReady with a demo yard</h1>
           <p className="text-base leading-relaxed text-ink-dim">
             Tap the button and you get your own copy of a made-up Odessa coil tubing company: 62 pieces of
             iron on 16 trucks and trailers, and a few problems already on the list. The BOP stack on CT‑03 is
@@ -84,7 +84,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
               Every piece of iron on your phone, worst first. Tap one to see its paper, its QR tag, and
               where it&apos;s been. You can open the demo on your phone too.
             </p>
-            <Image src="/screens/app-phone.webp" alt="SYNNR on a phone: the equipment list with a red-tagged plug valve on top"
+            <Image src="/screens/app-phone.webp" alt="RollReady on a phone: the equipment list with a red-tagged plug valve on top"
               width={750} height={1624} className="mx-auto mt-2 w-40 rounded-[22px] border-[5px] border-slate-900 shadow-lg" />
           </div>
         </div>

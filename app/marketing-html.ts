@@ -1,6 +1,6 @@
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
-// SYNNR homepage. One product: equipment test tracking that prevents NPT.
+// RollReady homepage (the product; SYNNR is the company). Equipment test tracking that prevents NPT.
 // Every piece of iron, its serial, where it is, and its next test; QR tags,
 // move history, truck checks, and proof links ride along at the same price.
 // Navy top with the real app in a laptop and phone, light sections below.
@@ -23,11 +23,11 @@ const ICON = {
 export const MARKETING_HTML = `
 <header class="nav nav-navy" id="nav">
   <div class="nav-pill">
-    <a class="brand" href="/" aria-label="SYNNR">
+    <a class="brand" href="/" aria-label="RollReady by SYNNR">
       <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
         <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#6f95ff"/>
       </svg>
-      <span class="wordmark">SYNNR</span>
+      <span class="wordmark">RollReady</span><span class="by-synnr">by SYNNR</span>
     </a>
     <nav class="nav-links">
       <a href="#product">Product</a>
@@ -60,7 +60,7 @@ export const MARKETING_HTML = `
     <div class="x-hero-copy">
       <p class="x-kicker">Equipment test tracking for oilfield service yards</p>
       <h1>An expired lubricator cert cost us $8,000 on a major's location.</h1>
-      <p class="x-lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. SYNNR keeps every piece of iron in your yard on one list, with its serial, where it is, and when its next test is due, so that never happens again.</p>
+      <p class="x-lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. RollReady keeps every piece of iron in your yard on one list, with its serial, where it is, and when its next test is due, so that never happens again.</p>
       <div class="x-cta">
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
         <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
@@ -71,7 +71,7 @@ export const MARKETING_HTML = `
       <div class="x-laptop">
         <div class="x-laptop-screen">
           <img src="/screens/app-desktop.webp" width="2000" height="1250"
-            alt="SYNNR equipment list: 62 pieces of iron with serials, where each one is, its next test, and a status. Two overdue, two red-tagged or missing." fetchpriority="high"/>
+            alt="RollReady equipment list: 62 pieces of iron with serials, where each one is, its next test, and a status. Two overdue, two red-tagged or missing." fetchpriority="high"/>
         </div>
         <div class="x-laptop-base"></div>
       </div>
@@ -110,7 +110,7 @@ export const MARKETING_HTML = `
       <div class="x-card x-proofcard">
         <span class="x-ic x-ic-blue">${ICON.camera}</span>
         <h3>Nobody fixes a record by typing a new date</h3>
-        <p>Someone takes a photo of the new cert, and SYNNR reads it before anything turns green:</p>
+        <p>Someone takes a photo of the new cert, and RollReady reads it before anything turns green:</p>
         <ul class="x-checks">
           <li>${ICON.check}<span>The expiration date has to be printed on the paper</span></li>
           <li>${ICON.check}<span>The serial on the cert has to match the iron</span></li>
@@ -140,7 +140,7 @@ export const MARKETING_HTML = `
     <div class="x-browser">
       <div class="x-browser-bar"><i></i><i></i><i></i><span>synnr.io/app</span></div>
       <img src="/screens/app-desktop.webp" width="2000" height="1250" loading="lazy"
-        alt="SYNNR equipment list: each piece with its serial, where it is, its next test, and a status"/>
+        alt="RollReady equipment list: each piece with its serial, where it is, its next test, and a status"/>
     </div>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
@@ -167,7 +167,7 @@ export const MARKETING_HTML = `
       <div class="x-price-left">
         <p class="x-kicker x-kicker-blue">Pricing</p>
         <h2 class="x-h2">One price. Your whole crew.</h2>
-        <p class="x-body">One lubricator miss is 16 months of SYNNR.</p>
+        <p class="x-body">One lubricator miss is 16 months of RollReady.</p>
         <p class="x-body">Early yards lock in $500 for as long as they stay on.</p>
         <p class="x-body">Running a lot of yards? Fleets are a conversation. <a href="${OWNER_PHONE_TEL}">Call or text me.</a></p>
       </div>
@@ -189,16 +189,16 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="x-card x-founder">
       <span class="x-ic x-ic-blue">${ICON.shield}</span>
-      <p>I ran wireline in the Permian for five years. I've been the hand on location when the paper was wrong, and I built SYNNR because nobody else had. If you want to see it with your own trucks in it, call or text me at <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a>.</p>
+      <p>I ran wireline in the Permian for five years. I've been the hand on location when the paper was wrong, and I built RollReady because nobody else had. If you want to see it with your own trucks in it, call or text me at <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a>.</p>
       <p class="x-sign">Caden Cain</p>
-      <p class="x-fine">You won't find fake logos or customer counts on this site. SYNNR is new, and I'd rather say so.</p>
+      <p class="x-fine">You won't find fake logos or customer counts on this site. RollReady is new, and I'd rather say so.</p>
     </div>
   </div>
 </section>
 
 <section class="x-close band-navy">
   <div class="container">
-    <h2 class="x-h2">See your iron in SYNNR</h2>
+    <h2 class="x-h2">See your iron in RollReady</h2>
     <p class="x-lede">Open the demo on your phone right now, or call and I'll load your yard.</p>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
@@ -212,7 +212,7 @@ export const MARKETING_HTML = `
 <footer class="simple-footer">
   <div class="container">
     <div class="row">
-      <span class="brand-sm">SYNNR</span>
+      <span class="brand-sm">RollReady by SYNNR</span>
       <a href="${OWNER_PHONE_TEL}">Call or text ${OWNER_PHONE}</a>
       <a href="/demo">Live demo</a>
       <a href="/readiness-audit">Free readiness map</a>
