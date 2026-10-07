@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search, Printer, Download, Plus, X, QrCode } from "lucide-react";
+import { Search, Printer, Download, Plus, X, QrCode, Map as MapIcon } from "lucide-react";
 import type { EquipRow, EquipState, EquipmentList } from "@/lib/saas/equipment";
 import { STATE_ORDER, stateLabel } from "@/lib/saas/equipment";
 import { ASSET_CATEGORIES, categoryLabel } from "@/lib/saas/taxonomy";
@@ -112,6 +112,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
         <div className="flex flex-wrap items-center gap-2">
           {hasAny && (
             <>
+              <Link href="/app/map" className={buttonClass("outline", "sm")}><MapIcon className="h-4 w-4" /> Yard map</Link>
               <Link href="/app/tags" className={buttonClass("outline", "sm")}><Printer className="h-4 w-4" /> Print QR tags</Link>
               <a href="/app/equipment/export" className={buttonClass("outline", "sm")}><Download className="h-4 w-4" /> Download list</a>
             </>

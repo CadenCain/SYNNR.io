@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, Truck, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
+import { Boxes, Map as MapIcon, Truck, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -13,6 +13,7 @@ type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolea
 const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records"];
 const MAIN: NavItem[] = [
   { href: "/app", label: "Equipment", icon: Boxes, exact: true, also: ["/app/assets"] },
+  { href: "/app/map", label: "Yard map", icon: MapIcon },
   { href: "/app/trucks", label: "Trucks", icon: Truck, also: TRUCK_PAGES },
   { href: "/app/compliance", label: "Tests due", icon: CalendarClock },
   { href: "/app/tags", label: "QR tags", icon: QrCode },
@@ -49,7 +50,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
   const path = usePathname() || "/app";
   const router = useRouter();
   const [more, setMore] = useState(false);
-  const moreActive = ["/app/tags", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
+  const moreActive = ["/app/map", "/app/tags", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
 
   async function signOut() {
     const sb = getBrowserSupabase();
@@ -205,6 +206,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
               </button>
             </div>
             {[
+              { href: "/app/map", label: "Yard map", icon: MapIcon },
               { href: "/app/tags", label: "QR tags", icon: QrCode },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
               { href: "/app/search", label: "Search", icon: Search },
