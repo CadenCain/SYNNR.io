@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Collide daily log: other people's names, messages, and leads. Never commit (repo is public).
+docs/collide-log.md
