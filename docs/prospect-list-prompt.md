@@ -15,7 +15,9 @@ Use the tab named **Shops**. Make it if it doesn't exist, with these columns in 
 
 Company · Slug · Personal demo link · Website · Main phone · City · County · State · Service lines · Fit tier · Size (if public) · Iron they likely run · Other yards · Decision maker · Title · Business email · Email source · LinkedIn (company page) · On IronTrac? · Source URLs · Notes · Status · Last touch · Next step date
 
-Also keep a tab named **Progress** (which searches are done, see "The grid") and a tab named **Partners** (testing and recert shops; see "Who's out").
+Also keep a tab named **Progress** (which searches are done, see "The grid") and a tab named **Partners** (testing and recert shops; see "Who's out"). Partners columns: Company · City · Services (UT, hydro, mag particle, banding, mobile units) · Uses IronTrac? · Evidence URL · Customer portal? · Main phone · Website · Decision maker · Title · Business email · Source URLs · Notes.
+
+Testing companies matter more than they look. IronTrac sells mainly through them: a testing company that runs IronTrac gives every shop it serves free access to their cert history in IronTrac. Two Midland testing companies say so on their own sites (J&J Pressure Management and Elite Testing). For every testing company, find out from its own site whether it uses IronTrac or another customer portal, and link the page that says so.
 
 - **Slug**: the shop's short code for its personal link. Take the company name, drop LLC, Inc, Co, Services, and Company, lowercase it, and join the words with hyphens. Only a-z, 0-9, and hyphens, 40 characters max. "Wildcat Wireline Services, LLC" becomes `wildcat-wireline`. Every slug must be unique; if one is taken, add the town (`wildcat-wireline-odessa`).
 - **Personal demo link**: `https://www.synnr.io/demo?ref=` plus the slug. Put it in as a formula so it updates if the slug changes: `="https://www.synnr.io/demo?ref="&B2`. When someone at that shop opens the demo from this link, Caden gets an email naming the shop.
@@ -72,6 +74,7 @@ Good places to look, all public:
 5. **Business email**: only one the company publishes or a business email you found in a public source. Never guess or build an email from a pattern. A general inbox like info@ is fine if that's all there is; mark it "general inbox" under Email source.
 6. **On IronTrac?**: "yes" with a source link only if you see real evidence (their site, a job post, or a press release mentions IronTrac). Otherwise leave it blank. Don't guess.
 7. **Source URLs**: every page you used. No row without a source.
+   If a shop's site names who does its iron testing or recert, put that company in Notes ("recert: J&J Pressure").
 8. Make the slug and the personal demo link.
 
 Before adding a shop, check the sheet for the same website or phone number. If it's already there, update the row with anything new instead of adding a second one.
