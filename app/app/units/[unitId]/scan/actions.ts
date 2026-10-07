@@ -106,12 +106,15 @@ export async function finishLoadout(input: {
   await db.from("saas_loadout_scans").insert({
     company_id: company.id, unit_id: unit.id, unit_name: unit.name, scanned_by: actor,
     started_at: input.startedAt || null, finished_at: now,
-    expected: expectedCount, scanned: scannedIds.length,
+    // "scanned" counts the truck's own list, so 4 of 5 means one wasn't scanned;
+    // pieces brought over from elsewhere are listed as added.
+    expected: expectedCount, scanned: scans.filter((s) => byId.get(s.assetId)!.unit_id === unit.id).length,
     pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, added: a.unit_id !== unit.id }; }),
     not_scanned: notScanned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   });
 
-  const parts = [`${scannedIds.length} scanned`];
+  const onListScanned = scans.filter((s) => byId.get(s.assetId)!.unit_id === unit.id).length;
+  const parts = [`${onListScanned} of ${expectedCount} on the list scanned`];
   if (added.length) parts.push(`added ${added.map(label).join(", ")}`);
   if (toYard.length) parts.push(`to the yard: ${toYard.map(label).join(", ")}`);
   if (missing.length) parts.push(`missing: ${missing.map(label).join(", ")}`);

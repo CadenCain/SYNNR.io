@@ -302,7 +302,7 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
           <h2 className="font-semibold">Before you save</h2>
           {redScanned.length > 0 && (
             <p className={cn("rounded-lg border px-3 py-2 text-sm", TONE.bad)}>
-              Out of test or red-tagged and scanned on: {redScanned.map((p) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`).join(", ")}. {truck.name} will read NOT READY until that&apos;s fixed or it comes off.
+              {`Out of test or red-tagged and scanned on: ${redScanned.map((p) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`).join(", ")}. ${truck.name} will read NOT READY until that's fixed or it comes off.`}
             </p>
           )}
           {notYet.length === 0 ? (
