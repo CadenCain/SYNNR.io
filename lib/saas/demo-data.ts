@@ -153,6 +153,13 @@ export const DEMO_MOVES: DemoMove[] = [
   { serial: "SW-1104", from: "yard", to: "ct4", note: "back from recert", by: "Freddy Carrasco", daysAgo: 3, hour: 10 },
 ];
 
+/** Load-outs scanned at the truck: what was proven on each before it rolled. */
+export const DEMO_LOADOUTS: { unitKey: string; by: string; how: "nfc" | "qr"; daysAgo: number; hour: number; minute: number }[] = [
+  { unitKey: "ct2", by: "Ray Hinojosa", how: "nfc", daysAgo: 0, hour: 4, minute: 40 },
+  { unitKey: "ct3", by: "Dale Wooten", how: "nfc", daysAgo: 0, hour: 4, minute: 55 },
+  { unitKey: "p1", by: "J.R. Stanton", how: "qr", daysAgo: 5, hour: 5, minute: 50 },
+];
+
 /**
  * One upload waiting on the manager, so the demo shows the rule that matters
  * most: nobody can clear a test with a date that isn't on the paper. Logan

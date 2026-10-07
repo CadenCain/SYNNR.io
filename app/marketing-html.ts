@@ -60,7 +60,7 @@ export const MARKETING_HTML = `
     <div class="x-hero-copy">
       <p class="x-kicker">Equipment test tracking for oilfield service yards</p>
       <h1>An expired lubricator cert cost us $8,000 on a major's location.</h1>
-      <p class="x-lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. RollReady keeps every piece of iron in your yard on one list, with its serial, where it is, and when its next test is due, so that never happens again.</p>
+      <p class="x-lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. RollReady keeps every piece of iron in your yard on one list, with its serial, which truck it's on, and when its next test is due, so that never happens again.</p>
       <div class="x-cta">
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
         <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
@@ -104,7 +104,7 @@ export const MARKETING_HTML = `
       <div>
         <p class="x-kicker x-kicker-blue">The product</p>
         <h2 class="x-h2">Every piece of iron, on one list</h2>
-        <p class="x-body">BOP stacks, lubricators, plug valves, swivels, pup joints, reels, and the trucks they ride on. Each piece has its serial, where it is right now, and every test and cert with its date. Before anything comes due, an email goes to the people you pick for that yard.</p>
+        <p class="x-body">BOP stacks, lubricators, plug valves, swivels, pup joints, reels, and the trucks they ride on. Each piece has its serial, which truck or rack it's on, and every test and cert with its date. Before anything comes due, an email goes to the people you pick for that yard.</p>
         <p class="x-body">If a piece lapses or gets red-tagged, the truck it's on reads <b>NOT READY</b> until it's fixed. There is no override button.</p>
       </div>
       <div class="x-card x-proofcard">
@@ -123,10 +123,10 @@ export const MARKETING_HTML = `
 
     <h3 class="x-h3">Also included at the same price</h3>
     <div class="x-grid x-grid-2">
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.qr}</span><h3>QR tags</h3><p>Print a tag for every piece. Anyone who scans it with a phone camera sees the serial, the test dates, and the cert. No app, no login.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.pin}</span><h3>Where it is, and where it's been</h3><p>Move iron between trucks and the yard in two taps. Every move is saved with who did it and when, and nobody can edit that history.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>Truck check</h3><p>Run a truck against the job date before it leaves. If anything on it is out of test or red-tagged, it says what.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.link}</span><h3>Proof links and a due list</h3><p>Send the operator a live page instead of a binder. Download what's coming due as a spreadsheet for your test company.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.pin}</span><h3>Yard map</h3><p>Every truck and rack on one screen, with each piece of iron colored by its test status. Red shows up first.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>Proven at load-out</h3><p>Before a truck rolls, the hand scans each piece as it goes on. RollReady flags anything out of test or missing, and keeps a record of what went out that nobody can edit.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.qr}</span><h3>QR and NFC tags</h3><p>Print QR tags for free on any phone, or use the NFC tags your testing company already put on (scanned from an Android phone). A scan shows the serial, test dates, and the cert.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.link}</span><h3>Truck check and proof links</h3><p>Check a truck against the job date before it leaves, and send the operator a live page instead of a binder.</p></div>
     </div>
   </div>
 </section>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Box, Settings2, Trash2, ChevronRight, Truck } from "lucide-react";
+import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, ScanLine } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { seenAge, fmtWhen, fmtDate } from "@/lib/saas/format";
@@ -145,8 +145,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         actions={
           <>
           <ShareProof scope="unit" unitId={u.id} warn={tile?.state === "not_ready" ? `${u.name} is NOT READY right now, and the link will say so.` : undefined} />
+          <Link href={`/app/units/${unitId}/scan`}
+            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
+            <ScanLine className="h-4 w-4" /> Load-out scan
+          </Link>
           <Link href={`/app/units/${unitId}/dispatch`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-coal hover:bg-bone-soft">
+            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-white hover:bg-bone-soft">
             <Truck className="h-4 w-4" /> Check readiness
           </Link>
           <Popover>

@@ -40,10 +40,10 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const here = `/app/assets/${assetId}`;
 
   const { data: asset } = await db
-    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id, yard_id, tag_token, last_seen_where, last_seen_by, last_seen_at")
+    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id, yard_id, tag_token, last_seen_where, last_seen_by, last_seen_at, scanned_at, scanned_by, scanned_unit_id")
     .eq("id", assetId).eq("company_id", company.id).maybeSingle();
   if (!asset) notFound();
-  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; yard_id: string | null; tag_token: string; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null };
+  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; yard_id: string | null; tag_token: string; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null; scanned_at: string | null; scanned_by: string | null; scanned_unit_id: string | null };
 
   // Where it is, the places it could move to, and where it's been.
   const [{ data: unitData }, { data: yardData }, { data: moveData }] = await Promise.all([
@@ -180,9 +180,15 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           <span className={`w-fit whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold ${status.cls}`}>{status.label}</span>
         </div>
         <div className="flex min-w-0 flex-col gap-0.5 p-4">
-          <span className="text-xs font-medium text-ink-faint">Where it is</span>
+          <span className="text-xs font-medium text-ink-faint">Where it was logged</span>
           <span className="break-words font-medium">{where}</span>
-          {a.last_seen_where ? <span className="break-words text-[13px] text-ink-dim">{a.last_seen_where}</span> : null}
+          {a.scanned_at && a.unit_id && a.scanned_unit_id === a.unit_id ? (
+            <span className="break-words text-[13px] text-emerald-400">Scanned on at load-out, {fmtWhen(a.scanned_at)}{a.scanned_by ? ` by ${a.scanned_by}` : ""}</span>
+          ) : moves[0] ? (
+            <span className="break-words text-[13px] text-ink-dim">
+              {a.last_seen_where && !/^scanned at load-out/.test(a.last_seen_where) ? `${a.last_seen_where}. ` : ""}Logged by hand {fmtWhen(moves[0].created_at)}{moves[0].actor ? ` by ${moves[0].actor}` : ""}, not scanned
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 flex-col gap-0.5 p-4">
           <span className="text-xs font-medium text-ink-faint">Next test</span>

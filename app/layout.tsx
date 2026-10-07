@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "RollReady keeps every piece of iron in an oilfield service yard on one list, with its serial, where it is, and when its next test is due. QR tags, move history, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
+    "RollReady keeps every piece of iron in an oilfield service yard on one list, with its serial, which truck it's on, and when its next test is due. A yard map, load-out scans, QR and NFC tags, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
   keywords: [
     "RollReady", "SYNNR", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
     "QR equipment tags", "NDT recertification tracking", "equipment tracking", "where is my equipment", "oilfield service software",

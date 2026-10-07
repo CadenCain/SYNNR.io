@@ -74,7 +74,7 @@ export default function OnePager() {
 
         <p className="op-p">
           Nobody knew until the company man checked the paper and turned the crew around at the gate.
-          RollReady keeps every piece of iron in your yard on one list, with its serial, where it is, and when
+          RollReady keeps every piece of iron in your yard on one list, with its serial, which truck it&apos;s on, and when
           its next test is due, and emails the right person before anything lapses. If something does
           lapse, the truck it rides on reads NOT READY until the record is fixed.
         </p>
@@ -85,7 +85,8 @@ export default function OnePager() {
             <ul>
               <li>BOP and lubricator tests, iron recerts (UT + hydro), annual DOT</li>
               <li>A QR tag on every piece: scan it, see its tests and cert</li>
-              <li>Where each piece is, and every move with who and when</li>
+              <li>A yard map: every truck and rack, and what&apos;s on it</li>
+              <li>Load-out scans: proof of what actually went out on the truck</li>
               <li>A truck check with no override button</li>
               <li>A live proof link to send the operator instead of a binder</li>
             </ul>

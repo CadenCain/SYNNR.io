@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, type DemoAsset,
 } from "./demo-data";
 import { verifyUpload } from "./cert-verify";
 import { computeDispatchCheck } from "./dispatch-check";
@@ -124,6 +124,35 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
       ]);
     })(),
 
+    // Load-outs scanned at the truck: each piece on these trucks was proven
+    // on by a tag scan. Service-role writes, so the times can be in the past.
+    (async () => {
+      for (const lo of DEMO_LOADOUTS) {
+        const unit = DEMO_UNITS.find((u) => u.key === lo.unitKey)!;
+        const onTruck = (unit.assets ?? []).filter((a) => a.status !== "retired");
+        const ids = onTruck.map((a) => assetIdByKey.get(keyOf(a))!).filter(Boolean);
+        const at = tsAgo(lo.daysAgo, lo.hour, lo.minute);
+        const day = new Date(at).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
+        await Promise.all([
+          admin.from("saas_assets").update({ scanned_at: at, scanned_by: lo.by, scanned_unit_id: unitId(lo.unitKey) }).in("id", ids),
+          admin.from("saas_loadout_scans").insert({
+            company_id: companyId, unit_id: unitId(lo.unitKey), unit_name: unit.name, scanned_by: lo.by,
+            started_at: at, finished_at: at, expected: onTruck.length, scanned: onTruck.length,
+            pieces: onTruck.map((a) => ({ asset_id: assetIdByKey.get(keyOf(a)), name: a.name, serial: a.identifier ?? null, how: lo.how, added: false })),
+            not_scanned: [],
+          }),
+          admin.from("saas_asset_moves").insert(ids.map((id) => ({
+            company_id: companyId, asset_id: id, from_where: whereLabel(lo.unitKey), to_where: whereLabel(lo.unitKey),
+            note: `scanned at load-out ${day}`, actor: lo.by, created_at: at,
+          }))),
+          admin.from("saas_events").insert({
+            company_id: companyId, kind: "loadout_scanned", unit_id: unitId(lo.unitKey), actor: lo.by, created_at: at,
+            message: `${unit.name} load-out: ${onTruck.length} scanned`,
+          }),
+        ]);
+      }
+    })(),
+
     // Activity feed + the month's two caught misses (append-only, insert only)
     admin.from("saas_events").insert([
       ...DEMO_EVENTS.map((e) => ({
@@ -225,7 +254,7 @@ export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
 // its members, and its proof links are kept: the reaper deletes those too,
 // a refresh must not.
 const YARD_TABLES = [
-  "saas_alerts_sent", "saas_asset_moves", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_alerts_sent", "saas_asset_moves", "saas_loadout_scans", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
   "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
@@ -284,7 +313,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const { data: members } = await admin.from("saas_memberships").select("user_id").eq("company_id", cid);
       // Child tables first (not everything cascades), company last, users after.
       const tables = [
-        "saas_alerts_sent", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+        "saas_alerts_sent", "saas_loadout_scans", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { List } from "lucide-react";
+import { List, ScanLine } from "lucide-react";
 import type { EquipRow, EquipState } from "@/lib/saas/equipment";
 import { STATE_ORDER, stateLabel } from "@/lib/saas/equipment";
 import type { UnitTile } from "@/lib/saas/readiness";
@@ -41,9 +41,13 @@ export interface YardMapProps {
   rows: EquipRow[];
   trucks: UnitTile[];
   yards: { id: string; name: string }[];
+  /** Last load-out scan per truck: unit id → when it finished. */
+  lastLoadout?: Record<string, string>;
+  /** "Oct 7, 5:10 AM" style, done on the server so it's in the yard's time zone. */
+  fmt?: Record<string, string>;
 }
 
-export default function YardMap({ rows, trucks, yards }: YardMapProps) {
+export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {} }: YardMapProps) {
   const [onlyProblems, setOnlyProblems] = useState(false);
   const [yard, setYard] = useState(yards[0]?.id ?? "");
 
@@ -80,7 +84,7 @@ export default function YardMap({ rows, trucks, yards }: YardMapProps) {
         <div className="min-w-0">
           <h1 className="text-[26px] font-semibold tracking-tight">Yard map</h1>
           <p className="mt-0.5 text-sm text-ink-dim">
-            Every truck and rack, and the iron on it. {scoped.length} pieces{red ? `, ${red} red` : ""}{due ? `, ${due} due soon` : ""}.
+            Where each piece was last logged, and what was proven on each truck at its last load-out scan. {scoped.length} pieces{red ? `, ${red} red` : ""}{due ? `, ${due} due soon` : ""}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -119,7 +123,8 @@ export default function YardMap({ rows, trucks, yards }: YardMapProps) {
             <Block key={t.id}
               title={<Link href={`/app/units/${t.id}`} className="hover:text-bone">{t.name}</Link>}
               chip={<span className={cn("whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold", TRUCK_CHIP[t.state].cls)}>{TRUCK_CHIP[t.state].label}</span>}
-              sub={`${unitTypeLabel(t.type)} · ${iron.length} ${iron.length === 1 ? "piece" : "pieces"}`}
+              sub={`${unitTypeLabel(t.type)} · ${iron.length} ${iron.length === 1 ? "piece" : "pieces"} · ${lastLoadout[t.id] ? `load-out scanned ${fmt[t.id] ?? ""}` : "no load-out scan yet"}`}
+              action={<Link href={`/app/units/${t.id}/scan`} className="inline-flex items-center gap-1 text-[13px] font-medium text-bone hover:underline"><ScanLine className="h-3.5 w-3.5" /> Scan load-out</Link>}
               why={t.state === "not_ready" || t.state === "due_soon" ? t.why : null}
               whyTone={t.state === "not_ready" ? "text-red-400" : "text-amber-400"}
               iron={iron} onlyProblems={onlyProblems} empty="No iron on this truck." />
@@ -144,9 +149,9 @@ export default function YardMap({ rows, trucks, yards }: YardMapProps) {
   );
 }
 
-function Block({ title, chip, sub, why, whyTone, iron, onlyProblems, empty }: {
+function Block({ title, chip, sub, why, whyTone, iron, onlyProblems, empty, action }: {
   title: React.ReactNode; chip: React.ReactNode; sub: string; why: string | null; whyTone: string;
-  iron: EquipRow[]; onlyProblems: boolean; empty: string;
+  iron: EquipRow[]; onlyProblems: boolean; empty: string; action?: React.ReactNode;
 }) {
   const shown = onlyProblems ? iron.filter(isProblem) : iron;
   const hidden = iron.length - shown.length;
@@ -159,6 +164,7 @@ function Block({ title, chip, sub, why, whyTone, iron, onlyProblems, empty }: {
         </div>
         <div className="text-[13px] text-ink-faint">{sub}</div>
         {why ? <div className={cn("break-words text-[13px]", whyTone)}>{why}</div> : null}
+        {action ? <div className="mt-1">{action}</div> : null}
       </div>
       {iron.length === 0 ? (
         empty ? <p className="text-sm text-ink-faint">{empty}</p> : null
@@ -181,7 +187,10 @@ function Tile({ r }: { r: EquipRow }) {
     <Link href={`/app/assets/${r.id}`} title={r.next ? `${r.next.title}: ${r.next.detail}` : "Nothing tracked yet"}
       className={cn("flex min-w-0 flex-col gap-0.5 rounded-lg border px-2.5 py-2 transition-colors hover:border-bone", TILE[r.state])}>
       <span className="line-clamp-2 break-words text-[13px] font-semibold leading-snug text-ink">{r.name}</span>
-      <span className="truncate text-[12px] text-ink-dim">{r.identifier ?? "No serial"}</span>
+      <span className="flex min-w-0 items-center gap-1 text-[12px] text-ink-dim">
+        <span className="truncate">{r.identifier ?? "No serial"}</span>
+        {r.scannedAt ? <span title="Scanned onto this truck at the last load-out"><ScanLine className="h-3 w-3 shrink-0 text-emerald-400" aria-label="Scanned at load-out" /></span> : null}
+      </span>
       <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-ink-dim">
         <span className={cn("h-2 w-2 shrink-0 rounded-full", DOT[r.state])} />
         {r.state === "due" && r.next?.exp ? `Due ${shortDate(r.next.exp)}` : stateLabel(r)}

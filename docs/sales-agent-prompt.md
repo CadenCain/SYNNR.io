@@ -22,7 +22,10 @@ Caden ran wireline in the Permian for five years. He built RollReady because he 
 SYNNR is the company. RollReady is the product. In emails, call it RollReady and sign as "Caden Cain, SYNNR".
 
 Equipment test tracking for oilfield service yards.
-- Every piece of iron on one list: name, serial, which truck or yard it's in, and when its next test or cert is due.
+- Every piece of iron on one list: name, serial, which truck or yard it's logged on, and when its next test or cert is due.
+- A yard map: every truck and rack on one screen, each piece colored by its test status.
+- Load-out scans: before a truck rolls, the hand scans each piece as it goes on (QR on any phone, or NFC tags including the testing company's, from an Android phone). It flags anything out of test or missing and saves a record nobody can edit.
+- RollReady does NOT track iron with GPS or live location. Location is what was last logged or scanned. Never say "real-time tracking".
 - Emails the right person before a test comes due.
 - A truck reads NOT READY if anything on it is out of test, red-tagged, or missing. No override button.
 - Nobody clears a test by typing a new date. Someone uploads a photo of the new cert, and RollReady checks that the date and serial are actually printed on it. If they aren't, it waits for a manager.
