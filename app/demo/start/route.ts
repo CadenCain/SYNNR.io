@@ -1,5 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { cookies } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { saasAdmin } from "@/lib/saas/db";
+import { sendEmail } from "@/lib/saas/notify";
+import { fmtWhen } from "@/lib/saas/format";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { seedDemoCompany } from "@/lib/saas/demo-seed";
 
@@ -44,9 +48,29 @@ export async function POST(req: Request) {
     const { error: signErr } = await sb.auth.signInWithPassword({ email, password });
     if (signErr) throw new Error(signErr.message);
 
+    // Opened from a tracked outreach link (synnr.io/demo?ref=<shop>)? Tell
+    // Caden right away: that shop is clicking around the demo yard now.
+    // Only a real click on the button gets here (it's a POST), so email
+    // link scanners that open the page don't count.
+    const ref = ((await cookies()).get("synnr_ref")?.value ?? "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 60);
+    if (ref) after(() => tellCadenDemoOpened(admin, ref));
+
     return NextResponse.redirect(new URL("/app", req.url), 303);
   } catch (e) {
     console.error("[demo] start failed:", e instanceof Error ? e.message : e);
     return back("err=seed");
   }
+}
+
+async function tellCadenDemoOpened(admin: SupabaseClient, ref: string): Promise<void> {
+  const when = fmtWhen(new Date().toISOString());
+  const { data } = await admin.from("audit_requests").insert({
+    company: ref, email: "", source: "demo_opened",
+    bottleneck: `Opened the demo yard from a tracked link (ref=${ref}) at ${when} CT`,
+  } as never).select("id").single();
+  const sent = await sendEmail([process.env.NOTIFY_EMAIL || "cadencain@synnr.io"], `Demo opened: ${ref}`,
+    `<p style="font:15px/1.5 -apple-system,sans-serif">Someone who got your link for <b>${ref}</b> just opened the demo yard (${when} CT). They're looking at it now.</p>` +
+    `<p style="font:15px/1.5 -apple-system,sans-serif">Call them today while it's fresh.</p>`);
+  const id = (data as { id: string } | null)?.id;
+  if (sent && id) await admin.from("audit_requests").update({ emailed: true } as never).eq("id", id);
 }
