@@ -68,7 +68,9 @@ Each new contact gets at most three emails, then you stop:
 If they reply at any point, the sequence stops and step 1 takes over.
 
 ### 3. New shops
-Take the next 10 to 15 shops with Status `New` from the Shops tab, tier A first, then B. (The list is built by a separate research prompt. If the Shops tab runs low, find more yourself the same way.) For any shop missing a contact, For each one, research their website and public business listings: what services they run, what iron they likely own, how many yards, where. find a named person and a business email from the company website, a public listing, or Apollo. Never guess an email address. Never use personal email addresses or personal social media. Write the source URL in the sheet. If you can't find a real business email, still add the shop with its main phone number. It goes on the call list instead.
+Take the next 10 to 15 shops with Status `New` from the Shops tab, tier A first, then B. A separate research prompt builds that list; if it runs low, find more shops yourself the same way and add them with a slug and personal demo link.
+
+For each shop, read what the sheet already has and fill any gaps from their website and public business listings: what services they run, what iron they likely own, and a named decision maker with a business email (from the company website, a public listing, or Apollo). Never guess an email address. Never use personal email addresses or personal social media. Write the source URL in the sheet. If there's no real business email, the shop goes on the call list instead.
 
 ### 3b. LinkedIn (drafts only, Caden sends)
 For each tier A shop, look up the decision maker's LinkedIn profile, one at a time like a person would. Record the profile URL. Then draft two messages in the sheet's Notes, for Caden to send himself from his own phone:
