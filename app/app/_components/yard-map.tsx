@@ -57,9 +57,12 @@ export default function YardMap({ rows, trucks, yards }: YardMapProps) {
     .sort((a, b) => TRUCK_ORDER[a.t.state] - TRUCK_ORDER[b.t.state] || a.t.name.localeCompare(b.t.name));
 
   // Iron sitting in the yard, grouped by the spot noted on its last move.
+  // Missing iron isn't in any spot, so it gets its own block.
   const yardIron = live.filter((r) => !r.unitId && inYard(r));
+  const missing = yardIron.filter((r) => r.status === "missing").sort(sortTiles);
   const spots = new Map<string, EquipRow[]>();
   for (const r of yardIron) {
+    if (r.status === "missing") continue;
     const key = r.note ?? "";
     spots.set(key, [...(spots.get(key) ?? []), r]);
   }
@@ -121,6 +124,12 @@ export default function YardMap({ rows, trucks, yards }: YardMapProps) {
               whyTone={t.state === "not_ready" ? "text-red-400" : "text-amber-400"}
               iron={iron} onlyProblems={onlyProblems} empty="No iron on this truck." />
           ))}
+          {missing.length > 0 && (
+            <Block key="missing" title="Missing" chip={null}
+              sub={`${missing.length} ${missing.length === 1 ? "piece" : "pieces"} flagged missing, last seen in the yard`}
+              why={missing.map((r) => r.note).filter(Boolean).join(" · ") || null} whyTone="text-red-400"
+              iron={missing} onlyProblems={onlyProblems} empty="" />
+          )}
           {spotBlocks.map(({ note, iron }) => (
             <Block key={`yard-${note}`}
               title={note ? `In the yard: ${note}` : "In the yard"}
