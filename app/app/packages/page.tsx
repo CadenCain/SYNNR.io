@@ -5,7 +5,8 @@ import { saasDb } from "@/lib/saas/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
-import { createPackage } from "./actions";
+import { createPackage, fillEmptyKits } from "./actions";
+import { Wand2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,14 @@ export default async function PackagesPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">Truck kits</h2>
+        {manager && units.some((u) => !kitOf.get(u.id)?.saas_package_lines?.length) ? (
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="min-w-0 flex-1 text-sm text-ink-dim">Trucks without a kit get one made from what&apos;s logged on them now, one line per kind of piece. You can change any of them after. Kits you already set aren&apos;t touched.</p>
+            <form action={fillEmptyKits}>
+              <button type="submit" className={buttonClass("outline", "lg")}><Wand2 className="h-5 w-5" /> Fill every empty kit</button>
+            </form>
+          </Card>
+        ) : null}
         {units.length === 0 ? <Card className="p-4 text-sm text-ink-dim">No trucks yet. Add them under Yards &amp; trucks.</Card> : null}
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {units.map((u) => {

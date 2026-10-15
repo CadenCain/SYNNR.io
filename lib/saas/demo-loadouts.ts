@@ -34,7 +34,7 @@ export function demoLoadoutRecord(lo: DemoLoadout, today: string) {
     onTruck.map((a) => ({ id: demoKey(a), name: a.name, serial: a.identifier ?? null })),
   );
   const truckPaper = (unit.items ?? []).map(judge).filter((t) => t.result === "expired" || t.result === "missing").map((t) => ({ title: t.title, detail: t.detail }));
-  const v = loadoutVerdict({ lines, bad, cantFind: [], truckPaper });
+  const v = loadoutVerdict({ lines, bad, cantFind: [], truckPaper, scanned: onTruck.length });
   const badKeys = new Set(bad.map((b) => b.key));
   return {
     unit,

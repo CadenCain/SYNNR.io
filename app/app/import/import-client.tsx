@@ -139,6 +139,11 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
                 <span className="text-ink-dim">{result.updates} update{result.updates === 1 ? "" : "s"}</span>
                 <span className={result.errors > 0 ? "font-medium text-red-400" : "text-ink-dim"}>{result.errors} error{result.errors === 1 ? "" : "s"}</span>
               </div>
+              {result.held ? (
+                <p className="text-sm text-amber-400">
+                  {result.held} {result.held === 1 ? "date was" : "dates were"} later than what&apos;s on file. {result.held === 1 ? "It doesn't" : "They don't"} count until someone uploads a photo of the cert showing {result.held === 1 ? "it" : "them"}.
+                </p>
+              ) : null}
               <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
                 {result.rows.map((r, i) => (
                   <div key={i} className={`rounded-lg border px-3 py-2 text-sm ${r.error ? "border-red-500/40 bg-red-500/10" : "border-line bg-coal"}`}>

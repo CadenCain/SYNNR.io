@@ -113,8 +113,11 @@ export function loadoutVerdict(input: {
   bad: BadPiece[];
   cantFind: { name: string; serial: string | null }[];
   truckPaper: { title: string; detail: string }[];
+  /** How many pieces went on. A truck with nothing scanned on isn't READY, list or no list. */
+  scanned?: number;
 }): { verdict: "ready" | "not_ready"; reasons: string[] } {
   const reasons: string[] = [];
+  if (input.scanned === 0) reasons.push("Nothing was scanned onto the truck");
   for (const l of shortLines(input.lines)) {
     reasons.push(`Short: ${l.label}, ${l.filled.length} of ${l.qty} scanned${l.package ? ` (${l.package})` : ""}`);
   }

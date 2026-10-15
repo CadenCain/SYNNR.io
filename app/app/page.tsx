@@ -4,7 +4,7 @@ import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { getEquipment } from "@/lib/saas/equipment";
 import { localToday } from "@/lib/saas/status";
 import { YARD_TZ } from "@/lib/saas/format";
-import { buildLoadOutTrucks, weekNumbers, type LoadoutScanRow } from "@/lib/saas/loadout-board";
+import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, type LoadoutScanRow } from "@/lib/saas/loadout-board";
 import LoadOutView, { type ActivityLine } from "./_components/loadout-view";
 import { WarmOffline } from "./_components/offline-support";
 
@@ -33,7 +33,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
-  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }] = await Promise.all([
+  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
@@ -44,6 +44,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).gte("created_at", weekAgo),
     db.from("saas_events").select("id, kind, actor, message, unit_id, created_at")
       .eq("company_id", company.id).gte("created_at", sinceIso()).order("created_at", { ascending: false }).limit(60),
+    db.from("saas_packages").select("unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).not("unit_id", "is", null),
   ]);
 
   const yards = list.yards.map((y) => ({ id: y.id, name: y.name }));
@@ -52,7 +53,9 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const unitIds = new Set(units.map((u) => u.id));
 
   const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string }[];
-  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, (scanRows ?? []) as LoadoutScanRow[], new Set(overrides.map((o) => o.loadout_id)), today);
+  const kits = new Map(((kitRows ?? []) as { unit_id: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[])
+    .map((k) => [k.unit_id, [...(k.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }))]));
+  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, (scanRows ?? []) as LoadoutScanRow[], new Set(overrides.map((o) => o.loadout_id)), today, kitShortByTruck(kits, list.rows));
   const inYard = <T extends { unit_id: string | null }>(r: T) => !yardId || (r.unit_id !== null && unitIds.has(r.unit_id));
   const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.length + (yardId ? 0 : oldOverrides ?? 0));
 

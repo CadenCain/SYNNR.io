@@ -66,15 +66,22 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div className="mt-12 grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><ShieldCheck className="h-5 w-5 text-emerald-400" /></span>
-            <h2 className="text-lg font-semibold">See a proof link</h2>
+            <h2 className="text-lg font-semibold">See a load-out record</h2>
             <p className="text-sm leading-relaxed text-ink-dim">
-              This is the page a shop sends an operator instead of a binder. It comes from the same demo
-              yard, so you&apos;ll see CT‑03&apos;s expired BOP test on it.
+              Every load-out saves a record nobody can edit, with its own link for the operator: every piece,
+              who scanned it, when, and its test date. This one is CT‑03 this morning, stopped in the yard
+              because its BOP stack is out of test.
             </p>
-            <a href={DEMO_PROOF} target="_blank" rel="noreferrer"
-              className="mt-1 flex min-h-11 w-fit items-center rounded-lg bg-bone px-4 text-sm font-semibold text-coal hover:bg-bone-soft">
-              Open the proof link
-            </a>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <a href="/l/showcase" target="_blank" rel="noreferrer"
+                className="flex min-h-11 w-fit items-center rounded-lg bg-bone px-4 text-sm font-semibold text-white hover:bg-bone-soft">
+                Open the load-out record
+              </a>
+              <a href={DEMO_PROOF} target="_blank" rel="noreferrer"
+                className="flex min-h-11 w-fit items-center rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
+                The whole yard&apos;s proof link
+              </a>
+            </div>
           </div>
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><Smartphone className="h-5 w-5 text-ink-dim" /></span>

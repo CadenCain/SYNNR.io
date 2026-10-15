@@ -2,6 +2,7 @@ import type { UnitTile } from "./readiness";
 import type { EquipRow } from "./equipment";
 import { YARD_TZ } from "./format";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
+import { fillLines, shortLines } from "./loadout-lines";
 
 /**
  * The Load out board: every truck as Ready (nothing red, not loaded out yet
@@ -44,12 +45,29 @@ const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZ
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
 const shortDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
 
+/**
+ * What each truck's kit is short of, going by what's logged on it now. A
+ * heads-up on the board: the load-out will block unless it comes from the
+ * yard. "Kit short: Lubricator, 2in 1502 pup joint (1 of 2 on it)".
+ */
+export function kitShortByTruck(kits: Map<string, { label: string; qty: number }[]>, rows: EquipRow[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [unitId, kit] of kits) {
+    if (!kit.length) continue;
+    const onIt = rows.filter((r) => r.unitId === unitId && r.state !== "retired").map((r) => ({ id: r.id, name: r.name, serial: r.identifier }));
+    const short = shortLines(fillLines(kit.map((l) => ({ ...l, source: "kit" as const })), onIt));
+    if (short.length) out.set(unitId, `Kit short: ${short.map((l) => (l.filled.length ? `${l.label} (${l.filled.length} of ${l.qty} on it)` : l.label)).join(", ")}. The load-out will block without it.`);
+  }
+  return out;
+}
+
 export function buildLoadOutTrucks(
   units: UnitTile[],
   rows: EquipRow[],
   scans: LoadoutScanRow[],
   overridden: Set<string>,
   today: string,
+  kitShort: Map<string, string> = new Map(),
 ): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const last = new Map<string, LoadoutScanRow>();
   for (const r of [...scans].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
@@ -76,7 +94,9 @@ export function buildLoadOutTrucks(
     }
     const loadoutLine = s ? `Last load-out ${shortDay(s.finished_at)}${by}` : null;
     if (t.state === "not_ready") return { ...base, status: "blocked", overridden: false, why: t.why, whyTone: "red", loadoutLine };
-    return { ...base, status: "ready", overridden: false, why: t.state === "due_soon" ? t.why : null, whyTone: t.state === "due_soon" ? "amber" : null, loadoutLine };
+    const short = kitShort.get(t.id);
+    const why = short ?? (t.state === "due_soon" ? t.why : null);
+    return { ...base, status: "ready", overridden: false, why, whyTone: why ? "amber" : null, loadoutLine };
   }).sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.t.name.localeCompare(b.t.name));
 
   const counts: LoadOutCounts = {

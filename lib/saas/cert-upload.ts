@@ -238,6 +238,8 @@ export async function applyUpload(
       pending_until: null,
       last_upload_id: up.id,
       waiting_upload_id: null,
+      // A date a manager typed in earlier was waiting on exactly this photo.
+      typed_expiration: null,
     }).eq("id", item.id).eq("company_id", companyId);
     if (error) return { ok: false, message: "Couldn't update the cert. Try again." };
     await clearAlertLog(companyId, item.id);

@@ -23,12 +23,14 @@ export interface RowItem {
   pending_until?: string | null;
   waiting_upload_id?: string | null;
   last_upload_id?: string | null;
+  /** A later date a manager typed in, held until a photo of the cert shows it. */
+  typed_expiration?: string | null;
   /** customer/operator names this requirement applies to; empty = all jobs */
   customers?: string[];
 }
 
 /** The columns every page selects for a row. */
-export const ROW_COLUMNS = "id, title, kind, issued_date, expiration_date, status, renewed_without_proof, pending_until, waiting_upload_id, last_upload_id";
+export const ROW_COLUMNS = "id, title, kind, issued_date, expiration_date, status, renewed_without_proof, pending_until, waiting_upload_id, last_upload_id, typed_expiration";
 
 const chip = "rounded-sm border px-1.5 py-0.5 text-[11px] font-medium";
 
@@ -55,6 +57,12 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
               isManager
                 ? <a href="/app/review" className={`${chip} border-amber-500/30 bg-amber-500/10 text-amber-400 underline-offset-2 hover:underline`}>Upload waiting on you</a>
                 : <span className={`${chip} border-amber-500/30 bg-amber-500/10 text-amber-400`}>Upload waiting on a manager</span>
+            )}
+            {item.typed_expiration && (
+              <span className={`${chip} border-amber-500/30 bg-amber-500/10 text-amber-400`}
+                title="A manager typed a later date. It doesn't count until a photo of the cert shows it.">
+                Typed {fmtDate(item.typed_expiration)}, needs the cert photo
+              </span>
             )}
             {item.renewed_without_proof && (
               <span className={`${chip} border-amber-500/30 bg-amber-500/10 text-amber-400`}

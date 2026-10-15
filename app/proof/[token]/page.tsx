@@ -151,11 +151,11 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // the truck and who scanned it.
   type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean };
   type LoadoutMiss = { name: string; serial: string | null; outcome: string };
-  type Loadout = { finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[] };
+  type Loadout = { finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string };
   let loadout = null as Loadout | null;
   if (proof.scope === "unit" && proof.unit_id) {
     const { data: lo } = await admin.from("saas_loadout_scans")
-      .select("finished_at, scanned_by, scanned, expected, pieces, not_scanned")
+      .select("finished_at, scanned_by, scanned, expected, pieces, not_scanned, verdict, reasons, proof_token")
       .eq("company_id", proof.company_id).eq("unit_id", proof.unit_id)
       .order("finished_at", { ascending: false }).limit(1).maybeSingle();
     loadout = (lo as Loadout | null) ?? null;
@@ -242,9 +242,20 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               <h2 className="text-sm font-semibold text-ink-dim">Last load-out scan</h2>
               <span className="text-xs text-ink-faint">{fmtWhen(loadout.finished_at)}</span>
             </div>
+            {loadout.verdict ? (
+              <p className={`mt-2 text-base font-bold ${loadout.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
+                {loadout.verdict === "ready" ? "READY at load-out" : "NOT READY at load-out"}
+              </p>
+            ) : null}
+            {loadout.verdict === "not_ready" && (loadout.reasons ?? []).length ? (
+              <ul className="mt-1 flex flex-col gap-0.5 text-sm text-red-300">
+                {(loadout.reasons ?? []).map((r) => <li key={r} className="break-words">{r}</li>)}
+              </ul>
+            ) : null}
             <p className="mt-2 text-sm">
-              <span className="font-semibold">{loadout.scanned} of {loadout.expected} pieces on this truck&apos;s list scanned on</span>
+              <span className="font-semibold">{loadout.pieces.length} {loadout.pieces.length === 1 ? "piece" : "pieces"} scanned on</span>
               <span className="text-ink-dim">{loadout.scanned_by ? ` by ${loadout.scanned_by}` : ""}</span>
+              {" · "}<a href={`/l/${loadout.proof_token}`} className="text-bone underline underline-offset-2">See the full load-out record</a>
             </p>
             {loadout.pieces.length > 0 && (
               <ul className="mt-3 flex flex-col gap-1 text-sm">

@@ -72,9 +72,9 @@ export const MARKETING_HTML = `
       <p class="x-punch">One bad load-out costs more than a year of RollReady.</p>
       <div class="x-cta">
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
-        <a href="#how" class="btn btn-ghost">See a load-out</a>
+        <a href="/l/showcase" class="btn btn-ghost">See a load-out</a>
       </div>
-      <p class="x-note">The demo is the real app with a made-up yard. No signup, no card.</p>
+      <p class="x-note">The demo is the real app with a made-up yard. No signup, no card. "See a load-out" opens the record a shop would send the operator.</p>
     </div>
     <div class="x-devices">
       <div class="x-laptop">

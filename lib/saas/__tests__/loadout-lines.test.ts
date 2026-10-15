@@ -78,6 +78,11 @@ describe("loadoutVerdict", () => {
   it("READY only when nothing is short, bad, missing, or out on the truck's paper", () => {
     expect(loadoutVerdict({ lines: full, bad: [], cantFind: [], truckPaper: [] })).toEqual({ verdict: "ready", reasons: [] });
   });
+  it("nothing scanned on is never READY, even with no list", () => {
+    expect(loadoutVerdict({ lines: [], bad: [], cantFind: [], truckPaper: [], scanned: 0 }))
+      .toEqual({ verdict: "not_ready", reasons: ["Nothing was scanned onto the truck"] });
+    expect(loadoutVerdict({ lines: [], bad: [], cantFind: [], truckPaper: [], scanned: 1 }).verdict).toBe("ready");
+  });
   it("anything missing, out of test, or red-tagged is NOT READY, with every reason", () => {
     const short = fillLines([{ label: "Plug valve 2-inch", qty: 4, source: "package", package: "Standard Coil Package" }], [p("a", 'Plug valve 2"')]);
     const v = loadoutVerdict({

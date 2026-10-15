@@ -53,7 +53,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       />
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
         kit={kitRow ? linesOf(kitRow) : []} packages={packages}
-        manager={company.role === "owner" || company.role === "admin"} />
+        manager={company.role === "owner" || company.role === "admin"} demo={company.is_demo} />
     </div>
   );
 }

@@ -43,6 +43,10 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
     <div className="flex flex-col gap-5">
       <PageHeader back={{ href: "/app", label: "Load out" }} title="Load-out records"
         description="Every load-out, locked when it was saved: who scanned what, when, and whether the truck could roll." />
+      {all.length ? (
+        // A file download, not a page: a plain link, so the browser saves it.
+        <a href="/app/loadouts/export" download className="-mt-2 self-start text-sm text-bone underline underline-offset-2">Download every load-out as a spreadsheet</a>
+      ) : null}
 
       <form className="grid grid-cols-1 gap-2 sm:grid-cols-4" action="/app/loadouts">
         {yards.length > 1 ? (
@@ -69,6 +73,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
       ) : (
         <div className="flex flex-col gap-2">
           {list.map(({ r, o }) => {
+            const byHand = r.pieces.filter((p) => p.how === "hand").length;
             const why = o === "ready" ? `${r.pieces.length} ${r.pieces.length === 1 ? "piece" : "pieces"} scanned` : reasonsOf(r)[0] ?? "";
             return (
               <Link key={r.id} href={`/app/loadouts/${r.id}`}>
@@ -80,6 +85,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
                     </div>
                     <div className="text-sm text-ink-dim">{fmtWhen(r.finished_at)}{r.scanned_by ? ` by ${r.scanned_by}` : ""}{o === "override" ? `, override by ${overrides.get(r.id)}` : ""}</div>
                     {why ? <div className="truncate text-sm text-ink-faint">{why}</div> : null}
+                    {byHand ? <div className="text-sm text-amber-400">{byHand} of {r.pieces.length} checked by hand</div> : null}
                   </div>
                   <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
                 </Card>

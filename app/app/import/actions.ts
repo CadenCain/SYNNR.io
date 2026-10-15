@@ -40,6 +40,8 @@ export interface ImportPreview {
 }
 export interface ImportResult extends ImportPreview {
   committed: boolean;
+  /** Re-imported dates later than what's on file: held until a cert photo shows them (migration 0013). */
+  held?: number;
 }
 
 /* ── CSV parsing (quoted fields + escaped quotes) ── */
@@ -255,7 +257,13 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     // under-billed until someone touched a yard in the UI.
   }
 
-  return { ok: true, rows, creates, updates, errors, committed: commit };
+  let held = 0;
+  if (commit && renewedItemIds.length) {
+    const { count } = await db.from("saas_compliance_items").select("id", { count: "exact", head: true })
+      .eq("company_id", company.id).in("id", renewedItemIds).not("typed_expiration", "is", null);
+    held = count ?? 0;
+  }
+  return { ok: true, rows, creates, updates, errors, committed: commit, held };
 }
 
 export async function previewImport(args: { csv: string; yardId: string; newYard: string }): Promise<ImportResult> {

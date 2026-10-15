@@ -177,6 +177,7 @@ export async function finishLoadout(input: {
     bad,
     cantFind: cantFind.map((a) => ({ name: a.name, serial: a.identifier })),
     truckPaper,
+    scanned: scans.length,
   });
   const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`)];
   const verdict: "ready" | "not_ready" = reasons.length ? "not_ready" : "ready";

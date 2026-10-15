@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { saasAdmin } from "@/lib/saas/db";
-import { getLoadout } from "@/lib/saas/loadout-record";
+import { getLoadout, RECORD_COLS, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 import LoadoutRecordView from "@/app/app/_components/loadout-record-view";
 
 /**
@@ -27,10 +28,11 @@ function Gone() {
 
 export default async function PublicLoadoutPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!/^[a-f0-9]{32}$/i.test(token)) return <Gone />;
   const admin = saasAdmin();
   if (!admin) return <Gone />;
-  const got = await getLoadout(admin, { token: token.toLowerCase() });
+  const got = token === "showcase" ? await showcaseLoadout(admin)
+    : /^[a-f0-9]{32}$/i.test(token) ? await getLoadout(admin, { token: token.toLowerCase() })
+    : null;
   if (!got) return <Gone />;
   const { rec, override } = got;
 
@@ -62,4 +64,22 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
       </div>
     </div>
   );
+}
+
+/**
+ * /l/showcase: the homepage's "See a load-out". The showcase demo yard (the
+ * one behind the /demo proof link, re-seeded daily) and its latest CT-03
+ * load-out, the one that caught the BOP stack out of test. Made-up yard,
+ * real record, same page an operator gets.
+ */
+async function showcaseLoadout(admin: NonNullable<ReturnType<typeof saasAdmin>>): Promise<{ rec: LoadoutRecord; override: LoadoutOverride | null } | null> {
+  const { data: proof } = await admin.from("saas_readiness_proofs").select("company_id").eq("token", SHOWCASE_PROOF_TOKEN).maybeSingle();
+  const companyId = (proof as { company_id: string } | null)?.company_id;
+  if (!companyId) return null;
+  const { data } = await admin.from("saas_loadout_scans").select(RECORD_COLS)
+    .eq("company_id", companyId).eq("unit_name", "CT-03").order("finished_at", { ascending: false }).limit(1).maybeSingle();
+  if (!data) return null;
+  const rec = data as LoadoutRecord;
+  const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", rec.id).maybeSingle();
+  return { rec: { ...rec, reasons: rec.reasons ?? [], lines: rec.lines ?? [], packages: rec.packages ?? [] }, override: (ov as LoadoutOverride | null) ?? null };
 }

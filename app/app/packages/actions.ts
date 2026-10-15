@@ -137,3 +137,31 @@ export async function kitFromTruck(fd: FormData) {
   void logEvent({ companyId: company.id, kind: "package_changed", unitId, actor: actorOf(user), message: `${pkg.name} set from what's on the truck (${lines.length} lines)` });
   refresh(pkg);
 }
+
+/** Setup in one tap: every truck without a kit gets one made from what's logged on it. Kits already set are left alone. */
+export async function fillEmptyKits() {
+  const { company, user, db } = await manager();
+  const actor = actorOf(user);
+  const [{ data: units }, { data: kits }, { data: assets }] = await Promise.all([
+    db.from("saas_units").select("id, name").eq("company_id", company.id),
+    db.from("saas_packages").select("id, unit_id, saas_package_lines(id)").eq("company_id", company.id).not("unit_id", "is", null),
+    db.from("saas_assets").select("name, unit_id").eq("company_id", company.id).not("unit_id", "is", null).neq("status", "retired"),
+  ]);
+  const hasLines = new Set(((kits ?? []) as { unit_id: string; saas_package_lines: { id: string }[] | null }[])
+    .filter((k) => (k.saas_package_lines ?? []).length > 0).map((k) => k.unit_id));
+  const namesOn = new Map<string, string[]>();
+  for (const a of (assets ?? []) as { name: string; unit_id: string }[]) namesOn.set(a.unit_id, [...(namesOn.get(a.unit_id) ?? []), a.name]);
+  let made = 0;
+  for (const u of (units ?? []) as { id: string; name: string }[]) {
+    if (hasLines.has(u.id) || !(namesOn.get(u.id) ?? []).length) continue;
+    const pkg = await kitFor(db, company.id, u.id, actor);
+    if (!pkg) continue;
+    const lines = kitLinesFrom(namesOn.get(u.id)!);
+    await db.from("saas_package_lines").insert(lines.map((l, i) => ({ package_id: pkg.id, company_id: company.id, label: l.label, qty: l.qty, sort: i + 1 })));
+    made++;
+  }
+  if (made) void logEvent({ companyId: company.id, kind: "package_changed", actor, message: `${made} truck ${made === 1 ? "kit" : "kits"} made from what's on the trucks` });
+  revalidatePath("/app/packages");
+  refreshRouter();
+}
+

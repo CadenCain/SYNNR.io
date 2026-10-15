@@ -32,6 +32,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
 }) {
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
+  const byHand = rec.pieces.filter((p) => p.how === "hand").length;
   const listNames = [
     rec.lines.some((l) => l.source === "kit") ? `${rec.unit_name} kit` : null,
     ...(rec.packages ?? []),
@@ -53,6 +54,11 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
           {rec.unit_name} load-out, {fmtWhen(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
           {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} scanned on.
         </p>
+        {byHand > 0 ? (
+          <p className="mt-1 text-sm font-medium text-amber-400">
+            {byHand} of {rec.pieces.length} checked by hand, not scanned off a tag.
+          </p>
+        ) : null}
         {override ? (
           <div className="mt-3 rounded-xl border border-amber-500/40 bg-surface p-3 text-sm">
             <div className="font-semibold text-ink">Override by {override.by_name}, {fmtWhen(override.created_at)}</div>

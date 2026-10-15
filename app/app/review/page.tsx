@@ -43,7 +43,7 @@ export default async function ReviewPage() {
   const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: checkData }] = await Promise.all([
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).eq("status", "waiting").order("created_at", { ascending: true }),
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).neq("status", "waiting").gte("created_at", since).order("created_at", { ascending: false }).limit(80),
-    db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, updated_at").eq("company_id", company.id).neq("parent_type", "crew").eq("renewed_without_proof", true).order("updated_at", { ascending: false }).limit(40),
+    db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, typed_expiration, updated_at").eq("company_id", company.id).neq("parent_type", "crew").or("renewed_without_proof.eq.true,typed_expiration.not.is.null").order("updated_at", { ascending: false }).limit(40),
     db.from("saas_compliance_items").select("id, title, parent_type, parent_id").eq("company_id", company.id),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_assets").select("id, name, unit_id").eq("company_id", company.id),
@@ -51,7 +51,7 @@ export default async function ReviewPage() {
   ]);
   const waiting = (waitingData ?? []) as Upload[];
   const recent = (recentData ?? []) as Upload[];
-  const typed = (typedData ?? []) as { id: string; title: string; parent_type: string; parent_id: string; expiration_date: string | null; updated_at: string }[];
+  const typed = (typedData ?? []) as { id: string; title: string; parent_type: string; parent_id: string; expiration_date: string | null; typed_expiration: string | null; updated_at: string }[];
 
   const items = new Map(((itemData ?? []) as { id: string; title: string; parent_type: string; parent_id: string }[]).map((i) => [i.id, i]));
   const units = new Map(((unitData ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
@@ -188,7 +188,9 @@ export default async function ReviewPage() {
               return (
                 <div key={t.id} className="flex flex-col gap-1 p-4">
                   <div className="text-sm font-medium">{t.title} · <Link href={p.href} className="font-normal text-ink-dim underline-offset-2 hover:underline">{p.name}</Link></div>
-                  <p className="text-sm text-amber-300">Date typed in without a photo{t.expiration_date ? `: good to ${fmtDate(t.expiration_date)}` : ""}. The feed shows who.</p>
+                  <p className="text-sm text-amber-300">{t.typed_expiration
+                    ? `${fmtDate(t.typed_expiration)} typed in. It doesn't count until someone uploads a photo of the cert showing that date. The feed shows who.`
+                    : `Date typed in without a photo${t.expiration_date ? `: good to ${fmtDate(t.expiration_date)}` : ""}. The feed shows who.`}</p>
                 </div>
               );
             })}

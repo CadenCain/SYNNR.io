@@ -410,13 +410,21 @@ export async function updateComplianceItem(fd: FormData) {
     .update({ title, kind, ...(editsDates ? { issued_date, expiration_date } : {}) })
     .eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+  // A later date is held by the database until a photo of the cert shows it
+  // (migration 0013); an earlier one applies. Say which happened.
+  const { data: afterRow } = dateChanged
+    ? await db.from("saas_compliance_items").select("expiration_date, typed_expiration").eq("id", id).eq("company_id", company.id).maybeSingle()
+    : { data: null };
+  const held = Boolean((afterRow as { typed_expiration: string | null } | null)?.typed_expiration);
   if (dateChanged) {
     const actor = actorName(user);
     void logEvent({
       companyId: company.id,
-      kind: "renewed",
+      kind: held ? "date_held" : "renewed",
       actor,
-      message: `${title} date typed in: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""}. No photo attached.`,
+      message: held
+        ? `${title}: ${expiration_date} typed in${actor ? ` by ${actor}` : ""}. It doesn't count until a photo of the cert shows that date.`
+        : `${title} date typed in: ${oldExp ?? "no date"} → ${expiration_date ?? "no date"}${actor ? `, by ${actor}` : ""}. No photo attached.`,
     });
   }
 
@@ -424,7 +432,7 @@ export async function updateComplianceItem(fd: FormData) {
   // per-item dedupe mutes this item forever (the camera-renew path has always
   // done this; typing the date in this form did not, so hand-edited items
   // silently stopped alerting).
-  if (dateChanged) await clearAlertLog(company.id, id);
+  if (dateChanged && !held) await clearAlertLog(company.id, id);
 
   // Customer relevance tags: comma-separated names → ensure each customer
   // exists, then replace this item's joins. Blank = applies to all jobs.

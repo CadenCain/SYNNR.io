@@ -65,7 +65,7 @@ const readDraftRaw = (truckId: string): string | null => {
 const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
 const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); } catch { /* storage off */ } };
 
-export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
@@ -73,6 +73,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   /** Packages a hand can add for the job. */
   packages: PackageOption[];
   manager?: boolean;
+  /** The demo yard: no iron to read, so checking by hand doesn't ask for the serial. */
+  demo?: boolean;
   /** Only for the marketing screenshot: packages already picked. */
   initialPackageIds?: string[];
   /** Only for the marketing screenshot: start partway through a load-out. */
@@ -381,7 +383,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const notYet = expected.filter((p) => !scans[p.id]);
   const short = shortLines(lines);
   const missingNow = notYet.filter((p) => outcomes[p.id] === "missing");
-  const willBlock = short.length + redScanned.length + missingNow.length > 0;
+  const nothingScanned = Object.keys(scans).length === 0;
+  const willBlock = nothingScanned || short.length + redScanned.length + missingNow.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
   return (
@@ -525,13 +528,13 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
           <div className="h-full rounded-full bg-bone transition-all" style={{ width: `${expected.length ? (scannedExpected / expected.length) * 100 : 0}%` }} />
         </div>
         {expected.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
-        {expected.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />)}
+        {expected.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />)}
       </section>
 
       {added.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Going on {truck.name} (logged somewhere else)</h2>
-          {added.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} onHand={() => {}} onTakeOff={() => takeOff(p)} />)}
+          {added.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} onHand={() => {}} onTakeOff={() => takeOff(p)} />)}
         </section>
       )}
 
@@ -552,7 +555,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
               <p className="text-sm text-ink-dim">These are logged on {truck.name} but didn&apos;t get scanned. Where are they?</p>
               {notYet.map((p) => (
                 <label key={p.id} className="flex flex-col gap-1 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0 break-words text-sm font-medium">{pieceText(p)}</span>
+                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${!demo && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
                   <select value={outcomes[p.id] ?? "yard"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
                     className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
                     <option value="yard">Not going this trip (stays in the yard)</option>
@@ -566,6 +569,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             <div className="text-lg font-bold">{willBlock ? `${truck.name} will be NOT READY` : `${truck.name} looks READY`}</div>
             {willBlock ? (
               <ul className="mt-1 flex flex-col gap-1 text-sm font-medium">
+                {nothingScanned ? <li>Nothing was scanned onto the truck</li> : null}
                 {short.map((l, i) => <li key={`s${i}`}>Short: {l.label}, {l.filled.length} of {l.qty} scanned</li>)}
                 {redScanned.map((p) => <li key={`r${p.id}`}>Bad piece on the truck: {pieceText(p)}. Take it off and scan a good one.</li>)}
                 {missingNow.map((p) => <li key={`m${p.id}`}>Can&apos;t find: {pieceText(p)}</li>)}
@@ -589,7 +593,34 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   );
 }
 
-function Row({ p, scan, onHand, onTakeOff }: { p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void }) {
+/** Letters and digits of a serial, uppercased: "QB-4471" → "QB4471". */
+const alnum = (x: string) => x.toUpperCase().replace(/[^A-Z0-9]/g, "");
+/** A serial long enough that its last 4 prove someone read the stamp. */
+const checkable = (serial: string | null) => Boolean(serial && alnum(serial).length >= 5);
+/** "QB-4471" → "QB-••••": the last 4 letters or digits hidden until the piece is scanned. */
+function maskSerial(serial: string): string {
+  let left = 4;
+  return serial.split("").reverse().map((ch) => (/[a-z0-9]/i.test(ch) && left-- > 0 ? "•" : ch)).reverse().join("");
+}
+
+/**
+ * One piece logged on the truck. Checking it by hand means reading the last
+ * 4 of its serial off the band or the stamp: the screen hides them until the
+ * piece is scanned, so the check proves someone looked at the iron. (Not in
+ * the demo yard, where there's no iron to read.)
+ */
+function Row({ p, scan, onHand, onTakeOff, demo = false }: { p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean }) {
+  const [asking, setAsking] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [err, setErr] = useState("");
+  const needsSerial = !demo && checkable(p.serial);
+  function check() {
+    if (!needsSerial) { onHand(); return; }
+    if (!asking) { setAsking(true); return; }
+    if (alnum(typed) === alnum(p.serial!).slice(-4)) { setAsking(false); setTyped(""); setErr(""); onHand(); }
+    else setErr("That's not it. Read the last 4 off the band or the stamp.");
+  }
+  const shownSerial = p.serial ? (!scan && needsSerial ? maskSerial(p.serial) : p.serial) : null;
   return (
     <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border p-3",
       scan ? (p.problem === "red" ? TONE.bad : "border-emerald-500/40 bg-emerald-500/[0.06]") : "border-line bg-surface")}>
@@ -598,15 +629,26 @@ function Row({ p, scan, onHand, onTakeOff }: { p: ScanPiece; scan?: Scan; onHand
         {scan ? <Check className="h-4 w-4" /> : null}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="break-words text-sm font-semibold text-ink">{p.name}{p.serial ? <span className="font-normal text-ink-dim"> · {p.serial}</span> : null}</div>
+        <div className="break-words text-sm font-semibold text-ink">{p.name}{shownSerial ? <span className="font-normal text-ink-dim"> · {shownSerial}</span> : null}</div>
         <div className={cn("break-words text-[13px]", p.problem === "red" ? "text-red-400" : p.problem === "yellow" ? "text-amber-400" : "text-ink-dim")}>
           {p.statusText}{scan ? <span className="text-ink-faint"> · {HOW[scan.how]} {clock(scan.at)}</span> : null}
         </div>
       </div>
       {!scan ? (
-        <button type="button" onClick={onHand} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">Check by hand</button>
+        <button type="button" onClick={check} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
+          {asking ? "Check it" : "Check by hand"}
+        </button>
       ) : p.problem === "red" ? (
         <button type="button" onClick={onTakeOff} className="min-h-12 w-full shrink-0 rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:w-auto">Took it off</button>
+      ) : null}
+      {asking && !scan ? (
+        <div className="flex w-full flex-col gap-1">
+          <label className="text-[13px] text-ink-dim" htmlFor={`last4-${p.id}`}>Last 4 of the serial on the band or the stamp</label>
+          <input id={`last4-${p.id}`} value={typed} onChange={(e) => { setTyped(e.target.value.slice(0, 8)); setErr(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") check(); }} autoFocus autoComplete="off" autoCapitalize="characters"
+            className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base uppercase tracking-widest text-ink outline-none focus:border-bone" />
+          {err ? <p className="text-[13px] text-red-400">{err}</p> : null}
+        </div>
       ) : null}
     </div>
   );

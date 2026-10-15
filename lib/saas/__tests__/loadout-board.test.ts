@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLoadOutTrucks, weekNumbers, type LoadoutScanRow } from "../loadout-board";
+import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, type LoadoutScanRow } from "../loadout-board";
 import type { UnitTile } from "../readiness";
 import type { EquipRow } from "../equipment";
 
@@ -72,6 +72,23 @@ describe("the Load out board", () => {
   it("counts iron per truck, leaving out retired pieces", () => {
     const { trucks } = buildLoadOutTrucks([unit("ct3", "ready")], [row("ct3"), row("ct3"), row("ct3", "retired"), row(null)], [], new Set(), TODAY);
     expect(trucks[0].pieces).toBe(2);
+  });
+});
+
+describe("kit short, on the board", () => {
+  const piece = (id: string, unitId: string, name: string) => ({ id, unitId, name, identifier: id, state: "ok" } as EquipRow);
+  it("a ready truck missing a kit piece says what to bring, and still reads Ready to load", () => {
+    const kits = new Map([["a", [{ label: "Lubricator", qty: 1 }, { label: "2in 1502 pup joint", qty: 2 }, { label: "BOP stack", qty: 1 }]]]);
+    const rows = [piece("p1", "a", "2in 1502 pup joint, 10 ft"), piece("b1", "a", "BOP stack #2")];
+    const short = kitShortByTruck(kits, rows);
+    expect(short.get("a")).toBe("Kit short: Lubricator, 2in 1502 pup joint (1 of 2 on it). The load-out will block without it.");
+    const { trucks } = buildLoadOutTrucks([unit("a", "ready")], rows, [], new Set(), TODAY, short);
+    expect(trucks[0].status).toBe("ready");
+    expect(trucks[0].whyTone).toBe("amber");
+    expect(trucks[0].why).toBe(short.get("a"));
+  });
+  it("says nothing when the kit is covered", () => {
+    expect(kitShortByTruck(new Map([["a", [{ label: "BOP stack", qty: 1 }]]]), [piece("b1", "a", "BOP stack #2")]).size).toBe(0);
   });
 });
 
