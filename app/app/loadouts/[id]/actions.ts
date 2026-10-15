@@ -34,7 +34,7 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
 
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");
-  const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason}". Not ready because: ${why}`;
+  const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason.replace(/[.\s]+$/, "")}". Not ready because: ${why}`;
   void logEvent({ companyId: company.id, kind: "rolled_override", unitId: got.rec.unit_id, actor, message });
   void notifyEvent({ companyId: company.id, companyName: company.name, yardId: got.rec.yard_id, message });
 

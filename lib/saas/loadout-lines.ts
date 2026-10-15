@@ -121,7 +121,7 @@ export function loadoutVerdict(input: {
   for (const p of input.cantFind) reasons.push(`Can't find: ${pieceLabel(p)}`);
   for (const p of input.bad) {
     const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file" : "Out of test";
-    reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? ` (${p.detail})` : ""}`);
+    reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? `, ${p.detail}` : ""}`);
   }
   for (const t of input.truckPaper) reasons.push(`Truck paper: ${t.title} ${t.detail}`);
   return { verdict: reasons.length ? "not_ready" : "ready", reasons };

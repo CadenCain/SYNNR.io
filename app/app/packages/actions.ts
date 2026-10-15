@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh as refreshRouter } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBillableCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
@@ -28,6 +28,8 @@ function refresh(pkg: { id: string; unit_id: string | null }) {
   revalidatePath("/app/packages");
   revalidatePath(`/app/packages/${pkg.id}`);
   if (pkg.unit_id) revalidatePath(`/app/units/${pkg.unit_id}/kit`);
+  // Redraw the page the manager is on, so the change shows right away.
+  refreshRouter();
 }
 
 /** The package or kit a line belongs to, if it's this company's. */

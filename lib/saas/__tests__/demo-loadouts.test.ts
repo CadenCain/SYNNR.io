@@ -13,7 +13,7 @@ describe("the demo yard's load-outs, by the real rules", () => {
   it("CT-03 is blocked by the BOP stack that's out of test, and only that", () => {
     const r = rec("ct3");
     expect(r.verdict).toBe("not_ready");
-    expect(r.reasons).toEqual(["Out of test: Quad BOP stack #3 QB-4471 (BOP pressure test expired Oct 8, 2026 (6d ago))"]);
+    expect(r.reasons).toEqual(["Out of test: Quad BOP stack #3 QB-4471, BOP pressure test expired Oct 8, 2026 (6d ago)"]);
     expect(r.pieces.filter((p) => p.red).map((p) => p.serial)).toEqual(["QB-4471"]);
   });
   it("CT-07 came back short on the pump-down package (the one a manager rolled anyway)", () => {

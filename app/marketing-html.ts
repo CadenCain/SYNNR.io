@@ -80,13 +80,13 @@ export const MARKETING_HTML = `
       <div class="x-laptop">
         <div class="x-laptop-screen">
           <img src="/screens/app-desktop.webp" width="2000" height="1250"
-            alt="RollReady Load out screen: every truck with its status. CT-03 and CT-06 not ready with the reason in red, and when each truck was last loaded out." fetchpriority="high"/>
+            alt="RollReady Load out screen: trucks counted as Blocked, Ready to load, and Loaded out today. CT-03 is blocked at load-out because its BOP stack is out of test." fetchpriority="high"/>
         </div>
         <div class="x-laptop-base"></div>
       </div>
       <div class="x-phone">
         <img src="/screens/app-phone.webp" width="750" height="1624"
-          alt="A load-out scan on a phone: the BOP stack on CT-03 just got scanned, and RollReady says it's out of test. Don't load it."/>
+          alt="A load-out scan on a phone: the BOP stack on CT-03 just got scanned, RollReady says it's out of test and not to load it, and the truck's kit list shows which lines are filled."/>
       </div>
     </div>
   </div>
@@ -121,7 +121,7 @@ export const MARKETING_HTML = `
     <div class="x-browser">
       <div class="x-browser-bar"><i></i><i></i><i></i><span>synnr.io/app</span></div>
       <img src="/screens/app-desktop.webp" width="2000" height="1250" loading="lazy"
-        alt="RollReady Load out screen: every truck, worst first, with a button to start its load-out scan"/>
+        alt="RollReady Load out screen: blocked trucks first with the reason in red, then trucks ready to load, each with a button to start its load-out scan"/>
     </div>
     <p class="x-fine x-center">Screenshots of the real app, not mockups. CT-03's BOP stack is six days past its pressure test, so the load-out stops it in the yard.</p>
     <div class="x-cta x-cta-center">

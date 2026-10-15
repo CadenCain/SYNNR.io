@@ -63,7 +63,8 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     .map((e) => ({
       id: e.id,
       time: new Date(e.created_at).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" }),
-      actor: e.actor, message: e.message, tone: TONE[e.kind] ?? null,
+      // The message usually names the person already ("... by Dale Wooten").
+      actor: e.actor && !e.message.includes(e.actor) ? e.actor : null, message: e.message, tone: TONE[e.kind] ?? null,
     }));
 
   return (

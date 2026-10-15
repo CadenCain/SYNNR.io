@@ -844,3 +844,9 @@
   .mkt .x-laptop-screen { border-width: 6px; border-bottom-width: 9px; border-radius: 10px 10px 3px 3px; }
   .mkt .x-laptop-base { height: 9px; }
 }
+
+/* Smallest phones (320 to 359px): the nav's demo button is also the hero's
+   first button, so it steps aside and the menu button stays on screen. */
+@media (max-width: 359px) {
+  .mkt .nav-cta .btn-sm { display: none; }
+}

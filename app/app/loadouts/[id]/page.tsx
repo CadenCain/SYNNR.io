@@ -58,7 +58,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
               <summary className="cursor-pointer text-sm font-semibold">Roll anyway (manager override)</summary>
               <form action={rollLoadoutAnyway} className="mt-3 flex flex-col gap-2">
                 <input type="hidden" name="loadout_id" value={rec.id} />
-                <label className="text-sm text-ink-dim" htmlFor="reason">Why is it OK to roll? Your name and this reason go on the record and the proof link, and the office gets an email.</label>
+                <label className="text-sm text-ink-dim" htmlFor="reason">Why is it OK to roll? Your name and this reason go on the record and the proof link, and anyone set up for alerts gets an email.</label>
                 <textarea id="reason" name="reason" required minLength={10} maxLength={500} rows={3}
                   className="w-full rounded-lg border border-line-2 bg-coal px-3 py-2 text-ink outline-none focus:border-bone" />
                 <button type="submit" className={buttonClass("outline", "lg", "self-start border-amber-500/50 text-amber-400")}>Roll it on my override</button>

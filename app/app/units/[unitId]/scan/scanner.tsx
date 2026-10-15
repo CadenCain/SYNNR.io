@@ -350,7 +350,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             {ready ? <ShieldCheck className="h-8 w-8 shrink-0" /> : <OctagonX className="h-8 w-8 shrink-0" />}
             {ready ? "READY" : "NOT READY"}
           </div>
-          <p className="mt-1 text-base text-ink">{ready ? `${truck.name} can roll. The record is saved and can't be edited.` : `${truck.name} can't roll. The record is saved, and the office has been told.`}</p>
+          <p className="mt-1 text-base text-ink">{ready ? `${truck.name} can roll. The record is saved and can't be edited.` : `${truck.name} can't roll. The record is saved, and anyone set up for alerts gets an email.`}</p>
           {!ready ? (
             <ul className="mt-3 flex flex-col gap-1.5">
               {saved.reasons.map((r) => <li key={r} className="break-words text-[15px] font-medium text-red-300">{r}</li>)}

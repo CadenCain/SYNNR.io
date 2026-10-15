@@ -20,6 +20,9 @@ const OUTCOME: Record<string, string> = {
 const time = (iso: string | undefined) =>
   iso ? new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" }) : "";
 const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
+/** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
+const testText = (t: { title: string; good_until: string | null; result: string }) =>
+  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : `good to ${plainDate(t.good_until)}`}`;
 
 export default function LoadoutRecordView({ rec, override, tagHref }: {
   rec: LoadoutRecord;
@@ -102,8 +105,8 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
             return (
               <div key={p.asset_id} className={cn("rounded-xl border p-3", p.red ? "border-red-500/40 bg-red-500/[0.06]" : "border-line bg-surface")}>
                 <div className="break-words text-sm font-semibold">{href ? <a href={href} className="hover:text-bone hover:underline">{pieceLabel(p)}</a> : pieceLabel(p)}</div>
-                <div className="mt-0.5 break-words text-[13px] text-ink-dim">
-                  {(p.tests ?? []).length ? (p.tests ?? []).map((t) => `${t.title}: ${t.good_until ? `good to ${plainDate(t.good_until)}` : "no date"}`).join(" · ") : "No test on file"}
+                <div className={cn("mt-0.5 break-words text-[13px]", p.red ? "text-red-400" : "text-ink-dim")}>
+                  {(p.tests ?? []).length ? (p.tests ?? []).map(testText).join(" · ") : "No test on file"}
                 </div>
                 <div className="mt-0.5 text-[13px] text-ink-faint">{HOW[p.how] ?? p.how}{p.at ? ` ${time(p.at)}` : ""}{p.by ? ` by ${p.by}` : ""}{p.added ? " · brought over from elsewhere" : ""}</div>
               </div>
@@ -124,7 +127,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
                       <td className="px-3 py-2 font-medium">{href ? <a href={href} className="hover:text-bone hover:underline">{p.name}</a> : p.name}{p.added ? <span className="block text-xs font-normal text-ink-faint">brought over from elsewhere</span> : null}</td>
                       <td className="px-3 py-2 tabular-nums text-ink-dim">{p.serial ?? ""}</td>
                       <td className={cn("px-3 py-2", p.red ? "text-red-400" : "text-ink-dim")}>
-                        {(p.tests ?? []).length ? (p.tests ?? []).map((t) => <div key={t.title}>{t.title}: {t.good_until ? `good to ${plainDate(t.good_until)}` : "no date"}</div>) : "No test on file"}
+                        {(p.tests ?? []).length ? (p.tests ?? []).map((t) => <div key={t.title}>{testText(t)}</div>) : "No test on file"}
                       </td>
                       <td className="px-3 py-2 text-ink-dim">{HOW[p.how] ?? p.how}</td>
                       <td className="px-3 py-2 tabular-nums text-ink-dim">{time(p.at)}</td>

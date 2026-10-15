@@ -90,7 +90,7 @@ describe("loadoutVerdict", () => {
     expect(v.reasons).toEqual([
       "Short: Plug valve 2-inch, 1 of 4 scanned (Standard Coil Package)",
       "Can't find: Lubricator LB-221",
-      "Out of test: BOP stack QB-4471 (pressure test expired Oct 8)",
+      "Out of test: BOP stack QB-4471, pressure test expired Oct 8",
       "Red-tagged: Plug valve PV-9",
       "Truck paper: DOT annual inspection expired Oct 2",
     ]);
