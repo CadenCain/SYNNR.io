@@ -63,38 +63,38 @@ export default function OnePager() {
 
       <div className="op-sheet">
         <div className="op-head">
-          <div className="op-brand">RollReady<small>by SYNNR · Load-out readiness · Permian Basin</small></div>
+          <div className="op-brand">RollReady<small>by SYNNR · Oilfield load-out software · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b>, founder<br />
             Call or text {OWNER_PHONE}
           </div>
         </div>
 
-        <h1 className="op-h">Nothing out of test goes on the truck.</h1>
+        <h1 className="op-h">Stop costly load-out mistakes.</h1>
 
         <p className="op-p">
           An expired lubricator cert cost us $8,000 on a major&apos;s location. Nobody knew until the company man
-          checked the paper and turned the crew around at the gate. RollReady checks every piece of iron as it
-          goes on the truck. Anything out of test, red-tagged, or missing gets caught in the yard, not at the
-          gate, and you keep a record of what left that nobody can edit.
+          checked the paper and turned the crew around at the gate. RollReady makes sure the right iron, in date,
+          leaves your yard every time. Hands scan each piece as it goes on the truck. Anything missing, expired, or
+          red-tagged stops the truck in the yard, and you keep a locked record of who loaded what.
         </p>
 
         <div className="op-cols">
           <div className="op-box">
             <h3>What it catches</h3>
             <ul>
-              <li>Load-out scans: tap each piece&apos;s tag as it goes on, bad iron gets called out on the spot</li>
+              <li>Packages, truck kits, and quick lists set what each truck needs</li>
+              <li>Scan each piece as it&apos;s loaded: bad iron gets called out on the spot</li>
+              <li>Missing, expired, or red-tagged means NOT READY. Hands can&apos;t override it.</li>
+              <li>A locked record of every load-out, with a proof link for the operator</li>
               <li>Works with your testing company&apos;s NFC tags, or free QR tags</li>
-              <li>A record of what left the yard, and a proof link for the operator</li>
-              <li>A yard map and every piece&apos;s next test on one list</li>
-              <li>BOP and lubricator tests, iron recerts (UT + hydro), annual DOT</li>
-              <li>No quiet overrides: only a manager, with a reason, on the record</li>
+              <li>Every yard on one screen: ready, blocked, loaded out, and who did what</li>
             </ul>
           </div>
           <div className="op-box">
             <h3>The math</h3>
             <div style={{ fontSize: "13.5px", lineHeight: 1.65 }}>
-              One lubricator miss is 16 months of RollReady. It&apos;s a flat price per yard and never
+              One bad load-out costs more than a year of RollReady. It&apos;s a flat price per yard and never
               per-seat, so adding people or iron costs nothing. No contract, cancel anytime, and your
               data stays yours.
             </div>
@@ -104,7 +104,7 @@ export default function OnePager() {
         <div className="op-math">
           <div><div className="n">$10,000+</div><div className="k">one missed cert, one NPT day</div></div>
           <div><div className="n">$500</div><div className="k">per yard / month, flat</div></div>
-          <div><div className="n">16 months</div><div className="k">of RollReady for one lubricator miss</div></div>
+          <div><div className="n">$6,000</div><div className="k">a full year of RollReady</div></div>
         </div>
 
         <div className="op-free">Setup is free for the first 10 yards. I&apos;ll do it with you in one afternoon. Bring the binder.</div>

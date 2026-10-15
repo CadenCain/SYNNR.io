@@ -52,6 +52,20 @@ const nextConfig: NextConfig = {
     // caps a request at 4.5MB, so 4MB is the real ceiling.
     serverActions: { bodySizeLimit: "4mb" },
   },
+  // The offline service worker (public/sw.js) must never be cached by the
+  // browser or a CDN, or a fix to it would take days to reach phones.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       // Old funnel URLs land directly on the live one (single hop — no chains).
@@ -61,6 +75,9 @@ const nextConfig: NextConfig = {
       // SYNNR sells one thing now. Old shared links land on the homepage's
       // product section instead of a 404.
       { source: "/products", destination: "/#product", permanent: false },
+      // Partners and custom builds are gone: RollReady sells one thing.
+      { source: "/partners", destination: "/", permanent: true },
+      { source: "/build", destination: "/", permanent: true },
       { source: "/products/:slug*", destination: "/#product", permanent: false },
       // Park old SaaS marketplace/app/auth routes.
       ...PARKED.map((source) => ({ source, destination: "/", permanent: false })),

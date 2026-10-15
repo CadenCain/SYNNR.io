@@ -39,7 +39,8 @@ const PAST = "2020-01-01";
 function fleetTables(assetCertExpiration: string | null, assetStatus = "in_service") {
   return {
     saas_units: [{ id: "u1", name: "Rig 4", type: "truck", yard_id: "y1", company_id: CO }],
-    saas_loadout_templates: [],
+    saas_packages: [],
+    saas_package_lines: [],
     saas_assets: [{ id: "a1", name: "Quad BOP #11", status: assetStatus, unit_id: "u1", company_id: CO }],
     saas_unit_crew: [],
     saas_crew_members: [],

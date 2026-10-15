@@ -70,11 +70,11 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <TriangleAlert className="h-7 w-7 text-ink-faint" />
           <p className="font-semibold">Nothing set up to check.</p>
           <p className="mx-auto max-w-md text-sm text-ink-dim">
-            This truck has no gear list, no iron, and no certs. A check with nothing
+            This truck has no kit, no iron, and no certs. A check with nothing
             to verify can&apos;t pass. Set it up first.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Link href={`/app/units/${unitId}/loadout`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-coal"><PencilRuler className="h-4 w-4" /> Edit gear list</Link>
+            <Link href={`/app/units/${unitId}/kit`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-white"><PencilRuler className="h-4 w-4" /> Set the truck&apos;s kit</Link>
             <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm text-ink">Add certs &amp; assets</Link>
           </div>
         </Card>

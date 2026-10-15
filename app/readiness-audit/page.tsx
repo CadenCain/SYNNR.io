@@ -4,9 +4,10 @@ import { SiteNav, SiteFooter } from "../site-chrome";
 import ReadinessAuditForm from "./readiness-audit-form";
 
 export const metadata = {
-  title: "Free readiness map | SYNNR",
+  title: "Send your iron list | RollReady",
   description:
-    "Send us one cert list or loadout sheet. We'll map what's expired, expiring, and missing in your yard and send it back. Free, no card, no pitch.",
+    "Send one cert list or load-out sheet, any format. You get back what's expired, coming due, and missing, and the first 10 yards get set up on RollReady free.",
+  alternates: { canonical: "/readiness-audit" },
 };
 
 export default function ReadinessAuditPage() {
@@ -16,12 +17,11 @@ export default function ReadinessAuditPage() {
       <main className="section" id="audit">
         <div className="container ra-wrap">
           <div className="head" style={{ textAlign: "left", marginInline: 0 }}>
-            <span className="eyebrow">Free readiness map</span>
-            <h1 className="h2" style={{ marginTop: 8 }}>Send one list. Get a readiness map back.</h1>
+            <h1 className="h2">Send your iron list</h1>
             <p className="lede" style={{ marginInline: 0 }}>
-              Send one cert list or loadout sheet. A spreadsheet, a photo of the whiteboard, whatever you&apos;ve got.
-              We&apos;ll map what&apos;s expired, expiring, and missing in your yard and send it back. Free, no card, no pitch.
-              Or just email <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> with the list attached.
+              One cert list or load-out sheet. A spreadsheet, a photo of the whiteboard, whatever you&apos;ve got.
+              I&apos;ll send back what&apos;s expired, coming due, and missing. The first 10 yards get set up on RollReady free, and I load the iron with you.
+              Or email the list to cadencain@synnr.io (<a href="mailto:cadencain@synnr.io">open email</a>).
             </p>
           </div>
 

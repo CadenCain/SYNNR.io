@@ -29,6 +29,7 @@ import ShareProof from "@/app/app/_components/share-proof";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { worstStatus } from "@/lib/saas/status";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
+import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,14 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
     .order("started_at", { ascending: false })
     .limit(6);
   const history = (historyData ?? []) as { id: string; type: string; status: string; performed_by_name: string | null; started_at: string }[];
+  // Load-out records on this truck, newest first, with any override.
+  const { data: loRows } = await db.from("saas_loadout_scans").select("id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
+    .eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(8);
+  const loadouts = (loRows ?? []) as (Pick<LoadoutRecord, "id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned">)[];
+  const { data: loOv } = loadouts.length
+    ? await db.from("saas_loadout_overrides").select("loadout_id").in("loadout_id", loadouts.map((l) => l.id))
+    : { data: [] };
+  const overriddenIds = new Set(((loOv ?? []) as { loadout_id: string }[]).map((o) => o.loadout_id));
 
   // The unit's verdict comes from the SAME readiness engine the dashboard and
   // the blocking check use — the banner can never disagree with the wall.
@@ -262,25 +271,53 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         </AddDisclosure>
       </section>
 
-      {/* Gear list — the standing reference of what rides on this unit.
+      {/* The truck's kit: what every load-out on it checks against.
           Shops don't have one: nothing "rides on" a building. */}
       {!isShop && (
-      <Link href={`/app/units/${unitId}/loadout`}>
+      <Link href={`/app/units/${unitId}/kit`}>
         <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
           <div className="min-w-0 flex-1">
-            <div className="font-medium">Gear list</div>
-            <div className="text-sm text-ink-dim">What rides on this truck, and which items are required</div>
+            <div className="font-medium">{u.name} kit</div>
+            <div className="text-sm text-ink-dim">What this truck always leaves with. Short at load-out means NOT READY.</div>
           </div>
           <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
         </Card>
       </Link>
       )}
 
+      {loadouts.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-ink-dim">Load-outs</h2>
+          <div className="flex flex-col gap-2">
+            {loadouts.map((l) => {
+              const o = outcomeOf(l, overriddenIds.has(l.id) ? { loadout_id: l.id, by_name: "", reason: "", created_at: "" } : null);
+              const why = o === "ready" ? "" : reasonsOf(l)[0] ?? "";
+              return (
+                <Link key={l.id} href={`/app/loadouts/${l.id}`}>
+                  <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">
+                        <span className={o === "ready" ? "text-emerald-400" : o === "override" ? "text-amber-400" : "text-red-400"}>
+                          {o === "ready" ? "READY" : o === "override" ? "Rolled on override" : "NOT READY"}
+                        </span>
+                        <span className="text-ink-dim"> · {fmtWhen(l.finished_at)}{l.scanned_by ? ` by ${l.scanned_by}` : ""}</span>
+                      </div>
+                      {why ? <div className="truncate text-sm text-ink-dim">{why}</div> : null}
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Dispatch history — the immutable records (spec #1d) */}
       {history.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold text-ink-dim">Dispatch history</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">Paper checks</h2>
           <div className="flex flex-col gap-2">
             {history.map((h) => (
               <Link key={h.id} href={`/app/records/${h.id}`}>

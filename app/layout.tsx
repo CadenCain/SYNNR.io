@@ -25,30 +25,30 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "RollReady by SYNNR: load-out readiness for oilfield service yards",
+    default: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
     template: "%s",
   },
   description:
-    "RollReady checks every piece of iron as it goes on the truck. Anything out of test, red-tagged, or missing gets caught in the yard, not at the gate, and you keep a record of what left that nobody can edit. $500 per yard, per month. Never per-seat.",
+    "Make sure the right iron, in date, leaves your yard every time. Scan at load-out, block expired or missing equipment, and keep a locked record of who loaded what. Built for Permian service companies.",
   keywords: [
-    "RollReady", "SYNNR", "load-out readiness", "load out scan", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
-    "QR equipment tags", "NDT recertification tracking", "equipment tracking", "where is my equipment", "oilfield service software",
-    "wireline", "coil tubing", "cementing", "BOP testing", "BOP recertification", "lubricator pressure test", "DOT inspection",
-    "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
+    "oilfield load out software", "equipment readiness oilfield", "prevent gate turnaround oilfield",
+    "oilfield cert tracking loadout", "truck readiness software oilfield",
+    "RollReady", "load-out scan", "pressure iron recertification", "NFC iron tags",
+    "coil tubing", "wireline", "BOP test", "lubricator cert", "Permian Basin", "Midland", "Odessa",
   ],
   openGraph: {
     type: "website",
     siteName: "RollReady by SYNNR",
-    title: "RollReady by SYNNR: load-out readiness for oilfield service yards",
+    title: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
     description:
-      "Nothing out of test goes on the truck. Scan every piece at load-out, catch it in the yard, and keep the record of what left. $500 per yard, per month.",
+      "Stop costly load-out mistakes. Scan iron as it goes on the truck, block anything missing, expired, or red-tagged, and keep a locked record of who loaded what.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RollReady by SYNNR: load-out readiness for oilfield service yards",
+    title: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
     description:
-      "Nothing out of test goes on the truck. Scan every piece at load-out, catch it in the yard, and keep the record of what left. $500 per yard, per month.",
+      "Stop costly load-out mistakes. Scan iron as it goes on the truck, block anything missing, expired, or red-tagged, and keep a locked record of who loaded what.",
   },
 };
 
@@ -72,7 +72,7 @@ export default function RootLayout({
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Load-out readiness for oilfield service yards. Every piece of iron gets scanned as it goes on the truck; anything out of test gets caught in the yard, with a record of what left.",
+                "Oilfield load-out software. Hands scan each piece of iron as it goes on the truck; anything missing, expired, or red-tagged blocks the truck in the yard, with a locked record of who loaded what.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",

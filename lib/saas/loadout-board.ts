@@ -1,16 +1,34 @@
 import type { UnitTile } from "./readiness";
 import type { EquipRow } from "./equipment";
-import type { UnitState } from "./status";
 import { YARD_TZ } from "./format";
+import { outcomeOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
 
 /**
- * The Load out board's rows from trucks, iron, and load-out scans. Pure, so
- * the home page and the marketing screenshot build it the same way.
+ * The Load out board: every truck as Ready (nothing red, not loaded out yet
+ * today), Blocked (today's load-out came back NOT READY, or the records
+ * already show something red), or Loaded out (today's load-out came back
+ * READY, or a manager rolled it on an override). Pure, so the home page and
+ * the marketing screenshot build it the same way.
  */
 
-export interface LoadoutScanRow { unit_id: string | null; finished_at: string; scanned_by: string | null; scanned: number; expected: number }
-export interface LoadOutTruckRow { t: UnitTile; pieces: number; loadoutLine: string | null; doneToday: boolean }
+export type LoadoutScanRow = Pick<LoadoutRecord, "id" | "unit_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned">;
+export type TruckStatus = "blocked" | "ready" | "out";
+export interface LoadOutTruckRow {
+  t: UnitTile;
+  pieces: number;
+  status: TruckStatus;
+  /** The red or amber line under the truck's name, if any. */
+  why: string | null;
+  whyTone: "red" | "amber" | null;
+  /** Already worded, in the yard's time zone: "Loaded out READY 5:40 AM by Ray Hinojosa". */
+  loadoutLine: string | null;
+  doneToday: boolean;
+  /** Today's load-out record, for the link. */
+  loadoutId: string | null;
+  overridden: boolean;
+}
 export interface LoadOutWeek { loadouts: number; caught: number; overrides: number }
+export interface LoadOutCounts { ready: number; blocked: number; out: number }
 
 /** This week's numbers for the owner: load-outs scanned, bad pieces caught at load-out, trucks rolled on override. */
 export function weekNumbers(scans: { pieces?: { red?: boolean }[] | null }[], overrides: number): LoadOutWeek {
@@ -21,12 +39,18 @@ export function weekNumbers(scans: { pieces?: { red?: boolean }[] | null }[], ov
   };
 }
 
-const ORDER: Record<UnitState, number> = { not_ready: 0, due_soon: 1, not_setup: 2, ready: 3 };
+const ORDER: Record<TruckStatus, number> = { blocked: 0, ready: 1, out: 2 };
 const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
 const shortDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
 
-export function buildLoadOutTrucks(units: UnitTile[], rows: EquipRow[], scans: LoadoutScanRow[], today: string): { trucks: LoadOutTruckRow[]; summary: string } {
+export function buildLoadOutTrucks(
+  units: UnitTile[],
+  rows: EquipRow[],
+  scans: LoadoutScanRow[],
+  overridden: Set<string>,
+  today: string,
+): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const last = new Map<string, LoadoutScanRow>();
   for (const r of [...scans].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
     if (r.unit_id && !last.has(r.unit_id)) last.set(r.unit_id, r);
@@ -34,19 +58,34 @@ export function buildLoadOutTrucks(units: UnitTile[], rows: EquipRow[], scans: L
   const pieces = new Map<string, number>();
   for (const r of rows) if (r.unitId && r.state !== "retired") pieces.set(r.unitId, (pieces.get(r.unitId) ?? 0) + 1);
 
-  const trucks = units.map((t) => {
+  const trucks = units.map((t): LoadOutTruckRow => {
     const s = last.get(t.id);
     const doneToday = Boolean(s && dayOf(s.finished_at) === today);
-    const loadoutLine = s
-      ? `${doneToday ? `Loaded out today ${timeOf(s.finished_at)}` : `Last load-out ${shortDay(s.finished_at)}`}${s.scanned_by ? ` by ${s.scanned_by}` : ""}, ${s.scanned} of ${s.expected} scanned`
-      : null;
-    return { t, pieces: pieces.get(t.id) ?? 0, loadoutLine, doneToday };
-  }).sort((a, b) => ORDER[a.t.state] - ORDER[b.t.state] || Number(a.doneToday) - Number(b.doneToday) || a.t.name.localeCompare(b.t.name));
+    const by = s?.scanned_by ? ` by ${s.scanned_by}` : "";
+    const base = { t, pieces: pieces.get(t.id) ?? 0, doneToday, loadoutId: doneToday && s ? s.id : null };
+    if (s && doneToday) {
+      const outcome = outcomeOf(s, overridden.has(s.id) ? { loadout_id: s.id, by_name: "", reason: "", created_at: "" } : null);
+      if (outcome === "blocked") {
+        const reasons = reasonsOf(s);
+        return { ...base, status: "blocked", overridden: false, whyTone: "red",
+          why: reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
+          loadoutLine: `Blocked at load-out ${timeOf(s.finished_at)}${by}` };
+      }
+      return { ...base, status: "out", overridden: outcome === "override", why: null, whyTone: null,
+        loadoutLine: outcome === "override" ? `Rolled on a manager's override ${timeOf(s.finished_at)}${by}` : `Loaded out READY ${timeOf(s.finished_at)}${by}` };
+    }
+    const loadoutLine = s ? `Last load-out ${shortDay(s.finished_at)}${by}` : null;
+    if (t.state === "not_ready") return { ...base, status: "blocked", overridden: false, why: t.why, whyTone: "red", loadoutLine };
+    return { ...base, status: "ready", overridden: false, why: t.state === "due_soon" ? t.why : null, whyTone: t.state === "due_soon" ? "amber" : null, loadoutLine };
+  }).sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.t.name.localeCompare(b.t.name));
 
-  const notReady = trucks.filter((x) => x.t.state === "not_ready").length;
-  const done = trucks.filter((x) => x.doneToday).length;
+  const counts: LoadOutCounts = {
+    ready: trucks.filter((x) => x.status === "ready").length,
+    blocked: trucks.filter((x) => x.status === "blocked").length,
+    out: trucks.filter((x) => x.status === "out").length,
+  };
   const summary = trucks.length
-    ? `${trucks.length} ${trucks.length === 1 ? "truck" : "trucks"}. ${done} loaded out today. ${notReady ? `${notReady} not ready.` : "None held up."}`
+    ? `${trucks.length} ${trucks.length === 1 ? "truck" : "trucks"}. ${counts.out} loaded out today. ${counts.blocked ? `${counts.blocked} blocked.` : "Nothing blocked."}`
     : "Pick a truck and scan every piece as it goes on.";
-  return { trucks, summary };
+  return { trucks, counts, summary };
 }

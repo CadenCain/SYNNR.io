@@ -66,7 +66,7 @@ export default async function OpReferrals() {
       <div className="op-page-h" style={{ marginTop: 32 }}>
         <div>
           <h1 style={{ fontSize: 20 }}>Partner interest</h1>
-          <div className="op-page-sub">From the /partners form — call them back.</div>
+          <div className="op-page-sub">From the old /partners form (retired 2026-10). Call them back.</div>
         </div>
       </div>
       <table className="op-table" style={{ width: "100%", borderCollapse: "collapse" }}>

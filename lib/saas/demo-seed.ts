@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, type DemoAsset,
 } from "./demo-data";
+import { demoLoadoutRecord } from "./demo-loadouts";
+import { kitLinesFrom } from "./loadout-lines";
 import { verifyUpload } from "./cert-verify";
 import { computeDispatchCheck } from "./dispatch-check";
 import { localToday, addDaysIso } from "./status";
@@ -124,34 +126,68 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
       ]);
     })(),
 
-    // Load-outs scanned at the truck: each piece on these trucks was proven
-    // on by a tag scan. Service-role writes, so the times can be in the past.
+    // Packages for kinds of jobs, and every truck's kit made from what's on it.
+    (async () => {
+      const { data: pk, error } = await admin.from("saas_packages").insert([
+        ...DEMO_PACKAGES.map((p) => ({ company_id: companyId, name: p.name, created_by: "Kevin Odom" })),
+        ...DEMO_UNITS.filter((u) => (u.assets ?? []).length).map((u) => ({ company_id: companyId, unit_id: unitId(u.key), name: `${u.name} kit`, created_by: "Kevin Odom" })),
+      ]).select("id, name, unit_id");
+      if (error) throw new Error(`packages: ${error.message}`);
+      const rows = (pk ?? []) as { id: string; name: string; unit_id: string | null }[];
+      const lines = rows.flatMap((r) => {
+        const src = r.unit_id
+          ? kitLinesFrom((DEMO_UNITS.find((u) => unitId(u.key) === r.unit_id)!.assets ?? []).filter((a) => a.status !== "retired").map((a) => a.name))
+          : DEMO_PACKAGES.find((p) => p.name === r.name)!.lines;
+        return src.map((l, i) => ({ package_id: r.id, company_id: companyId, label: l.label, qty: l.qty, sort: i + 1 }));
+      });
+      if (lines.length) await admin.from("saas_package_lines").insert(lines);
+    })(),
+
+    // Load-outs scanned at the truck, worked out by the same rules as a real
+    // one (lib/saas/demo-loadouts.ts). Service-role writes, so the times can
+    // be in the past.
     (async () => {
       for (const lo of DEMO_LOADOUTS) {
-        const unit = DEMO_UNITS.find((u) => u.key === lo.unitKey)!;
-        const onTruck = (unit.assets ?? []).filter((a) => a.status !== "retired");
-        const ids = onTruck.map((a) => assetIdByKey.get(keyOf(a))!).filter(Boolean);
+        const rec = demoLoadoutRecord(lo, localToday());
+        const ids = rec.onTruck.map((a) => assetIdByKey.get(keyOf(a))!).filter(Boolean);
         const at = tsAgo(lo.daysAgo, lo.hour, lo.minute);
+        const atMs = Date.parse(at);
         const day = new Date(at).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
+        const summary = rec.verdict === "ready"
+          ? `${rec.unit.name} loaded out READY by ${lo.by}: ${rec.pieces.length} pieces scanned`
+          : `${rec.unit.name} blocked at load-out (NOT READY) by ${lo.by}: ${rec.reasons.slice(0, 3).join("; ")}`;
+        const { data: saved, error: loErr } = await admin.from("saas_loadout_scans").insert({
+          company_id: companyId, unit_id: unitId(lo.unitKey), unit_name: rec.unit.name, yard_id: yardId, scanned_by: lo.by,
+          started_at: new Date(atMs - rec.pieces.length * 70e3).toISOString(), finished_at: at,
+          expected: rec.pieces.length, scanned: rec.pieces.length,
+          verdict: rec.verdict, reasons: rec.reasons, packages: rec.packages,
+          lines: rec.lines.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}),
+            filled: l.filled.map((f) => ({ asset_id: assetIdByKey.get(f.id), name: f.name, serial: f.serial })) })),
+          pieces: rec.pieces.map((x, i) => ({
+            asset_id: assetIdByKey.get(x.key), name: x.name, serial: x.serial, how: lo.how, by: lo.by, added: false, red: x.red, tests: x.tests,
+            at: new Date(atMs - (rec.pieces.length - i) * 60e3).toISOString(),
+          })),
+          not_scanned: [],
+        }).select("id").single();
+        if (loErr) throw new Error(`load-out: ${loErr.message}`);
+        const loadoutId = (saved as { id: string }).id;
+        const ovAt = lo.override ? new Date(atMs + lo.override.minutesLater * 60e3).toISOString() : null;
         await Promise.all([
           admin.from("saas_assets").update({ scanned_at: at, scanned_by: lo.by, scanned_unit_id: unitId(lo.unitKey) }).in("id", ids),
-          admin.from("saas_loadout_scans").insert({
-            company_id: companyId, unit_id: unitId(lo.unitKey), unit_name: unit.name, scanned_by: lo.by,
-            started_at: at, finished_at: at, expected: onTruck.length, scanned: onTruck.length,
-            pieces: onTruck.map((a) => ({
-              asset_id: assetIdByKey.get(keyOf(a)), name: a.name, serial: a.identifier ?? null, how: lo.how, added: false,
-              red: a.status === "out_of_service" || a.status === "missing" || (a.items ?? []).some((it) => it.exp === null || it.exp < 0),
-            })),
-            not_scanned: [],
-          }),
           admin.from("saas_asset_moves").insert(ids.map((id) => ({
             company_id: companyId, asset_id: id, from_where: whereLabel(lo.unitKey), to_where: whereLabel(lo.unitKey),
             note: `scanned at load-out ${day}`, actor: lo.by, created_at: at,
           }))),
-          admin.from("saas_events").insert({
-            company_id: companyId, kind: "loadout_scanned", unit_id: unitId(lo.unitKey), actor: lo.by, created_at: at,
-            message: `${unit.name} load-out: ${onTruck.length} scanned`,
-          }),
+          admin.from("saas_events").insert([
+            { company_id: companyId, kind: rec.verdict === "ready" ? "loadout_ready" : "loadout_blocked", unit_id: unitId(lo.unitKey), actor: lo.by, created_at: at, message: summary },
+            ...(lo.override && ovAt ? [{
+              company_id: companyId, kind: "rolled_override", unit_id: unitId(lo.unitKey), actor: lo.override.by, created_at: ovAt,
+              message: `${rec.unit.name} rolled NOT READY on a manager override by ${lo.override.by}. Reason: "${lo.override.reason}"`,
+            }] : []),
+          ]),
+          lo.override && ovAt
+            ? admin.from("saas_loadout_overrides").insert({ company_id: companyId, loadout_id: loadoutId, by_name: lo.override.by, reason: lo.override.reason, created_at: ovAt })
+            : Promise.resolve(),
         ]);
       }
     })(),
@@ -257,7 +293,7 @@ export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
 // its members, and its proof links are kept: the reaper deletes those too,
 // a refresh must not.
 const YARD_TABLES = [
-  "saas_alerts_sent", "saas_asset_moves", "saas_loadout_scans", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_alerts_sent", "saas_asset_moves", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
   "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
@@ -316,7 +352,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const { data: members } = await admin.from("saas_memberships").select("user_id").eq("company_id", cid);
       // Child tables first (not everything cascades), company last, users after.
       const tables = [
-        "saas_alerts_sent", "saas_loadout_scans", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+        "saas_alerts_sent", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",

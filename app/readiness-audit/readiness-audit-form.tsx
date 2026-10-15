@@ -33,10 +33,10 @@ export default function ReadinessAuditForm() {
   if (done) {
     return (
       <div className="ra-form-done">
-        <b>Got it ✓</b>
+        <b>Got it.</b>
         <p>
-          I'll call or text you this week with your free readiness map: what's expired, expiring, and missing in your yard.
-          No pitch, just the facts. We'll follow up if it looks like a fit.
+          I'll call or text you this week. Send the list whenever it's handy, and I'll tell you what's expired, coming due, and missing.
+          If RollReady fits, I'll load your iron with you. If not, you still get the list back.
         </p>
       </div>
     );
@@ -58,8 +58,8 @@ export default function ReadinessAuditForm() {
         </label>
       </div>
       <label>
-        What's your biggest asset or cert headache right now?
-        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Certs lapsing? DOT surprises? Whiteboard chaos? Tell us." />
+        What goes wrong at load-out in your yard?
+        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Certs lapsing? Pieces left in the yard? Red tags that went anyway?" />
       </label>
       <div className="svc-form-row">
         <label>Cell<input name="phone" type="tel" required autoComplete="tel" placeholder="(432) 555-0100" /></label>
@@ -67,7 +67,7 @@ export default function ReadinessAuditForm() {
       </div>
       {err ? <p className="svc-form-err">{err}</p> : null}
       <button className="btn btn-primary" type="submit" disabled={busy}>
-        {busy ? "Sending…" : "Send my details →"}
+        {busy ? "Sending…" : "Send"}
       </button>
     </form>
   );

@@ -813,13 +813,30 @@
 
 .mkt .simple-footer { background: #fff; }
 
+/* 2026-10 load-out homepage additions */
+.mkt .x-punch { margin-top: 18px; font-size: clamp(17px, 1.6vw, 20px); font-weight: 650; color: #fff; max-width: 54ch; }
+.mkt .x-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mkt .x-steps { list-style: none; padding: 0; }
+.mkt .x-step h3 { font-size: 18px; }
+.mkt .x-step p { margin-top: 0; font-size: 15.5px; color: #475569; }
+.mkt .x-step p b { color: #0f172a; }
+.mkt .x-center { text-align: center; }
+.mkt #how .x-browser { margin-top: clamp(32px, 4vw, 48px); }
+.mkt #how .x-cta { margin-top: 24px; }
+.mkt .x-val h3 { font-size: 20px; }
+.mkt .x-features { margin-top: clamp(40px, 5vw, 64px); }
+.mkt .x-founder-h { margin-top: 4px; font-size: clamp(24px, 2.8vw, 32px); }
+.mkt .x-founder > p:first-of-type { margin-top: 16px; }
+.mkt .x-founder > p + p:not(.x-sign):not(.x-fine) { margin-top: 12px; font-size: 17px; line-height: 1.6; color: #0f172a; }
+
 @media (max-width: 1023px) {
   .mkt .x-hero-grid { grid-template-columns: 1fr; }
+  .mkt .x-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mkt .x-devices { max-width: 680px; margin-inline: auto; width: 100%; }
   .mkt .x-split, .mkt .x-price { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
-  .mkt .x-grid-2, .mkt .x-grid-3 { grid-template-columns: 1fr; }
+  .mkt .x-grid-2, .mkt .x-grid-3, .mkt .x-grid-4 { grid-template-columns: 1fr; }
   .mkt .x-cta .btn { flex: 1 1 100%; }
   .mkt .x-devices { padding: 0 0 10% 8%; }
   .mkt .x-phone { width: 30%; border-width: 4px; border-radius: 16px; }

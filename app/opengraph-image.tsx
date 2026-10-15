@@ -25,10 +25,10 @@ export default function OgImage() {
         <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}><span style={{ fontSize: 40, fontWeight: 700, letterSpacing: -1 }}>RollReady</span><span style={{ fontSize: 24, color: "#9fb7ff" }}>by SYNNR</span></div>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div style={{ display: "flex", fontSize: 68, fontWeight: 800, lineHeight: 1.06, letterSpacing: -2, maxWidth: 1000 }}>
-            Nothing out of test goes on the truck.
+            Stop costly load-out mistakes.
           </div>
           <div style={{ display: "flex", fontSize: 30, color: "#c3cde3", maxWidth: 1000 }}>
-            Scan every piece at load-out. A bad cert gets caught in the yard, not at the gate.
+            Scan iron as it goes on the truck. Missing, expired, or red-tagged stops it in the yard.
           </div>
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#9fb7ff", fontWeight: 600 }}>synnr.io · $500 per yard, per month</div>

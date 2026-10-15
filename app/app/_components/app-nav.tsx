@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
+import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
@@ -14,6 +14,8 @@ type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolea
 const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records", "/app/trucks"];
 const MAIN: NavItem[] = [
   { href: "/app", label: "Load out", icon: ScanLine, exact: true, also: TRUCK_PAGES },
+  { href: "/app/loadouts", label: "Load-out records", icon: History },
+  { href: "/app/packages", label: "Packages & kits", icon: Package },
   { href: "/app/equipment", label: "Equipment", icon: Boxes, also: ["/app/assets", "/app/import"] },
   { href: "/app/map", label: "Yard map", icon: MapIcon },
   { href: "/app/compliance", label: "Tests due", icon: CalendarClock },
@@ -209,6 +211,8 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
               </button>
             </div>
             {[
+              { href: "/app/loadouts", label: "Load-out records", icon: History },
+              { href: "/app/packages", label: "Packages & kits", icon: Package },
               { href: "/app/tags", label: "QR tags", icon: QrCode },
               { href: "/app/quick", label: "Quick add or renew", icon: Plus },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),

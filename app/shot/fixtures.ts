@@ -1,5 +1,8 @@
 import { buildEquipment, type EquipmentList, type RawAsset, type RawItem } from "@/lib/saas/equipment";
-import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS } from "@/lib/saas/demo-data";
+import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS, DEMO_PACKAGES } from "@/lib/saas/demo-data";
+import { demoLoadoutRecord } from "@/lib/saas/demo-loadouts";
+import { kitLinesFrom } from "@/lib/saas/loadout-lines";
+import type { LoadoutScanRow } from "@/lib/saas/loadout-board";
 import { addDaysIso, localToday } from "@/lib/saas/status";
 import { judgeUnit, withSerial } from "@/lib/saas/judge";
 import type { UnitTile } from "@/lib/saas/readiness";
@@ -65,16 +68,27 @@ export function demoTrucks(): UnitTile[] {
 /** The Load out board for the demo yard, built like the real home page. */
 export function demoLoadOut() {
   const { list } = demoEquipment();
-  const scans = DEMO_LOADOUTS.map((l) => {
-    const unit = DEMO_UNITS.find((u) => u.key === l.unitKey)!;
-    const n = (unit.assets ?? []).length;
-    return { unit_id: l.unitKey, finished_at: loadoutAt(l.unitKey) as string, scanned_by: l.by, scanned: n, expected: n };
-  });
-  const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, localToday());
-  // Same rule as the seed: a piece is "caught" if it was red when scanned on.
-  const caught = DEMO_LOADOUTS.reduce((n, l) => n + (DEMO_UNITS.find((u) => u.key === l.unitKey)!.assets ?? [])
-    .filter((a) => a.status === "out_of_service" || a.status === "missing" || (a.items ?? []).some((it) => it.exp === null || it.exp < 0)).length, 0);
-  return { ...board, week: { loadouts: DEMO_LOADOUTS.length, caught, overrides: 0 } };
+  const today = localToday();
+  const recs = DEMO_LOADOUTS.map((l) => ({ l, r: demoLoadoutRecord(l, today) }));
+  const scans: LoadoutScanRow[] = recs.map(({ l, r }) => ({
+    id: `lo-${l.unitKey}`, unit_id: l.unitKey, finished_at: loadoutAt(l.unitKey) as string, scanned_by: l.by,
+    verdict: r.verdict, reasons: r.reasons, not_scanned: [],
+    pieces: r.pieces.map((p) => ({ asset_id: p.key, name: p.name, serial: p.serial, how: l.how, red: p.red })),
+  }));
+  const overridden = new Set(DEMO_LOADOUTS.filter((l) => l.override).map((l) => `lo-${l.unitKey}`));
+  const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, overridden, today);
+  const recent = recs.filter(({ l }) => l.daysAgo <= 7);
+  const caught = recent.reduce((n, { r }) => n + r.pieces.filter((p) => p.red).length, 0);
+  return { ...board, week: { loadouts: recent.length, caught, overrides: recent.filter(({ l }) => l.override).length } };
+}
+
+/** Every truck's kit and the demo packages, as the scan screen gets them. */
+export function demoKitAndPackages(unitKey: string) {
+  const unit = DEMO_UNITS.find((u) => u.key === unitKey)!;
+  return {
+    kit: kitLinesFrom((unit.assets ?? []).filter((a) => a.status !== "retired").map((a) => a.name)),
+    packages: DEMO_PACKAGES.map((p, i) => ({ id: `pkg-${i}`, name: p.name, lines: p.lines })),
+  };
 }
 
 /** CT-03 partway through a load-out: two pieces scanned clean, then the BOP stack that's out of test. */

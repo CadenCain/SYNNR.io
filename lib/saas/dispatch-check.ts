@@ -109,23 +109,21 @@ export async function computeDispatchCheck(
   if (!unitData) return null;
   const unit = unitData as { id: string; name: string; type: string; yard_id: string };
 
-  // Template resolution: unit-specific → company type default → global seed
-  const { data: templates } = await db
-    .from("saas_loadout_templates")
-    .select("id, company_id, unit_id, unit_type")
-    .or(`unit_id.eq.${unitId},unit_type.eq.${unit.type}`);
-  const tpls = (templates ?? []) as TplLite[];
-  const template = resolveLoadoutTemplate(tpls, companyId, unitId, unit.type);
+  // The truck's kit (what every load-out on it checks against). Here it's a
+  // heads-up against what's logged on the truck; the load-out scan is where
+  // a short kit blocks the truck.
+  const { data: kitRow } = await db.from("saas_packages").select("id").eq("company_id", companyId).eq("unit_id", unitId).maybeSingle();
+  const kitId = (kitRow as { id: string } | null)?.id ?? null;
 
   // Equipment only: the truck's own paper and the iron on it. Retired iron
   // (scrapped or sold) isn't on the truck in any way that counts.
   const [{ data: tplItems }, { data: assetData }] = await Promise.all([
-    template
-      ? db.from("saas_loadout_items").select("id, label, required, sort").eq("template_id", template.id).order("sort")
+    kitId
+      ? db.from("saas_package_lines").select("id, label, sort").eq("package_id", kitId).order("sort")
       : Promise.resolve({ data: [] }),
     db.from("saas_assets").select("id, name, identifier, status").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
   ]);
-  const loadout = (tplItems ?? []) as { id: string; label: string; required: boolean; sort: number }[];
+  const loadout = ((tplItems ?? []) as { id: string; label: string; sort: number }[]).map((l) => ({ ...l, required: true }));
   const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; status: string }[])
     .map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
 
@@ -144,7 +142,7 @@ export async function computeDispatchCheck(
   const lines: CheckLine[] = [];
   const warnings: string[] = [];
 
-  // 1) Gear list vs the asset book. The gear list is a REFERENCE, not a gate:
+  // 1) The kit vs the asset book. Here the kit is a REFERENCE, not a gate:
   //    a line that simply isn't in the book yet is a heads-up, never a
   //    failure. Gear that IS flagged missing or red-tagged fails the truck
   //    through the rules below, whether or not it's on the list.
@@ -154,7 +152,7 @@ export async function computeDispatchCheck(
       // A required line that isn't in the book must not wear green: a hand
       // scanning chips saw six OKs on a truck that wasn't ready.
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: li.required ? "warn" : "ok", detail: li.required ? "not in the asset book yet" : "optional, not in the asset book" });
-      if (li.required) warnings.push(`${li.label} is on the gear list but not in the asset book yet. Add it so it's tracked.`);
+      if (li.required) warnings.push(`${li.label} is on ${unit.name}'s kit but isn't logged on the truck. The load-out scan will block it if it isn't scanned on.`);
     } else if (FAILING_GEAR.has(match.status)) {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "missing", detail: `${match.name} is flagged ${match.status === "out_of_service" ? "red-tagged" : "missing"}` });
     } else {

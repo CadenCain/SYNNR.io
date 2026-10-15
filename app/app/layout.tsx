@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import AppNav from "./_components/app-nav";
 import ReviewBanner from "./_components/review-banner";
+import OfflineSupport from "./_components/offline-support";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
@@ -62,6 +63,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
         switchAction={switchCompany} reviewCount={reviewCount} />
       <div className="relative z-10 min-w-0 flex-1">
+        <OfflineSupport companyId={company.id} />
         {/* Never-subscribed, lapsed, and payment-failed are three different
             situations — telling a brand-new signup their subscription "paused"
             describes something that never happened and points at the wrong

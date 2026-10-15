@@ -154,10 +154,26 @@ export const DEMO_MOVES: DemoMove[] = [
 ];
 
 /** Load-outs scanned at the truck: what was proven on each before it rolled. */
-export const DEMO_LOADOUTS: { unitKey: string; by: string; how: "nfc" | "qr"; daysAgo: number; hour: number; minute: number }[] = [
+export interface DemoLoadout {
+  unitKey: string; by: string; how: "nfc" | "qr"; daysAgo: number; hour: number; minute: number;
+  /** Packages picked for the job, on top of the truck's kit. */
+  packages?: string[];
+  /** A manager rolled it anyway. */
+  override?: { by: string; reason: string; minutesLater: number };
+}
+export const DEMO_LOADOUTS: DemoLoadout[] = [
   { unitKey: "ct2", by: "Ray Hinojosa", how: "nfc", daysAgo: 0, hour: 4, minute: 40 },
+  // ← the red: CT-03's BOP stack is out of test, so the load-out comes back NOT READY
   { unitKey: "ct3", by: "Dale Wooten", how: "nfc", daysAgo: 0, hour: 4, minute: 55 },
+  { unitKey: "ct7", by: "Lupe Cardenas", how: "nfc", daysAgo: 3, hour: 5, minute: 10, packages: ["Pump-down package"],
+    override: { by: "Kevin Odom", minutesLater: 14, reason: "Job changed to a cleanout before they left. The pump-down iron isn't needed. Called the company man and he's good with it." } },
   { unitKey: "p1", by: "J.R. Stanton", how: "qr", daysAgo: 5, hour: 5, minute: 50 },
+];
+
+/** Packages for kinds of jobs. Every truck's kit is made from what's on it (kitLinesFrom). */
+export const DEMO_PACKAGES: { name: string; lines: { label: string; qty: number }[] }[] = [
+  { name: "Standard Coil Package", lines: [{ label: "Lubricator", qty: 1 }, { label: "2in 1502 pup joint", qty: 2 }] },
+  { name: "Pump-down package", lines: [{ label: "2in 1502 plug valve", qty: 1 }, { label: "2in 1502 Chiksan swivel", qty: 1 }] },
 ];
 
 /**
@@ -190,7 +206,7 @@ Tested by: R. Salinas Cert #88213`,
 /** Activity feed: ten days of a working yard, hours a yard actually keeps. */
 export const DEMO_EVENTS: DemoEvent[] = [
   { kind: "check_not_ready", message: "CT-03 checked NOT READY: BOP pressure test (Quad BOP stack #3) expired", actor: "Dale Wooten", daysAgo: 0, hour: 5, minute: 5 },
-  { kind: "check_ready", message: "CT-02 checked READY for the Mabee Ranch pad", actor: "Ray Hinojosa", daysAgo: 0, hour: 4, minute: 50 },
+  { kind: "check_ready", message: "CT-02 checked READY for this morning's job", actor: "Ray Hinojosa", daysAgo: 0, hour: 4, minute: 50 },
   { kind: "alert_sent", message: "Warning emailed: Lubricator #1 pressure test due in 9 days", actor: null, daysAgo: 0, hour: 6, minute: 32 },
   { kind: "check_ready", message: "CR-01 Crane checked READY, slings current", actor: "Cody Blackburn", daysAgo: 1, hour: 6, minute: 15 },
   { kind: "check_not_ready", message: "CT-06 held: 2in plug valve PV-2231 red-tagged", actor: "Lupe Cardenas", daysAgo: 2, hour: 5, minute: 20 },
@@ -198,7 +214,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
   // ── the win story: fail → fix → re-check, all in one working day ──
   { kind: "check_not_ready", message: "CT-04 checked NOT READY: iron recert on swivel SW-1104 expired", actor: "Dale Wooten", daysAgo: 3, hour: 4, minute: 50 },
   { kind: "renewed", message: "Iron recert renewed on swivel SW-1104 with a photo of the test company's cert, good for 12 months", actor: "Freddy Carrasco", daysAgo: 3, hour: 9, minute: 40 },
-  { kind: "check_ready", message: "CT-04 re-checked READY for the Diamondback pad and rolled at 4pm", actor: "Dale Wooten", daysAgo: 3, hour: 15, minute: 20 },
+  { kind: "check_ready", message: "CT-04 re-checked READY and rolled at 4pm", actor: "Dale Wooten", daysAgo: 3, hour: 15, minute: 20 },
   { kind: "asset_moved", message: "Lubricator #2 moved from the yard to BOP Trailer T-1, rack 2", actor: "Beau Slaughter", daysAgo: 3, hour: 7, minute: 10 },
   { kind: "check_ready", message: "P-01 checked READY", actor: "J.R. Stanton", daysAgo: 5, hour: 6, minute: 15 },
   { kind: "asset_status", message: "3in 1502 plug valve PV-3019 flagged MISSING after rig-down on CT-07", actor: "Kevin Odom", daysAgo: 6, hour: 18, minute: 45 },
@@ -208,7 +224,7 @@ export const DEMO_EVENTS: DemoEvent[] = [
 
 /** The two misses caught this month (both visible in the feed). */
 export const DEMO_MISSES: { message: string; daysAgo: number; hour: number }[] = [
-  { message: "Miss caught: CT-04 swivel recert dead before the Diamondback pad", daysAgo: 3, hour: 4 },
+  { message: "Miss caught: CT-04 swivel recert dead before the job", daysAgo: 3, hour: 4 },
   { message: "Miss caught: CT-06 red-tagged plug valve caught before rollout", daysAgo: 2, hour: 5 },
 ];
 

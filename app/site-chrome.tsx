@@ -1,8 +1,8 @@
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
 /**
- * Shared marketing nav + footer for the subpages (partners, build, readiness
- * map, glossary, legal-adjacent). Same shape as the homepage: SYNNR only,
+ * Shared marketing nav + footer for the subpages (send your iron list,
+ * glossary, legal-adjacent). Same shape as the homepage: RollReady by SYNNR,
  * demo and phone as the two ways in, no card-first signup button.
  */
 const MARK = (
@@ -15,7 +15,7 @@ export function SiteNav() {
   return (
     <header className="nav nav-static">
       <div className="nav-pill">
-        <a className="brand" href="/" aria-label="SYNNR">{MARK}<span className="wordmark">SYNNR</span></a>
+        <a className="brand" href="/" aria-label="RollReady by SYNNR">{MARK}<span className="wordmark">RollReady</span><span className="by-synnr">by SYNNR</span></a>
         <nav className="nav-links">
           <a href="/#how">How it works</a>
           <a href="/#pricing">Pricing</a>
@@ -47,12 +47,11 @@ export function SiteFooter() {
     <footer className="simple-footer">
       <div className="container">
         <div className="row">
-          <span className="brand-sm">SYNNR</span>
+          <span className="brand-sm">RollReady by SYNNR</span>
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
           <a href="/demo">Live demo</a>
-          <a href="/readiness-audit">Free readiness map</a>
-          <a href="/partners">Partners</a>
-          <a href="/build">Custom builds</a>
+          <a href="/readiness-audit">Send your iron list</a>
+          <a href="/glossary">Glossary</a>
           <a href="/login">Log in</a>
           <a href="/legal/terms">Terms</a>
           <a href="/legal/privacy">Privacy</a>
