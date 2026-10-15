@@ -27,18 +27,20 @@ Only tell stories from this list or from Caden's notes in the log. Never invent 
 
 ## What RollReady does (only say what's true here)
 
-- **Load-out readiness is the main job.** Before a truck rolls, the hand scans each piece as it goes on the truck. Anything out of test, red-tagged, or not on that truck's list gets called out on the spot ("Don't load it"). You keep a record of exactly what left the yard, who scanned it, and when, that nobody can edit.
+- **Load-out readiness is the main job.** Each truck has a kit (what it always leaves with), the shop builds packages for kinds of jobs (like a Standard Coil Package), and a hand can add quick lines for that day. As each piece goes on the truck the hand scans it, and anything out of test, red-tagged, or not on the list gets called out on the spot ("Don't load it").
+- Anything missing, out of test, or red-tagged makes the truck NOT READY. A hand can't override it. Only a manager can roll it anyway, with their name and reason on the record and an email to whoever is set up for alerts.
+- Every load-out saves a record nobody can edit: what left, who scanned each piece, and when. Each one gets its own proof link to send the operator.
 - Positioning in one line: your testing company's tag tells you about one piece; RollReady tells you whether the truck can leave.
-- No quiet overrides: only a manager can roll a NOT READY truck, with their name and reason on the record and an email to the office.
-- Every piece of iron on one list with its serial, which truck it's on, and when its next test is due.
-- A yard map: every truck and rack on one screen, each piece colored by its test status.
-- Load-out scans work with the testing company's NFC tags (from an Android phone) or RollReady's own QR tags on any phone. Scans are kept on the phone if signal drops.
+- A manager sees every truck as Blocked, Ready to load, or Loaded out, per yard, and who did what that day.
+- Every piece of iron on one list with its serial, which truck it's on, and when its next test is due. A yard map shows every truck and rack.
+- Load-out scans work with the testing company's NFC tags (from an Android phone) or RollReady's own QR tags on any phone.
+- Works with no signal once the Load out screen has been opened with signal on that phone: scans save on the phone and send when signal comes back.
 - Nobody clears a test by typing a date. A photo of the new cert has to show it.
 - Emails the right person before anything comes due.
 - $500 a yard per month, no contract, never per-seat. First 10 yards get setup free.
 - A demo with no signup.
 
-It does NOT do: GPS or real-time tracking, text alerts, offline mode, invoicing, or a native phone app. Never say it does. Never say shops use it.
+It does NOT do: GPS or real-time tracking, text alerts, invoicing, dispatch, field tickets, or a native phone app. Never say it does. Never say shops use it.
 
 ## The link
 

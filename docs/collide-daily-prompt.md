@@ -49,7 +49,7 @@ If Gmail is available, look for emails with "Demo opened" in the subject from th
 
 ## Self-check before anything goes out
 Read every reply, message, comment, and post against this list before you submit it. If it fails any line, rewrite it. If you can't make it pass, don't send it; put it in the log under Needs Caden.
-- Every fact about RollReady is in "What RollReady does." Nothing about GPS, real-time tracking, texts, offline, invoicing, or a phone app.
+- Every fact about RollReady is in "What RollReady does." Nothing about GPS, real-time tracking, texts, invoicing, dispatch, or a phone app.
 - No customers or users claimed. No shop, person, operator, or company man named unless Caden's notes say so.
 - No story, number, quote, or result that isn't in the story bank, this file, or Caden's notes.
 - No price except $500 a yard a month, no contract, and free setup for the first 10 yards.
