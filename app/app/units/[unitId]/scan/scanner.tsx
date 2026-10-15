@@ -433,7 +433,7 @@ export default function LoadoutScanner({ truck, pieces, initialScans, initialBan
 
 function Row({ p, scan, onHand }: { p: ScanPiece; scan?: Scan; onHand: () => void }) {
   return (
-    <div className={cn("flex items-center gap-3 rounded-xl border p-3",
+    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border p-3",
       scan ? (p.problem === "red" ? TONE.bad : "border-emerald-500/40 bg-emerald-500/[0.06]") : "border-line bg-surface")}>
       <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
         scan ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-line-2 text-ink-faint")}>
@@ -446,7 +446,7 @@ function Row({ p, scan, onHand }: { p: ScanPiece; scan?: Scan; onHand: () => voi
         </div>
       </div>
       {!scan ? (
-        <button type="button" onClick={onHand} className="shrink-0 rounded-lg border border-line-2 px-3 py-2.5 text-sm text-ink-dim hover:bg-elevated">Check by hand</button>
+        <button type="button" onClick={onHand} className="w-full shrink-0 rounded-lg border border-line-2 px-3 py-2.5 text-sm text-ink-dim hover:bg-elevated sm:w-auto">Check by hand</button>
       ) : null}
     </div>
   );

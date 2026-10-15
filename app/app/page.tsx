@@ -15,10 +15,13 @@ export const dynamic = "force-dynamic";
  * a big button to start the load-out scan. The equipment list, yard map,
  * and tests due all support this screen.
  */
+/** A week back from now, as an ISO time. */
+const weekAgoIso = () => new Date(Date.now() - 7 * 86400e3).toISOString();
+
 export default async function LoadOutHome() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const weekAgo = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const weekAgo = weekAgoIso();
   const [rd, list, { data: scanRows }, { data: weekScans }, { count: overrides }] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
