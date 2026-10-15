@@ -63,32 +63,32 @@ export default function OnePager() {
 
       <div className="op-sheet">
         <div className="op-head">
-          <div className="op-brand">RollReady<small>by SYNNR · Equipment test tracking · Permian Basin</small></div>
+          <div className="op-brand">RollReady<small>by SYNNR · Load-out readiness · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b>, founder<br />
             Call or text {OWNER_PHONE}
           </div>
         </div>
 
-        <h1 className="op-h">An expired lubricator cert cost us $8,000 on a major&apos;s location.</h1>
+        <h1 className="op-h">Nothing out of test goes on the truck.</h1>
 
         <p className="op-p">
-          Nobody knew until the company man checked the paper and turned the crew around at the gate.
-          RollReady keeps every piece of iron in your yard on one list, with its serial, which truck it&apos;s on, and when
-          its next test is due, and emails the right person before anything lapses. If something does
-          lapse, the truck it rides on reads NOT READY until the record is fixed.
+          An expired lubricator cert cost us $8,000 on a major&apos;s location. Nobody knew until the company man
+          checked the paper and turned the crew around at the gate. RollReady checks every piece of iron as it
+          goes on the truck. Anything out of test, red-tagged, or missing gets caught in the yard, not at the
+          gate, and you keep a record of what left that nobody can edit.
         </p>
 
         <div className="op-cols">
           <div className="op-box">
             <h3>What it catches</h3>
             <ul>
+              <li>Load-out scans: tap each piece&apos;s tag as it goes on, bad iron gets called out on the spot</li>
+              <li>Works with your testing company&apos;s NFC tags, or free QR tags</li>
+              <li>A record of what left the yard, and a proof link for the operator</li>
+              <li>A yard map and every piece&apos;s next test on one list</li>
               <li>BOP and lubricator tests, iron recerts (UT + hydro), annual DOT</li>
-              <li>A QR tag on every piece: scan it, see its tests and cert</li>
-              <li>A yard map: every truck and rack, and what&apos;s on it</li>
-              <li>Load-out scans: proof of what actually went out on the truck</li>
-              <li>A truck check with no override button</li>
-              <li>A live proof link to send the operator instead of a binder</li>
+              <li>No quiet overrides: only a manager, with a reason, on the record</li>
             </ul>
           </div>
           <div className="op-box">

@@ -41,14 +41,14 @@ export async function addEquipment(fd: FormData) {
   const where = await resolveWhere(db, company.id, str(fd, "where"));
   if (!where) return;
   if (await isRecentDuplicate(db, "saas_assets", { company_id: company.id, name, unit_id: where.unit_id })) {
-    revalidatePath("/app");
+    revalidatePath("/app"); revalidatePath("/app/equipment");
     return; // double-tap echo
   }
   const { data, error } = await db.from("saas_assets")
     .insert({ company_id: company.id, name, category, identifier, ...where })
     .select("id").single();
   if (error) throw new Error(error.message);
-  revalidatePath("/app");
+  revalidatePath("/app"); revalidatePath("/app/equipment");
   redirect(`/app/assets/${(data as { id: string }).id}`);
 }
 
@@ -74,6 +74,6 @@ export async function moveEquipment(fd: FormData) {
   }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);
-  revalidatePath("/app");
+  revalidatePath("/app"); revalidatePath("/app/equipment");
   refresh(); // redraw the page the Move box is on, with the new history row
 }

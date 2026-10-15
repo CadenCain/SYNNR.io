@@ -27,9 +27,12 @@ Only tell stories from this list or from Caden's notes in the log. Never invent 
 
 ## What RollReady does (only say what's true here)
 
+- **Load-out readiness is the main job.** Before a truck rolls, the hand scans each piece as it goes on the truck. Anything out of test, red-tagged, or not on that truck's list gets called out on the spot ("Don't load it"). You keep a record of exactly what left the yard, who scanned it, and when, that nobody can edit.
+- Positioning in one line: your testing company's tag tells you about one piece; RollReady tells you whether the truck can leave.
+- No quiet overrides: only a manager can roll a NOT READY truck, with their name and reason on the record and an email to the office.
 - Every piece of iron on one list with its serial, which truck it's on, and when its next test is due.
 - A yard map: every truck and rack on one screen, each piece colored by its test status.
-- Load-out scans: the hand scans each piece as it goes on the truck (QR on any phone, or NFC tags including the testing company's, from an Android phone). It flags anything out of test or missing and saves a record nobody can edit.
+- Load-out scans work with the testing company's NFC tags (from an Android phone) or RollReady's own QR tags on any phone. Scans are kept on the phone if signal drops.
 - Nobody clears a test by typing a date. A photo of the new cert has to show it.
 - Emails the right person before anything comes due.
 - $500 a yard per month, no contract, never per-seat. First 10 yards get setup free.

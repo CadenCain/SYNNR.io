@@ -100,7 +100,7 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
               onlyProblems ? "border-bone bg-bone text-white" : "border-line-2 bg-surface text-ink-dim hover:text-ink")}>
             Only show problems
           </button>
-          <Link href="/app" className={buttonClass("outline", "sm")}><List className="h-4 w-4" /> List view</Link>
+          <Link href="/app/equipment" className={buttonClass("outline", "sm")}><List className="h-4 w-4" /> List view</Link>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
 
       {truckBlocks.length === 0 && yardIron.length === 0 ? (
         <div className="rounded-2xl border border-line bg-surface px-6 py-12 text-center text-sm text-ink-dim">
-          Nothing here yet. <Link href="/app" className="text-bone hover:underline">Add equipment</Link> and put it on a truck or in the yard.
+          Nothing here yet. <Link href="/app/equipment" className="text-bone hover:underline">Add equipment</Link> and put it on a truck or in the yard.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">

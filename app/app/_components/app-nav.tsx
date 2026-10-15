@@ -3,26 +3,27 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, Map as MapIcon, Truck, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
+import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolean; also?: string[] };
 
-// Equipment first. Trucks own the yard, unit, and truck-check pages too.
-const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records"];
+// Load out first: the home screen is the trucks and their load-out scans,
+// and owns the yard, truck, truck-check, and record pages too.
+const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records", "/app/trucks"];
 const MAIN: NavItem[] = [
-  { href: "/app", label: "Equipment", icon: Boxes, exact: true, also: ["/app/assets"] },
+  { href: "/app", label: "Load out", icon: ScanLine, exact: true, also: TRUCK_PAGES },
+  { href: "/app/equipment", label: "Equipment", icon: Boxes, also: ["/app/assets", "/app/import"] },
   { href: "/app/map", label: "Yard map", icon: MapIcon },
-  { href: "/app/trucks", label: "Trucks", icon: Truck, also: TRUCK_PAGES },
   { href: "/app/compliance", label: "Tests due", icon: CalendarClock },
   { href: "/app/tags", label: "QR tags", icon: QrCode },
 ];
 
-// Phones: the three places a yard lives in, plus the button and More.
+// Phones: two tabs each side of the big Load out button in the middle.
 const TABS_LEFT: NavItem[] = [
-  { href: "/app", label: "Equipment", icon: Boxes, exact: true, also: ["/app/assets"] },
-  { href: "/app/trucks", label: "Trucks", icon: Truck, also: TRUCK_PAGES },
+  { href: "/app/equipment", label: "Equipment", icon: Boxes, also: ["/app/assets"] },
+  { href: "/app/map", label: "Map", icon: MapIcon },
 ];
 const TABS_RIGHT: NavItem[] = [
   { href: "/app/compliance", label: "Due", icon: CalendarClock },
@@ -50,7 +51,8 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
   const path = usePathname() || "/app";
   const router = useRouter();
   const [more, setMore] = useState(false);
-  const moreActive = ["/app/map", "/app/tags", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
+  const moreActive = ["/app/tags", "/app/quick", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
+  const loadOutActive = isActive(path, "/app", true, TRUCK_PAGES);
 
   async function signOut() {
     const sb = getBrowserSupabase();
@@ -180,10 +182,11 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-surface/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
-        <Link href="/app/quick" className="flex flex-col items-center gap-1" aria-label="Quick action">
-          <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-coal shadow-lg shadow-slate-900/20">
-            <Plus className="h-6 w-6" />
+        <Link href="/app" className="flex flex-col items-center gap-1" aria-label="Load out" aria-current={loadOutActive ? "page" : undefined}>
+          <span className={cn("-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-white shadow-lg shadow-slate-900/20", loadOutActive ? "ring-4 ring-bone/20" : "")}>
+            <ScanLine className="h-6 w-6" />
           </span>
+          <span className={cn("text-[11px]", loadOutActive ? "font-medium text-bone" : "text-ink-faint")}>Load out</span>
         </Link>
         {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
         <button type="button" onClick={() => setMore(true)} aria-label="More"
@@ -206,8 +209,8 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
               </button>
             </div>
             {[
-              { href: "/app/map", label: "Yard map", icon: MapIcon },
               { href: "/app/tags", label: "QR tags", icon: QrCode },
+              { href: "/app/quick", label: "Quick add or renew", icon: Plus },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
               { href: "/app/search", label: "Search", icon: Search },
               { href: "/app/settings", label: "Settings", icon: Settings },

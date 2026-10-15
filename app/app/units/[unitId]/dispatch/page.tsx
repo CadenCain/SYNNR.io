@@ -8,7 +8,7 @@ import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { localToday } from "@/lib/saas/status";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { recordDispatchCheck } from "./actions";
+import { recordDispatchCheck, rollAnyway } from "./actions";
 import JobDatePicker from "./job-date-picker";
 import RecordButton from "./record-button";
 
@@ -18,8 +18,9 @@ export const dynamic = "force-dynamic";
  * Readiness check — a computed record-currency check, not a possession
  * checklist. The verdict comes straight from the live records (cert/DOT
  * currency on the truck and its iron, flagged iron); the gear list only warns.
- * Nobody taps lines, nothing can be overridden. One button records the
- * result as an immutable check with every line and reason.
+ * Nobody taps lines. One button records the result as an immutable check with
+ * every line and reason. A NOT READY truck rolls only on a manager's override:
+ * their name, a written reason, an alert, and it shows on the proof link.
  */
 const RESULT_UI: Record<string, string> = {
   ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
@@ -56,7 +57,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
         title={`Readiness check: ${comp.unitName}`}
-        description="Checks this truck's own paper and every piece of iron on it against the job date. There's no override."
+        description="Checks this truck's own paper and every piece of iron on it against the job date. A NOT READY truck only rolls on a manager's override, on the record."
       />
 
       <Card className="p-4">
@@ -140,9 +141,35 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           <RecordButton label={`Record this check${comp.isFutureJob ? ` for ${plainDate(comp.jobDate)}` : ""}`} />
           <p className="text-center text-xs text-ink-faint">
             Saves the result and every line with your name and the time. It can&apos;t be edited afterward.
-            {comp.verdict === "not_ready" ? " A NOT READY result is saved as NOT READY. There is no override. Fix the items and run it again." : ""}
+            {comp.verdict === "not_ready" ? " A NOT READY result is saved as NOT READY. Fix the items and run it again." : ""}
           </p>
         </form>
+      )}
+
+      {comp.verdict === "not_ready" && (
+        company.role === "owner" || company.role === "admin" ? (
+          <details className="rounded-2xl border border-line bg-surface p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-ink">Roll anyway (manager override)</summary>
+            <form action={rollAnyway} className="mt-3 flex flex-col gap-2">
+              <input type="hidden" name="unit_id" value={unitId} />
+              <input type="hidden" name="job_date" value={comp.jobDate} />
+              <p className="text-sm text-ink-dim">
+                Only when you have to: the new cert is in the truck and the upload failed, or the company man signed off on location.
+                Your name and reason go on a record nobody can edit, the people who get alerts get an email, and the proof link shows it.
+              </p>
+              <label className="text-xs text-ink-faint">Why is it rolling NOT READY?
+                <textarea name="reason" required minLength={10} maxLength={500} rows={3}
+                  placeholder="e.g. New BOP test cert is in the truck, upload failed. Company man saw it on location."
+                  className="mt-1 w-full rounded-lg border border-line-2 bg-coal px-3 py-2 text-sm text-ink outline-none focus:border-bone" />
+              </label>
+              <button type="submit" className="inline-flex h-11 items-center justify-center rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:self-start">
+                Roll NOT READY on my override
+              </button>
+            </form>
+          </details>
+        ) : (
+          <p className="text-center text-xs text-ink-faint">Only a manager can roll a NOT READY truck, and it goes on the record with their name and reason.</p>
+        )
       )}
     </div>
   );

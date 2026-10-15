@@ -29,7 +29,7 @@ const ndef = (): NdefCtor | null =>
 const noSubscribe = () => () => {};
 const useHasNfc = () => useSyncExternalStore(noSubscribe, () => ndef() !== null, () => false);
 
-type Scan = { how: ScanHow; at: number };
+export type Scan = { how: ScanHow; at: number };
 type Outcome = "left" | "yard" | "missing";
 const HOW: Record<ScanHow, string> = { nfc: "NFC tap", qr: "QR", hand: "checked by hand" };
 const TONE = {
@@ -39,12 +39,45 @@ const TONE = {
 };
 const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-export default function LoadoutScanner({ truck, pieces }: { truck: { id: string; name: string }; pieces: ScanPiece[] }) {
-  const hasNfc = useHasNfc();
-  const [startedAt] = useState(() => new Date().toISOString());
+// Scans live on the phone until the load-out is saved, so a dead zone, a
+// dropped call, or a closed tab never loses them.
+type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; savedAt: number };
+const draftKey = (truckId: string) => `rr-loadout-${truckId}`;
+/** The saved draft's raw text if it's from the last 18 hours and has scans, else null. */
+const readDraftRaw = (truckId: string): string | null => {
+  try {
+    const raw = localStorage.getItem(draftKey(truckId));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Draft;
+    return Date.now() - d.savedAt < 18 * 3600e3 && Object.keys(d.scans ?? {}).length ? raw : null;
+  } catch { return null; }
+};
+const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
+const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); } catch { /* storage off */ } };
+
+export default function LoadoutScanner({ truck, pieces, initialScans, initialBanner, previewNfc = false }: {
+  truck: { id: string; name: string };
+  pieces: ScanPiece[];
+  /** Only for the marketing screenshot: start partway through a load-out. */
+  initialScans?: Record<string, Scan>;
+  initialBanner?: { tone: "good" | "warn" | "bad"; text: string };
+  /** Only for the marketing screenshot: show the Android (NFC) version of the screen. */
+  previewNfc?: boolean;
+}) {
+  const hasNfcHere = useHasNfc();
+  const hasNfc = hasNfcHere || previewNfc;
+  const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
+  // An unsaved load-out from earlier on this phone (read once, offered to pick back up).
+  const draftRaw = useSyncExternalStore(noSubscribe, () => readDraftRaw(truck.id), () => null);
+  const [draftHandled, setDraftHandled] = useState(false);
+  const draft = useMemo<Draft | null>(() => {
+    if (!draftRaw) return null;
+    try { return JSON.parse(draftRaw) as Draft; } catch { return null; }
+  }, [draftRaw]);
+  const [waitingForSignal, setWaitingForSignal] = useState(false);
   const [list, setList] = useState(pieces); // local copy so a newly linked tag works on the next scan
-  const [scans, setScans] = useState<Record<string, Scan>>({});
-  const [banner, setBanner] = useState<{ tone: keyof typeof TONE; text: string } | null>(null);
+  const [scans, setScans] = useState<Record<string, Scan>>(initialScans ?? {});
+  const [banner, setBanner] = useState<{ tone: keyof typeof TONE; text: string } | null>(initialBanner ?? null);
   const [pendingLink, setPendingLink] = useState<{ extTag: string; how: ScanHow } | null>(null);
   const [linkChoice, setLinkChoice] = useState("");
   const [serialText, setSerialText] = useState("");
@@ -87,6 +120,20 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
     setBanner({ tone: "warn", text: r.text });
   }
   useEffect(() => { handleRef.current = handleScan; });
+
+  // Keep the load-out on the phone as it happens.
+  useEffect(() => {
+    if (saved || Object.keys(scans).length === 0) return;
+    writeDraft(truck.id, { startedAt, scans, outcomes, savedAt: Date.now() });
+  }, [scans, outcomes, startedAt, saved, truck.id]);
+
+  function pickUpDraft() {
+    if (!draft) return;
+    setScans(draft.scans); setOutcomes(draft.outcomes); setStartedAt(draft.startedAt);
+    setDraftHandled(true);
+    setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
+  }
+  function dropDraft() { clearDraft(truck.id); setDraftHandled(true); }
 
   async function startNfc() {
     const Ctor = ndef();
@@ -189,16 +236,37 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
   async function save() {
     setSaving(true); setSaveErr("");
     const notScanned = expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "left" as Outcome }));
-    const res = await finishLoadout({
-      unitId: truck.id, startedAt,
-      scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how })),
-      notScanned,
-    });
+    let res: Awaited<ReturnType<typeof finishLoadout>>;
+    try {
+      res = await finishLoadout({
+        unitId: truck.id, startedAt,
+        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how })),
+        notScanned,
+      });
+    } catch {
+      // No signal (or the request died). Everything is still on the phone.
+      setSaving(false);
+      setWaitingForSignal(true);
+      setSaveErr("No signal. Your scans are saved on this phone, and they'll send by themselves when you have signal.");
+      return;
+    }
     setSaving(false);
     if (!res.ok) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
+    setWaitingForSignal(false);
+    clearDraft(truck.id);
     stopNfc(); stopCamera();
     setSaved(res.summary ?? "Saved.");
   }
+  // When signal comes back, send the load-out that's waiting.
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; });
+  useEffect(() => {
+    if (!waitingForSignal) return;
+    const retry = () => { void saveRef.current(); };
+    window.addEventListener("online", retry);
+    const timer = setInterval(() => { if (navigator.onLine) retry(); }, 30000);
+    return () => { window.removeEventListener("online", retry); clearInterval(timer); };
+  }, [waitingForSignal]);
 
   if (saved) {
     return (
@@ -221,23 +289,33 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
 
   return (
     <div className="flex flex-col gap-5">
+      {draft && !draftHandled && Object.keys(scans).length === 0 ? (
+        <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
+          <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
+          <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} pieces scanned, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={pickUpDraft} className={buttonClass("default", "lg")}>Pick it back up</button>
+            <button type="button" onClick={dropDraft} className={buttonClass("ghost", "lg")}>Start over</button>
+          </div>
+        </div>
+      ) : null}
       {banner ? (
-        <div role="status" aria-live="polite" className={cn("rounded-2xl border px-4 py-3.5 text-base font-semibold", TONE[banner.tone])}>{banner.text}</div>
+        <div role="status" aria-live="polite" className={cn("rounded-2xl border px-4 py-4 text-lg font-semibold leading-snug", TONE[banner.tone])}>{banner.text}</div>
       ) : (
         <div className="rounded-2xl border border-line bg-surface px-4 py-3.5 text-sm text-ink-dim">
           Scan each piece as it goes on {truck.name}. Anything out of test or not on this truck&apos;s list gets called out right away.
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
         {hasNfc ? (
           nfcOn
-            ? <button type="button" onClick={stopNfc} className={buttonClass("outline")}><Nfc className="h-4 w-4 animate-pulse text-bone" /> Listening for tags (stop)</button>
-            : <button type="button" onClick={startNfc} className={buttonClass("default")}><Nfc className="h-4 w-4" /> Tap tags (NFC)</button>
+            ? <button type="button" onClick={stopNfc} className={buttonClass("outline", "lg", "h-14 text-base")}><Nfc className="h-5 w-5 animate-pulse text-bone" /> Listening for tags (stop)</button>
+            : <button type="button" onClick={startNfc} className={buttonClass("default", "lg", "h-14 text-base")}><Nfc className="h-5 w-5" /> Tap tags (NFC)</button>
         ) : null}
         {camOn
-          ? <button type="button" onClick={stopCamera} className={buttonClass("outline")}><X className="h-4 w-4" /> Stop camera</button>
-          : <button type="button" onClick={startCamera} className={buttonClass(hasNfc ? "outline" : "default")}><Camera className="h-4 w-4" /> Scan QR codes</button>}
+          ? <button type="button" onClick={stopCamera} className={buttonClass("outline", "lg", "h-14 text-base")}><X className="h-5 w-5" /> Stop camera</button>
+          : <button type="button" onClick={startCamera} className={buttonClass(hasNfc ? "outline" : "default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Scan QR codes</button>}
       </div>
       {!hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes or check pieces by hand.</p> : null}
 
@@ -296,7 +374,7 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
       </div>
 
       {!finishing ? (
-        <button type="button" onClick={() => setFinishing(true)} className={buttonClass("default", "lg", "w-full sm:w-auto sm:self-start")}>Done loading</button>
+        <button type="button" onClick={() => setFinishing(true)} className={buttonClass("default", "lg", "h-14 w-full text-base sm:w-auto sm:self-start")}>Done loading</button>
       ) : (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>
@@ -323,9 +401,9 @@ export default function LoadoutScanner({ truck, pieces }: { truck: { id: string;
               ))}
             </div>
           )}
-          {saveErr ? <p className="text-sm text-red-400">{saveErr}</p> : null}
+          {saveErr ? <p className={cn("text-sm", waitingForSignal ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saving} className={buttonClass("default")}>{saving ? "Saving…" : "Save load-out"}</button>
+            <button type="button" onClick={save} disabled={saving} className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waitingForSignal ? "Try sending now" : "Save load-out"}</button>
             <button type="button" onClick={() => setFinishing(false)} className={buttonClass("ghost")}>Keep scanning</button>
           </div>
         </section>
@@ -349,7 +427,7 @@ function Row({ p, scan, onHand }: { p: ScanPiece; scan?: Scan; onHand: () => voi
         </div>
       </div>
       {!scan ? (
-        <button type="button" onClick={onHand} className="shrink-0 rounded-lg border border-line-2 px-2.5 py-1.5 text-xs text-ink-dim hover:bg-elevated">Check by hand</button>
+        <button type="button" onClick={onHand} className="shrink-0 rounded-lg border border-line-2 px-3 py-2.5 text-sm text-ink-dim hover:bg-elevated">Check by hand</button>
       ) : null}
     </div>
   );

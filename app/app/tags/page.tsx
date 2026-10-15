@@ -50,7 +50,7 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
 
       <div className="no-print flex flex-col gap-4">
         <PageHeader
-          back={{ href: "/app", label: "Equipment" }}
+          back={{ href: "/app/equipment", label: "Equipment" }}
           title="QR tags"
           description={`${rows.length} ${rows.length === 1 ? "tag" : "tags"}. Print on label paper, or plain paper you cut out and laminate, or put each link on an NFC tag. A scan shows that piece's serial, test dates, and paper.`}
           actions={rows.length ? <PrintButton /> : null}
@@ -76,7 +76,7 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
 
       {rows.length === 0 ? (
         <Card className="no-print px-6 py-12 text-center text-sm text-ink-dim">
-          No equipment to tag yet. <Link href="/app" className="text-bone hover:underline">Add equipment</Link> first.
+          No equipment to tag yet. <Link href="/app/equipment" className="text-bone hover:underline">Add equipment</Link> first.
         </Card>
       ) : (
         <div className={cn("grid grid-cols-1 gap-3 print:gap-2", small ? "sm:grid-cols-2 xl:grid-cols-3 print:grid-cols-3" : "lg:grid-cols-2 print:grid-cols-2")}>

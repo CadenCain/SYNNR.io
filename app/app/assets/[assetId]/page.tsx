@@ -109,7 +109,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   return (
     <div className="flex flex-col gap-7">
       <PageHeader
-        back={{ href: "/app", label: "Equipment" }}
+        back={{ href: "/app/equipment", label: "Equipment" }}
         title={a.name}
         description={`${categoryLabel(a.category)}${a.identifier ? ` · Serial ${a.identifier}` : " · No serial on file"}`}
         actions={

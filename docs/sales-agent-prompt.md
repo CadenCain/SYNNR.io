@@ -27,7 +27,8 @@ Equipment test tracking for oilfield service yards.
 - Load-out scans: before a truck rolls, the hand scans each piece as it goes on (QR on any phone, or NFC tags including the testing company's, from an Android phone). It flags anything out of test or missing and saves a record nobody can edit.
 - RollReady does NOT track iron with GPS or live location. Location is what was last logged or scanned. Never say "real-time tracking".
 - Emails the right person before a test comes due.
-- A truck reads NOT READY if anything on it is out of test, red-tagged, or missing. No override button.
+- Load-out readiness is the main job: before a truck rolls, the hand scans each piece as it goes on, and anything out of test, red-tagged, or missing gets called out on the spot. A truck reads NOT READY until it's fixed.
+- No quiet overrides: only a manager can roll a NOT READY truck, with their name and a written reason on the record and an email to the office.
 - Nobody clears a test by typing a new date. Someone uploads a photo of the new cert, and RollReady checks that the date and serial are actually printed on it. If they aren't, it waits for a manager.
 - QR tags or NFC tags on the iron. Anyone who scans one with a phone sees the serial, test dates, and the cert.
 - A move history for every piece (who moved it, when, where) that nobody can edit.
@@ -132,7 +133,7 @@ Reply "stop" and I won't email again.
 **Follow-up 1 (day 4)**
 Subject: re: test dates on your iron
 
-[First name], one more try. Has anything gone out on a job past its test date in the last year? That's the thing RollReady stops: a truck reads not ready until the paper's fixed.
+[First name], one more try. Has anything gone out on a job past its test date in the last year? That's the thing RollReady stops: every piece gets scanned as it goes on the truck, so a bad cert gets caught in the yard, not at the gate.
 
 Here's a demo yard you can click through, no signup: [their personal demo link]
 

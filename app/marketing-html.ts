@@ -1,6 +1,8 @@
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
-// RollReady homepage (the product; SYNNR is the company). Equipment test tracking that prevents NPT.
+// RollReady homepage (the product; SYNNR is the company). Load-out readiness:
+// every piece of iron gets checked as it goes on the truck, so a bad cert gets
+// caught in the yard instead of at the gate.
 // Every piece of iron, its serial, where it is, and its next test; QR tags,
 // move history, truck checks, and proof links ride along at the same price.
 // Navy top with the real app in a laptop and phone, light sections below.
@@ -58,9 +60,9 @@ export const MARKETING_HTML = `
 <section class="x-hero band-navy">
   <div class="container x-hero-grid">
     <div class="x-hero-copy">
-      <p class="x-kicker">Equipment test tracking for oilfield service yards</p>
-      <h1>An expired lubricator cert cost us $8,000 on a major's location.</h1>
-      <p class="x-lede">Nobody knew until the company man checked the paper and turned the crew around at the gate. RollReady keeps every piece of iron in your yard on one list, with its serial, which truck it's on, and when its next test is due, so that never happens again.</p>
+      <p class="x-kicker">Load-out readiness for oilfield service yards</p>
+      <h1>Nothing out of test goes on the truck.</h1>
+      <p class="x-lede">An expired lubricator cert cost us $8,000 on a major's location. Nobody knew until the company man checked the paper and turned the crew around at the gate. RollReady checks every piece of iron as it goes on the truck, so a bad cert gets caught in the yard, not at the gate.</p>
       <div class="x-cta">
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
         <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
@@ -71,13 +73,13 @@ export const MARKETING_HTML = `
       <div class="x-laptop">
         <div class="x-laptop-screen">
           <img src="/screens/app-desktop.webp" width="2000" height="1250"
-            alt="RollReady equipment list: 62 pieces of iron with serials, where each one is, its next test, and a status. Two overdue, two red-tagged or missing." fetchpriority="high"/>
+            alt="RollReady Load out screen: every truck with its status. CT-03 and CT-06 not ready with the reason in red, and when each truck was last loaded out." fetchpriority="high"/>
         </div>
         <div class="x-laptop-base"></div>
       </div>
       <div class="x-phone">
         <img src="/screens/app-phone.webp" width="750" height="1624"
-          alt="The same equipment list on a phone, red-tagged plug valve on top"/>
+          alt="A load-out scan on a phone: the BOP stack on CT-03 just got scanned, and RollReady says it's out of test. Don't load it."/>
       </div>
     </div>
   </div>
@@ -102,10 +104,11 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="x-split">
       <div>
-        <p class="x-kicker x-kicker-blue">The product</p>
-        <h2 class="x-h2">Every piece of iron, on one list</h2>
-        <p class="x-body">BOP stacks, lubricators, plug valves, swivels, pup joints, reels, and the trucks they ride on. Each piece has its serial, which truck or rack it's on, and every test and cert with its date. Before anything comes due, an email goes to the people you pick for that yard.</p>
-        <p class="x-body">If a piece lapses or gets red-tagged, the truck it's on reads <b>NOT READY</b> until it's fixed. There is no override button.</p>
+        <p class="x-kicker x-kicker-blue">How a load-out works</p>
+        <h2 class="x-h2">Scan it on. Find out before the gate.</h2>
+        <p class="x-body">Pick the truck. As each piece goes on, the hand taps its tag or scans its QR code. Anything out of test, red-tagged, or not on that truck's list gets called out the second it's scanned: <b>Don't load it.</b></p>
+        <p class="x-body">When the truck's loaded, you have a record of exactly what left the yard, who scanned it, and when. Nobody can edit it. Send the operator a live link to it instead of a binder.</p>
+        <p class="x-body">Your testing company's tag tells you about one piece. RollReady tells you whether the truck can leave.</p>
       </div>
       <div class="x-card x-proofcard">
         <span class="x-ic x-ic-blue">${ICON.camera}</span>
@@ -121,12 +124,12 @@ export const MARKETING_HTML = `
       </div>
     </div>
 
-    <h3 class="x-h3">Also included at the same price</h3>
+    <h3 class="x-h3">Everything behind the load-out, same price</h3>
     <div class="x-grid x-grid-2">
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.pin}</span><h3>Yard map</h3><p>Every truck and rack on one screen, with each piece of iron colored by its test status. Red shows up first.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>Proven at load-out</h3><p>Before a truck rolls, the hand scans each piece as it goes on. RollReady flags anything out of test or missing, and keeps a record of what went out that nobody can edit.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.qr}</span><h3>QR and NFC tags</h3><p>Print QR tags for free on any phone, or use the NFC tags your testing company already put on (scanned from an Android phone). A scan shows the serial, test dates, and the cert.</p></div>
-      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.link}</span><h3>Truck check and proof links</h3><p>Check a truck against the job date before it leaves, and send the operator a live page instead of a binder.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.qr}</span><h3>Works with the tags you have</h3><p>Scan the NFC tags your testing company already put on the iron (from an Android phone), or print QR tags for free and use any phone.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.pin}</span><h3>Yard map and the full list</h3><p>Every truck and rack on one screen, each piece colored by its test status, and every piece's serial and next test on one list. Red shows up first.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>No quiet overrides</h3><p>A NOT READY truck only rolls on a manager's override, with their name and reason on the record and an email to the office.</p></div>
+      <div class="x-card"><span class="x-ic x-ic-blue">${ICON.alert}</span><h3>Warnings before the date</h3><p>The people you pick get an email before a test comes due, so the recert gets scheduled before the load-out ever catches it.</p></div>
     </div>
   </div>
 </section>
@@ -135,12 +138,12 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="x-head">
       <h2 class="x-h2">This is the actual app</h2>
-      <p class="x-sub">Screenshots of the real thing, not mockups. The BOP stack on CT-03 is six days past its pressure test, so CT-03 can't roll. It stays that way until somebody uploads the new cert.</p>
+      <p class="x-sub">Screenshots of the real thing, not mockups. CT-03 can't roll: its BOP stack is six days past its pressure test. The load-out scan catches it in the yard, and it stays red until somebody uploads the new cert.</p>
     </div>
     <div class="x-browser">
       <div class="x-browser-bar"><i></i><i></i><i></i><span>synnr.io/app</span></div>
       <img src="/screens/app-desktop.webp" width="2000" height="1250" loading="lazy"
-        alt="RollReady equipment list: each piece with its serial, where it is, its next test, and a status"/>
+        alt="RollReady Load out screen: every truck, worst first, with a button to start its load-out scan"/>
     </div>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
@@ -155,8 +158,8 @@ export const MARKETING_HTML = `
     </div>
     <div class="x-grid x-grid-3">
       <div class="x-card x-step"><span class="x-num">1</span><p>Hand me your spreadsheet or binder. We load your iron, the serials, and every test date in one afternoon.</p></div>
-      <div class="x-card x-step"><span class="x-num">2</span><p>Print the QR tags and stick one on each piece.</p></div>
-      <div class="x-card x-step"><span class="x-num">3</span><p>Pick who gets the alerts. Before anything comes due, they hear about it.</p></div>
+      <div class="x-card x-step"><span class="x-num">2</span><p>Use the NFC tags your testing company already put on, or print QR tags and stick one on each piece.</p></div>
+      <div class="x-card x-step"><span class="x-num">3</span><p>Scan every load-out. Anything bad gets caught in the yard, and you keep the record of what left.</p></div>
     </div>
   </div>
 </section>
@@ -198,8 +201,8 @@ export const MARKETING_HTML = `
 
 <section class="x-close band-navy">
   <div class="container">
-    <h2 class="x-h2">See your iron in RollReady</h2>
-    <p class="x-lede">Open the demo on your phone right now, or call and I'll load your yard.</p>
+    <h2 class="x-h2">Catch it in the yard, not at the gate</h2>
+    <p class="x-lede">Open the demo on your phone and run a load-out, or call and I'll load your yard.</p>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
       <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>

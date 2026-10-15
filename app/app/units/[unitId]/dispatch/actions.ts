@@ -101,3 +101,55 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
   // Tapping and seeing nothing made testers tap again — and again.
   redirect(`/app/records/${checkId}`);
 }
+
+/**
+ * A manager's override: roll a NOT READY truck anyway, on the record. Shops
+ * sometimes have to roll (the new cert is in the truck and the upload failed,
+ * the company man signed off on location). A system with no way through gets
+ * worked around or dropped; this way has a name, a reason, and an alert on it.
+ * Managers only. The verdict is recomputed here and must still be NOT READY.
+ * The record can't be edited, and the proof link shows it.
+ */
+export async function rollAnyway(fd: FormData): Promise<void> {
+  const { company, user } = await requireBillableCompany();
+  if (company.role !== "owner" && company.role !== "admin") {
+    throw new Error("Only a manager can roll a NOT READY truck.");
+  }
+  const unitId = String(fd.get("unit_id") ?? "");
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 500);
+  if (!unitId) return;
+  if (reason.length < 10) throw new Error("Write the reason in a full sentence. It goes on the record.");
+  const jobDate = String(fd.get("job_date") ?? "") || null;
+  const db = await saasDb();
+
+  const comp = await computeDispatchCheck(db, company.id, unitId, jobDate);
+  if (!comp || comp.verdict !== "not_ready") redirect(`/app/units/${unitId}/dispatch`);
+
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "A manager";
+  const writer = saasAdmin();
+  if (!writer) throw new Error("Something's down on our end. Try again in a minute.");
+  const { data: check, error } = await writer.from("saas_dispatch_checks").insert({
+    company_id: company.id, unit_id: unitId, type: "checkout",
+    performed_by: user.id, performed_by_name: actor,
+    status: "not_ready_override", override_reason: reason,
+    job_date: comp.jobDate, completed_at: new Date().toISOString(),
+  }).select("id").single();
+  if (error) throw new Error(error.message);
+  const checkId = (check as { id: string }).id;
+  if (comp.lines.length) {
+    await writer.from("saas_dispatch_check_items").insert(comp.lines.map((l) => ({
+      check_id: checkId, company_id: company.id, source_type: l.source_type, source_id: l.source_id,
+      label: l.label, result: l.result, note: l.detail ?? null,
+    })));
+  }
+
+  const failLine = comp.failures.slice(0, 3).join("; ");
+  const message = `${comp.unitName} rolled NOT READY on a manager override by ${actor}. Reason: "${reason}". Not ready because: ${failLine}`;
+  void logEvent({ companyId: company.id, kind: "rolled_override", unitId, actor, message });
+  void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message });
+
+  revalidatePath(`/app/units/${unitId}`);
+  revalidatePath(`/app/units/${unitId}/dispatch`);
+  revalidatePath("/app");
+  redirect(`/app/records/${checkId}`);
+}

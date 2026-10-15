@@ -50,7 +50,7 @@ export default function GlossaryIndex() {
         <div className="cta">
           <div>
             <b>Stop getting turned around at the gate.</b>
-            <span>RollReady by SYNNR keeps every piece of iron on one list, with its serial, where it is, and when its next test is due, and warns you before anything lapses.</span>
+            <span>RollReady by SYNNR checks every piece of iron as it goes on the truck, so a bad cert gets caught in the yard, not at the gate.</span>
           </div>
           <Link className="go" href="/demo">Open the live demo</Link>
         </div>

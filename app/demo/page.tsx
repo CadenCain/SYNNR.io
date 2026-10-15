@@ -32,12 +32,11 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div className="mt-8 flex flex-col gap-5">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try RollReady with a demo yard</h1>
           <p className="text-base leading-relaxed text-ink-dim">
-            Tap the button and you get your own copy of a made-up Odessa coil tubing company: 62 pieces of
-            iron on 16 trucks and trailers, and a few problems already on the list. The BOP stack on CT‑03 is
-            past its pressure test, a plug valve on CT‑06 got red-tagged after UT, and another one has been
-            missing since a rig-down. A hand already sent a photo of a new BOP cert with a date that isn&apos;t on
-            the paper, so it&apos;s waiting on you under Review uploads. Open a piece of iron, look at its QR tag
-            and where it&apos;s been, and see what it takes to turn it green.
+            Tap the button and you get your own copy of a made-up Odessa coil tubing company: 16 trucks and
+            trailers and 62 pieces of iron, with a few problems already in the yard. Start a load-out on CT&#8209;03
+            and check its pieces off: when you get to the BOP stack that&apos;s six days past its pressure test,
+            RollReady tells you not to load it. Then open the yard map, and look under Review uploads at the cert
+            photo a hand sent with a date that isn&apos;t on the paper.
           </p>
           <p className="text-base leading-relaxed text-ink-dim">
             Nobody else sees your copy, and it deletes itself after 24 hours.
@@ -81,10 +80,10 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><Smartphone className="h-5 w-5 text-ink-dim" /></span>
             <h2 className="text-lg font-semibold">Works on a phone</h2>
             <p className="text-sm leading-relaxed text-ink-dim">
-              Every piece of iron on your phone, worst first. Tap one to see its paper, its QR tag, and
-              where it&apos;s been. You can open the demo on your phone too.
+              The load-out scan is built for a phone in a gloved hand: big buttons, a loud red warning,
+              and it keeps your scans if you lose signal. Open the demo on your phone and try it.
             </p>
-            <Image src="/screens/app-phone.webp" alt="RollReady on a phone: the equipment list with a red-tagged plug valve on top"
+            <Image src="/screens/app-phone.webp" alt="A load-out scan on a phone: the BOP stack on CT-03 is out of test, don't load it"
               width={750} height={1624} className="mx-auto mt-2 w-40 rounded-[22px] border-[5px] border-slate-900 shadow-lg" />
           </div>
         </div>

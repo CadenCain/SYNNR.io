@@ -25,13 +25,13 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
+    default: "RollReady by SYNNR: load-out readiness for oilfield service yards",
     template: "%s",
   },
   description:
-    "RollReady keeps every piece of iron in an oilfield service yard on one list, with its serial, which truck it's on, and when its next test is due. A yard map, load-out scans, QR and NFC tags, and a warning before anything lapses. $500 per yard, per month. Never per-seat.",
+    "RollReady checks every piece of iron as it goes on the truck. Anything out of test, red-tagged, or missing gets caught in the yard, not at the gate, and you keep a record of what left that nobody can edit. $500 per yard, per month. Never per-seat.",
   keywords: [
-    "RollReady", "SYNNR", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
+    "RollReady", "SYNNR", "load-out readiness", "load out scan", "iron tracking", "pressure iron tracking", "flow iron recertification", "treating iron", "equipment test tracking",
     "QR equipment tags", "NDT recertification tracking", "equipment tracking", "where is my equipment", "oilfield service software",
     "wireline", "coil tubing", "cementing", "BOP testing", "BOP recertification", "lubricator pressure test", "DOT inspection",
     "Permian Basin", "Midland", "Odessa", "service shop operations", "oilfield compliance",
@@ -39,16 +39,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "RollReady by SYNNR",
-    title: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
+    title: "RollReady by SYNNR: load-out readiness for oilfield service yards",
     description:
-      "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
+      "Nothing out of test goes on the truck. Scan every piece at load-out, catch it in the yard, and keep the record of what left. $500 per yard, per month.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RollReady by SYNNR: equipment test tracking for oilfield service yards",
+    title: "RollReady by SYNNR: load-out readiness for oilfield service yards",
     description:
-      "Every piece of iron in your yard on one list, with its serial, where it is, and its next test. A warning before anything lapses. $500 per yard, per month.",
+      "Nothing out of test goes on the truck. Scan every piece at load-out, catch it in the yard, and keep the record of what left. $500 per yard, per month.",
   },
 };
 
@@ -72,7 +72,7 @@ export default function RootLayout({
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Equipment test tracking for oilfield service yards. Every piece of iron on one list with its serial, location, and next test, QR tags, and a warning before anything lapses.",
+                "Load-out readiness for oilfield service yards. Every piece of iron gets scanned as it goes on the truck; anything out of test gets caught in the yard, with a record of what left.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",

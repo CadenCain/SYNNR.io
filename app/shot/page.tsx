@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import EquipmentView from "@/app/app/_components/equipment-view";
 import YardMap from "@/app/app/_components/yard-map";
+import LoadOutView from "@/app/app/_components/loadout-view";
+import LoadoutScanner from "@/app/app/units/[unitId]/scan/scanner";
 import AppNav from "@/app/app/_components/app-nav";
-import { demoEquipment, demoTrucks, demoLastLoadout } from "./fixtures";
+import { demoEquipment, demoTrucks, demoLastLoadout, demoLoadOut, demoScanInProgress } from "./fixtures";
 import { fmtWhen } from "@/lib/saas/format";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -22,7 +24,16 @@ export default async function Shot({ searchParams }: { searchParams: Promise<{ v
       <AppNav companyName={companyName} userName="Demo manager" reviewCount={1} />
       <div className="relative z-10 min-w-0 flex-1">
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
-          {view === "map"
+          {view === "loadout"
+            ? (() => { const b = demoLoadOut(); return <LoadOutView trucks={b.trucks} summary={b.summary} />; })()
+            : view === "scan"
+            ? (() => { const d = demoScanInProgress(); return (
+                <div className="flex flex-col gap-5">
+                  <div><h1 className="text-[22px] font-semibold tracking-tight">Load-out scan: CT-03</h1></div>
+                  <LoadoutScanner truck={d.truck} pieces={d.pieces} initialScans={d.initialScans} initialBanner={d.initialBanner} previewNfc />
+                </div>
+              ); })()
+            : view === "map"
             ? <YardMap rows={list.rows} trucks={demoTrucks()} yards={list.yards} lastLoadout={demoLastLoadout()}
                 fmt={Object.fromEntries(Object.entries(demoLastLoadout()).map(([k, v]) => [k, fmtWhen(v)]))} />
             : <EquipmentView list={list} companyName={companyName} />}

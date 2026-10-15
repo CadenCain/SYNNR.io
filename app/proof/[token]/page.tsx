@@ -147,6 +147,20 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
   // who checked it, the verdict, and photo proof.
+  // Unit scope: the last load-out scan, the record of what actually went on
+  // the truck and who scanned it.
+  type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean };
+  type LoadoutMiss = { name: string; serial: string | null; outcome: string };
+  type Loadout = { finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[] };
+  let loadout = null as Loadout | null;
+  if (proof.scope === "unit" && proof.unit_id) {
+    const { data: lo } = await admin.from("saas_loadout_scans")
+      .select("finished_at, scanned_by, scanned, expected, pieces, not_scanned")
+      .eq("company_id", proof.company_id).eq("unit_id", proof.unit_id)
+      .order("finished_at", { ascending: false }).limit(1).maybeSingle();
+    loadout = (lo as Loadout | null) ?? null;
+  }
+
   let record: {
     type: string; status: string; performed_by_name: string | null; cosigner_name: string | null;
     started_at: string; override_reason: string | null;
@@ -220,6 +234,42 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
             </div>
           ) : null}
         </div>
+
+        {/* Last load-out: what was actually scanned onto the truck */}
+        {loadout ? (
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-ink-dim">Last load-out scan</h2>
+              <span className="text-xs text-ink-faint">{fmtWhen(loadout.finished_at)}</span>
+            </div>
+            <p className="mt-2 text-sm">
+              <span className="font-semibold">{loadout.scanned} of {loadout.expected} pieces on this truck&apos;s list scanned on</span>
+              <span className="text-ink-dim">{loadout.scanned_by ? ` by ${loadout.scanned_by}` : ""}</span>
+            </p>
+            {loadout.pieces.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1 text-sm">
+                {loadout.pieces.map((p, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Scanned</span>
+                    <span className="break-words">{p.name}{p.serial ? ` ${p.serial}` : ""}</span>
+                    <span className="text-xs text-ink-faint">{p.how === "nfc" ? "NFC tag" : p.how === "qr" ? "QR code" : "checked by hand"}{p.added ? ", added at load-out" : ""}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {loadout.not_scanned.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {loadout.not_scanned.map((p, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="inline-flex rounded-full border border-line-2 bg-elevated px-2 py-0.5 text-xs font-medium text-ink-dim">Not scanned</span>
+                    <span className="break-words">{p.name}{p.serial ? ` ${p.serial}` : ""}</span>
+                    <span className="text-xs text-ink-faint">{p.outcome === "yard" ? "left in the yard" : p.outcome === "missing" ? "flagged missing" : "said to be on the truck"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
         {/* Latest dispatch record — the enforcement artifact */}
         {record ? (
@@ -323,7 +373,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         )}
 
         <p className="text-center text-xs text-ink-faint">
-          Live from RollReady by SYNNR, equipment test tracking for oilfield service yards · synnr.io
+          Live from RollReady by SYNNR, load-out readiness for oilfield service yards · synnr.io
         </p>
       </div>
     </div>

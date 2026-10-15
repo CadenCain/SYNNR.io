@@ -109,8 +109,8 @@ export default async function CompliancePage() {
       {items.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
           Nothing with a date yet. Open a piece of{" "}
-          <Link href="/app" className="text-ink underline underline-offset-2 hover:text-bone">equipment</Link> or a{" "}
-          <Link href="/app/trucks" className="text-ink underline underline-offset-2 hover:text-bone">truck</Link> and add its test or cert.
+          <Link href="/app/equipment" className="text-ink underline underline-offset-2 hover:text-bone">equipment</Link> or a{" "}
+          <Link href="/app" className="text-ink underline underline-offset-2 hover:text-bone">truck</Link> and add its test or cert.
         </Card>
       ) : (
         <ComplianceTable items={rows} />
