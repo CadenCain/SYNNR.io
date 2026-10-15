@@ -10,6 +10,16 @@ import { YARD_TZ } from "./format";
 
 export interface LoadoutScanRow { unit_id: string | null; finished_at: string; scanned_by: string | null; scanned: number; expected: number }
 export interface LoadOutTruckRow { t: UnitTile; pieces: number; loadoutLine: string | null; doneToday: boolean }
+export interface LoadOutWeek { loadouts: number; caught: number; overrides: number }
+
+/** This week's numbers for the owner: load-outs scanned, bad pieces caught at load-out, trucks rolled on override. */
+export function weekNumbers(scans: { pieces?: { red?: boolean }[] | null }[], overrides: number): LoadOutWeek {
+  return {
+    loadouts: scans.length,
+    caught: scans.reduce((n, s) => n + (s.pieces ?? []).filter((p) => p.red).length, 0),
+    overrides,
+  };
+}
 
 const ORDER: Record<UnitState, number> = { not_ready: 0, due_soon: 1, not_setup: 2, ready: 3 };
 const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });

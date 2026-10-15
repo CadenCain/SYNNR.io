@@ -210,5 +210,16 @@ export async function computeDispatchCheck(
   const notChecked: string[] = [];
   warnings.push(...notChecked);
 
+  // The load-out scan is the proof of what's actually on the truck. Say so
+  // when nobody has scanned this truck today; it's a heads-up, not a fail
+  // (the records can still be current without a scan).
+  if (verdict !== "not_setup") {
+    const { data: lastScan } = await db.from("saas_loadout_scans").select("finished_at")
+      .eq("company_id", companyId).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle();
+    const at = (lastScan as { finished_at: string } | null)?.finished_at ?? null;
+    const scannedToday = at && new Date(at).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) === today;
+    if (!scannedToday) warnings.push("Nobody has scanned this truck's load-out today. Scan it as it's loaded so you know what's actually on it.");
+  }
+
   return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked };
 }

@@ -3,7 +3,7 @@ import { saasDb } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { getEquipment } from "@/lib/saas/equipment";
 import { localToday } from "@/lib/saas/status";
-import { buildLoadOutTrucks } from "@/lib/saas/loadout-board";
+import { buildLoadOutTrucks, weekNumbers } from "@/lib/saas/loadout-board";
 import LoadOutView from "./_components/loadout-view";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +18,17 @@ export const dynamic = "force-dynamic";
 export default async function LoadOutHome() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [rd, list, { data: scanRows }] = await Promise.all([
+  const weekAgo = new Date(Date.now() - 7 * 86400e3).toISOString();
+  const [rd, list, { data: scanRows }, { data: weekScans }, { count: overrides }] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("unit_id, finished_at, scanned_by, scanned, expected")
       .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(500),
+    db.from("saas_loadout_scans").select("pieces").eq("company_id", company.id).gte("finished_at", weekAgo),
+    db.from("saas_dispatch_checks").select("id", { count: "exact", head: true })
+      .eq("company_id", company.id).eq("status", "not_ready_override").gte("started_at", weekAgo),
   ]);
   const { trucks, summary } = buildLoadOutTrucks(rd.units, list.rows, (scanRows ?? []) as never, localToday());
-  return <LoadOutView trucks={trucks} summary={summary} />;
+  const week = weekNumbers((weekScans ?? []) as { pieces: { red?: boolean }[] }[], overrides ?? 0);
+  return <LoadOutView trucks={trucks} summary={summary} week={week} />;
 }

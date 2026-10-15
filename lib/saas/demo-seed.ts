@@ -138,7 +138,10 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
           admin.from("saas_loadout_scans").insert({
             company_id: companyId, unit_id: unitId(lo.unitKey), unit_name: unit.name, scanned_by: lo.by,
             started_at: at, finished_at: at, expected: onTruck.length, scanned: onTruck.length,
-            pieces: onTruck.map((a) => ({ asset_id: assetIdByKey.get(keyOf(a)), name: a.name, serial: a.identifier ?? null, how: lo.how, added: false })),
+            pieces: onTruck.map((a) => ({
+              asset_id: assetIdByKey.get(keyOf(a)), name: a.name, serial: a.identifier ?? null, how: lo.how, added: false,
+              red: a.status === "out_of_service" || a.status === "missing" || (a.items ?? []).some((it) => it.exp === null || it.exp < 0),
+            })),
             not_scanned: [],
           }),
           admin.from("saas_asset_moves").insert(ids.map((id) => ({

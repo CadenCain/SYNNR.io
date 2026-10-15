@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLoadOutTrucks } from "../loadout-board";
+import { buildLoadOutTrucks, weekNumbers } from "../loadout-board";
 import type { UnitTile } from "../readiness";
 import type { EquipRow } from "../equipment";
 
@@ -35,5 +35,15 @@ describe("the Load out board", () => {
     expect(byId.b.loadoutLine).toBe("Last load-out Oct 9, 4 of 5 scanned");
     expect(byId.c.loadoutLine).toBeNull();
     expect(summary).toBe("3 trucks. 1 loaded out today. None held up.");
+  });
+});
+
+describe("the week's numbers", () => {
+  it("counts load-outs, bad pieces caught (red when scanned on), and overrides", () => {
+    expect(weekNumbers([
+      { pieces: [{ red: true }, { red: false }, {}] },
+      { pieces: [{ red: true }, { red: true }] },
+      { pieces: null },
+    ], 1)).toEqual({ loadouts: 3, caught: 3, overrides: 1 });
   });
 });

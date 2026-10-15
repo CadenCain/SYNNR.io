@@ -6,6 +6,8 @@ import { saasDb } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
 import { YARD_TZ } from "@/lib/saas/format";
 import type { ScanHow } from "@/lib/saas/loadout";
+import { judgeItem } from "@/lib/saas/judge";
+import { localToday } from "@/lib/saas/status";
 
 type Outcome = "left" | "yard" | "missing";
 
@@ -68,6 +70,22 @@ export async function finishLoadout(input: {
 
   const now = new Date().toISOString();
   const day = dayLabel(now);
+
+  // Which scanned pieces were bad when they went on: red-tagged, missing, or
+  // a test past due or with no date. Worked out here from the records, not
+  // taken from the phone, so "bad pieces caught at load-out" is a real count.
+  const scanIds = [...new Set(input.scans.map((s) => s.assetId))].filter((x) => byId.has(x));
+  const { data: itemRows } = scanIds.length
+    ? await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until")
+        .eq("company_id", company.id).eq("parent_type", "asset").in("parent_id", scanIds)
+    : { data: [] };
+  const today = localToday();
+  const redIds = new Set<string>();
+  for (const id of scanIds) if (["out_of_service", "missing"].includes(byId.get(id)!.status)) redIds.add(id);
+  for (const it of (itemRows ?? []) as { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null }[]) {
+    const r = judgeItem(it, today, today).result;
+    if (r === "expired" || r === "missing") redIds.add(it.parent_id);
+  }
   const scans = input.scans.filter((s) => byId.has(s.assetId) && byId.get(s.assetId)!.status !== "retired");
   const scannedIds = [...new Set(scans.map((s) => s.assetId))];
 
@@ -109,7 +127,7 @@ export async function finishLoadout(input: {
     // "scanned" counts the truck's own list, so 4 of 5 means one wasn't scanned;
     // pieces brought over from elsewhere are listed as added.
     expected: expectedCount, scanned: scans.filter((s) => byId.get(s.assetId)!.unit_id === unit.id).length,
-    pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, added: a.unit_id !== unit.id }; }),
+    pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, added: a.unit_id !== unit.id, red: redIds.has(a.id) }; }),
     not_scanned: notScanned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   });
 

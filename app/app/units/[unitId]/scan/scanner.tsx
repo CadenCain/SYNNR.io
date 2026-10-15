@@ -80,6 +80,7 @@ export default function LoadoutScanner({ truck, pieces, initialScans, initialBan
   const [banner, setBanner] = useState<{ tone: keyof typeof TONE; text: string } | null>(initialBanner ?? null);
   const [pendingLink, setPendingLink] = useState<{ extTag: string; how: ScanHow } | null>(null);
   const [linkChoice, setLinkChoice] = useState("");
+  const [linkFilter, setLinkFilter] = useState("");
   const [serialText, setSerialText] = useState("");
   const [nfcOn, setNfcOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
@@ -216,12 +217,27 @@ export default function LoadoutScanner({ truck, pieces, initialScans, initialBan
 
   async function doLink() {
     if (!pendingLink || !linkChoice) return;
-    const res = await linkTag({ assetId: linkChoice, extTag: pendingLink.extTag });
-    if (!res.ok) { setBanner({ tone: "bad", text: res.error ?? "Couldn't link that tag." }); return; }
     const piece = list.find((p) => p.id === linkChoice);
+    let res: Awaited<ReturnType<typeof linkTag>>;
+    try {
+      res = await linkTag({ assetId: linkChoice, extTag: pendingLink.extTag });
+    } catch {
+      // No signal: keep the load-out moving. Count it by hand now; the tag
+      // can be linked next time there's signal.
+      if (piece) markScanned(piece, "hand");
+      setPendingLink(null); setLinkFilter("");
+      setBanner({ tone: "warn", text: `No signal to link that tag. ${piece ? `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is counted as checked by hand.` : ""} Link it next time you have signal.` });
+      return;
+    }
+    if (!res.ok) { setBanner({ tone: "bad", text: res.error ?? "Couldn't link that tag." }); return; }
     setList((l) => l.map((p) => (p.id === linkChoice ? { ...p, extTag: pendingLink.extTag } : p)));
     if (piece) markScanned({ ...piece, extTag: pendingLink.extTag }, pendingLink.how);
-    setPendingLink(null);
+    setPendingLink(null); setLinkFilter("");
+  }
+
+  function matchesLink(p: ScanPiece) {
+    const f = linkFilter.trim().toLowerCase();
+    return !f || `${p.name} ${p.serial ?? ""}`.toLowerCase().includes(f);
   }
 
   function addBySerial() {
@@ -330,15 +346,18 @@ export default function LoadoutScanner({ truck, pieces, initialScans, initialBan
         <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
           <div className="font-semibold">New tag. Which piece is it on?</div>
           <p className="text-sm text-ink-dim">Probably your testing company&apos;s tag. Link it once and RollReady knows it from now on.</p>
+          <input value={linkFilter} onChange={(e) => { setLinkFilter(e.target.value); setLinkChoice(""); }} aria-label="Find the piece"
+            placeholder="Type part of the serial or name" autoComplete="off"
+            className="h-12 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
           <div className="flex flex-col gap-2 sm:flex-row">
             <select value={linkChoice} onChange={(e) => setLinkChoice(e.target.value)} aria-label="Piece this tag is on"
               className="h-11 w-full min-w-0 grow rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-bone">
               <option value="">Pick the piece…</option>
               <optgroup label={`On ${truck.name}`}>
-                {expected.map((p) => <option key={p.id} value={p.id}>{p.name}{p.serial ? ` ${p.serial}` : ""}</option>)}
+                {expected.filter(matchesLink).map((p) => <option key={p.id} value={p.id}>{p.name}{p.serial ? ` ${p.serial}` : ""}</option>)}
               </optgroup>
               <optgroup label="Everything else">
-                {list.filter((p) => p.unitId !== truck.id).map((p) => <option key={p.id} value={p.id}>{p.name}{p.serial ? ` ${p.serial}` : ""} ({p.where})</option>)}
+                {list.filter((p) => p.unitId !== truck.id).filter(matchesLink).slice(0, 200).map((p) => <option key={p.id} value={p.id}>{p.name}{p.serial ? ` ${p.serial}` : ""} ({p.where})</option>)}
               </optgroup>
             </select>
             <button type="button" onClick={doLink} disabled={!linkChoice} className={buttonClass("default")}>Link it</button>

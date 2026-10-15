@@ -70,7 +70,11 @@ export function demoLoadOut() {
     const n = (unit.assets ?? []).length;
     return { unit_id: l.unitKey, finished_at: loadoutAt(l.unitKey) as string, scanned_by: l.by, scanned: n, expected: n };
   });
-  return buildLoadOutTrucks(demoTrucks(), list.rows, scans, localToday());
+  const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, localToday());
+  // Same rule as the seed: a piece is "caught" if it was red when scanned on.
+  const caught = DEMO_LOADOUTS.reduce((n, l) => n + (DEMO_UNITS.find((u) => u.key === l.unitKey)!.assets ?? [])
+    .filter((a) => a.status === "out_of_service" || a.status === "missing" || (a.items ?? []).some((it) => it.exp === null || it.exp < 0)).length, 0);
+  return { ...board, week: { loadouts: DEMO_LOADOUTS.length, caught, overrides: 0 } };
 }
 
 /** CT-03 partway through a load-out: two pieces scanned clean, then the BOP stack that's out of test. */

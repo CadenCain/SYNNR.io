@@ -25,7 +25,7 @@ export default async function Shot({ searchParams }: { searchParams: Promise<{ v
       <div className="relative z-10 min-w-0 flex-1">
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {view === "loadout"
-            ? (() => { const b = demoLoadOut(); return <LoadOutView trucks={b.trucks} summary={b.summary} />; })()
+            ? (() => { const b = demoLoadOut(); return <LoadOutView trucks={b.trucks} summary={b.summary} week={b.week} />; })()
             : view === "scan"
             ? (() => { const d = demoScanInProgress(); return (
                 <div className="flex flex-col gap-5">

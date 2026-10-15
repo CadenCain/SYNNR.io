@@ -28,7 +28,7 @@ export interface LoadOutTruck {
   doneToday: boolean;
 }
 
-export default function LoadOutView({ trucks, summary }: { trucks: LoadOutTruck[]; summary: string }) {
+export default function LoadOutView({ trucks, summary, week }: { trucks: LoadOutTruck[]; summary: string; week?: { loadouts: number; caught: number; overrides: number } }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -40,6 +40,22 @@ export default function LoadOutView({ trucks, summary }: { trucks: LoadOutTruck[
           <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; adding trucks</Link>
         </div>
       </div>
+
+      {week && trucks.length > 0 ? (
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {[
+            { n: week.loadouts, label: "Load-outs scanned", sub: "last 7 days", tone: "text-ink" },
+            { n: week.caught, label: "Bad pieces caught", sub: "at load-out, before the gate", tone: week.caught ? "text-red-400" : "text-ink" },
+            { n: week.overrides, label: "Rolled on override", sub: "manager, with a reason", tone: week.overrides ? "text-amber-400" : "text-ink" },
+          ].map((x) => (
+            <div key={x.label} className="rounded-2xl border border-line bg-surface px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)] sm:px-4">
+              <div className="text-[12px] font-medium leading-tight text-ink-dim sm:text-[13px]">{x.label}</div>
+              <div className={cn("mt-1 text-2xl font-semibold tabular-nums", x.tone)}>{x.n}</div>
+              <div className="hidden text-xs text-ink-faint sm:block">{x.sub}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {trucks.length === 0 ? (
         <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
