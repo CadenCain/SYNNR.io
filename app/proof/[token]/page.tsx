@@ -281,7 +281,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
             <p className="mt-2 text-sm">
               <span className={record.status === "ready" ? "font-semibold text-emerald-400" : "font-semibold text-red-400"}>
                 {record.status === "ready" ? "Checked: READY"
-                  : record.status === "not_ready_override" ? "Rolled out NOT ready on override"
+                  : record.status === "not_ready_override" ? "Rolled NOT READY on a manager's override"
                   : "Checked: NOT READY"}
               </span>
               <span className="text-ink-dim"> · checked by {record.performed_by_name ?? "unknown"}{record.cosigner_name ? ` · co-signed by ${record.cosigner_name}` : ""}</span>
@@ -292,7 +292,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                 {record.lines.map((l, i) => (
                   <li key={i} className="flex items-center gap-2">
                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${l.result === "ok" ? CHIP.valid : l.result === "missing" ? CHIP.expired : CHIP.none}`}>
-                      {l.result === "ok" ? "OK" : l.result === "missing" ? "Missing" : "Not checked"}
+                      {l.result === "ok" ? "On the list" : l.result === "missing" ? "Missing" : "Not checked"}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{l.label}</span>
                     {l.photoUrl ? (

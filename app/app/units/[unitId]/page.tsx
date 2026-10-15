@@ -292,7 +292,9 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                     </div>
                     <div className="text-sm text-ink-dim">by {h.performed_by_name ?? "unknown"}</div>
                   </div>
-                  {h.status === "not_ready" || h.status === "not_ready_override" ? (
+                  {h.status === "not_ready_override" ? (
+                    <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Rolled on override</span>
+                  ) : h.status === "not_ready" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>
                   ) : h.status === "partial" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Items not returned</span>

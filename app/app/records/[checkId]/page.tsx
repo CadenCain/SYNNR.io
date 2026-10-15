@@ -64,7 +64,7 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       ? c.status === "partial" ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Checked in: items not returned" }
         : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Checked in: all accounted for" }
       : isOverride
-        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled out NOT READY on override (old record)" }
+        ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled NOT READY on a manager's override" }
         : c.status === "not_ready"
           ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Readiness check: NOT READY" }
           : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Readiness check: Ready" };
