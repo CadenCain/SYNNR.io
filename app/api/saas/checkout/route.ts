@@ -1,80 +1,76 @@
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/stripe";
-import { getServerSupabase } from "@/lib/supabase/server";
 import { requireCompany } from "@/lib/saas/auth";
+import { canPerform } from "@/lib/saas/entitlements";
 import { saasAdmin } from "@/lib/saas/db";
+import { clampYards } from "@/lib/saas/plan";
+import { yardPriceId } from "@/lib/saas/stripe-setup";
 
-/** Create a per-yard subscription Checkout session. Quantity = the number of
- *  yards the shop says it runs (picked at subscribe time; defaults to the
- *  yards already in SYNNR). Adjustable again on the Stripe page itself, and
- *  it follows active yards after that. */
+/**
+ * Start a subscription: Stripe Checkout for "RollReady Yard" at $500 a yard
+ * a month, quantity = the yards the shop said it runs at onboarding. The
+ * owner only; the demo yard never; never a second subscription on top of a
+ * live one. The success page and the webhook both mark the shop paid.
+ */
 export async function POST(req: Request) {
   const { user, company } = await requireCompany();
-  if (company.is_demo) {
-    return NextResponse.json(
-      { ok: false, error: "This is the demo yard, so nothing here can be billed. Call or text 432-250-0715 to set up your real yard." },
-      { status: 403 },
-    );
-  }
-  // Already paying? Don't open a second Checkout — that creates a DUPLICATE
-  // subscription (double billing). Manage yard count from Settings instead.
+  const no = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
+  if (company.is_demo) return no("This is the demo yard, so nothing here can be billed. Call or text 432-250-0715 to set up your real yard.", 403);
+  if (!canPerform(company.role, "billing")) return no("Only the account owner can start the subscription.", 403);
+  // Already paying: a second Checkout would make a second subscription.
   if (company.subscription_status === "active" || company.subscription_status === "past_due") {
-    return NextResponse.json(
-      { ok: false, error: "You're already subscribed. Manage yards and billing from Settings." },
-      { status: 409 },
-    );
+    return no("You're already subscribed. Add or remove yards under Settings, Billing.", 409);
   }
   const stripe = getStripe();
-  const price = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
-  if (!stripe || !price) {
-    return NextResponse.json({ ok: false, error: "Billing isn't configured yet." }, { status: 500 });
+  const admin = saasAdmin();
+  if (!stripe || !admin) return no("Billing isn't set up yet. Call or text 432-250-0715.", 500);
+
+  let requested: unknown = null;
+  try { requested = (await req.json())?.quantity; } catch { /* no body */ }
+  const { data: row } = await admin.from("saas_companies")
+    .select("stripe_customer_id, requested_yards, contact_name, contact_email, contact_phone").eq("id", company.id).maybeSingle();
+  const c = row as { stripe_customer_id: string | null; requested_yards: number | null; contact_name: string | null; contact_email: string | null; contact_phone: string | null } | null;
+  const quantity = clampYards(requested ?? c?.requested_yards ?? 1);
+
+  let price: string;
+  try {
+    price = await yardPriceId(stripe);
+  } catch (e) {
+    console.error("[checkout] price:", e instanceof Error ? e.message : e);
+    return no("Billing is down for a minute on our end. Call or text 432-250-0715 and we'll get you set up today.", 500);
   }
 
-  const sb = (await getServerSupabase()) as unknown as SupabaseClient;
-  const admin = saasAdmin();
-
-  // Requested yard count (from the stepper), else active yards in SYNNR. 1-50.
-  let requested = 0;
-  try {
-    const body = await req.json();
-    requested = Math.floor(Number(body?.quantity) || 0);
-  } catch { /* no body — fall back to yard count */ }
-  const { count: yardCount } = await sb
-    .from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id);
-  const quantity = Math.min(50, Math.max(1, requested || yardCount || 1));
-
-  // Ensure a Stripe customer.
-  const { data: companyRow } = await sb
-    .from("saas_companies").select("stripe_customer_id").eq("id", company.id).maybeSingle();
-  let customerId = (companyRow as { stripe_customer_id: string | null } | null)?.stripe_customer_id ?? null;
+  // One Stripe customer per company, with the contact from onboarding.
+  let customerId = c?.stripe_customer_id ?? null;
+  if (customerId) {
+    // A customer from the other Stripe mode (test vs live) or a deleted one: make a fresh one.
+    const ok = await stripe.customers.retrieve(customerId).then((x) => !("deleted" in x && x.deleted)).catch(() => false);
+    if (!ok) customerId = null;
+  }
   if (!customerId) {
     const customer = await stripe.customers.create({
       name: company.name,
-      // Email on the customer means Stripe receipts + dunning emails work even
-      // if Checkout doesn't back-fill it.
-      ...(user.email ? { email: user.email } : {}),
-      metadata: { company_id: company.id },
+      email: c?.contact_email || user.email || undefined,
+      phone: c?.contact_phone || undefined,
+      metadata: { company_id: company.id, contact_name: c?.contact_name ?? "" },
     });
     customerId = customer.id;
-    if (admin) await admin.from("saas_companies").update({ stripe_customer_id: customerId }).eq("id", company.id);
+    await admin.from("saas_companies").update({ stripe_customer_id: customerId }).eq("id", company.id);
   }
 
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
-    // Lets the success page verify the session was created FOR this company
-    // before activating it.
     client_reference_id: company.id,
-    line_items: [{ price, quantity, adjustable_quantity: { enabled: true, minimum: 1, maximum: 50 } }],
-    // No trial — card charged immediately, billed monthly.
+    line_items: [{ price, quantity }],
     subscription_data: { metadata: { company_id: company.id } },
+    metadata: { company_id: company.id },
+    customer_update: { name: "auto", address: "auto" },
     payment_method_collection: "always",
+    allow_promotion_codes: false,
     success_url: `${origin}/onboarding/billing?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/onboarding/billing`,
-    allow_promotion_codes: true,
+    cancel_url: `${origin}/onboarding/billing?canceled=1`,
   });
-
-  return NextResponse.json({ ok: true, url: session.url });
+  return NextResponse.json({ ok: true, url: session.url, quantity, amount_total: session.amount_total });
 }

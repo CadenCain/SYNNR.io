@@ -77,7 +77,8 @@ export default function LoadOutView({ trucks, counts, summary, week, yards = [],
           <div className="text-lg font-semibold">No trucks yet</div>
           <p className="max-w-md text-sm text-ink-dim">Add your trucks and trailers to a yard, put your iron on them, and every load-out gets checked as it goes on.</p>
           <div className="flex flex-wrap justify-center gap-2">
-            <Link href="/app/yards" className={buttonClass("default")}>Add a truck</Link>
+            <Link href="/app/welcome" className={buttonClass("default")}>Getting set up</Link>
+            <Link href="/app/yards" className={buttonClass("outline")}>Add a truck</Link>
             <Link href="/app/import" className={buttonClass("outline")}>Import a spreadsheet</Link>
           </div>
         </Card>

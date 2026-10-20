@@ -2,6 +2,8 @@ import { requireOperator } from "@/lib/op/auth";
 import { saasAdmin } from "@/lib/saas/db";
 import { localToday, addDaysIso } from "@/lib/saas/status";
 import { isBillableYard } from "@/lib/saas/billing-rules";
+import { getStripe } from "@/lib/stripe";
+import { YARD_PRICE_LOOKUP_KEY, isYardPrice } from "@/lib/saas/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -163,18 +165,56 @@ export default async function OpHealth() {
     if (!isBillableYard(y.name)) continue; // the demo yard is free — never drift
     yardCount.set(y.company_id, (yardCount.get(y.company_id) ?? 0) + 1);
   }
-  const payingMismatch = cos.filter((c) =>
-    c.stripe_subscription_id && c.subscription_status === "active" &&
-    c.yard_quantity !== Math.max(1, yardCount.get(c.id) ?? 0));
+  // The plan is a limit: paying for more yards than are set up is fine; more
+  // yards set up than paid for is free RollReady.
+  const overCap = cos.filter((c) =>
+    c.stripe_subscription_id && (c.subscription_status === "active" || c.subscription_status === "past_due") &&
+    (yardCount.get(c.id) ?? 0) > c.yard_quantity);
   add({
-    name: "Billed yards match actual yards",
-    ok: payingMismatch.length === 0,
-    detail: payingMismatch.length === 0
-      ? `${cos.filter((c) => c.stripe_subscription_id).length} real subscription(s) in step`
-      : payingMismatch.map((c) => `${c.name}: billed ${c.yard_quantity}, has ${yardCount.get(c.id) ?? 0}`).join(" · "),
-    soWhat: "You are under- or over-charging a paying shop, and partner payouts are computed off this same number.",
+    name: "No shop runs more yards than it pays for",
+    ok: overCap.length === 0,
+    detail: overCap.length === 0
+      ? `${cos.filter((c) => c.stripe_subscription_id).length} real subscription(s), all within their plan`
+      : overCap.map((c) => `${c.name}: pays for ${c.yard_quantity}, has ${yardCount.get(c.id) ?? 0}`).join(" · "),
+    soWhat: "A shop is getting yards it isn't paying for, and partner payouts are computed off this same number.",
     severity: "critical",
   });
+
+  // ── Stripe is wired up ──────────────────────────────────────────────────
+  const stripe = getStripe();
+  const sk = process.env.STRIPE_SECRET_KEY ?? "";
+  add({
+    name: "Stripe key is set",
+    ok: Boolean(stripe),
+    detail: stripe ? `${sk.startsWith("sk_live") || sk.startsWith("rk_live") ? "LIVE" : "TEST"} mode` : "STRIPE_SECRET_KEY missing",
+    soWhat: "Nobody can pay. Checkout and Manage billing both fail.",
+    severity: "critical",
+  });
+  add({
+    name: "Stripe webhook secret is set",
+    ok: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+    detail: process.env.STRIPE_WEBHOOK_SECRET ? "set (endpoint: https://www.synnr.io/api/saas/stripe-webhook)" : "STRIPE_WEBHOOK_SECRET missing",
+    soWhat: "Cancellations, failed renewals, and yard changes made in Stripe never reach the app. A canceled shop keeps using RollReady.",
+    severity: "critical",
+  });
+  if (stripe) {
+    let priceDetail = "";
+    let priceOk = false;
+    try {
+      const p = (await stripe.prices.list({ lookup_keys: [YARD_PRICE_LOOKUP_KEY], active: true, limit: 1 })).data[0];
+      priceOk = !p || isYardPrice(p);
+      priceDetail = !p ? "not made yet; the first checkout makes it ($500/yard/month)" : `${p.id}: $${(p.unit_amount ?? 0) / 100} ${p.currency.toUpperCase()} per ${p.recurring?.interval}`;
+    } catch (e) {
+      priceDetail = `Stripe call failed: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    add({
+      name: "The yard price is $500 a month",
+      ok: priceOk,
+      detail: priceDetail,
+      soWhat: "Checkout refuses to sell at the wrong price, so nobody can subscribe until this is fixed in Stripe.",
+      severity: "critical",
+    });
+  }
 
   const ghostPaying = cos.filter((c) => c.subscription_status === "active" && !c.stripe_customer_id);
   add({

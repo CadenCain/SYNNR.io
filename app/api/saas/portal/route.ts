@@ -1,40 +1,40 @@
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripe } from "@/lib/stripe";
-import { getServerSupabase } from "@/lib/supabase/server";
 import { requireCompany } from "@/lib/saas/auth";
+import { canPerform } from "@/lib/saas/entitlements";
+import { saasAdmin } from "@/lib/saas/db";
+import { portalConfigurationId } from "@/lib/saas/stripe-setup";
 
-/** Stripe Customer Portal — manage card / plan / cancel. */
-export async function POST() {
+/**
+ * Stripe's billing page for the owner: card, invoices, billing details, and
+ * cancel. Yard count changes happen in the app (lib/saas/stripe-setup.ts
+ * explains why), so this portal can't change the quantity.
+ */
+export async function POST(req: Request) {
   const { company } = await requireCompany();
-  if (company.is_demo) {
-    return NextResponse.json({ ok: false, error: "This is the demo yard, so there's no billing here. Call or text 432-250-0715 to set up your real yard." }, { status: 403 });
-  }
+  const no = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
+  if (company.is_demo) return no("This is the demo yard, so there's no billing here. Call or text 432-250-0715 to set up your real yard.", 403);
+  if (!canPerform(company.role, "billing")) return no("Only the account owner can open billing.", 403);
   const stripe = getStripe();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
-  if (!stripe) return NextResponse.json({ ok: false, error: "Billing not configured." }, { status: 500 });
+  const admin = saasAdmin();
+  if (!stripe || !admin) return no("Billing isn't set up yet.", 500);
 
-  const sb = (await getServerSupabase()) as unknown as SupabaseClient;
-  const { data } = await sb.from("saas_companies").select("stripe_customer_id").eq("id", company.id).maybeSingle();
+  const { data } = await admin.from("saas_companies").select("stripe_customer_id").eq("id", company.id).maybeSingle();
   const customerId = (data as { stripe_customer_id: string | null } | null)?.stripe_customer_id;
-  if (!customerId) return NextResponse.json({ ok: false, error: "No subscription yet." }, { status: 400 });
+  if (!customerId) return no("No subscription yet.", 400);
 
   try {
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
+      configuration: await portalConfigurationId(stripe),
       return_url: `${origin}/app/settings/billing`,
     });
     return NextResponse.json({ ok: true, url: session.url });
   } catch (e) {
-    // This message is read by a PAYING CUSTOMER, not by us — it must never
-    // leak internal setup instructions, and it must leave them a real way to
-    // do the thing they came here to do (change a card, get an invoice,
-    // cancel). Being unable to cancel is how a subscription earns a
-    // chargeback.
+    // Read by a paying customer: no setup details, and a real way to get
+    // their card, invoice, or cancellation handled.
     console.error("[portal] session create failed:", e instanceof Error ? e.message : e);
-    return NextResponse.json({
-      ok: false,
-      error: "Can't open the billing page right now. Email cadencain@synnr.io or text 432-250-0715 and we'll sort out your card, invoice, or cancellation the same day.",
-    }, { status: 502 });
+    return no("Can't open the billing page right now. Email cadencain@synnr.io or text 432-250-0715 and we'll sort out your card, invoice, or cancellation the same day.", 502);
   }
 }

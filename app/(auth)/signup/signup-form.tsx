@@ -22,6 +22,8 @@ export default function SignupForm() {
     const email = String(fd.get("email") ?? "").trim();
     const password = String(fd.get("password") ?? "");
     const fullName = String(fd.get("fullName") ?? "").trim();
+    // Every scan and load-out carries this name, so it isn't optional.
+    if (!fullName) { setErr("Add your name. It goes on everything you scan."); return; }
 
     setBusy(true);
     // 1) Create the (pre-confirmed) user server-side — works without email delivery.
@@ -65,6 +67,8 @@ export default function SignupForm() {
         <input
           name="fullName"
           type="text"
+          required
+          maxLength={120}
           autoComplete="name"
           className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
           placeholder="John Smith"
@@ -102,7 +106,7 @@ export default function SignupForm() {
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-xs text-ink-dim">Card required at the next step · billed monthly · cancel anytime.</p>
+      <p className="text-center text-xs text-ink-dim">Invited by your shop? Use the email the invite went to. Starting a new account? Payment is step 3, $500 a yard a month, cancel anytime.</p>
     </form>
   );
 }

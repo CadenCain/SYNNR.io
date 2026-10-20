@@ -42,6 +42,7 @@ export const MARKETING_HTML = `
       <a href="#product">What's in it</a>
       <a href="#pricing">Pricing</a>
       <a href="/demo">Live demo</a>
+      <a href="/signup">Get started</a>
     </nav>
     <div class="nav-cta">
       <a href="${OWNER_PHONE_TEL}" class="nav-login">${OWNER_PHONE}</a>
@@ -55,6 +56,7 @@ export const MARKETING_HTML = `
       <a href="#product">What's in it</a>
       <a href="#pricing">Pricing</a>
       <a href="/demo">Live demo</a>
+      <a href="/signup">Get started</a>
       <a href="${OWNER_PHONE_TEL}">Call or text ${OWNER_PHONE}</a>
       <a href="/login">Log in</a>
     </nav>
@@ -74,7 +76,7 @@ export const MARKETING_HTML = `
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
         <a href="/l/showcase" class="btn btn-ghost">See a load-out</a>
       </div>
-      <p class="x-note">The demo is the real app with a made-up yard. No signup, no card. "See a load-out" opens the record a shop would send the operator.</p>
+      <p class="x-note">The demo is the real app with a made-up yard. No signup, no card. Ready for your own yard? <a href="/signup">Get started</a>.</p>
     </div>
     <div class="x-devices">
       <div class="x-laptop">
@@ -198,7 +200,9 @@ export const MARKETING_HTML = `
           <li>${ICON.check}<span>Setup is free for the first 10 yards. I'll load your iron with you.</span></li>
           <li>${ICON.check}<span>Your data is yours. Export it as a spreadsheet anytime.</span></li>
         </ul>
-        <a href="/demo" class="btn btn-primary x-block">Open the live demo</a>
+        <a href="/signup" class="btn btn-primary x-block">Get started</a>
+        <a href="/demo" class="btn btn-ghost x-block x-block-2">Open the live demo first</a>
+        <p class="x-fine x-center">Sign up, pick your yards, pay by card, and you're in. About 3 minutes.</p>
       </div>
     </div>
   </div>
@@ -220,9 +224,10 @@ export const MARKETING_HTML = `
 <section class="x-close band-navy" aria-labelledby="close-h">
   <div class="container">
     <h2 class="x-h2" id="close-h">Catch it in the yard, not at the gate</h2>
-    <p class="x-lede">Open the demo on your phone and run a load-out, or call and I'll set up your yard.</p>
+    <p class="x-lede">Open the demo on your phone and run a load-out, start your own yard today, or call and I'll set it up with you.</p>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
+      <a href="/signup" class="btn btn-ghost">Get started</a>
       <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
     </div>
   </div>

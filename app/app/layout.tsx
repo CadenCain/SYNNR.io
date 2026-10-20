@@ -7,14 +7,15 @@ import ReviewBanner from "./_components/review-banner";
 import OfflineSupport from "./_components/offline-support";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
+import { mustSubscribe } from "@/lib/saas/plan";
 import { saasDb } from "@/lib/saas/db";
 
-// The signed-in SaaS surface. Authenticated + belongs to a company. A lapsed
-// subscription is READ-ONLY, never locked out (spec §3): every page renders,
-// export works, writes are gated in the actions, and this layout wears the
-// banner. The old behavior — redirecting every route to a paywall — broke
-// the "cancel anytime, your data stays exportable" promise on the checkout
-// page.
+// The signed-in app. A company that never finished paying is sent to the
+// payment step. A shop that paid and then lapsed is READ-ONLY, never locked
+// out: every page renders, export works, the load-out and every change are
+// gated (requireBillableCompany in the actions, a wall on the scan page),
+// and this layout wears the banner. Locking a lapsed shop out entirely
+// would break "cancel anytime, your data stays exportable."
 export const metadata: Metadata = {
   title: "RollReady",
   robots: { index: false, follow: false },
@@ -34,6 +35,9 @@ async function switchCompany(formData: FormData) {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { company, user } = await requireCompany();
+  // Never finished paying: straight to payment, not an empty app. A shop that
+  // paid and lapsed stays in, read-only, with its records exportable.
+  if (mustSubscribe(company)) redirect("/onboarding/billing");
   const writable = isWritable(company.subscription_status, company.comped);
 
   const userName =
@@ -74,25 +78,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {/* Signs the demo session out, then opens the free-setup form. */}
             <a href="/demo/exit" className="font-medium underline underline-offset-2">Want this for your yard?</a>
           </div>
-        ) : !writable && company.subscription_status === "none" ? (
-          <div className="border-b border-line-2 bg-elevated px-4 py-2.5 text-sm text-ink-dim">
-            You&apos;re on the free view. Look around all you like.{" "}
-            {company.role === "owner" ? (
-              <Link href="/onboarding/billing" className="font-medium text-ink underline underline-offset-2">Start your subscription</Link>
-            ) : (
-              <span className="font-medium text-ink">Ask your account owner to subscribe</span>
-            )}{" "}
-            to start adding your yard.
-          </div>
         ) : !writable ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            Your subscription has ended. Your records are safe and you can still export them.{" "}
+            Your subscription has ended, so load-outs and changes are locked. Your records are safe and you can still export them.{" "}
             {company.role === "owner" ? (
-              <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">restart billing</Link>
+              <Link href="/onboarding/billing" className="font-medium underline underline-offset-2">Restart your subscription</Link>
             ) : (
-              <span className="font-medium">ask your account owner to restart billing</span>
-            )}{" "}
-            to edit again.
+              <span className="font-medium">Ask your account owner to restart the subscription.</span>
+            )}
           </div>
         ) : company.subscription_status === "past_due" ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">

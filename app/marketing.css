@@ -850,3 +850,8 @@
 @media (max-width: 359px) {
   .mkt .nav-cta .btn-sm { display: none; }
 }
+
+/* Pricing card: Get started first, the demo right under it. */
+.mkt .x-price-card .x-block-2 { margin-top: 10px; }
+.mkt .x-note a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+

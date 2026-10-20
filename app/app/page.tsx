@@ -7,6 +7,8 @@ import { YARD_TZ } from "@/lib/saas/format";
 import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, type LoadoutScanRow } from "@/lib/saas/loadout-board";
 import LoadOutView, { type ActivityLine } from "./_components/loadout-view";
 import { WarmOffline } from "./_components/offline-support";
+import LockedCard from "./_components/locked-card";
+import { isWritable } from "@/lib/saas/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      {!isWritable(company.subscription_status, company.comped) ? <div className="mb-6"><LockedCard owner={company.role === "owner"} /></div> : null}
       <LoadOutView trucks={trucks} counts={counts} summary={summary} week={week} yards={yards} yardId={yardId} activity={activity} />
       <WarmOffline companyId={company.id} urls={rd.units.map((u) => `/app/units/${u.id}/scan`)} />
     </>

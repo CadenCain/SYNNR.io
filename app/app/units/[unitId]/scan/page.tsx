@@ -6,6 +6,8 @@ import type { ScanPiece } from "@/lib/saas/loadout";
 import { fmtWhen } from "@/lib/saas/format";
 import { PageHeader } from "@/components/ui/page-header";
 import LoadoutScanner, { type KitLine, type PackageOption } from "./scanner";
+import LockedCard from "../../../_components/locked-card";
+import { isWritable } from "@/lib/saas/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,14 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   ]);
   const unit = unitRow as { id: string; name: string } | null;
   if (!unit) notFound();
+  if (!isWritable(company.subscription_status, company.comped)) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHeader back={{ href: `/app/units/${unit.id}`, label: unit.name }} title={`Load-out scan: ${unit.name}`} />
+        <LockedCard owner={company.role === "owner"} />
+      </div>
+    );
+  }
 
   const extTag = new Map(((tagRows ?? []) as { id: string; nfc_uid: string }[]).map((r) => [r.id, r.nfc_uid]));
   const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({

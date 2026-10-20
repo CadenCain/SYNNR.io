@@ -4,7 +4,7 @@ import { getSaasUser } from "@/lib/saas/auth";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Get started · SYNNR" };
+export const metadata = { title: "Get started · RollReady" };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string; invite?: string }> }) {
   const { next, invite } = await searchParams;
@@ -14,8 +14,9 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-        <p className="mt-1 text-sm text-ink-dim">$500 per yard a month, billed monthly. Add your card at the next step. Cancel anytime.</p>
+        {invite || next?.startsWith("/invite/") ? null : <p className="text-sm text-ink-faint">Step 1 of 3</p>}
+        <h1 className="mt-1 text-xl font-semibold tracking-tight">Create your login</h1>
+        <p className="mt-1 text-sm text-ink-dim">Your own login, with your name on everything you scan. $500 a yard a month after setup. Cancel anytime.</p>
       </div>
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">

@@ -9,6 +9,7 @@ import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
 import { yardCapState, isWritable } from "@/lib/saas/entitlements";
 import { isBillableYard } from "@/lib/saas/billing-rules";
+import { monthlyDollars, money } from "@/lib/saas/plan";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
 
@@ -59,6 +60,19 @@ async function addYardWithUpgrade(formData: FormData) {
   const db = await saasDb();
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
   if (error) redirect(`/app/yards?err=${encodeURIComponent(error.message)}`);
+  revalidatePath("/app/yards");
+  redirect("/app/yards");
+}
+
+/** Paying for more yards than are set up: drop the plan by one, prorated. */
+async function lowerPlanByOne() {
+  "use server";
+  const { company } = await requireBillableCompany();
+  assertCan(company, "billing");
+  const inUse = await billableYardCount(company.id);
+  if (company.yard_quantity - 1 < Math.max(1, inUse)) redirect("/app/yards");
+  const res = await setYardAllowance(company.id, company.yard_quantity - 1);
+  if (!res.ok) redirect(`/app/yards?err=${encodeURIComponent(res.error)}`);
   revalidatePath("/app/yards");
   redirect("/app/yards");
 }
@@ -135,6 +149,15 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
+      {isOwner && writable && !company.comped && inUse > 0 && company.yard_quantity > inUse ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
+          <p className="min-w-0 flex-1 text-sm text-ink-dim">
+            You pay for {company.yard_quantity} yards and have {inUse} set up. Not going to use the rest? Drop one from your plan: {money(monthlyDollars(company.yard_quantity))} → {money(monthlyDollars(company.yard_quantity - 1))} a month.
+          </p>
+          <form action={lowerPlanByOne}><button type="submit" className={buttonClass("outline", "lg")}>Remove a yard from my plan</button></form>
+        </Card>
+      ) : null}
+
       {!canAdd ? null : (!writable || !hasSubscription) && !company.comped ? (
         <Card className="p-5">
           <h2 className="text-sm font-semibold">{hasSubscription ? "Your subscription has ended." : "No subscription yet."}</h2>
@@ -145,8 +168,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
                   ? "Restart billing to keep adding to your yard. Everything you entered is still here."
                   : "Each yard is $500 a month. Start your plan to add one."}
               </p>
-              <Link href={hasSubscription ? "/app/settings/billing" : "/onboarding/billing"} className={`${buttonClass("default")} mt-3 inline-flex`}>
-                {hasSubscription ? "Restart billing" : "Start your subscription"}
+              <Link href="/onboarding/billing" className={`${buttonClass("default")} mt-3 inline-flex`}>
+                {hasSubscription ? "Restart the subscription" : "Start your subscription"}
               </Link>
             </>
           ) : (
@@ -159,7 +182,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           {isOwner ? (
             <>
               <p className="mt-1 text-sm text-ink-dim">
-                Add {company.yard_quantity === 0 ? "your first" : `a ${company.yard_quantity + 1}th`} to your plan for $500/mo more, prorated from today.
+                {company.yard_quantity === 0 ? "Add your first yard" : "Add another yard"} to your plan: {money(monthlyDollars(company.yard_quantity))} → {money(monthlyDollars(company.yard_quantity + 1))} a month, prorated from today.
               </p>
               {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through because you were at your limit.</p> : null}
               <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 lg:flex-row">
@@ -167,7 +190,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
                 <input name="location" placeholder="Location (optional)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
-                <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard ($500/mo)</Button>
+                <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard (+$500/mo)</Button>
               </form>
             </>
           ) : (

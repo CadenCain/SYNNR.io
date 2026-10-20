@@ -213,6 +213,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
             {[
               { href: "/app/loadouts", label: "Load-out records", icon: History },
               { href: "/app/packages", label: "Packages & kits", icon: Package },
+              { href: "/app/welcome", label: "Getting set up", icon: Plus },
               { href: "/app/tags", label: "QR tags", icon: QrCode },
               { href: "/app/quick", label: "Quick add or renew", icon: Plus },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),

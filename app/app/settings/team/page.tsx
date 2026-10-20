@@ -1,7 +1,7 @@
 import { fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { requireCompany } from "@/lib/saas/auth";
+import { requireCompany, requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 async function createInvite(formData: FormData) {
   "use server";
-  const { company } = await requireCompany();
+  // Crew logins come with a paid subscription.
+  const { company } = await requireBillableCompany();
   // Members can look but not mint invites, and NOBODY mints an owner through
   // this form — a member could otherwise invite themselves an owner account.
   if (company.role !== "owner" && company.role !== "admin") throw new Error("Only a manager can invite people.");
@@ -76,10 +77,13 @@ export default async function TeamSettings() {
 
   // Resolve emails via admin (auth.users isn't readable through RLS).
   const emails = new Map<string, string>();
+  const names = new Map<string, string>();
   if (admin) {
     for (const m of members) {
       const { data } = await admin.auth.admin.getUserById(m.user_id);
       if (data?.user?.email) emails.set(m.user_id, data.user.email);
+      const n = (data?.user?.user_metadata?.full_name as string | undefined)?.trim();
+      if (n) names.set(m.user_id, n);
     }
   }
 
@@ -88,7 +92,7 @@ export default async function TeamSettings() {
     .eq("company_id", company.id).eq("status", "pending").order("created_at", { ascending: false });
   const invites = (invData ?? []) as { id: string; token: string; role: string; email: string | null; status: string; expires_at: string }[];
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://www.synnr.io";
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,7 +106,10 @@ export default async function TeamSettings() {
         <h2 className="text-sm font-medium text-ink">Members</h2>
         {members.map((m) => (
           <Card key={m.user_id} className="flex items-center justify-between gap-3 p-4">
-            <span className="min-w-0 break-all">{emails.get(m.user_id) ?? m.user_id}{m.user_id === user.id ? " (you)" : ""}</span>
+            <span className="min-w-0">
+              <span className="block font-medium">{names.get(m.user_id) ?? "No name yet"}{m.user_id === user.id ? " (you)" : ""}</span>
+              <span className="block break-all text-sm text-ink-dim">{emails.get(m.user_id) ?? m.user_id}</span>
+            </span>
             <span className="flex items-center gap-2">
               {company.role === "owner" && m.role === "admin" && m.user_id !== user.id ? (
                 <form action={transferOwnership}>

@@ -25,6 +25,8 @@ export async function POST(req: Request) {
 
   if (!EMAIL_RE.test(email)) return NextResponse.json({ ok: false, error: "Enter a valid email." }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ ok: false, error: "Password must be at least 8 characters." }, { status: 400 });
+  // Every scan, load-out, and override carries a person's name.
+  if (!fullName) return NextResponse.json({ ok: false, error: "Add your name. It goes on everything you scan." }, { status: 400 });
 
   const admin = getAdminSupabase();
   if (!admin) return NextResponse.json({ ok: false, error: "Signup is temporarily unavailable." }, { status: 500 });
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
     email,
     password,
     email_confirm: true,
-    user_metadata: fullName ? { full_name: fullName } : undefined,
+    user_metadata: { full_name: fullName.slice(0, 120) },
   });
 
   if (error) {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Phone, ShieldCheck, Smartphone, Truck } from "lucide-react";
@@ -27,7 +28,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
   return (
     <div className="saas min-h-dvh bg-coal text-ink antialiased">
       <main className="mx-auto w-full max-w-3xl px-4 pb-20 pt-6 sm:px-6 md:pt-10">
-        <a href="/" className="inline-block text-sm font-semibold text-ink hover:text-bone">RollReady <span className="font-normal text-ink-faint">by SYNNR</span></a>
+        <Link href="/" className="inline-block text-sm font-semibold text-ink hover:text-bone">RollReady <span className="font-normal text-ink-faint">by SYNNR</span></Link>
 
         <div className="mt-8 flex flex-col gap-5">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try RollReady with a demo yard</h1>
@@ -103,7 +104,8 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             per-seat.
           </p>
           <DemoLeadForm />
-          <a href="/" className="mt-2 text-sm text-ink-dim underline underline-offset-2 hover:text-ink">Back to synnr.io</a>
+          <p className="text-sm text-ink-dim">Ready now? <Link href="/signup" className="font-medium text-bone underline underline-offset-2">Get started on your own</Link>: pick your yards, pay by card, and you&apos;re in.</p>
+          <Link href="/" className="mt-2 text-sm text-ink-dim underline underline-offset-2 hover:text-ink">Back to synnr.io</Link>
         </div>
       </main>
     </div>

@@ -41,7 +41,7 @@ export default function BillingActions({ mode }: { mode: "portal" | "subscribe" 
     <div className="flex flex-col items-end gap-1.5">
       {mode === "portal" ? (
         <Button onClick={() => go("/api/saas/portal")} disabled={busy} variant="outline">
-          {busy ? "Opening…" : "Manage billing"}
+          {busy ? "Opening…" : "Manage card and invoices"}
         </Button>
       ) : (
         <Button onClick={() => go("/api/saas/checkout")} disabled={busy}>

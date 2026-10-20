@@ -1,13 +1,17 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getStripe } from "@/lib/stripe";
-import { requireCompany , getUserCompanies } from "@/lib/saas/auth";
+import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
+import { canPerform } from "@/lib/saas/entitlements";
 import { saasAdmin } from "@/lib/saas/db";
-import { saasDb } from "@/lib/saas/db";
+import { hasFullAccess } from "@/lib/saas/plan";
+import { subscriptionFields } from "@/lib/saas/stripe-events";
+import { billableYardCount } from "@/lib/saas/billing";
 import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Subscribe · SYNNR" };
+export const metadata = { title: "Payment · RollReady" };
 
 async function switchCompanyFromWall(formData: FormData) {
   "use server";
@@ -20,73 +24,79 @@ async function switchCompanyFromWall(formData: FormData) {
   redirect("/app");
 }
 
-export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string }> }) {
+/**
+ * Getting started, step 3: pay. Back from Stripe, the session is checked
+ * right here (made for THIS company, and paid) so the shop lands in the app
+ * the moment the card goes through, without waiting on the webhook. The
+ * webhook records the same thing again, which is harmless.
+ */
+export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string; canceled?: string }> }) {
   const { company } = await requireCompany();
-  if (company.subscription_status === "active" || company.subscription_status === "past_due") redirect("/app");
-
-  // Returned from Checkout — confirm payment immediately (don't wait on webhook).
+  if (hasFullAccess(company)) redirect("/app");
   const sp = await searchParams;
+  const admin = saasAdmin();
+
+  let pending = false;
   if (sp.session_id) {
     const stripe = getStripe();
-    const admin = saasAdmin();
-    // NOTE: redirect() throws NEXT_REDIRECT, so it must live OUTSIDE the try —
-    // a bare catch would swallow it and re-render the subscribe card to a
-    // customer who just paid.
-    let confirmed = false;
+    let paid = false;
+    // redirect() throws, so it lives outside the try.
     if (stripe && admin) {
       try {
         const session = await stripe.checkout.sessions.retrieve(sp.session_id, { expand: ["subscription"] });
-        // Ownership check: only a session created FOR this company may activate
-        // it — otherwise any authenticated user replaying someone else's paid
-        // session id could flip their own company active (and cross-wire the
-        // two companies' Stripe customer ids).
         const sub = session.subscription && typeof session.subscription !== "string" ? session.subscription : null;
-        const owned = session.client_reference_id === company.id || sub?.metadata?.company_id === company.id;
-        if (owned && (session.payment_status === "paid" || session.status === "complete")) {
-          // Record the yards they actually PAID for. Don't rely on the
-          // subscription.created webhook for this: if that event isn't enabled
-          // on the endpoint, nothing else writes yard_quantity on a first
-          // purchase (the allowance is explicit now; Stripe already
-          // matches), so a 3-yard shop would sit at 0 — and partner payouts in
-          // /op/referrals are computed from this column.
-          const paidQty = sub?.items?.data?.[0]?.quantity ?? null;
+        // Only a session made FOR this company counts, or anyone could replay
+        // someone else's paid session id and turn their own company on.
+        const mine = session.client_reference_id === company.id || sub?.metadata?.company_id === company.id;
+        if (mine && sub && (sub.status === "active" || sub.status === "trialing")) {
           await admin.from("saas_companies").update({
-            subscription_status: "active",
-            // Spread only what's present: writing null here would wipe a
-            // working id, breaking the billing portal and every future webhook
-            // match for that customer.
-            ...(session.subscription ? { stripe_subscription_id: sub ? sub.id : String(session.subscription) } : {}),
+            ...subscriptionFields(sub),
             ...(session.customer ? { stripe_customer_id: String(session.customer) } : {}),
-            ...(paidQty != null ? { yard_quantity: paidQty } : {}),
+            subscribed_at: new Date().toISOString(),
           }).eq("id", company.id);
-          confirmed = true;
+          paid = true;
+        } else if (mine) {
+          pending = true; // e.g. a bank still confirming the card
         }
       } catch {
-        // fall through to the subscribe card (webhook remains source of truth)
+        // The webhook still records it; show the page.
       }
     }
-    if (confirmed) redirect("/app");
+    if (paid) redirect("/app/welcome");
   }
 
-  const db = await saasDb();
-  const { count: yardCount } = await db
-    .from("saas_yards").select("id", { count: "exact", head: true }).eq("company_id", company.id);
+  const [{ data }, inUse] = await Promise.all([
+    admin ? admin.from("saas_companies").select("requested_yards, contact_name").eq("id", company.id).maybeSingle() : Promise.resolve({ data: null }),
+    billableYardCount(company.id),
+  ]);
+  const c = data as { requested_yards: number | null; contact_name: string | null } | null;
+  // Restarting after a lapse starts at the yards they already run.
+  const startYards = Math.max(c?.requested_yards ?? 1, company.yard_quantity, inUse, 1);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <a href="/" className="mb-2 inline-block text-sm text-ink-dim hover:text-ink">← Back</a>
-        {/* An unpaid company must never trap the login (spec §4): if this user
-            belongs to other companies, offer the door right on the wall. */}
         <CompanySwitcherWall />
-        <h1 className="text-xl font-semibold tracking-tight">Start your subscription</h1>
-        <p className="mt-1 text-sm text-ink-dim">One more step: add a card to activate {company.name}.</p>
+        <p className="text-sm text-ink-faint">Step 3 of 3</p>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight">Start {company.name} on RollReady</h1>
+        <p className="mt-1 text-sm text-ink-dim">Pay by card on Stripe&apos;s secure page, and you&apos;re in.</p>
       </div>
-      <SubscribeCard initialYards={Math.max(1, yardCount ?? 1)} />
+      {pending ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          Stripe is still confirming your card. This page will let you in as soon as it does. Refresh in a minute.
+        </p>
+      ) : null}
+      {sp.canceled ? (
+        <p className="rounded-lg border border-line-2 bg-elevated px-4 py-3 text-sm text-ink-dim">No charge was made. Pick up where you left off whenever you&apos;re ready.</p>
+      ) : null}
+      <SubscribeCard initialYards={startYards} canPay={canPerform(company.role, "billing")} />
+      <p className="text-center text-sm text-ink-dim">
+        Questions first? Call or text Caden at 432-250-0715. <Link href="/demo" className="underline underline-offset-2">Or try the demo.</Link>
+      </p>
+      <p className="text-center text-xs text-ink-faint"><a href="/logout" className="underline underline-offset-2">Sign out</a></p>
     </div>
   );
 }
-
 
 async function CompanySwitcherWall() {
   const { user } = await requireCompany();

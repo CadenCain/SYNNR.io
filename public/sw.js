@@ -28,7 +28,7 @@ self.addEventListener("activate", (event) => {
 
 const savable = (url) => url.pathname === "/app" || /^\/app\/units\/[^/]+\/scan$/.test(url.pathname);
 const keyOf = (url) => url.origin + url.pathname;
-const authPath = (p) => p.startsWith("/login") || p.startsWith("/signup") || p.startsWith("/auth") || p.startsWith("/invite") || p.startsWith("/demo");
+const authPath = (p) => ["/login", "/logout", "/signup", "/auth", "/invite", "/demo", "/onboarding"].some((x) => p.startsWith(x));
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
