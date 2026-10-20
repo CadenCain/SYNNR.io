@@ -201,7 +201,8 @@ export default async function OpHealth() {
     let priceDetail = "";
     let priceOk = false;
     try {
-      const p = (await stripe.prices.list({ lookup_keys: [YARD_PRICE_LOOKUP_KEY], active: true, limit: 1 })).data[0];
+      const p = (await stripe.prices.list({ lookup_keys: [YARD_PRICE_LOOKUP_KEY], active: true, limit: 1 })).data[0]
+        ?? (process.env.NEXT_PUBLIC_STRIPE_PRICE_ID ? await stripe.prices.retrieve(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID).catch(() => undefined) : undefined);
       priceOk = !p || isYardPrice(p);
       priceDetail = !p ? "not made yet; the first checkout makes it ($500/yard/month)" : `${p.id}: $${(p.unit_amount ?? 0) / 100} ${p.currency.toUpperCase()} per ${p.recurring?.interval}`;
     } catch (e) {

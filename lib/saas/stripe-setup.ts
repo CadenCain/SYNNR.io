@@ -5,9 +5,10 @@ import { PER_YARD_CENTS, YARD_PRICE_LOOKUP_KEY, YARD_PRODUCT_NAME, isYardPrice }
  * The two things Stripe has to have set up for RollReady, made by the app
  * itself so nobody has to paste a price id into Vercel and get it wrong:
  *
- *   The price: "RollReady Yard", $500 USD per yard per month, found by its
- *   lookup key. If it doesn't exist (a fresh Stripe account, or test mode),
- *   it's made. If something under that key isn't $500 a month, checkout
+ *   The price: $500 USD per yard per month, found by its lookup key, else the
+ *   price already in NEXT_PUBLIC_STRIPE_PRICE_ID if it's $500 a month. Only if
+ *   neither exists (a fresh Stripe account, or test mode) is a "RollReady
+ *   Yard" product and price made. If something under that key isn't $500 a month, checkout
  *   refuses rather than sell at the wrong price.
  *
  *   The billing portal: card, invoices, billing details, and cancel. Yard
@@ -28,6 +29,13 @@ export async function yardPriceId(stripe: Stripe): Promise<string> {
   if (hit) return hit;
   const find = async () => (await stripe.prices.list({ lookup_keys: [YARD_PRICE_LOOKUP_KEY], active: true, limit: 1 })).data[0] ?? null;
   let price = await find();
+  // The $500 price made before the lookup key existed (NEXT_PUBLIC_STRIPE_PRICE_ID):
+  // use it rather than making a second product, as long as it really is $500 a month.
+  const existingId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID;
+  if (!price && existingId) {
+    const p = await stripe.prices.retrieve(existingId).catch(() => null);
+    if (p && isYardPrice(p)) price = p;
+  }
   if (!price) {
     const product = await stripe.products.create({
       name: YARD_PRODUCT_NAME,
