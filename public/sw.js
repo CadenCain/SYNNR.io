@@ -73,7 +73,7 @@ main{max-width:420px;background:#fff;border:1px solid #e3e8ef;border-radius:16px
 // with the built files each one needs.
 self.addEventListener("message", (event) => {
   const d = event.data || {};
-  if (d.type === "warm" && Array.isArray(d.urls)) event.waitUntil(warm(d.urls.slice(0, 60)));
+  if (d.type === "warm" && Array.isArray(d.urls)) event.waitUntil(warm(d.urls.slice(0, 160)));
   if (d.type === "forget") event.waitUntil(caches.delete(PAGES));
 });
 

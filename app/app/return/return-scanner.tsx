@@ -184,7 +184,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
                 className={cn("flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-semibold",
                   dest === d ? "border-bone bg-bone/10 text-bone" : "border-line-2 text-ink-dim")}>
                 {d === "truck" ? <Truck className="h-5 w-5" /> : <Warehouse className="h-5 w-5" />}
-                {d === "truck" ? `Back on ${truck.name}` : "Into the yard"}
+                {d === "truck" ? <span>Back on <span className="whitespace-nowrap">{truck.name}</span></span> : "Into the yard"}
               </button>
             ))}
           </div>
