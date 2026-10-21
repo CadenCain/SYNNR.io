@@ -54,7 +54,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
       .eq("company_id", company.id).gte("created_at", sinceIso()).order("created_at", { ascending: false }).limit(60),
     db.from("saas_packages").select("unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).not("unit_id", "is", null),
     db.from("saas_returns").select("unit_id, finished_at, returned_by").eq("company_id", company.id).order("finished_at", { ascending: false }).limit(400),
-    db.from("saas_assets").select("id, unit_id, yard_id, out_since").eq("company_id", company.id).not("out_since", "is", null).neq("status", "retired"),
+    db.from("saas_assets").select("id, unit_id, yard_id, out_since").eq("company_id", company.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
     db.from("saas_events").select("kind, actor, unit_id").eq("company_id", company.id).gte("created_at", weekAgo).not("actor", "is", null).limit(2000),
     getYardRules(db, company.id),
   ]);

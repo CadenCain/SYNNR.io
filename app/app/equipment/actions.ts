@@ -3,7 +3,7 @@
 import { revalidatePath, refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBillableCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { isRecentDuplicate } from "@/lib/saas/dedupe";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -71,10 +71,12 @@ export async function moveEquipment(fd: FormData) {
     last_seen_where: note || null,
     last_seen_by: by,
     last_seen_at: new Date().toISOString(),
-    // Somebody has it in hand, so it isn't out on a job anymore.
-    out_since: null, out_loadout_id: null, out_alerted_at: null,
   }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+  // Somebody has it in hand, so it isn't out on a job anymore. Only the
+  // server writes that (the database turns a phone away).
+  await saasAdmin()?.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null })
+    .eq("id", id).eq("company_id", company.id).not("out_since", "is", null);
   revalidatePath(`/app/assets/${id}`);
   revalidatePath("/app"); revalidatePath("/app/equipment");
   refresh(); // redraw the page the Move box is on, with the new history row

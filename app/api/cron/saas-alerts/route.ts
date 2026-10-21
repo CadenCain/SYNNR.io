@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { saasAdmin } from "@/lib/saas/db";
 import { sweepAlerts } from "@/lib/saas/alerts";
 import { sendEmail } from "@/lib/saas/notify";
+import { escHtml } from "@/lib/saas/html";
 import { snapshotAllCompanies } from "@/lib/saas/readiness";
 import { logCronRun } from "@/lib/saas/cron-log";
 
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
     });
     if (result.errors.length > 0) {
       await sendEmail([OPERATOR], `[SYNNR ops] alert sweep: ${result.errors.length} delivery failure(s)`,
-        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">Sweep ran but some sends failed:\n\n${result.errors.map((x) => `• ${x}`).join("\n")}\n\nScanned ${result.companies_scanned} companies · ${result.emails_sent} emails · ${result.sms_sent} SMS sent.\nFailed items retry on tomorrow's sweep.</pre>`);
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`Sweep ran but some sends failed:\n\n${result.errors.map((x) => `• ${x}`).join("\n")}\n\nScanned ${result.companies_scanned} companies · ${result.emails_sent} emails · ${result.sms_sent} SMS sent.\nFailed items retry on tomorrow's sweep.`)}</pre>`);
     }
     return NextResponse.json({ ok: true, ...result, snapshot });
   } catch (e) {
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
     await logCronRun(admin, { job: "saas-alerts", ok: false, detail: msg });
     // The whole sweep died — every company's alerts skipped today. Scream.
     await sendEmail([OPERATOR], "[SYNNR ops] ALERT SWEEP CRASHED — no alerts went out",
-      `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">The daily sweep threw before completing:\n\n${msg}\n\nNo company received expiration alerts today. Investigate before tomorrow's run.</pre>`).catch(() => {});
+      `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`The daily sweep threw before completing:\n\n${msg}\n\nNo company received expiration alerts today. Investigate before tomorrow's run.`)}</pre>`).catch(() => {});
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

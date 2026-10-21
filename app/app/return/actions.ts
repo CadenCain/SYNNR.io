@@ -17,6 +17,24 @@ const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string 
   user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || "someone";
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
 
+type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
+
+/** This hand's check-in (of this truck, or of everything out) that started at this moment, if it already saved. */
+async function savedReturn(admin: Admin, companyId: string, userId: string, unitId: string | null, startedIso: string) {
+  let q = admin.from("saas_returns").select("id, unit_name, returned_by, pieces, not_returned")
+    .eq("company_id", companyId).eq("returned_by_user", userId).eq("started_at", startedIso);
+  q = unitId ? q.eq("unit_id", unitId) : q.is("unit_id", null);
+  const { data } = await q.maybeSingle();
+  const r = data as { id: string; unit_name: string | null; returned_by: string; pieces: unknown[] | null; not_returned: unknown[] | null } | null;
+  if (!r) return null;
+  const back = (r.pieces ?? []).length;
+  const left = (r.not_returned ?? []).length;
+  return {
+    ok: true, id: r.id,
+    summary: `${r.unit_name ? `${r.unit_name} checked in` : "Iron checked in"} by ${r.returned_by}: ${back} checked in${left ? `, ${left} not back` : ""}`,
+  };
+}
+
 /**
  * Check iron back in after a job. Each scanned piece goes back on the truck
  * (the truck's own kit, parked in the yard) or off into the yard at a rack or
@@ -48,6 +66,12 @@ export async function finishReturn(input: {
   const yard = yards.find((y) => y.id === input.yardId) ?? yards.find((y) => y.id === unit?.yard_id) ?? yards[0];
   if (!yard) return { ok: false, error: "Add a yard first." };
 
+  // A resend of a check-in that already landed gets the first record back.
+  const startedMs = Date.parse(input.startedAt) || Date.now();
+  const startedIso = new Date(startedMs).toISOString();
+  const already = await savedReturn(admin, company.id, user.id, unit?.id ?? null, startedIso);
+  if (already) return already;
+
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notReturned.map((n) => n.assetId)])];
   const { data: assetRows } = ids.length
     ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since").eq("company_id", company.id).in("id", ids)
@@ -63,7 +87,6 @@ export async function finishReturn(input: {
 
   const now = new Date().toISOString();
   const nowMs = Date.parse(now);
-  const startedMs = Date.parse(input.startedAt) || nowMs;
   const day = dayLabel(now);
   const today = localToday();
 
@@ -92,7 +115,9 @@ export async function finishReturn(input: {
     if (r === "expired" || r === "missing") red.add(it.parent_id);
   }
 
-  const back = { returned_at: now, returned_by: actor, out_since: null, out_loadout_id: null, out_alerted_at: null, last_seen_by: actor, last_seen_at: now };
+  const back = { last_seen_by: actor, last_seen_at: now };
+  // Off the job: only the server writes these (the database turns a phone away).
+  const offJob = { returned_at: now, returned_by: actor, out_since: null, out_loadout_id: null, out_alerted_at: null };
   // Back on the truck, one write.
   const onTruck = scans.filter((s) => s.to === "truck");
   if (onTruck.length && unit) {
@@ -123,10 +148,17 @@ export async function finishReturn(input: {
       last_seen_where: `didn't come back${unit ? ` on ${unit.name}` : ""}, ${day}`, last_seen_by: actor, last_seen_at: now,
     }).eq("id", a.id).eq("company_id", company.id);
   }
+  // What came back is off the job. What can't be found isn't out on a job
+  // either: it's missing, and it shows (and blocks) as missing.
+  const offIds = [...scans.map((x) => x.assetId), ...notReturned.filter((x) => x.outcome === "missing").map((x) => x.assetId)];
+  if (offIds.length) {
+    const { error } = await admin.from("saas_assets").update(offJob).eq("company_id", company.id).in("id", offIds);
+    if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };
+  }
 
   const { data: rec, error: recErr } = await admin.from("saas_returns").insert({
     company_id: company.id, yard_id: yard.id, unit_id: unit?.id ?? null, unit_name: unit?.name ?? null,
-    returned_by: actor, returned_by_user: user.id, started_at: new Date(startedMs).toISOString(), finished_at: now,
+    returned_by: actor, returned_by_user: user.id, started_at: startedIso, finished_at: now,
     pieces: scans.map((s) => {
       const a = byId.get(s.assetId)!;
       return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, to: s.to,
@@ -135,6 +167,10 @@ export async function finishReturn(input: {
     }),
     not_returned: notReturned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   }).select("id").single();
+  if (recErr?.code === "23505") {
+    const first = await savedReturn(admin, company.id, user.id, unit?.id ?? null, startedIso);
+    if (first) return first;
+  }
   if (recErr || !rec) return { ok: false, error: `Couldn't save the check-in record: ${recErr?.message ?? "unknown"}` };
 
   const parts: string[] = [];

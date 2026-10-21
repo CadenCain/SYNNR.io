@@ -11,7 +11,10 @@ import { saasDb } from "@/lib/saas/db";
 export const dynamic = "force-dynamic";
 
 const esc = (v: unknown) => {
-  const s = String(v ?? "");
+  // Names are typed by people: one starting =, +, -, or @ would run as a
+  // formula when the sheet opens in Excel, so it goes in as plain text.
+  const raw = String(v ?? "");
+  const s = /^[=+\-@\t\r]/.test(raw) && !/^-?\d+(\.\d+)?$/.test(raw) ? `'${raw}` : raw;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 

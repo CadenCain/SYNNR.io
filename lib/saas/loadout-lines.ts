@@ -101,7 +101,30 @@ export function kitLinesFrom(names: string[]): { label: string; qty: number }[] 
 
 export const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
-export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date"; detail?: string }
+export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file"; detail?: string }
+
+/**
+ * Pieces with no test on file that can't go on: pressure iron always, and any
+ * piece filling a line on the list that the yard's other iron of that kind
+ * carries a test for. Without this, a piece added from a phone ("Quad BOP
+ * stack #9", no paper) could fill the BOP line while the real BOP, out of
+ * test, rode along marked "not going this trip".
+ */
+export function untestedPieces(input: {
+  scanned: { id: string; name: string; serial: string | null; category: string }[];
+  hasTest: Set<string>;
+  filled: FilledLine[];
+  testedCategories: Set<string>;
+  /** Does other iron that would fill this line carry a test? */
+  lineIsTested: (label: string) => boolean;
+}): (BadPiece & { id: string })[] {
+  const lineOf = new Map<string, string>();
+  for (const l of input.filled) for (const f of l.filled) lineOf.set(f.id, l.label);
+  return input.scanned
+    .filter((p) => !input.hasTest.has(p.id))
+    .filter((p) => input.testedCategories.has(p.category) || (lineOf.has(p.id) && input.lineIsTested(lineOf.get(p.id)!)))
+    .map((p) => ({ id: p.id, name: p.name, serial: p.serial, why: "no_test_on_file" as const }));
+}
 
 /**
  * READY or NOT READY, and every reason, in plain words. Anything missing,
@@ -123,7 +146,7 @@ export function loadoutVerdict(input: {
   }
   for (const p of input.cantFind) reasons.push(`Can't find: ${pieceLabel(p)}`);
   for (const p of input.bad) {
-    const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file" : "Out of test";
+    const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file" : p.why === "no_test_on_file" ? "No test on file" : "Out of test";
     reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? `, ${p.detail}` : ""}`);
   }
   for (const t of input.truckPaper) reasons.push(`Truck paper: ${t.title} ${t.detail}`);

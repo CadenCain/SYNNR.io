@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { saasAdmin } from "@/lib/saas/db";
 import { sendEmail } from "@/lib/saas/notify";
+import { escHtml } from "@/lib/saas/html";
 import { logCronRun } from "@/lib/saas/cron-log";
 import { reconcileYardBilling } from "@/lib/saas/billing";
 
@@ -69,7 +70,7 @@ export async function GET(req: Request) {
         : `The watchdog's own read failed: ${error!.message}\n\nThe sweep may be fine — but nothing can currently prove it. Check Supabase.`;
     // If THIS email fails there is genuinely nothing left to do from in here —
     // it still shows red on /op/health and in the watchdog's own heartbeat.
-    await sendEmail([OWNER], subject, `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${body}</pre>`).catch(() => {});
+    await sendEmail([OWNER], subject, `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`${body}`)}</pre>`).catch(() => {});
   }
 
   // ── Billing reconcile — the money version of the dead-man. The per-change
@@ -85,18 +86,18 @@ export async function GET(req: Request) {
     if (rec.issues.length > 0 || rec.errors.length > 0) {
       const driftLines = rec.issues.map((d) => `• ${d}`);
       await sendEmail([OWNER], `[SYNNR ops] BILLING DRIFT — ${rec.issues.length} issue(s)`,
-        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">Nightly billed-vs-actual reconcile (${rec.checked} subscription(s) checked):
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`Nightly billed-vs-actual reconcile (${rec.checked} subscription(s) checked):
 
 ${driftLines.join("\n") || "(no drift, but errors below)"}
 
 ${rec.errors.length ? `Couldn't check:
 ${rec.errors.map((e) => `• ${e}`).join("\n")}
 
-` : ""}Fix: open the company in Stripe and set the quantity, or add/delete the yard difference in the app — the next yard change also re-syncs.</pre>`).catch(() => {});
+` : ""}Fix: open the company in Stripe and set the quantity, or add/delete the yard difference in the app — the next yard change also re-syncs.`)}</pre>`).catch(() => {});
     }
   } catch (e) {
     await sendEmail([OWNER], "[SYNNR ops] billing reconcile CRASHED",
-      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+      `<pre style="font:13px/1.6 monospace">${escHtml(`${e instanceof Error ? e.message : String(e)}`)}</pre>`).catch(() => {});
   }
 
   // ── Demo reaper — throwaway demo yards (and their users) live 24h. Rides
@@ -110,11 +111,11 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
     const out = await sweepOutTooLong(admin);
     if (out.errors.length) {
       await sendEmail([OWNER], "[SYNNR ops] out-too-long sweep hit errors",
-        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${out.errors.join("\n")}</pre>`).catch(() => {});
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`${out.errors.join("\n")}`)}</pre>`).catch(() => {});
     }
   } catch (e) {
     await sendEmail([OWNER], "[SYNNR ops] out-too-long sweep CRASHED",
-      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+      `<pre style="font:13px/1.6 monospace">${escHtml(`${e instanceof Error ? e.message : String(e)}`)}</pre>`).catch(() => {});
   }
 
   try {
@@ -122,11 +123,11 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
     demo = await cleanupDemoCompanies(admin);
     if (demo.errors.length) {
       await sendEmail([OWNER], "[SYNNR ops] demo reaper hit errors",
-        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${demo.errors.join("\n")}</pre>`).catch(() => {});
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`${demo.errors.join("\n")}`)}</pre>`).catch(() => {});
     }
   } catch (e) {
     await sendEmail([OWNER], "[SYNNR ops] demo reaper CRASHED",
-      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+      `<pre style="font:13px/1.6 monospace">${escHtml(`${e instanceof Error ? e.message : String(e)}`)}</pre>`).catch(() => {});
   }
 
   // The showcase yard behind the /demo proof link, re-seeded so it tells the
@@ -136,11 +137,11 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
     const r = await refreshShowcase(admin);
     if (!r.ok) {
       await sendEmail([OWNER], "[SYNNR ops] showcase refresh failed",
-        `<pre style="font:13px/1.6 monospace">${r.error ?? "unknown"}</pre>`).catch(() => {});
+        `<pre style="font:13px/1.6 monospace">${escHtml(`${r.error ?? "unknown"}`)}</pre>`).catch(() => {});
     }
   } catch (e) {
     await sendEmail([OWNER], "[SYNNR ops] showcase refresh CRASHED",
-      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+      `<pre style="font:13px/1.6 monospace">${escHtml(`${e instanceof Error ? e.message : String(e)}`)}</pre>`).catch(() => {});
   }
 
   await logCronRun(admin, {

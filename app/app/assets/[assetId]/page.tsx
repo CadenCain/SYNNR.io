@@ -120,11 +120,17 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
             <PopoverContent align="end" className="w-80 p-3">
               <form action={updateAsset} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={a.id} />
-                <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={a.name} required className={`${fld} mt-1 w-full`} /></label>
-                <label className="text-xs text-ink-faint">Category
-                  <select name="category" defaultValue={a.category} className={`${fld} mt-1 w-full`}>
-                    {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select></label>
+                {isManager ? (
+                  <>
+                    <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={a.name} required className={`${fld} mt-1 w-full`} /></label>
+                    <label className="text-xs text-ink-faint">Category
+                      <select name="category" defaultValue={a.category} className={`${fld} mt-1 w-full`}>
+                        {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select></label>
+                  </>
+                ) : (
+                  <p className="text-xs text-ink-faint">Only a manager can rename a piece or change what kind it is.</p>
+                )}
                 {a.status === "out_of_service" && !isManager ? (
                   <>
                     <input type="hidden" name="status" value="out_of_service" />

@@ -36,7 +36,7 @@ export async function sweepOutTooLong(admin: SupabaseClient): Promise<{ companie
       const limit = (rules as { out_alert_days: number } | null)?.out_alert_days ?? 7;
       const cutoff = new Date(now - limit * 86400e3).toISOString();
       const { data: rows } = await admin.from("saas_assets").select("id, name, identifier, unit_id, out_since, out_alerted_at")
-        .eq("company_id", c.id).neq("status", "retired").not("out_since", "is", null).lte("out_since", cutoff);
+        .eq("company_id", c.id).not("status", "in", "(retired,missing)").not("out_since", "is", null).lte("out_since", cutoff);
       const fresh = ((rows ?? []) as (OutPiece & { out_alerted_at: string | null })[])
         .filter((r) => !r.out_alerted_at || r.out_alerted_at < r.out_since);
       if (!fresh.length) continue;

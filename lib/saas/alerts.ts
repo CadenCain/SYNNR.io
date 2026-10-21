@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendSms, sendEmail, smsConfigured } from "./notify";
+import { escHtml } from "./html";
 import { localToday } from "./status";
 import { alertHorizon, isAlertDue } from "./alert-window";
 import { isWritable } from "./entitlements";
@@ -143,7 +144,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
         const ok = await sendEmail(
           [r.email],
           `[RollReady] ${company.name}: ${sorted.length} expiring`,
-          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen RollReady to renew: ${appUrl}</pre>`,
+          `<pre style="font:14px/1.6 -apple-system,sans-serif;white-space:pre-wrap">${escHtml(`${company.name}: ${sorted.length} item${sorted.length === 1 ? "" : "s"} need attention\n\n${sorted.map((i) => `• ${line(i)}`).join("\n")}\n\nOpen RollReady to renew: ${appUrl}`)}</pre>`,
         );
         if (ok) { res.emails_sent++; sorted.forEach((i) => emailedIds.add(i.id)); noteRecip(sorted.map((i) => i.id), r.name); }
         else {

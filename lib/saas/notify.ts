@@ -1,4 +1,5 @@
 import { saasAdmin } from "./db";
+import { escHtml } from "./html";
 
 /**
  * Outbound notifications: email (Resend) + SMS (Twilio) behind one interface.
@@ -127,7 +128,7 @@ export async function notifyEvent(args: {
     const sends: { channel: string; recipient: string }[] = [];
     if (emails.length) {
       const ok = await sendEmail(emails, `RollReady alert: ${args.message}`,
-        `<p style="font:14px/1.5 -apple-system,sans-serif">${args.message}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${args.companyName} · <a href="https://www.synnr.io/app">open RollReady</a></p>`);
+        `<p style="font:14px/1.5 -apple-system,sans-serif">${escHtml(args.message)}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${escHtml(args.companyName)} · <a href="https://www.synnr.io/app">open RollReady</a></p>`);
       if (ok) sends.push({ channel: "email", recipient: emailNames.join(", ") });
       else await admin.from("saas_events").insert({ company_id: args.companyId, kind: "alert_failed", message: `Instant alert email FAILED (${emailNames.join(", ")}): ${args.message}` });
     }

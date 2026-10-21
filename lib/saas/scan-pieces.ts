@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getEquipment, stateLabel } from "./equipment";
 import type { ScanPiece } from "./loadout";
 import { daysOut } from "./whereabouts";
+import { TESTED_CATEGORIES } from "./taxonomy";
 
 /**
  * Every piece a scan screen can recognize (load-out or check-in): its tags,
@@ -20,7 +21,8 @@ export async function getScanPieces(db: SupabaseClient, companyId: string): Prom
   const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
     id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where,
     tagToken: r.tagToken, extTag: extTag.get(r.id) ?? null,
-    problem: r.state === "overdue" || r.state === "down" ? "red" : r.state === "due" ? "yellow" : null,
+    // Pressure iron with no test on file can't go out, so it reads red on the phone too.
+    problem: r.state === "overdue" || r.state === "down" || (r.state === "no_paper" && TESTED_CATEGORIES.has(r.category)) ? "red" : r.state === "due" ? "yellow" : null,
     statusText: r.state === "down" ? stateLabel(r) : r.next ? `${r.next.title}: ${r.next.detail}` : "No test on file",
   }));
   return { pieces, outDays };

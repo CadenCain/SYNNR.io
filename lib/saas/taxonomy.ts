@@ -30,6 +30,12 @@ export const ASSET_CATEGORIES: { value: string; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+/**
+ * Iron that gets pressure- or load-tested. A piece of these kinds with no
+ * test on file can't go out on a load-out: nobody has proved it's good.
+ */
+export const TESTED_CATEGORIES = new Set(["flow_iron", "pressure_control", "lifting"]);
+
 export const COMPLIANCE_KINDS: { value: string; label: string }[] = [
   { value: "cert", label: "Cert" },
   { value: "inspection", label: "Inspection" },

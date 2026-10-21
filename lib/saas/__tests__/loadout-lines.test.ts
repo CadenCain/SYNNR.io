@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { lineTokens, lineMatches, fillLines, shortLines, expectedLines, loadoutVerdict, type ExpectedLine } from "../loadout-lines";
+import { lineTokens, lineMatches, fillLines, shortLines, expectedLines, loadoutVerdict, untestedPieces, type ExpectedLine } from "../loadout-lines";
+import { TESTED_CATEGORIES } from "../taxonomy";
 
 const p = (id: string, name: string, serial: string | null = null) => ({ id, name, serial });
 
@@ -99,5 +100,33 @@ describe("loadoutVerdict", () => {
       "Red-tagged: Plug valve PV-9",
       "Truck paper: DOT annual inspection expired Oct 2",
     ]);
+  });
+});
+
+describe("untestedPieces: nothing goes on that nobody proved is good", () => {
+  const kit: ExpectedLine[] = [{ label: "Quad BOP stack", qty: 1, source: "kit" }, { label: "Pipe wrench", qty: 1, source: "kit" }];
+  type P = { id: string; name: string; serial: string | null; category: string };
+  const fake: P = { id: "fake", name: "Quad BOP stack #9", serial: "QB-9999", category: "tool" };
+  const wrench: P = { id: "wr", name: "Pipe wrench 36in", serial: null, category: "tool" };
+  const run = (scanned: P[], hasTest: string[], tested: string[]) => untestedPieces({
+    scanned, hasTest: new Set(hasTest), filled: fillLines(kit, scanned), testedCategories: TESTED_CATEGORIES,
+    lineIsTested: (label) => tested.includes(label),
+  }).map((p) => p.id);
+
+  it("a piece added with no paper can't fill a line the yard's other iron of that kind is tested for", () => {
+    expect(run([fake], [], ["Quad BOP stack"])).toEqual(["fake"]);
+  });
+  it("an untested tool on an untested line is fine", () => {
+    expect(run([wrench], [], ["Quad BOP stack"])).toEqual([]);
+  });
+  it("pressure iron with no test on file never goes, on the list or not", () => {
+    expect(run([{ id: "pv", name: "2in 1502 plug valve", serial: "PV-1", category: "flow_iron" }], [], [])).toEqual(["pv"]);
+  });
+  it("a piece with any test on file is judged by its tests, not here", () => {
+    expect(run([fake], ["fake"], ["Quad BOP stack"])).toEqual([]);
+  });
+  it("reads as its own reason on the record", () => {
+    const v = loadoutVerdict({ lines: [], bad: [{ name: "Quad BOP stack #9", serial: "QB-9999", why: "no_test_on_file" }], cantFind: [], truckPaper: [], scanned: 1 });
+    expect(v).toEqual({ verdict: "not_ready", reasons: ["No test on file: Quad BOP stack #9 QB-9999"] });
   });
 });

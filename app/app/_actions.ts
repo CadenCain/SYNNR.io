@@ -122,11 +122,15 @@ export async function deleteUnit(fd: FormData) {
 export async function updateAsset(fd: FormData) {
   const { company } = await requireBillableCompany();
   const id = str(fd, "id");
+  const status = str(fd, "status") || "in_service";
+  if (!id) return;
+  const manager = canPerform(company.role, "edit_records");
+  // A name is what fills a line on a truck's kit, so renaming iron (or
+  // changing what kind it is) is a manager's job. The database enforces it too.
   const name = str(fd, "name");
   const category = str(fd, "category") || "other";
-  const status = str(fd, "status") || "in_service";
-  if (!id || !name) return;
-  const manager = canPerform(company.role, "edit_records");
+  if (manager && !name) return;
+  const named = manager ? { name, category } : {};
   // The serial is what a cert photo gets matched against, and a red tag only
   // comes off by a manager. The database enforces both (migration 0009);
   // this keeps a hand's save from tripping it.
@@ -137,7 +141,7 @@ export async function updateAsset(fd: FormData) {
   if (wasRedTagged && status !== "out_of_service" && !manager) {
     throw new Error("Only a manager can put red-tagged gear back in service.");
   }
-  const { error } = await db.from("saas_assets").update({ name, category, status, ...identifier }).eq("id", id).eq("company_id", company.id);
+  const { error } = await db.from("saas_assets").update({ ...named, status, ...identifier }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);
 }

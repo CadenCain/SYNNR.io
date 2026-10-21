@@ -8,7 +8,8 @@ import { YARD_TZ } from "@/lib/saas/format";
 import type { ScanHow } from "@/lib/saas/loadout";
 import { judgeItem } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
-import { expectedLines, fillLines, loadoutVerdict, type BadPiece } from "@/lib/saas/loadout-lines";
+import { expectedLines, fillLines, loadoutVerdict, untestedPieces, lineTokens, lineMatches, type BadPiece } from "@/lib/saas/loadout-lines";
+import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 
 type Outcome = "yard" | "missing";
 
@@ -40,6 +41,24 @@ export async function linkTag(input: { assetId: string; extTag: string }): Promi
   return { ok: true };
 }
 
+type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
+
+/** This hand's load-out of this truck that started at this moment, if it already saved. */
+async function savedLoadout(admin: Admin, companyId: string, userId: string, unitId: string, startedIso: string) {
+  const { data } = await admin.from("saas_loadout_scans").select("id, proof_token, verdict, reasons, unit_name, scanned_by, pieces")
+    .eq("company_id", companyId).eq("scanned_by_user", userId).eq("unit_id", unitId).eq("started_at", startedIso).maybeSingle();
+  const r = data as { id: string; proof_token: string; verdict: "ready" | "not_ready"; reasons: string[] | null; unit_name: string; scanned_by: string; pieces: unknown[] | null } | null;
+  if (!r) return null;
+  const n = (r.pieces ?? []).length;
+  const reasons = r.reasons ?? [];
+  return {
+    ok: true, id: r.id, verdict: r.verdict, reasons, proofToken: r.proof_token,
+    summary: r.verdict === "ready"
+      ? `${r.unit_name} loaded out READY by ${r.scanned_by}: ${n} ${n === 1 ? "piece" : "pieces"} scanned`
+      : `${r.unit_name} blocked at load-out (NOT READY) by ${r.scanned_by}: ${reasons.slice(0, 3).join("; ")}`,
+  };
+}
+
 /**
  * Save a load-out. The server works out READY or NOT READY from the records,
  * never from what the phone says: every line on the list (the truck's kit,
@@ -68,6 +87,13 @@ export async function finishLoadout(input: {
     .eq("id", input.unitId).eq("company_id", company.id).maybeSingle();
   const unit = unitRow as { id: string; name: string; yard_id: string } | null;
   if (!unit) return { ok: false, error: "That truck isn't in your account." };
+
+  // A resend of a load-out that already landed (signal dropped before the
+  // phone heard back) gets the first record back, not a second one.
+  const startedMs = Date.parse(input.startedAt) || Date.now();
+  const startedIso = new Date(startedMs).toISOString();
+  const already = await savedLoadout(admin, company.id, user.id, unit.id, startedIso);
+  if (already) return already;
 
   // The list. Kit and packages come from the database, not the phone, so a
   // phone can only add lines (quick ones), never drop one.
@@ -100,15 +126,14 @@ export async function finishLoadout(input: {
   const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id);
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const label = (a: A) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}`;
 
   const now = new Date().toISOString();
   const nowMs = Date.parse(now);
-  const startedMs = Date.parse(input.startedAt) || nowMs;
   const day = dayLabel(now);
   const today = localToday();
 
@@ -125,6 +150,7 @@ export async function finishLoadout(input: {
     return { ...s, at };
   });
   const scannedIds = scans.map((s) => s.assetId);
+  const filled = fillLines(expected, scans.map((s) => { const a = byId.get(s.assetId)!; return { id: a.id, name: a.name, serial: a.identifier }; }));
 
   // What's wrong with the pieces that went on, worked out here from the records.
   const { data: itemRows } = scannedIds.length
@@ -144,6 +170,30 @@ export async function finishLoadout(input: {
     if (r.result === "expired") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "out_of_test", detail: `${it.title} ${r.detail}` });
     else if (r.result === "missing") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "no_test_date", detail: it.title });
   }
+  // No test on file: pressure iron can't go, and neither can a piece filling
+  // a line that the yard's other iron of that kind has a test for.
+  const hasTest = new Set(((itemRows ?? []) as Item[]).map((it) => it.parent_id));
+  const untested = scannedIds.filter((id) => !hasTest.has(id));
+  const testedLabels = new Set<string>();
+  if (untested.length) {
+    const lineOf = new Map<string, string>();
+    for (const l of filled) for (const f of l.filled) lineOf.set(f.id, l.label);
+    for (const label of new Set(untested.map((id) => lineOf.get(id)).filter((x): x is string => Boolean(x)))) {
+      const word = [...lineTokens(label)].sort((a, b) => b.length - a.length)[0];
+      if (!word) continue;
+      const { data: like } = await db.from("saas_assets").select("id, name").eq("company_id", company.id)
+        .neq("status", "retired").ilike("name", `%${word}%`).limit(300);
+      const kin = ((like ?? []) as { id: string; name: string }[]).filter((p) => !untested.includes(p.id) && lineMatches(label, p.name)).map((p) => p.id);
+      if (!kin.length) continue;
+      const { data: t } = await db.from("saas_compliance_items").select("id").eq("company_id", company.id)
+        .eq("parent_type", "asset").in("parent_id", kin.slice(0, 200)).limit(1);
+      if ((t ?? []).length) testedLabels.add(label);
+    }
+  }
+  bad.push(...untestedPieces({
+    scanned: scannedIds.map((id) => { const a = byId.get(id)!; return { id, name: a.name, serial: a.identifier, category: a.category }; }),
+    hasTest, filled, testedCategories: TESTED_CATEGORIES, lineIsTested: (label) => testedLabels.has(label),
+  }).filter((p) => byId.get(p.id)!.status !== "out_of_service"));
   const redIds = new Set(bad.map((b) => b.id));
   // Each piece's tests as they stood when it went on, kept on the record.
   const testsOf = new Map<string, { title: string; good_until: string | null; result: string }[]>();
@@ -171,7 +221,6 @@ export async function finishLoadout(input: {
   const cantFind = notScanned.filter((n) => n.outcome === "missing").map((n) => byId.get(n.assetId)!);
   const unaccounted = notScanned.filter((n) => n.outcome === "left").map((n) => byId.get(n.assetId)!);
 
-  const filled = fillLines(expected, scans.map((s) => { const a = byId.get(s.assetId)!; return { id: a.id, name: a.name, serial: a.identifier }; }));
   const v = loadoutVerdict({
     lines: filled,
     bad,
@@ -214,7 +263,7 @@ export async function finishLoadout(input: {
   const { data: rec, error: recErr } = await admin.from("saas_loadout_scans").insert({
     company_id: company.id, unit_id: unit.id, unit_name: unit.name, yard_id: unit.yard_id,
     scanned_by: actor, scanned_by_user: user.id,
-    started_at: new Date(startedMs).toISOString(), finished_at: now,
+    started_at: startedIso, finished_at: now,
     expected: onList + notScanned.length, scanned: onList,
     verdict, reasons,
     packages: pkgs.map((x) => x.name),
@@ -222,6 +271,11 @@ export async function finishLoadout(input: {
     pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, added: a.unit_id !== unit.id, red: redIds.has(a.id), tests: testsOf.get(a.id) ?? [] }; }),
     not_scanned: notScanned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   }).select("id, proof_token").single();
+  if (recErr?.code === "23505") {
+    // The same load-out landed a moment ago from a resend: hand that one back.
+    const first = await savedLoadout(admin, company.id, user.id, unit.id, startedIso);
+    if (first) return first;
+  }
   if (recErr || !rec) return { ok: false, error: `Couldn't save the load-out record: ${recErr?.message ?? "unknown"}` };
   const saved = rec as { id: string; proof_token: string };
 
