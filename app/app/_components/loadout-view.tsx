@@ -112,7 +112,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {trucks.map(({ t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong }) => (
+          {trucks.map(({ t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong, stillOut }) => (
             <Card key={t.id} className={cn("flex flex-col gap-3 border-l-4 p-4", outTooLong ? "border-l-red-500" : CHIP[status].edge)}>
               {mine && t.id === mine.t.id ? <div className="-mb-1 text-xs font-semibold text-bone">Your truck</div> : null}
               <Link href={`/app/units/${t.id}`} className="group flex items-start justify-between gap-3">
@@ -131,6 +131,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
                 <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-ink-faint" />
               </Link>
               {why ? <div className={cn("break-words text-sm", whyTone === "red" ? "font-medium text-red-400" : "text-amber-400")}>{why}</div> : null}
+              {stillOut ? <div className="break-words text-sm text-amber-400">{stillOut}</div> : null}
               {loadoutId ? (
                 <Link href={`/app/loadouts/${loadoutId}`} className={cn("text-[13px] underline-offset-2 hover:underline", status === "blocked" ? "text-red-400" : overridden ? "text-amber-400" : "text-bone")}>
                   {loadoutLine} · See the record

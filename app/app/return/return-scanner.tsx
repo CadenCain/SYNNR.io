@@ -311,7 +311,7 @@ function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip }: {
       <div className="min-w-0 flex-1">
         <div className="break-words text-sm font-semibold text-ink">{p.name}{shown ? <span className="font-normal text-ink-dim"> · {shown}</span> : null}</div>
         <div className={cn("break-words text-[13px]", scan ? "text-ink-dim" : days !== undefined && days >= alertDays ? "text-red-400" : "text-ink-dim")}>
-          {scan ? <>{destText} · {HOW[scan.how]} {clock(scan.at)}</> : <>{days !== undefined ? `Out ${days} ${days === 1 ? "day" : "days"} · ` : ""}{p.where}</>}
+          {scan ? <>{destText} · {HOW[scan.how]} {clock(scan.at)}</> : <>{days !== undefined ? `${days === 0 ? "Out since today" : `Out ${days} ${days === 1 ? "day" : "days"}`} · ` : ""}{p.where}</>}
           {p.problem === "red" ? <span className="text-red-400"> · {p.statusText}</span> : null}
         </div>
       </div>

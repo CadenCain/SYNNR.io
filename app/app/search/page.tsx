@@ -41,8 +41,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const units = (unitRows ?? []) as { id: string; name: string; type: string; identifier: string | null; yard_id: string }[];
   const yardName = new Map(list.yards.map((y) => [y.id, y.name]));
   const now = clock();
-  // A truck with iron out on a job hasn't been checked back in.
-  const truckOut = new Set(list.rows.filter((r) => r.outSince && r.unitId).map((r) => r.unitId as string));
+  // How much of each truck's iron is out on a job and not checked back in.
+  const outOn = new Map<string, number>();
+  for (const r of list.rows) if (r.outSince && r.unitId && r.state !== "retired") outOn.set(r.unitId, (outOn.get(r.unitId) ?? 0) + 1);
+  const outText = (days: number) => (days === 0 ? ", since today" : `, ${days} ${days === 1 ? "day" : "days"}`);
 
   const searchable = list.rows.filter((r) => r.state !== "retired").map((r) => ({
     ...r, serial: r.identifier, typeLabel: categoryLabel(r.category), nextTitle: r.next?.title ?? null,
@@ -86,8 +88,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                         <div className="break-words font-semibold group-hover:text-bone">{p.name}{p.identifier ? <span className="font-normal text-ink-dim"> · {p.identifier}</span> : null}</div>
                         <div className="break-words text-sm text-ink-dim">{p.where}{p.note ? `, ${p.note}` : ""}</div>
                         <div className="mt-0.5 flex flex-wrap gap-x-3 text-sm">
-                          <span className={cn("font-medium", PLACE_TONE[p.place])}>{PLACE_LABEL[p.place]}{out ? `, ${days} ${days === 1 ? "day" : "days"}` : ""}</span>
-                          <span className={STATE_TONE[p.state]}>{p.state === "ok" || p.state === "due" || p.state === "overdue" ? (p.next ? `${p.next.title}: ${p.next.detail}` : stateLabel(p)) : stateLabel(p)}</span>
+                          <span className={cn("font-medium", PLACE_TONE[p.place])}>{PLACE_LABEL[p.place]}{out ? outText(days) : ""}</span>
+                          {p.state === "down" ? null : <span className={STATE_TONE[p.state]}>{p.state === "ok" || p.state === "due" || p.state === "overdue" ? (p.next ? `${p.next.title}: ${p.next.detail}` : stateLabel(p)) : stateLabel(p)}</span>}
                         </div>
                       </div>
                     </Link>
@@ -96,7 +98,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                       <Link href={p.unitId ? `/app/units/${p.unitId}` : "/app/map"} className={act()}><MapPin className="h-4 w-4" /> {p.unitName ?? "Yard map"}</Link>
                       {out ? (
                         <Link href={p.unitId ? `/app/units/${p.unitId}/return` : "/app/return"} className={buttonClass("default", "default", "h-11")}><PackageCheck className="h-4 w-4" /> Check in</Link>
-                      ) : p.unitId && !truckOut.has(p.unitId) ? (
+                      ) : p.unitId ? (
                         <Link href={`/app/units/${p.unitId}/scan`} className={act()}><ScanLine className="h-4 w-4" /> Load out {p.unitName}</Link>
                       ) : null}
                     </div>
@@ -114,12 +116,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
                     <div className="min-w-0">
                       <div className="font-semibold group-hover:text-bone">{u.name}</div>
-                      <div className="text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""} · {yardName.get(u.yard_id) ?? ""}{truckOut.has(u.id) ? " · out on a job" : ""}</div>
+                      <div className="text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""} · {yardName.get(u.yard_id) ?? ""}{outOn.has(u.id) ? ` · ${outOn.get(u.id)} ${outOn.get(u.id) === 1 ? "piece" : "pieces"} out on a job` : ""}</div>
                     </div>
                   </Link>
-                  {truckOut.has(u.id)
-                    ? <Link href={`/app/units/${u.id}/return`} className={buttonClass("default", "default", "h-11")}><PackageCheck className="h-4 w-4" /> Check in</Link>
-                    : <Link href={`/app/units/${u.id}/scan`} className={buttonClass("default", "default", "h-11")}><ScanLine className="h-4 w-4" /> Start load-out</Link>}
+                  <div className="flex flex-wrap gap-2">
+                    {outOn.has(u.id) ? <Link href={`/app/units/${u.id}/return`} className={buttonClass("default", "default", "h-11")}><PackageCheck className="h-4 w-4" /> Check in</Link> : null}
+                    <Link href={`/app/units/${u.id}/scan`} className={outOn.has(u.id) ? act() : buttonClass("default", "default", "h-11")}><ScanLine className="h-4 w-4" /> Start load-out</Link>
+                  </div>
                 </Card>
               ))}
             </section>

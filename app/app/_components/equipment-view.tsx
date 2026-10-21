@@ -266,7 +266,7 @@ function Chip({ r }: { r: EquipRow }) {
 function PlaceChip({ place, outDays }: { place: Place; outDays: number }) {
   const cls = PLACE_CHIP[place];
   if (!cls) return null;
-  const text = place === "out" || place === "out_too_long" ? `${PLACE_LABEL[place]}, ${outDays} ${outDays === 1 ? "day" : "days"}` : PLACE_LABEL[place];
+  const text = place === "out" || place === "out_too_long" ? `${PLACE_LABEL[place]}, ${outDays === 0 ? "since today" : `${outDays} ${outDays === 1 ? "day" : "days"}`}` : PLACE_LABEL[place];
   return <span className={cn("inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold", cls)}>{text}</span>;
 }
 

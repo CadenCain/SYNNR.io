@@ -31,6 +31,8 @@ export interface LoadOutTruckRow {
   /** Out on a job: since when, and whether that's past the limit. */
   outSince: string | null;
   outTooLong: boolean;
+  /** Back from the job, but some of its iron didn't come back: "Still out on the job: Reel R-5". */
+  stillOut: string | null;
 }
 export interface LoadOutWeek { loadouts: number; caught: number; overrides: number }
 export interface LoadOutCounts { ready: number; blocked: number; out: number; outTooLong: number }
@@ -72,7 +74,7 @@ export function buildLoadOutTrucks(
   overridden: Set<string>,
   today: string,
   kitShort: Map<string, string> = new Map(),
-  opts: { returns?: { unit_id: string | null; finished_at: string }[]; now?: number; alertDays?: number } = {},
+  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number } = {},
 ): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const now = opts.now ?? Date.now();
   const alertDays = opts.alertDays ?? DEFAULT_OUT_ALERT_DAYS;
@@ -83,13 +85,22 @@ export function buildLoadOutTrucks(
   }
   const out = truckOut(scans.map((r) => ({ id: r.id, unit_id: r.unit_id, finished_at: r.finished_at, rolled: outcomeOf(r, ov(r.id)) !== "blocked" })), opts.returns ?? []);
   const pieces = new Map<string, number>();
-  for (const r of rows) if (r.unitId && r.state !== "retired") pieces.set(r.unitId, (pieces.get(r.unitId) ?? 0) + 1);
+  const outNames = new Map<string, string[]>();
+  for (const r of rows) {
+    if (!r.unitId || r.state === "retired") continue;
+    pieces.set(r.unitId, (pieces.get(r.unitId) ?? 0) + 1);
+    if (r.outSince) outNames.set(r.unitId, [...(outNames.get(r.unitId) ?? []), r.name]);
+  }
+  const lastBack = new Map<string, { finished_at: string; returned_by?: string | null }>();
+  for (const r of [...(opts.returns ?? [])].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
+    if (r.unit_id && !lastBack.has(r.unit_id)) lastBack.set(r.unit_id, r);
+  }
 
   const trucks = units.map((t): LoadOutTruckRow => {
     const s = last.get(t.id);
     const doneToday = Boolean(s && dayOf(s.finished_at) === today);
     const by = s?.scanned_by ? ` by ${s.scanned_by}` : "";
-    const base = { t, pieces: pieces.get(t.id) ?? 0, doneToday, loadoutId: doneToday && s ? s.id : null, outSince: null, outTooLong: false };
+    const base = { t, pieces: pieces.get(t.id) ?? 0, doneToday, loadoutId: doneToday && s ? s.id : null, outSince: null, outTooLong: false, stillOut: null };
     const trip = out.get(t.id);
     if (trip && s && s.id === trip.loadoutId) {
       const days = daysOut(trip.since, now);
@@ -109,11 +120,21 @@ export function buildLoadOutTrucks(
           loadoutLine: `Blocked at load-out ${timeOf(s.finished_at)}${by}` };
       }
     }
-    const loadoutLine = s ? `Last load-out ${shortDay(s.finished_at)}${by}` : null;
-    if (t.state === "not_ready") return { ...base, status: "blocked", overridden: false, why: t.why, whyTone: "red", loadoutLine };
+    // Checked back in since its last load-out: say so, and name anything that didn't come back.
+    const back = lastBack.get(t.id);
+    const isBack = Boolean(back && (!s || back.finished_at > s.finished_at));
+    const backBy = back?.returned_by ? ` by ${back.returned_by}` : "";
+    const loadoutLine = isBack && back
+      ? `Checked in ${dayOf(back.finished_at) === today ? `today ${timeOf(back.finished_at)}` : shortDay(back.finished_at)}${backBy}`
+      : s ? `Last load-out ${shortDay(s.finished_at)}${by}` : null;
+    const left = isBack ? outNames.get(t.id) ?? [] : [];
+    const stillOut = left.length ? `Still out on the job: ${left.slice(0, 3).join(", ")}${left.length > 3 ? ` and ${left.length - 3} more` : ""}` : null;
+    // A truck that's back starts fresh: its next scan is a new load-out, not "scan again".
+    const rest = { ...base, ...(isBack ? { doneToday: false, loadoutId: null } : {}), loadoutLine, stillOut };
+    if (t.state === "not_ready") return { ...rest, status: "blocked", overridden: false, why: t.why, whyTone: "red" };
     const short = kitShort.get(t.id);
     const why = short ?? (t.state === "due_soon" ? t.why : null);
-    return { ...base, status: "ready", overridden: false, why, whyTone: why ? "amber" : null, loadoutLine };
+    return { ...rest, status: "ready", overridden: false, why, whyTone: why ? "amber" : null };
   }).sort((a, b) => ORDER[a.status] - ORDER[b.status] || Number(b.outTooLong) - Number(a.outTooLong) || a.t.name.localeCompare(b.t.name));
 
   const counts: LoadOutCounts = {

@@ -78,7 +78,7 @@ export function demoLoadOut() {
   const overridden = new Set(DEMO_LOADOUTS.filter((l) => l.override).map((l) => `lo-${l.unitKey}`));
   const returns = DEMO_RETURNS.map((r) => {
     const d = new Date(); d.setDate(d.getDate() - r.daysAgo); d.setHours(r.hour, r.minute, 0, 0);
-    return { unit_id: r.unitKey, finished_at: d.toISOString() };
+    return { unit_id: r.unitKey, finished_at: d.toISOString(), returned_by: r.by };
   });
   const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, overridden, today, new Map(), { returns, alertDays: 7 });
   const recent = recs.filter(({ l }) => l.daysAgo <= 7);

@@ -11,7 +11,7 @@ const scan = (unit_id: string, finished_at: string, extra: Partial<LoadoutScanRo
 
 const TODAY = "2026-10-14";
 const NOW = Date.parse("2026-10-14T18:00:00Z");
-const o = (returns: { unit_id: string; finished_at: string }[] = [], alertDays = 7) => ({ returns, now: NOW, alertDays });
+const o = (returns: { unit_id: string; finished_at: string; returned_by?: string }[] = [], alertDays = 7) => ({ returns, now: NOW, alertDays });
 
 describe("the Load out board", () => {
   it("blocked first, then ready to load, then loaded out", () => {
@@ -69,7 +69,20 @@ describe("the Load out board", () => {
     expect(stillOut.trucks[0].outTooLong).toBe(false);
     const back = buildLoadOutTrucks([unit("b", "ready")], [], [rolled], new Set(), TODAY, new Map(), o([{ unit_id: "b", finished_at: "2026-10-13T20:00:00Z" }]));
     expect(back.trucks[0].status).toBe("ready");
-    expect(back.trucks[0].loadoutLine).toBe("Last load-out Oct 11");
+    expect(back.trucks[0].loadoutLine).toBe("Checked in Oct 13");
+    expect(back.trucks[0].stillOut).toBeNull();
+  });
+
+  it("checked in today: says who, starts a fresh load-out, and names iron that didn't come back", () => {
+    const rolled = scan("b", "2026-10-14T09:00:00Z");
+    const reel = { unitId: "b", state: "ok", name: "Reel R-5", outSince: "2026-10-14T09:00:00Z" } as EquipRow;
+    const { trucks } = buildLoadOutTrucks([unit("b", "ready")], [row("b"), reel], [rolled], new Set(), TODAY, new Map(),
+      o([{ unit_id: "b", finished_at: "2026-10-14T16:30:00Z", returned_by: "Freddy Carrasco" }]));
+    expect(trucks[0].status).toBe("ready");
+    expect(trucks[0].loadoutLine).toBe("Checked in today 11:30 AM by Freddy Carrasco");
+    expect(trucks[0].stillOut).toBe("Still out on the job: Reel R-5");
+    expect(trucks[0].doneToday).toBe(false);
+    expect(trucks[0].loadoutId).toBeNull();
   });
 
   it("out past the limit is flagged red and sorts first among the trucks out", () => {
