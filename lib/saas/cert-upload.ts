@@ -127,7 +127,7 @@ export async function processUpload(args: {
     holderName: item.holderName,
     identifier: item.identifier,
     prevExpiration: item.expiration_date,
-    itemWasFailing: item.status === "expired" || item.status === "none",
+    itemWasFailing: item.status === "expired" || item.status === "none" || item.status === "no_paper",
     sameHashOn,
   });
   if (v.reject && !(v.canForce && args.force)) return { ...refuse(v.reject, v.canForce), checks: v.checks };
@@ -208,7 +208,7 @@ export async function processUpload(args: {
     canApprove: manager,
     message: manager
       ? `The software couldn't confirm it: ${why}. Look at it and approve it yourself if it's right.`
-      : `Sent to a manager. ${item.title} ${item.status === "expired" || item.status === "none" ? "stays red" : "keeps its current date"} until they OK it. ${why}.`,
+      : `Sent to a manager. ${item.title} ${item.status === "expired" || item.status === "none" || item.status === "no_paper" ? "stays red" : "keeps its current date"} until they OK it. ${why}.`,
   };
 }
 

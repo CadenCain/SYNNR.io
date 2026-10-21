@@ -1,3 +1,4 @@
+import { isFailing } from "@/lib/saas/status";
 import { fmtWhen, fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { Bell, Settings2 } from "lucide-react";
@@ -68,7 +69,7 @@ export default async function CompliancePage() {
 
   const ironCount = items.filter((i) => i.parent_type === "asset").length;
   const truckCount = items.filter((i) => i.parent_type === "unit").length;
-  const failing = items.filter((i) => i.status === "expired" || i.status === "none").length;
+  const failing = items.filter((i) => isFailing(i.status)).length;
 
   // Alert plumbing state + the sent ledger (moved here from /app/alerts).
   const s = settingsData as { email_enabled: boolean; lead_days: number; recipients: string[] } | null;
@@ -101,7 +102,7 @@ export default async function CompliancePage() {
           <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{ironCount} on iron</span>
           <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{truckCount} truck paper</span>
           <span className={`rounded-sm border px-2.5 py-1 ${failing > 0 ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"}`}>
-            {failing > 0 ? `${failing} failing (expired or missing date)` : "nothing failing"}
+            {failing > 0 ? `${failing} failing (expired, no date, or no paper)` : "nothing failing"}
           </span>
         </div>
       )}

@@ -128,7 +128,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const { data: waitData } = await db.from("saas_compliance_items").select("title")
     .eq("company_id", company.id).in("parent_id", scopeIds).not("waiting_upload_id", "is", null);
   const waitingTitles = [...new Set(((waitData ?? []) as { title: string }[]).map((r) => r.title))];
-  const failingCerts = items.filter((i) => (i.status === "expired" || i.status === "none") && !pendingCovers(i, localToday()));
+  const failingCerts = items.filter((i) => i.status === "no_paper" || ((i.status === "expired" || i.status === "none") && !pendingCovers(i, localToday())));
   // "Upload the new cert" goes where the bad paper lives: this truck's book,
   // the piece of gear, or the hand. The cert that turned CT-03 red is often
   // on its BOP stack, not the truck.

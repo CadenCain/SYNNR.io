@@ -95,7 +95,7 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
         {/* Upload + edit sit side by side; the upload panel renders
             order-last w-full, wrapping to its own full-width band under the
             row instead of wedging into this corner. */}
-        <UploadCert itemId={item.id} isManager={isManager} allowOnTheWay={allowOnTheWay} failing={failing && !onTheWay} />
+        <UploadCert itemId={item.id} isManager={isManager} allowOnTheWay={allowOnTheWay} failing={failing && !onTheWay} noPaper={item.status === "no_paper"} />
         {isManager && (
         <div className="flex items-center gap-2">
           <Popover>

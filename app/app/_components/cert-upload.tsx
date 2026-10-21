@@ -186,15 +186,17 @@ async function approve(uploadId: string): Promise<{ ok: boolean; message: string
 }
 
 /** On an existing item: "Upload new cert". */
-export function UploadCert({ itemId, isManager, allowOnTheWay, failing }: {
+export function UploadCert({ itemId, isManager, allowOnTheWay, failing, noPaper = false }: {
   itemId: string; isManager: boolean; allowOnTheWay: boolean; failing: boolean;
+  /** The date's on file but its paper isn't: this attaches it. */
+  noPaper?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)}
-        className={cn(failing ? primary : secondary, "min-h-10 px-3.5 text-[13px]")}>
-        <Upload className="h-4 w-4" /> Upload new cert
+        className={cn(failing || noPaper ? primary : secondary, "min-h-10 px-3.5 text-[13px]")}>
+        <Upload className="h-4 w-4" /> {noPaper ? "Upload the cert" : "Upload new cert"}
       </button>
     );
   }
