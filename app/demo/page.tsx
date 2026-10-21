@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Phone, ShieldCheck, Smartphone, Truck } from "lucide-react";
+import { ShieldCheck, Smartphone, Truck } from "lucide-react";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 import DemoLeadForm from "./lead-form";
 import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
@@ -48,11 +48,14 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
                 <Truck className="h-5 w-5" /> Open the demo yard
               </button>
             </form>
-            <a href={OWNER_PHONE_TEL} className="flex min-h-13 items-center justify-center gap-2 rounded-lg border border-line-2 px-5 text-base text-ink hover:bg-elevated">
-              <Phone className="h-4 w-4" /> Call or text {OWNER_PHONE}
-            </a>
+            <Link href="/signup" className="flex min-h-13 items-center justify-center gap-2 rounded-lg border-2 border-bone px-5 text-base font-semibold text-bone hover:bg-bone/10">
+              Get started with your yard
+            </Link>
           </div>
-          <p className="text-sm text-ink-faint">No signup and no card.</p>
+          <p className="text-sm text-ink-faint">
+            The demo needs no signup and no card. Getting started sets up your real account: your company, your yards, $500 a yard a month.
+            {" "}Questions? Call or text <a href={OWNER_PHONE_TEL} className="underline underline-offset-2">{OWNER_PHONE}</a>.
+          </p>
           {busy ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
               A lot of people are opening demo yards right now. Give it a few minutes and tap again.
@@ -104,7 +107,8 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             per-seat.
           </p>
           <DemoLeadForm />
-          <p className="text-sm text-ink-dim">Ready now? <Link href="/signup" className="font-medium text-bone underline underline-offset-2">Get started on your own</Link>: pick your yards, pay by card, and you&apos;re in.</p>
+          <Link href="/signup" className="flex min-h-12 items-center justify-center rounded-lg bg-bone px-6 text-base font-semibold text-white hover:bg-bone-soft">Get started with your yard</Link>
+          <p className="text-sm text-ink-dim">Pick your yards, pay by card, and you&apos;re in. About 3 minutes.</p>
           <Link href="/" className="mt-2 text-sm text-ink-dim underline underline-offset-2 hover:text-ink">Back to synnr.io</Link>
         </div>
       </main>

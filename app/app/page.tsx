@@ -8,6 +8,8 @@ import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, type LoadoutScanRow }
 import LoadOutView, { type ActivityLine } from "./_components/loadout-view";
 import { WarmOffline } from "./_components/offline-support";
 import LockedCard from "./_components/locked-card";
+import WelcomeCard from "./_components/welcome-card";
+import { isBillableYard } from "@/lib/saas/billing-rules";
 import { isWritable } from "@/lib/saas/entitlements";
 
 export const dynamic = "force-dynamic";
@@ -29,9 +31,9 @@ const TONE: Record<string, ActivityLine["tone"]> = {
   loadout_ready: "green", check_ready: "green", renewed: "green",
 };
 
-export default async function LoadOutHome({ searchParams }: { searchParams: Promise<{ yard?: string }> }) {
+export default async function LoadOutHome({ searchParams }: { searchParams: Promise<{ yard?: string; welcome?: string }> }) {
   const { company } = await requireCompany();
-  const { yard } = await searchParams;
+  const { yard, welcome } = await searchParams;
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
@@ -75,6 +77,12 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   return (
     <>
       {!isWritable(company.subscription_status, company.comped) ? <div className="mb-6"><LockedCard owner={company.role === "owner"} /></div> : null}
+      {!company.is_demo && isWritable(company.subscription_status, company.comped) && (welcome === "1" || list.rows.length === 0) ? (
+        <div className="mb-6">
+          <WelcomeCard justPaid={welcome === "1"} yards={yards.map((y) => y.name).filter(isBillableYard)}
+            manager={company.role === "owner" || company.role === "admin"} />
+        </div>
+      ) : null}
       <LoadOutView trucks={trucks} counts={counts} summary={summary} week={week} yards={yards} yardId={yardId} activity={activity} />
       <WarmOffline companyId={company.id} urls={rd.units.map((u) => `/app/units/${u.id}/scan`)} />
     </>

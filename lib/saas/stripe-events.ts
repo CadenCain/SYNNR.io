@@ -37,6 +37,8 @@ export interface EventDeps {
   update: (fields: CompanyFields, match: CompanyMatch) => Promise<number>;
   /** The subscription as Stripe has it right now. */
   retrieveSubscription: (id: string) => Promise<Stripe.Subscription>;
+  /** Make the yards a shop just paid for (also done by the success page; safe to repeat). */
+  provision?: (companyIdHint: string | null, customerId: string | null, paidFor: number) => Promise<void>;
   now?: () => string;
 }
 
@@ -77,8 +79,11 @@ export async function applyStripeEvent(event: Stripe.Event, deps: EventDeps): Pr
       const sub = await deps.retrieveSubscription(subId);
       const fields: CompanyFields = { ...subscriptionFields(sub) };
       if (sub.status === "active") fields.subscribed_at = (deps.now ?? (() => new Date().toISOString()))();
-      const matched = await sync(fields, idOf(s.customer as string | Stripe.Customer | null), s.client_reference_id ?? s.metadata?.company_id ?? sub.metadata?.company_id ?? null,
-        live(sub.status) ? undefined : sub.id);
+      const hint = s.client_reference_id ?? s.metadata?.company_id ?? sub.metadata?.company_id ?? null;
+      const customer = idOf(s.customer as string | Stripe.Customer | null);
+      const matched = await sync(fields, customer, hint, live(sub.status) ? undefined : sub.id);
+      // Paid: make their yards, in case they closed the tab before coming back.
+      if (matched && live(sub.status) && deps.provision) await deps.provision(hint, customer, fields.yard_quantity ?? 1);
       return { handled: true, companyMatched: matched };
     }
     case "customer.subscription.created":

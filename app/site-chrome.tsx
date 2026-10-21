@@ -24,7 +24,8 @@ export function SiteNav() {
         <div className="nav-cta">
           <a href={OWNER_PHONE_TEL} className="nav-login">{OWNER_PHONE}</a>
           <a href="/login" className="nav-login">Log in</a>
-          <a href="/demo" className="btn btn-primary btn-sm">Open the live demo</a>
+          <a href="/signup" className="nav-start">Get started</a>
+          <a href="/demo" className="btn btn-primary btn-sm"><span className="lbl-long">Open the live demo</span><span className="lbl-short">Live demo</span></a>
           <label className="nav-burger" htmlFor="navMenu" aria-label="Open menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </label>
@@ -34,6 +35,7 @@ export function SiteNav() {
           <a href="/#how">How it works</a>
           <a href="/#pricing">Pricing</a>
           <a href="/demo">Live demo</a>
+          <a href="/signup">Get started</a>
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
           <a href="/login">Log in</a>
         </nav>

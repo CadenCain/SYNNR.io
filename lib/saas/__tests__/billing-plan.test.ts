@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type Stripe from "stripe";
-import { clampYards, planLine, monthlyDollars, isYardPrice, hasFullAccess, mustSubscribe, PER_YARD_CENTS } from "../plan";
+import { clampYards, planLine, monthlyDollars, isYardPrice, hasFullAccess, mustSubscribe, yardsToMake, isDemoUser, PER_YARD_CENTS } from "../plan";
 import { applyStripeEvent, type CompanyFields, type CompanyMatch } from "../stripe-events";
 
 describe("the plan: $500 a yard a month", () => {
@@ -8,8 +8,8 @@ describe("the plan: $500 a yard a month", () => {
     expect(monthlyDollars(1)).toBe(500);
     expect(monthlyDollars(3)).toBe(1500);
     expect(monthlyDollars(12)).toBe(6000);
-    expect(planLine(1)).toBe("$500 × 1 yard = $500/month");
-    expect(planLine(4)).toBe("$500 × 4 yards = $2,000/month");
+    expect(planLine(1)).toBe("$500 × 1 yard = $500 / month");
+    expect(planLine(4)).toBe("$500 × 4 yards = $2,000 / month");
   });
   it("yard counts are whole numbers from 1 to 50", () => {
     expect(clampYards(0)).toBe(1);
@@ -27,6 +27,29 @@ describe("the plan: $500 a yard a month", () => {
     expect(isYardPrice({ ...ok, recurring: { interval: "month", usage_type: "metered" } })).toBe(false);
     expect(isYardPrice({ ...ok, recurring: null })).toBe(false);
     expect(isYardPrice({ ...ok, active: false })).toBe(false);
+  });
+});
+
+describe("yards made after payment", () => {
+  it("first yard gets the name they typed, the rest are numbered", () => {
+    expect(yardsToMake(3, "Odessa", [])).toEqual(["Odessa", "Yard 2", "Yard 3"]);
+    expect(yardsToMake(1, "  ", [])).toEqual(["Main yard"]);
+    expect(yardsToMake(2, null, [])).toEqual(["Main yard", "Yard 2"]);
+  });
+  it("never more than they paid for, and never a name twice (success page and webhook can both run)", () => {
+    expect(yardsToMake(3, "Odessa", ["Odessa"])).toEqual(["Yard 2", "Yard 3"]);
+    expect(yardsToMake(3, "Odessa", ["Odessa", "Yard 2", "Yard 3"])).toEqual([]);
+    expect(yardsToMake(2, "Midland", ["Yard 2"])).toEqual(["Midland"]);
+    expect(yardsToMake(2, "Yard 2", [])).toEqual(["Yard 2", "Yard 3"]);
+  });
+});
+
+describe("the demo login", () => {
+  it("is recognized by its flag or its address, so Get started can sign it out", () => {
+    expect(isDemoUser({ email: "demo-abc@demo.synnr.io" })).toBe(true);
+    expect(isDemoUser({ email: "x@y.com", user_metadata: { is_demo: true } })).toBe(true);
+    expect(isDemoUser({ email: "caden@shop.com", user_metadata: {} })).toBe(false);
+    expect(isDemoUser(null)).toBe(false);
   });
 });
 
@@ -80,6 +103,18 @@ describe("the Stripe webhook", () => {
     const w = world([fresh()], { sub_1: sub("active", 3) });
     await applyStripeEvent(ev("checkout.session.completed", { mode: "subscription", customer: "cus_1", subscription: "sub_1", client_reference_id: "co1" }), w.deps);
     expect(w.db[0]).toMatchObject({ subscription_status: "active", stripe_subscription_id: "sub_1", yard_quantity: 3, subscribed_at: "2026-10-20T12:00:00.000Z" });
+  });
+
+  it("a paid checkout makes the yards; a failed first payment doesn't", async () => {
+    const made: [string | null, number][] = [];
+    const paid = world([fresh()], { sub_1: sub("active", 3) });
+    await applyStripeEvent(ev("checkout.session.completed", { mode: "subscription", customer: "cus_1", subscription: "sub_1", client_reference_id: "co1" }),
+      { ...paid.deps, provision: async (hint, _c, n) => { made.push([hint, n]); } });
+    expect(made).toEqual([["co1", 3]]);
+    const failed = world([fresh()], { sub_1: sub("incomplete", 3) });
+    await applyStripeEvent(ev("checkout.session.completed", { mode: "subscription", customer: "cus_1", subscription: "sub_1", client_reference_id: "co1" }),
+      { ...failed.deps, provision: async (hint, _c, n) => { made.push([hint, n]); } });
+    expect(made).toHaveLength(1);
   });
 
   it("matches by company id when the customer id drifted, and repairs it", async () => {

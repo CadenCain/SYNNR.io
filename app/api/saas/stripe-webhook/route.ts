@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { saasAdmin } from "@/lib/saas/db";
 import { applyStripeEvent, type CompanyFields, type CompanyMatch } from "@/lib/saas/stripe-events";
+import { provisionPaidYards } from "@/lib/saas/onboarding";
 
 /**
  * Stripe webhook: the source of truth for whether a shop is paid up. Point
@@ -44,6 +45,12 @@ export async function POST(req: Request) {
     await applyStripeEvent(event, {
       update,
       retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      provision: async (hint, customerId, paidFor) => {
+        const q = admin!.from("saas_companies").select("id");
+        const { data } = await (customerId ? q.eq("stripe_customer_id", customerId) : q.eq("id", hint ?? "")).maybeSingle();
+        const id = (data as { id: string } | null)?.id ?? hint;
+        if (id) await provisionPaidYards(admin!, id, paidFor);
+      },
     });
   } catch (e) {
     // 500 so Stripe retries: a database blip must not drop a payment.

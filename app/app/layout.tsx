@@ -75,8 +75,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {company.is_demo ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
             <span className="font-semibold">Demo yard.</span> The data is made up, so click anything.{" "}
-            {/* Signs the demo session out, then opens the free-setup form. */}
-            <a href="/demo/exit" className="font-medium underline underline-offset-2">Want this for your yard?</a>
+            {/* Leaves the demo and goes straight to creating a real account. */}
+            <a href="/demo/exit?to=signup" className="font-semibold underline underline-offset-2">Get started with your yard</a>
           </div>
         ) : !writable ? (
           <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">

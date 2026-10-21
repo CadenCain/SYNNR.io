@@ -113,7 +113,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     yardOp = `create yard "${newYard.trim()}"`;
     if (commit) {
       const { data, error } = await db.from("saas_yards").insert({ company_id: company.id, name: newYard.trim() }).select("id").single();
-      if (error) return { ok: false, error: error.message, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+      if (error) return { ok: false, error: error.code === "23505" ? `You already have a yard named ${newYard.trim()}. Pick it from the list instead.` : error.message, rows: [], creates: 0, updates: 0, errors: 0, committed: false };
       resolvedYard = (data as { id: string }).id;
       createdYard = true;
     }

@@ -855,3 +855,45 @@
 .mkt .x-price-card .x-block-2 { margin-top: 10px; }
 .mkt .x-note a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 
+/* "Get started" sits in the header at every width, next to the demo button. */
+.mkt .nav-start { font-family: var(--font-body); font-size: 14.5px; font-weight: 650; color: var(--fg); white-space: nowrap; padding: 10px 2px; }
+.mkt .nav-start:hover { text-decoration: underline; text-underline-offset: 4px; }
+.mkt .lbl-short { display: none; }
+@media (max-width: 440px) {
+  .mkt .lbl-long { display: none; }
+  .mkt .lbl-short { display: inline; }
+  .mkt .nav-start { font-size: 14px; }
+}
+/* The phone menu reads like the rest of the site: plain words, not mono caps. */
+@media (max-width: 860px) {
+  .mkt .nav-mobile a { font-family: var(--font-body); font-size: 15px; letter-spacing: 0; text-transform: none; }
+}
+
+
+/* Small laptops: the four page links, Log in, Get started, and the demo
+   button fit without the phone number (it's in the hero, footer, and menu). */
+@media (min-width: 861px) and (max-width: 1180px) {
+  .mkt .nav-cta a[href^="tel:"] { display: none; }
+}
+/* Phones: tighter header so Get started, the demo button, and the menu all fit. */
+@media (max-width: 400px) {
+  .mkt .nav-pill { padding-left: 14px; padding-right: 14px; }
+  .mkt .nav-cta { gap: 6px; }
+  .mkt .nav-cta .btn-sm { padding: 0 10px; }
+  .mkt .nav-start { font-size: 13.5px; padding: 10px 0; }
+  .mkt .brand .wordmark { font-size: 17px; }
+}
+/* 861 to 1000px: the page links move into the menu, like on a phone. */
+@media (min-width: 861px) and (max-width: 1000px) {
+  .mkt .nav-links { display: none; }
+  .mkt .nav-burger { display: inline-flex; }
+  .mkt .nav-toggle:checked ~ .nav-mobile {
+    display: flex; flex-direction: column;
+    position: absolute; top: 100%; right: var(--pad); min-width: 240px; z-index: 70;
+    background: var(--bg); backdrop-filter: blur(18px);
+    border: 1px solid var(--line-2); border-radius: 10px; padding: 6px;
+    box-shadow: 0 24px 60px -24px rgba(15,23,42,.35);
+  }
+  .mkt .nav-mobile a { padding: 13px 16px; color: var(--fg-dim); font-size: 15px; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  .mkt .nav-mobile a:last-child { border-bottom: 0; }
+}

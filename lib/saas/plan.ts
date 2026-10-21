@@ -21,10 +21,33 @@ export function clampYards(n: unknown): number {
 export const monthlyDollars = (yards: number) => clampYards(yards) * PER_YARD_DOLLARS;
 export const money = (dollars: number) => `$${dollars.toLocaleString("en-US")}`;
 
-/** "$500 × 3 yards = $1,500/month" */
+/** "$500 × 3 yards = $1,500 / month" */
 export function planLine(yards: number): string {
   const y = clampYards(yards);
-  return `${money(PER_YARD_DOLLARS)} × ${y} ${y === 1 ? "yard" : "yards"} = ${money(monthlyDollars(y))}/month`;
+  return `${money(PER_YARD_DOLLARS)} × ${y} ${y === 1 ? "yard" : "yards"} = ${money(monthlyDollars(y))} / month`;
+}
+
+/**
+ * The yards a shop gets the moment it pays: the first named what they typed
+ * at onboarding (or "Main yard"), the rest "Yard 2", "Yard 3"... Skips names
+ * they already have, and never makes more than they paid for.
+ */
+export function yardsToMake(paidFor: number, firstName: string | null | undefined, existing: string[]): string[] {
+  const have = new Set(existing.map((n) => n.trim().toLowerCase()));
+  const need = Math.max(0, clampYards(paidFor) - existing.length);
+  const first = (firstName ?? "").trim().slice(0, 80) || "Main yard";
+  const out: string[] = [];
+  for (let i = 1; out.length < need && i <= MAX_YARDS + existing.length + 1; i++) {
+    const name = i === 1 ? first : `Yard ${i}`;
+    if (!have.has(name.toLowerCase())) { out.push(name); have.add(name.toLowerCase()); }
+  }
+  return out;
+}
+
+/** The throwaway login the live demo signs you into (never a real customer). */
+export function isDemoUser(user: { email?: string | null; user_metadata?: Record<string, unknown> | null } | null | undefined): boolean {
+  if (!user) return false;
+  return user.user_metadata?.is_demo === true || (user.email ?? "").toLowerCase().endsWith("@demo.synnr.io");
 }
 
 /** Is a Stripe price really $500 a month per unit, in dollars? */

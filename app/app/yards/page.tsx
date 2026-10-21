@@ -40,6 +40,7 @@ async function createYard(formData: FormData) {
     return; // double-tap echo
   }
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
+  if (error?.code === "23505") redirect(`/app/yards?err=${encodeURIComponent(`You already have a yard named ${name}.`)}`);
   if (error) throw new Error(error.message);
   revalidatePath("/app/yards");
 }
@@ -59,7 +60,7 @@ async function addYardWithUpgrade(formData: FormData) {
   if (!res.ok) redirect(`/app/yards?err=${encodeURIComponent(res.error)}`);
   const db = await saasDb();
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
-  if (error) redirect(`/app/yards?err=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`/app/yards?err=${encodeURIComponent(error.code === "23505" ? `You already have a yard named ${name}. Your plan now has room for one more; add it with a different name.` : error.message)}`);
   revalidatePath("/app/yards");
   redirect("/app/yards");
 }

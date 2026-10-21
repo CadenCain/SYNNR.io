@@ -42,12 +42,12 @@ export const MARKETING_HTML = `
       <a href="#product">What's in it</a>
       <a href="#pricing">Pricing</a>
       <a href="/demo">Live demo</a>
-      <a href="/signup">Get started</a>
     </nav>
     <div class="nav-cta">
       <a href="${OWNER_PHONE_TEL}" class="nav-login">${OWNER_PHONE}</a>
       <a href="/login" class="nav-login">Log in</a>
-      <a href="/demo" class="btn btn-primary btn-sm">Open the live demo</a>
+      <a href="/signup" class="nav-start">Get started</a>
+      <a href="/demo" class="btn btn-primary btn-sm"><span class="lbl-long">Open the live demo</span><span class="lbl-short">Live demo</span></a>
       <label class="nav-burger" for="navMenu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></label>
     </div>
     <input type="checkbox" id="navMenu" class="nav-toggle" aria-hidden="true"/>

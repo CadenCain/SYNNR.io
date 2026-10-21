@@ -8,6 +8,7 @@ import { saasAdmin } from "@/lib/saas/db";
 import { hasFullAccess } from "@/lib/saas/plan";
 import { subscriptionFields } from "@/lib/saas/stripe-events";
 import { billableYardCount } from "@/lib/saas/billing";
+import { provisionPaidYards } from "@/lib/saas/onboarding";
 import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ async function switchCompanyFromWall(formData: FormData) {
  * the moment the card goes through, without waiting on the webhook. The
  * webhook records the same thing again, which is harmless.
  */
-export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string; canceled?: string }> }) {
+export default async function OnboardingBilling({ searchParams }: { searchParams: Promise<{ session_id?: string; canceled?: string; err?: string }> }) {
   const { company } = await requireCompany();
   if (hasFullAccess(company)) redirect("/app");
   const sp = await searchParams;
@@ -49,11 +50,14 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
         // someone else's paid session id and turn their own company on.
         const mine = session.client_reference_id === company.id || sub?.metadata?.company_id === company.id;
         if (mine && sub && (sub.status === "active" || sub.status === "trialing")) {
+          const fields = subscriptionFields(sub);
           await admin.from("saas_companies").update({
-            ...subscriptionFields(sub),
+            ...fields,
             ...(session.customer ? { stripe_customer_id: String(session.customer) } : {}),
             subscribed_at: new Date().toISOString(),
           }).eq("id", company.id);
+          // Their yards, made now, so they land in a set-up account.
+          await provisionPaidYards(admin, company.id, fields.yard_quantity ?? 1).catch((e) => console.error("[onboarding] yards:", e));
           paid = true;
         } else if (mine) {
           pending = true; // e.g. a bank still confirming the card
@@ -62,7 +66,7 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
         // The webhook still records it; show the page.
       }
     }
-    if (paid) redirect("/app/welcome");
+    if (paid) redirect("/app?welcome=1");
   }
 
   const [{ data }, inUse] = await Promise.all([
@@ -86,10 +90,18 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
           Stripe is still confirming your card. This page will let you in as soon as it does. Refresh in a minute.
         </p>
       ) : null}
+      {sp.err ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          Stripe&apos;s page didn&apos;t open. Try the button below. If it keeps happening, call or text 432-250-0715.
+        </p>
+      ) : null}
       {sp.canceled ? (
         <p className="rounded-lg border border-line-2 bg-elevated px-4 py-3 text-sm text-ink-dim">No charge was made. Pick up where you left off whenever you&apos;re ready.</p>
       ) : null}
       <SubscribeCard initialYards={startYards} canPay={canPerform(company.role, "billing")} />
+      {company.subscription_status === "none" ? (
+        <p className="text-center text-sm"><Link href="/onboarding" className="text-ink-dim underline underline-offset-2">Change the company name, phone, or yards</Link></p>
+      ) : null}
       <p className="text-center text-sm text-ink-dim">
         Questions first? Call or text Caden at 432-250-0715. <Link href="/demo" className="underline underline-offset-2">Or try the demo.</Link>
       </p>

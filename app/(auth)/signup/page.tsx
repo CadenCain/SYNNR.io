@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSaasUser } from "@/lib/saas/auth";
+import { isDemoUser } from "@/lib/saas/plan";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,10 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const { next, invite } = await searchParams;
   const raw = next || (invite ? `/invite/${invite}` : "");
   const nextPath = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/app";
-  if (await getSaasUser()) redirect(nextPath);
+  const user = await getSaasUser();
+  // Still signed into the live demo? Leave it and come back here to sign up.
+  if (user && isDemoUser(user)) redirect("/demo/exit?to=signup");
+  if (user) redirect(nextPath);
   return (
     <div className="flex flex-col gap-6">
       <div>
