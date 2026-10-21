@@ -39,7 +39,7 @@ export function demoEquipment(): { companyName: string; list: EquipmentList } {
       scanned_at: loadoutAt(unitKey), scanned_unit_id: loadoutAt(unitKey) ? unitKey : null });
     (a.items ?? []).forEach((it, k) => items.push({
       id: `${id}-${k}`, title: it.title, expiration_date: it.exp === null ? null : addDaysIso(today, it.exp),
-      reminder_days: 30, pending_until: null, parent_id: id,
+      reminder_days: 30, pending_until: null, parent_id: id, last_upload_id: it.noPaper ? null : "demo",
     }));
   };
   for (const u of DEMO_UNITS) (u.assets ?? []).forEach(add(u.key));
@@ -54,10 +54,10 @@ export function demoTrucks(): UnitTile[] {
   return DEMO_UNITS.map((u) => {
     const assets = (u.assets ?? []).map((a, n) => ({ id: `${u.key}-${n}`, name: withSerial(a.name, a.identifier), status: a.status ?? "in_service" }));
     const j = judgeUnit({
-      unitItems: (u.items ?? []).map((it, k) => ({ id: `${u.key}-u${k}`, title: it.title, expiration_date: d(it.exp), reminder_days: 30 })),
+      unitItems: (u.items ?? []).map((it, k) => ({ id: `${u.key}-u${k}`, title: it.title, expiration_date: d(it.exp), reminder_days: 30, last_upload_id: it.noPaper ? null : "demo" })),
       assets,
       assetItems: (u.assets ?? []).flatMap((a, n) => (a.items ?? []).map((it, k) => ({
-        id: `${u.key}-${n}-${k}`, title: it.title, expiration_date: d(it.exp), reminder_days: 30, parent_id: `${u.key}-${n}`,
+        id: `${u.key}-${n}-${k}`, title: it.title, expiration_date: d(it.exp), reminder_days: 30, parent_id: `${u.key}-${n}`, last_upload_id: it.noPaper ? null : "demo",
       }))),
       crew: [], crewItems: [],
     }, today, today);

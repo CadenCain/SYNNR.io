@@ -22,7 +22,7 @@ export interface RowItem {
   renewed_without_proof?: boolean;
   pending_until?: string | null;
   waiting_upload_id?: string | null;
-  last_upload_id?: string | null;
+  last_upload_id: string | null;
   /** A later date a manager typed in, held until a photo of the cert shows it. */
   typed_expiration?: string | null;
   /** customer/operator names this requirement applies to; empty = all jobs */
@@ -62,6 +62,12 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
               <span className={`${chip} border-amber-500/30 bg-amber-500/10 text-amber-400`}
                 title="A manager typed a later date. It doesn't count until a photo of the cert shows it.">
                 Typed {fmtDate(item.typed_expiration)}, needs the cert photo
+              </span>
+            )}
+            {item.status === "no_paper" && !item.renewed_without_proof && !item.typed_expiration && (
+              <span className={`${chip} border-red-500/30 bg-red-500/10 text-red-400`}
+                title="No paper, no go: a date only counts with the cert attached.">
+                Needs the cert photo to count
               </span>
             )}
             {item.renewed_without_proof && (

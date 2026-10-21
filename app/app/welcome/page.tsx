@@ -41,7 +41,7 @@ async function nameYards(formData: FormData) {
 export default async function Welcome() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data: yardRows }, { count: trucks }, { count: iron }, { count: kits }, { count: crew }, { count: tagged }, { count: loadouts }] = await Promise.all([
+  const [{ data: yardRows }, { count: trucks }, { count: iron }, { count: kits }, { count: crew }, { count: tagged }, { count: loadouts }, { count: tests }, { count: noPaper }] = await Promise.all([
     db.from("saas_yards").select("id, name").eq("company_id", company.id).order("created_at"),
     db.from("saas_units").select("id", { count: "exact", head: true }).eq("company_id", company.id),
     db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("status", "retired"),
@@ -49,6 +49,8 @@ export default async function Welcome() {
     db.from("saas_memberships").select("user_id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "active"),
     db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).not("nfc_uid", "is", null),
     db.from("saas_loadout_scans").select("id", { count: "exact", head: true }).eq("company_id", company.id),
+    db.from("saas_compliance_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("parent_type", "crew"),
+    db.from("saas_compliance_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("parent_type", "crew").is("last_upload_id", null),
   ]);
   const yards = ((yardRows ?? []) as { id: string; name: string }[]).filter((y) => isBillableYard(y.name));
   const paidFor = company.comped ? yards.length : company.yard_quantity;
@@ -91,6 +93,12 @@ export default async function Welcome() {
           </p>
         </div>
       ),
+    },
+    {
+      done: (tests ?? 0) > 0 && (noPaper ?? 0) === 0,
+      title: "Attach the paper",
+      body: <>No paper, no go: a test only counts with a photo of its cert attached, so the operator can see it. {(noPaper ?? 0) > 0 ? `${noPaper} ${noPaper === 1 ? "test still needs its" : "tests still need their"} paper. Until then, the iron can't go out.` : (tests ?? 0) > 0 ? "Every test has its paper." : ""}</>,
+      action: <Link href="/app/compliance" className={buttonClass("outline", "lg")}>Tests due, filter No paper <ArrowRight className="h-4 w-4" /></Link>,
     },
     {
       done: (kits ?? 0) > 0,

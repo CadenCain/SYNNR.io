@@ -129,7 +129,7 @@ export async function computeDispatchCheck(
 
   // Certs: the unit + its iron
   const assetIds = assets.map((a) => a.id);
-  const COLS = "id, title, expiration_date, pending_until, reminder_days, parent_id";
+  const COLS = "id, title, expiration_date, pending_until, reminder_days, parent_id, last_upload_id";
   const [{ data: unitCerts }, { data: assetCerts }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
       .select(COLS).eq("company_id", companyId).eq("parent_type", "unit").eq("parent_id", unitId),
@@ -189,7 +189,7 @@ export async function computeDispatchCheck(
       lines.push({ source_type, source_id: l.id, label: l.kind === "crew" ? l.label.replace(/: no cards on file$/, "") : l.label, result: l.result, detail: l.detail });
       failures.push(l.kind === "crew" ? l.label
         : l.kind === "asset" ? `${l.label}: ${l.detail}`
-        : l.result === "missing" ? `${l.label}: no expiration on file`
+        : l.result === "missing" ? `${l.label}: ${l.detail}`
         : isFutureJob && l.expiration_date && l.expiration_date >= today ? `${l.label}: expires ${plainDate(l.expiration_date)}, before the job`
         : `${l.label}: expired`);
     }

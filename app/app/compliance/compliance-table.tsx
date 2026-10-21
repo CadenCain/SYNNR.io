@@ -25,6 +25,7 @@ const STATUS_FILTERS: { key: string; label: string; match: (s: ComplianceStatus)
   { key: "all", label: "All", match: () => true },
   { key: "expired", label: "Expired", match: (s) => s === "expired" },
   { key: "missing", label: "Missing date", match: (s) => s === "none" },
+  { key: "no_paper", label: "No paper", match: (s) => s === "no_paper" },
   { key: "expiring", label: "Due soon", match: (s) => s === "expiring" },
   { key: "valid", label: "Valid", match: (s) => s === "valid" },
 ];
@@ -33,7 +34,7 @@ const KIND_FILTERS = [
   { key: "iron", label: "Iron" },
   { key: "trucks", label: "Truck paper" },
 ];
-const RANK: Record<ComplianceStatus, number> = { expired: 0, none: 1, expiring: 2, valid: 3 };
+const RANK: Record<ComplianceStatus, number> = { expired: 0, no_paper: 1, none: 2, expiring: 3, valid: 4 };
 
 export default function ComplianceTable({ items }: { items: CompItem[] }) {
   const [status, setStatus] = useState("all");

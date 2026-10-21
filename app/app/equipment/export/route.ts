@@ -28,10 +28,10 @@ export async function GET() {
   const [list, { data: itemData }] = await Promise.all([
     getEquipment(db, company.id),
     db.from("saas_compliance_items")
-      .select("id, title, issued_date, expiration_date, reminder_days, pending_until, parent_id")
+      .select("id, title, issued_date, expiration_date, reminder_days, pending_until, parent_id, last_upload_id")
       .eq("company_id", company.id).eq("parent_type", "asset"),
   ]);
-  type I = { id: string; title: string; issued_date: string | null; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string };
+  type I = { id: string; title: string; issued_date: string | null; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string; last_upload_id: string | null };
   const items = (itemData ?? []) as I[];
   const today = localToday();
 

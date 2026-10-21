@@ -109,11 +109,11 @@ export async function finishReturn(input: {
   // What came back bad: worth a note on the record (it can't roll again until fixed).
   const scanIds = scans.map((s) => s.assetId);
   const { data: itemRows } = scanIds.length
-    ? await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until")
+    ? await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until, last_upload_id")
         .eq("company_id", company.id).eq("parent_type", "asset").in("parent_id", scanIds)
     : { data: [] };
   const red = new Set<string>(scanIds.filter((id) => byId.get(id)!.status === "out_of_service"));
-  for (const it of (itemRows ?? []) as { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null }[]) {
+  for (const it of (itemRows ?? []) as { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null }[]) {
     const r = judgeItem(it, today, today).result;
     if (r === "expired" || r === "missing") red.add(it.parent_id);
   }

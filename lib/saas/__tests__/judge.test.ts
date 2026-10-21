@@ -8,8 +8,23 @@ import { judgeUnit, judgeItem, type UnitScope } from "../judge";
 
 const TODAY = "2026-09-28";
 const empty = (): UnitScope => ({ unitItems: [], assets: [], assetItems: [], crew: [], crewItems: [] });
-const item = (id: string, title: string, exp: string | null, extra: Partial<{ pending_until: string; parent_id: string; reminder_days: number }> = {}) =>
-  ({ id, title, expiration_date: exp, ...extra });
+const item = (id: string, title: string, exp: string | null, extra: Partial<{ pending_until: string; parent_id: string; reminder_days: number; last_upload_id: string | null }> = {}) =>
+  ({ id, title, expiration_date: exp, last_upload_id: "u-1", ...extra });
+
+describe("no paper, no go", () => {
+  it("a date with no cert attached isn't good: it fails like a test with no date", () => {
+    const j = judgeItem(item("a", "BOP pressure test", "2027-02-01", { last_upload_id: null }), TODAY, TODAY);
+    expect(j).toEqual({ result: "missing", detail: "no cert attached" });
+  });
+  it("an expired test reads expired, paper or not", () => {
+    expect(judgeItem(item("a", "DOT", "2026-09-01", { last_upload_id: null }), TODAY, TODAY).result).toBe("expired");
+  });
+  it("a truck whose own paper has no cert attached is NOT READY, and says why", () => {
+    const j = judgeUnit({ ...empty(), unitItems: [item("u", "Annual DOT inspection", "2027-02-01", { last_upload_id: null })] }, TODAY, TODAY);
+    expect(j.verdict).toBe("not_ready");
+    expect(j.why).toBe("Annual DOT inspection: no cert attached");
+  });
+});
 
 describe("judgeItem", () => {
   it("expires later than the window → ok", () => {

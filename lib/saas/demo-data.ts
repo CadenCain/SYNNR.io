@@ -19,7 +19,8 @@
 export const DEMO_COMPANY_NAME = "Caprock Coil & Pressure Control";
 export const DEMO_YARD_NAME = "Odessa Yard";
 
-export interface DemoItem { title: string; kind: string; exp: number | null; issued?: number }
+/** A test or cert. Every one has its paper attached (a sample cert) unless noPaper: no paper, no go. */
+export interface DemoItem { title: string; kind: string; exp: number | null; issued?: number; noPaper?: boolean }
 export interface DemoAsset {
   name: string; category: string; identifier?: string; status?: string; items?: DemoItem[];
   /** Where-it-is note ("rack 2"). */
@@ -136,7 +137,9 @@ export const DEMO_YARD_IRON: DemoAsset[] = [
   valve("PV-2250", 20),
   valve("PV-3019", 140, { size: "3in", status: "missing", note: "came off CT-07 at rig-down, not seen since" }),
   valve("PV-1977", -40, { status: "retired", note: "failed UT, cut up for scrap" }),
-  { ...lube(3, 260), name: "Spare lubricator #3" },
+  // Back from recert with a date typed in, but the paper hasn't come in: no paper, no go.
+  { ...lube(3, 260), name: "Spare lubricator #3", note: "back from recert, paper not in yet",
+    items: (lube(3, 260).items ?? []).map((i) => ({ ...i, noPaper: true })) },
   { name: "2in 1502 pup joint, 10 ft", category: "flow_iron", identifier: "PJ-3312", items: [annual(RECERT, "test", 200)] },
   { name: "2in 1502 pup joint, 6 ft", category: "flow_iron", identifier: "PJ-3318", items: [annual(RECERT, "test", 28)] },
   { name: "Test pump & chart recorder", category: "equipment", identifier: "TP-01", items: [{ title: "Chart recorder calibration", kind: "inspection", exp: 50, issued: -130 }] },

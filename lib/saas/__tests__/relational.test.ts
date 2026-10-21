@@ -46,9 +46,9 @@ function fleetTables(assetCertExpiration: string | null, assetStatus = "in_servi
     saas_crew_members: [],
     saas_compliance_items_with_status: [
       // parent unit's own paper: perfectly healthy
-      { id: "c-unit", title: "Annual DOT inspection", expiration_date: FUTURE, status: "valid", parent_type: "unit", parent_id: "u1", company_id: CO },
+      { id: "c-unit", title: "Annual DOT inspection", expiration_date: FUTURE, status: "valid", parent_type: "unit", parent_id: "u1", company_id: CO, last_upload_id: "up-unit" },
       // child asset's paper: the variable under test
-      { id: "c-asset", title: "BOP pressure test", expiration_date: assetCertExpiration, status: assetCertExpiration === null ? "none" : assetCertExpiration < "2026" ? "expired" : "valid", parent_type: "asset", parent_id: "a1", company_id: CO },
+      { id: "c-asset", title: "BOP pressure test", expiration_date: assetCertExpiration, status: assetCertExpiration === null ? "none" : assetCertExpiration < "2026" ? "expired" : "valid", parent_type: "asset", parent_id: "a1", company_id: CO, last_upload_id: "up-asset" },
     ],
   };
 }

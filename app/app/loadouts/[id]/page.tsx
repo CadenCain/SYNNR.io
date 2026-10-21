@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import LoadoutRecordView from "../../_components/loadout-record-view";
 import ProofLink from "../../_components/proof-link";
 import { rollLoadoutAnyway } from "./actions";
+import { recordPaper } from "@/lib/saas/paper";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         description="The record of what went on the truck, who scanned each piece, and when."
       />
 
-      <LoadoutRecordView rec={rec} override={override} />
+      <LoadoutRecordView rec={rec} override={override} paper={await recordPaper(db, company.id, rec.pieces)} />
 
       <Card className="flex flex-col gap-3 p-4">
         <div>

@@ -139,6 +139,11 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
                 <span className="text-ink-dim">{result.updates} update{result.updates === 1 ? "" : "s"}</span>
                 <span className={result.errors > 0 ? "font-medium text-red-400" : "text-ink-dim"}>{result.errors} error{result.errors === 1 ? "" : "s"}</span>
               </div>
+              {result.committed ? (
+                <p className="text-sm text-ink-dim">
+                  No paper, no go: imported dates tell you what&apos;s due, but a test only counts once a photo of its cert is attached. Find them under Tests due, filtered to No paper.
+                </p>
+              ) : null}
               {result.held ? (
                 <p className="text-sm text-amber-400">
                   {result.held} {result.held === 1 ? "date was" : "dates were"} later than what&apos;s on file. {result.held === 1 ? "It doesn't" : "They don't"} count until someone uploads a photo of the cert showing {result.held === 1 ? "it" : "them"}.

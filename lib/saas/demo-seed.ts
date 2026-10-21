@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
@@ -8,6 +9,7 @@ import { kitLinesFrom } from "./loadout-lines";
 import { verifyUpload } from "./cert-verify";
 import { computeDispatchCheck } from "./dispatch-check";
 import { localToday, addDaysIso } from "./status";
+import { DEMO_PAPER } from "./paper";
 
 /**
  * Seed one private copy of the Caprock demo yard for one visitor — batched
@@ -83,18 +85,32 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
     .map((r) => [r.identifier ?? r.name, r.id]));
 
   // Every test and cert, truck paper and iron, one batch.
-  const row = (parent_type: string, parent_id: string, it: { title: string; kind: string; exp: number | null; issued?: number }) => ({
+  // Each test's paper: a sample cert drawn for that piece (app/demo-cert),
+  // except the ones left without paper on purpose. No paper, no go.
+  const row = (parent_type: string, parent_id: string, it: { title: string; kind: string; exp: number | null; issued?: number; noPaper?: boolean }) => ({
     company_id: companyId, parent_type, parent_id, title: it.title, kind: it.kind,
     expiration_date: it.exp === null ? null : iso(it.exp),
     issued_date: it.issued != null ? iso(it.issued) : null,
+    last_upload_id: it.noPaper || it.exp === null ? null : randomUUID(),
   });
   const itemRows = [
     ...DEMO_UNITS.flatMap((u) => (u.items ?? []).map((it) => row("unit", unitId(u.key), it))),
     ...specs.flatMap(({ a }) => (a.items ?? []).map((it) => row("asset", assetIdByKey.get(keyOf(a))!, it))),
   ];
   const { data: insertedItems, error: iErr } = await admin.from("saas_compliance_items")
-    .insert(itemRows).select("id, parent_type, parent_id, title");
+    .insert(itemRows).select("id, parent_type, parent_id, title, expiration_date, issued_date, last_upload_id");
   if (iErr) throw new Error(`items: ${iErr.message}`);
+  const papered = ((insertedItems ?? []) as { id: string; expiration_date: string | null; issued_date: string | null; last_upload_id: string | null }[])
+    .filter((r) => r.last_upload_id);
+  if (papered.length) {
+    const { error: pErr } = await admin.from("saas_cert_uploads").insert(papered.map((r) => ({
+      id: r.last_upload_id, company_id: companyId, item_id: r.id, storage_path: `${DEMO_PAPER}${r.id}`, content_type: "image/svg+xml",
+      sha256: `demo-${r.id}`, evidence: "cert", status: "applied", verdict: "verified", read_ok: true,
+      claimed_expiration: r.expiration_date, claimed_issued: r.issued_date, uploaded_by_name: "Kevin Odom", uploaded_by_role: "owner",
+      created_at: tsAgo(30, 9, 0), applied_at: tsAgo(30, 9, 0),
+    })));
+    if (pErr) throw new Error(`papers: ${pErr.message}`);
+  }
   const itemId = (parentType: string, parentId: string, title: string) =>
     ((insertedItems ?? []) as { id: string; parent_type: string; parent_id: string; title: string }[])
       .find((r) => r.parent_type === parentType && r.parent_id === parentId && r.title === title)?.id ?? null;

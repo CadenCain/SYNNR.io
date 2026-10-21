@@ -24,4 +24,5 @@ export async function saasDb(): Promise<SupabaseClient> {
   return sb as unknown as SupabaseClient;
 }
 
-export type ComplianceStatus = "valid" | "expiring" | "expired" | "none";
+/** From the status view. no_paper: a date on file but no cert attached, which counts as bad (migration 0020). */
+export type ComplianceStatus = "valid" | "expiring" | "expired" | "no_paper" | "none";

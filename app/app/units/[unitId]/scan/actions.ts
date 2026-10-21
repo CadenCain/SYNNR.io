@@ -6,7 +6,7 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent, notifyEvent } from "@/lib/saas/notify";
 import { YARD_TZ } from "@/lib/saas/format";
 import type { ScanHow } from "@/lib/saas/loadout";
-import { judgeItem } from "@/lib/saas/judge";
+import { judgeItem, isNoPaper } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { expectedLines, fillLines, loadoutVerdict, untestedPieces, lineTokens, lineMatches, needsTagScan, type BadPiece } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
@@ -165,10 +165,10 @@ export async function finishLoadout(input: {
 
   // What's wrong with the pieces that went on, worked out here from the records.
   const { data: itemRows } = scannedIds.length
-    ? await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until")
+    ? await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until, last_upload_id")
         .eq("company_id", company.id).eq("parent_type", "asset").in("parent_id", scannedIds)
     : { data: [] };
-  type Item = { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null };
+  type Item = { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null };
   const bad: (BadPiece & { id: string })[] = [];
   for (const id of scannedIds) {
     const a = byId.get(id)!;
@@ -179,6 +179,7 @@ export async function finishLoadout(input: {
     if (a.status === "out_of_service") continue;
     const r = judgeItem(it, today, today);
     if (r.result === "expired") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "out_of_test", detail: `${it.title} ${r.detail}` });
+    else if (isNoPaper(r)) bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "no_paper", detail: it.title });
     else if (r.result === "missing") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "no_test_date", detail: it.title });
   }
   // No test on file: pressure iron can't go, and neither can a piece filling
@@ -207,19 +208,20 @@ export async function finishLoadout(input: {
   }).filter((p) => byId.get(p.id)!.status !== "out_of_service"));
   const redIds = new Set(bad.map((b) => b.id));
   // Each piece's tests as they stood when it went on, kept on the record.
-  const testsOf = new Map<string, { title: string; good_until: string | null; result: string }[]>();
+  const testsOf = new Map<string, { title: string; good_until: string | null; result: string; paper: string | null }[]>();
   for (const it of (itemRows ?? []) as Item[]) {
     const list = testsOf.get(it.parent_id) ?? [];
-    list.push({ title: it.title, good_until: it.expiration_date, result: judgeItem(it, today, today).result });
+    const j = judgeItem(it, today, today);
+    list.push({ title: it.title, good_until: it.expiration_date, result: isNoPaper(j) ? "no_paper" : j.result, paper: it.last_upload_id });
     testsOf.set(it.parent_id, list);
   }
 
   // The truck's own paper (DOT and the like) counts too.
-  const { data: paperRows } = await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until")
+  const { data: paperRows } = await db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until, last_upload_id")
     .eq("company_id", company.id).eq("parent_type", "unit").eq("parent_id", unit.id);
   const truckPaper = ((paperRows ?? []) as Item[]).map((it) => ({ it, r: judgeItem(it, today, today) }))
     .filter((x) => x.r.result === "expired" || x.r.result === "missing")
-    .map((x) => ({ title: x.it.title, detail: x.r.detail }));
+    .map((x) => ({ title: x.it.title, detail: isNoPaper(x.r) ? "has no cert attached" : x.r.detail }));
 
   // Logged on the truck but not scanned: taken off, or can't be found. One
   // the phone didn't say anything about stays where it's logged and blocks

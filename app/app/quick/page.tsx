@@ -6,7 +6,7 @@ import QuickClient, { type QuickItem, type QuickUnit, type QuickAsset } from "./
 
 export const dynamic = "force-dynamic";
 
-const ORDER: Record<ComplianceStatus, number> = { expired: 0, expiring: 1, valid: 2, none: 3 };
+const ORDER: Record<ComplianceStatus, number> = { expired: 0, no_paper: 1, expiring: 2, valid: 3, none: 4 };
 
 export default async function QuickPage() {
   const { company } = await requireCompany();

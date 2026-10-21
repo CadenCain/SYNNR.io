@@ -11,6 +11,8 @@ import { addDaysIso } from "./status";
  *
  * A truck is NOT READY, as of a date, when any of these is true:
  *   · a cert on the truck, its gear, or its assigned crew has no date on file
+ *   · or has a date but no paper behind it (no cert photo or scan attached):
+ *     no paper, no go, in every yard
  *   · one of those expires before that date
  *   · a piece of its gear is flagged missing or out of service (red-tagged)
  *   · an assigned hand has no cards on file at all
@@ -25,6 +27,8 @@ export interface JItem {
   id: string;
   title: string;
   expiration_date: string | null;
+  /** The cert (photo or scan) this date was read off. None = no paper = not good. */
+  last_upload_id: string | null;
   pending_until?: string | null;
   reminder_days?: number | null;
   parent_id?: string;
@@ -102,6 +106,8 @@ export function judgeItem(item: JItem, asOf: string, today: string, soonDays?: n
     const ago = days(exp, today);
     return { result: "expired", detail: `expired ${plainDate(exp)}${ago > 0 ? ` (${ago}d ago)` : ""}` };
   }
+  // No paper, no go: a date counts only with the cert behind it.
+  if (!item.last_upload_id) return { result: "missing", detail: NO_PAPER };
   const window = soonDays ?? item.reminder_days ?? 30;
   if (exp <= addDaysIso(asOf, window)) {
     const d = days(today, exp);
@@ -110,12 +116,16 @@ export function judgeItem(item: JItem, asOf: string, today: string, soonDays?: n
   return { result: "ok", detail: `good to ${plainDate(exp)}` };
 }
 
+/** The detail on a test that has a date but no cert attached. */
+export const NO_PAPER = "no cert attached";
+export const isNoPaper = (j: { result: LineResult; detail: string }) => j.result === "missing" && j.detail === NO_PAPER;
+
 /** Short wording for a tile: "BOP test: expired 6d ago". */
 function shortWhy(l: JLine, today: string): string {
   if (l.kind === "crew") return l.label;
   if (l.kind === "asset") return `${l.label}: ${l.detail === "flagged missing" ? "missing" : "red-tagged"}`;
   if (l.result === "pending") return `${l.label}: cert on the way`;
-  if (l.result === "missing") return `${l.label}: no expiration on file`;
+  if (l.result === "missing") return `${l.label}: ${l.detail}`;
   const exp = l.expiration_date as string;
   if (l.result === "expired") {
     const ago = days(exp, today);

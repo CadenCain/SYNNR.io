@@ -89,7 +89,7 @@ export type UnitState = "ready" | "due_soon" | "not_ready" | "not_setup";
  * Severity: expired (proven lapsed) > none (NO DATE ON FILE — can't prove it,
  * treated as failing, shows as "Missing") > expiring > valid.
  */
-const WORST_RANK: Record<ComplianceStatus, number> = { expired: 0, none: 1, expiring: 2, valid: 3 };
+const WORST_RANK: Record<ComplianceStatus, number> = { expired: 0, no_paper: 1, none: 2, expiring: 3, valid: 4 };
 export function worstStatus(statuses: ComplianceStatus[]): ComplianceStatus | null {
   if (statuses.length === 0) return null;
   return statuses.reduce((w, s) => (WORST_RANK[s] < WORST_RANK[w] ? s : w));
@@ -97,5 +97,5 @@ export function worstStatus(statuses: ComplianceStatus[]): ComplianceStatus | nu
 
 /** A compliance item that fails readiness: expired, or unverifiable (no date). */
 export function isFailing(status: ComplianceStatus): boolean {
-  return status === "expired" || status === "none";
+  return status === "expired" || status === "none" || status === "no_paper";
 }

@@ -63,7 +63,7 @@ const RANK: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, d
 export const STATE_ORDER: Record<EquipState, number> = { down: 0, overdue: 1, due: 2, no_paper: 3, ok: 4, retired: 5 };
 
 export interface RawAsset { id: string; name: string; category: string; identifier: string | null; status: string; yard_id: string | null; unit_id: string | null; last_seen_where?: string | null; scanned_at?: string | null; scanned_unit_id?: string | null; out_since?: string | null }
-export interface RawItem { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string }
+export interface RawItem { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string; last_upload_id: string | null }
 
 export async function getEquipment(db: SupabaseClient, companyId: string): Promise<EquipmentList> {
   const [{ data: assetData }, { data: unitData }, { data: yardData }, { data: itemData }] = await Promise.all([
@@ -71,7 +71,7 @@ export async function getEquipment(db: SupabaseClient, companyId: string): Promi
       .eq("company_id", companyId).order("name"),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", companyId).order("name"),
     db.from("saas_yards").select("id, name").eq("company_id", companyId).order("name"),
-    db.from("saas_compliance_items").select("id, title, expiration_date, reminder_days, pending_until, parent_id")
+    db.from("saas_compliance_items").select("id, title, expiration_date, reminder_days, pending_until, parent_id, last_upload_id")
       .eq("company_id", companyId).eq("parent_type", "asset"),
   ]);
   return buildEquipment({

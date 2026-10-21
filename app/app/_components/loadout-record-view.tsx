@@ -23,13 +23,15 @@ const time = (iso: string | undefined) =>
 const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 /** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
 const testText = (t: { title: string; good_until: string | null; result: string }) =>
-  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : `good to ${plainDate(t.good_until)}`}`;
+  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached" : `good to ${plainDate(t.good_until)}`}`;
 
-export default function LoadoutRecordView({ rec, override, tagHref }: {
+export default function LoadoutRecordView({ rec, override, tagHref, paper = {} }: {
   rec: LoadoutRecord;
   override: LoadoutOverride | null;
   /** Link to a piece's public tag page (tests and the cert), when known. */
   tagHref?: (assetId: string) => string | null;
+  /** The cert behind each piece's tests, by asset id: what the operator wants to see. */
+  paper?: Record<string, { title: string; url: string }[]>;
 }) {
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
@@ -122,6 +124,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
                   {(p.tests ?? []).length ? (p.tests ?? []).map(testText).join(" · ") : "No test on file"}
                 </div>
                 <div className="mt-0.5 text-[13px] text-ink-faint">{HOW[p.how] ?? p.how}{p.at ? ` ${time(p.at)}` : ""}{p.by ? ` by ${p.by}` : ""}{p.added ? " · brought over from elsewhere" : ""}</div>
+                <PaperLinks list={paper[p.asset_id]} />
               </div>
             );
           })}
@@ -141,6 +144,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
                       <td className="px-3 py-2 tabular-nums text-ink-dim">{p.serial ?? ""}</td>
                       <td className={cn("px-3 py-2", p.red ? "text-red-400" : "text-ink-dim")}>
                         {(p.tests ?? []).length ? (p.tests ?? []).map((t) => <div key={t.title}>{testText(t)}</div>) : "No test on file"}
+                        <PaperLinks list={paper[p.asset_id]} />
                       </td>
                       <td className="px-3 py-2 text-ink-dim">{HOW[p.how] ?? p.how}</td>
                       <td className="px-3 py-2 tabular-nums text-ink-dim">{time(p.at)}</td>
@@ -170,6 +174,20 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
       <p className="flex items-center gap-2 text-[13px] text-ink-faint">
         <Lock className="h-4 w-4 shrink-0" /> Saved when the load-out finished. Nobody can edit this record.
       </p>
+    </div>
+  );
+}
+
+/** "See the cert" for each test behind a piece. */
+function PaperLinks({ list }: { list?: { title: string; url: string }[] }) {
+  if (!list?.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
+      {list.map((x) => (
+        <a key={x.url} href={x.url} target="_blank" rel="noreferrer" className="font-medium text-bone underline underline-offset-2">
+          See the cert{list.length > 1 ? `: ${x.title}` : ""}
+        </a>
+      ))}
     </div>
   );
 }

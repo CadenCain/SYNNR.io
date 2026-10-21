@@ -42,7 +42,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   // (scrapped or sold) is kept for the record but out of every count.
   const [{ data: itemData }, { data: unitData }, { data: assetData }] = await Promise.all([
     db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id")
+      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id, last_upload_id")
       .eq("company_id", companyId).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
     db.from("saas_assets").select("id, name, identifier, unit_id, status").eq("company_id", companyId).neq("status", "retired"),
@@ -56,7 +56,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
   // current. Once its window closes the view's own status takes over again.
   const effective = (i: Item): ComplianceStatus =>
     (i.status === "expired" || i.status === "none") && pendingCovers(i, today) ? "expiring" : i.status;
-  const counts = { expired: 0, expiring: 0, valid: 0, none: 0 } as Record<ComplianceStatus, number>;
+  const counts = { expired: 0, expiring: 0, valid: 0, no_paper: 0, none: 0 } as Record<ComplianceStatus, number>;
   for (const i of items) counts[effective(i)]++;
 
   type UnitRow = { id: string; name: string; type: string; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };

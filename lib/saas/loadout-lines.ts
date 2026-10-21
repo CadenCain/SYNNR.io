@@ -117,7 +117,7 @@ export function kitLinesFrom(names: string[]): { label: string; qty: number }[] 
 
 export const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
-export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file"; detail?: string }
+export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file" | "no_paper"; detail?: string }
 
 /**
  * Pieces with no test on file that can't go on: pressure iron always, and any
@@ -162,7 +162,8 @@ export function loadoutVerdict(input: {
   }
   for (const p of input.cantFind) reasons.push(`Can't find: ${pieceLabel(p)}`);
   for (const p of input.bad) {
-    const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file" : p.why === "no_test_on_file" ? "No test on file" : "Out of test";
+    const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file"
+      : p.why === "no_test_on_file" ? "No test on file" : p.why === "no_paper" ? "No paper on file" : "Out of test";
     reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? `, ${p.detail}` : ""}`);
   }
   for (const t of input.truckPaper) reasons.push(`Truck paper: ${t.title} ${t.detail}`);

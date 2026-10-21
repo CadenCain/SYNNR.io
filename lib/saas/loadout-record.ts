@@ -14,7 +14,8 @@ export interface RecordPiece {
   by?: string;
   added?: boolean;
   red?: boolean;
-  tests?: { title: string; good_until: string | null; result: string }[];
+  /** Each test as it stood at load-out, with the cert (upload id) behind it. */
+  tests?: { title: string; good_until: string | null; result: string; paper?: string | null }[];
 }
 export interface RecordLine {
   label: string;

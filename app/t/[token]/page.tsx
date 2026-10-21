@@ -4,6 +4,7 @@ import { ShieldCheck, TriangleAlert, FileImage, ArrowRight } from "lucide-react"
 import { saasAdmin } from "@/lib/saas/db";
 import { getSaasUser } from "@/lib/saas/auth";
 import { judgeItem, type LineResult } from "@/lib/saas/judge";
+import { paperLinks } from "@/lib/saas/paper";
 import { localToday } from "@/lib/saas/status";
 import { categoryLabel } from "@/lib/saas/taxonomy";
 import { fmtDate, fmtWhen } from "@/lib/saas/format";
@@ -92,16 +93,7 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
     .sort((x, y) => rank[x.j.result] - rank[y.j.result] || (x.i.expiration_date ?? "").localeCompare(y.i.expiration_date ?? ""));
 
   // The photo behind each current date.
-  const paper = new Map<string, string>();
-  const uploadIds = items.map((x) => x.i.last_upload_id).filter((x): x is string => Boolean(x));
-  if (uploadIds.length) {
-    const { data: ups } = await admin.from("saas_cert_uploads").select("id, item_id, storage_path").in("id", uploadIds);
-    const list = (ups ?? []) as { id: string; item_id: string; storage_path: string }[];
-    if (list.length) {
-      const { data: signed } = await admin.storage.from("proofs").createSignedUrls(list.map((u) => u.storage_path), 3600);
-      list.forEach((u, idx) => { const url = signed?.[idx]?.signedUrl; if (url) paper.set(u.item_id, url); });
-    }
-  }
+  const paper = await paperLinks(admin, items.map((x) => x.i));
 
   const down = a.status === "out_of_service" || a.status === "missing";
   const retired = a.status === "retired";
@@ -111,8 +103,8 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
     : a.status === "out_of_service" ? { title: "Red-tagged. Do not use.", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has pulled this from service." }
     : a.status === "missing" ? { title: "Flagged missing", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has this marked missing. Let them know where it is." }
     : items.length === 0 ? { title: "No test on file", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop hasn't put this piece's paper in RollReady yet." }
-    : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due or missing a date.` }
-    : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today." };
+    : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due, missing a date, or missing their paper.` }
+    : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today, with the paper behind it." };
 
   return (
     <Shell>

@@ -1,5 +1,5 @@
 import { DEMO_UNITS, DEMO_PACKAGES, type DemoLoadout, type DemoAsset } from "./demo-data";
-import { judgeItem } from "./judge";
+import { judgeItem, isNoPaper } from "./judge";
 import { addDaysIso } from "./status";
 import { expectedLines, fillLines, loadoutVerdict, kitLinesFrom, type BadPiece } from "./loadout-lines";
 
@@ -15,16 +15,17 @@ export const demoKey = (a: DemoAsset) => a.identifier ?? a.name;
 export function demoLoadoutRecord(lo: DemoLoadout, today: string) {
   const unit = DEMO_UNITS.find((u) => u.key === lo.unitKey)!;
   const onTruck = (unit.assets ?? []).filter((a) => a.status !== "retired");
-  const judge = (it: { title: string; exp: number | null }) => {
+  const judge = (it: { title: string; exp: number | null; noPaper?: boolean }) => {
     const good_until = it.exp === null ? null : addDaysIso(today, it.exp);
-    const r = judgeItem({ id: "", title: it.title, expiration_date: good_until, reminder_days: 30, pending_until: null }, today, today);
-    return { title: it.title, good_until, result: r.result as string, detail: r.detail };
+    const r = judgeItem({ id: "", title: it.title, expiration_date: good_until, reminder_days: 30, pending_until: null, last_upload_id: it.noPaper ? null : "demo" }, today, today);
+    return { title: it.title, good_until, result: isNoPaper(r) ? "no_paper" : r.result as string, detail: r.detail };
   };
   const bad: (BadPiece & { key: string })[] = [];
   for (const a of onTruck) {
     if (a.status === "out_of_service") { bad.push({ key: demoKey(a), name: a.name, serial: a.identifier ?? null, why: "red_tagged" }); continue; }
     for (const t of (a.items ?? []).map(judge)) {
       if (t.result === "expired") bad.push({ key: demoKey(a), name: a.name, serial: a.identifier ?? null, why: "out_of_test", detail: `${t.title} ${t.detail}` });
+      else if (t.result === "no_paper") bad.push({ key: demoKey(a), name: a.name, serial: a.identifier ?? null, why: "no_paper", detail: t.title });
       else if (t.result === "missing") bad.push({ key: demoKey(a), name: a.name, serial: a.identifier ?? null, why: "no_test_date", detail: t.title });
     }
   }

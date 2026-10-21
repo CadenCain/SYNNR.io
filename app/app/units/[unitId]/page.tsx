@@ -132,7 +132,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   // "Upload the new cert" goes where the bad paper lives: this truck's book,
   // the piece of gear, or the hand. The cert that turned CT-03 red is often
   // on its BOP stack, not the truck.
-  const bad = (st: ComplianceStatus | null | undefined) => st === "expired" || st === "none";
+  const bad = (st: ComplianceStatus | null | undefined) => st === "expired" || st === "none" || st === "no_paper";
   const fixHref = failingCerts.length > 0 ? "#book"
     : (() => {
         const a = assets.find((x) => bad(worstByAsset.get(x.id)));
