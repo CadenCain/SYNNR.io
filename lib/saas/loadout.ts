@@ -3,6 +3,8 @@
  * is, which piece it belongs to, and what the scan means for the truck.
  */
 
+import { tagKey } from "./tag-key";
+
 export type ScanHow = "nfc" | "qr" | "hand";
 
 export interface ScanPiece {
@@ -11,18 +13,21 @@ export interface ScanPiece {
   serial: string | null;
   unitId: string | null;
   where: string;
-  tagToken: string;
-  /** A linked outside tag: an NFC chip ID ("04:a2:...") or "qr:<content>". */
-  extTag: string | null;
+  /** What kind of iron (flow_iron, pressure_control, ...): pressure iron has to be scanned in a scan-only yard. */
+  category: string;
+  /** Fingerprint of the piece's RollReady tag (tag-key.ts). The page never holds the code itself. */
+  tagKey: string;
+  /** Fingerprint of a linked outside tag (an NFC chip ID or "qr:<content>"), if any. */
+  extKey: string | null;
   /** Red: overdue, red-tagged, or missing. Yellow: due soon. */
   problem: "red" | "yellow" | null;
   statusText: string;
 }
 
-/** What one scan found. */
+/** What one scan found. A match carries the code read off the tag, sent with the scan as proof. */
 export type ScanResult =
-  | { kind: "match"; piece: ScanPiece; onTruck: boolean }
-  | { kind: "unknown"; extTag: string; fromUrl: string | null }
+  | { kind: "match"; piece: ScanPiece; onTruck: boolean; proof?: string }
+  | { kind: "unknown"; extTag: string }
   | { kind: "foreign"; text: string };
 
 const TOKEN_RE = /\/t\/([a-f0-9]{32})(?:[/?#]|$)/i;
@@ -42,29 +47,44 @@ export function normalizeChipId(uid: string): string {
 /** The key an outside QR code is linked by. */
 export const qrKey = (content: string) => `qr:${content.trim().slice(0, 300)}`;
 
+/** The codes read off a tag: RollReady's own token, or an outside chip ID or QR code. */
+export function tagCodes(input: { link: string | null; chipId: string | null }): { token: string | null; ext: string | null } {
+  const token = input.link ? tagTokenFrom(input.link) : null;
+  if (token) return { token, ext: null };
+  const ext = input.chipId ? normalizeChipId(input.chipId) : input.link ? qrKey(input.link) : null;
+  return { token: null, ext: ext || null };
+}
+
 /**
- * Work out what a scan is.
- *   link    the URL or text read off the tag or code (may be empty for a
- *           blank or locked NFC tag with no link)
- *   chipId  the NFC chip's factory ID, when it was an NFC tap
+ * Work out what a scan is, from the codes read off the tag and their
+ * fingerprints (tag-key.ts, worked out by the caller).
  */
 export function identifyScan(
-  input: { link: string | null; chipId: string | null; how: ScanHow },
+  codes: { token: string | null; ext: string | null },
+  keys: { token: string | null; ext: string | null },
   pieces: ScanPiece[],
   truckId: string,
 ): ScanResult {
-  const token = input.link ? tagTokenFrom(input.link) : null;
-  if (token) {
-    const piece = pieces.find((p) => p.tagToken === token);
-    if (piece) return { kind: "match", piece, onTruck: piece.unitId === truckId };
+  if (codes.token) {
+    const piece = keys.token ? pieces.find((p) => p.tagKey === keys.token) : undefined;
+    if (piece) return { kind: "match", piece, onTruck: piece.unitId === truckId, proof: codes.token };
     return { kind: "foreign", text: "That's a RollReady tag, but not one of your company's pieces." };
   }
   // An outside tag (the testing company's NFC chip or QR code).
-  const ext = input.chipId ? normalizeChipId(input.chipId) : input.link ? qrKey(input.link) : null;
-  if (!ext) return { kind: "foreign", text: "Couldn't read anything off that tag. Try again, or check it by hand." };
-  const piece = pieces.find((p) => p.extTag === ext);
-  if (piece) return { kind: "match", piece, onTruck: piece.unitId === truckId };
-  return { kind: "unknown", extTag: ext, fromUrl: input.link };
+  if (!codes.ext) return { kind: "foreign", text: "Couldn't read anything off that tag. Try again, or check it by hand." };
+  const piece = keys.ext ? pieces.find((p) => p.extKey === keys.ext) : undefined;
+  if (piece) return { kind: "match", piece, onTruck: piece.unitId === truckId, proof: codes.ext };
+  return { kind: "unknown", extTag: codes.ext };
+}
+
+/** Read a tag on the phone: its codes, their fingerprints, and what it matches. */
+export async function readScan(input: { link: string | null; chipId: string | null }, pieces: ScanPiece[], truckId: string): Promise<ScanResult> {
+  const codes = tagCodes(input);
+  const keys = {
+    token: codes.token ? await tagKey(codes.token) : null,
+    ext: codes.ext ? await tagKey(codes.ext) : null,
+  };
+  return identifyScan(codes, keys, pieces, truckId);
 }
 
 /** Plain-words verdict for the big banner after a scan. */

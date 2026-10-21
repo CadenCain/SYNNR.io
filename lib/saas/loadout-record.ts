@@ -19,7 +19,7 @@ export interface RecordPiece {
 export interface RecordLine {
   label: string;
   qty: number;
-  source: "kit" | "package" | "quick";
+  source: "kit" | "package" | "plan" | "quick";
   package?: string;
   filled: { asset_id: string; name: string; serial: string | null }[];
 }
@@ -41,11 +41,14 @@ export interface LoadoutRecord {
   pieces: RecordPiece[];
   not_scanned: { asset_id: string; name: string; serial: string | null; outcome: "left" | "yard" | "missing" }[];
   proof_token: string;
+  /** The manager's plan this load-out was checked against, as it stood. */
+  plan?: RecordPlan | null;
 }
+export interface RecordPlan { id: string; by: string | null; at: string; note: string | null; packages: string[]; lines: { label: string; qty: number }[] }
 export interface LoadoutOverride { loadout_id: string; by_name: string; reason: string; created_at: string }
 
 export const RECORD_COLS =
-  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token";
+  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token, plan";
 
 /**
  * READY or NOT READY. Load-outs saved before the server worked out the

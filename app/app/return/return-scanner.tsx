@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Truck, Warehouse } from "lucide-react";
-import { identifyScan, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
+import { readScan, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTagReader, type ReaderNote } from "../_components/use-tag-reader";
@@ -18,7 +18,7 @@ import { finishReturn, type ReturnDest } from "./actions";
  * zone never loses them, and they send by themselves when signal is back.
  */
 
-type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string };
+type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string; proof?: string };
 type Outcome = "still_out" | "missing";
 type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; savedAt: number };
 
@@ -76,9 +76,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   const yardName = yards.find((y) => y.id === yardId)?.name ?? "the yard";
   const destText = (s: Scan) => s.to === "truck" && truck ? `back on ${truck.name}` : `into ${yardName}${s.rack ? `, ${s.rack}` : ""}`;
 
-  function mark(p: ScanPiece, how: ScanHow) {
+  function mark(p: ScanPiece, how: ScanHow, proof?: string) {
     const already = Boolean(scans[p.id]);
-    const s: Scan = { how, at: Date.now(), to: dest, rack: dest === "yard" ? rack.trim() : "" };
+    const s: Scan = { how, at: Date.now(), to: dest, rack: dest === "yard" ? rack.trim() : "", ...(proof ? { proof } : {}) };
     if (!already) setScans((x) => ({ ...x, [p.id]: s }));
     const label = `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
     setBanner(already ? { tone: "warn", text: `${label} is already checked in.` }
@@ -86,12 +86,13 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       : { tone: "good", text: `${label}: ${destText(s)}.` });
     try { navigator.vibrate?.(p.problem === "red" ? [120, 80, 120] : 80); } catch { /* no vibration */ }
   }
-  function onRead(r: { link: string | null; chipId: string | null; how: ScanHow }) {
-    const hit = identifyScan(r, pieces, truck?.id ?? "");
-    if (hit.kind === "match") { mark(hit.piece, r.how); return; }
+  async function onReadTag(r: { link: string | null; chipId: string | null; how: ScanHow }) {
+    const hit = await readScan(r, pieces, truck?.id ?? "");
+    if (hit.kind === "match") { mark(hit.piece, r.how, hit.proof); return; }
     if (hit.kind === "unknown") { setBanner({ tone: "warn", text: "That tag isn't linked to a piece yet. Type the serial below, and link the tag on the next load-out." }); return; }
     setBanner({ tone: "warn", text: hit.text });
   }
+  const onRead = (r: { link: string | null; chipId: string | null; how: ScanHow }) => { void onReadTag(r); };
   const { hasNfc, nfcOn, camOn, startNfc, stopNfc, startCamera, stopCamera, video, stopAll } = useTagReader(onRead, setBanner);
 
   function bySerial() {
@@ -117,7 +118,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     try {
       res = await finishReturn({
         unitId: truck?.id ?? null, yardId: yardId || null, startedAt,
-        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack })),
+        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof })),
         notReturned: truck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
       });
     } catch {

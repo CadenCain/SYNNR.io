@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import AppNav from "./_components/app-nav";
 import ReviewBanner from "./_components/review-banner";
 import OfflineSupport from "./_components/offline-support";
+import { ThemeSync } from "@/components/theme";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { mustSubscribe } from "@/lib/saas/plan";
@@ -63,6 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
+      <ThemeSync />
       <AppNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
         switchAction={switchCompany} reviewCount={reviewCount} />

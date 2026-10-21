@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { ThemePicker } from "@/components/theme";
 
 type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolean; also?: string[] };
 
@@ -38,7 +39,7 @@ function isActive(path: string, href: string, exact?: boolean, also: string[] = 
 
 const MARK = (
   <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
+    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" className="fill-bone" />
   </svg>
 );
 
@@ -148,6 +149,8 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
           <Plus className="h-[18px] w-[18px]" /> Quick action
         </Link>
 
+        <ThemePicker className="mt-3" />
+
         {userName ? (
           <div className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">
             <Link href="/app/settings" title="Settings" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-0.5 hover:bg-elevated">
@@ -232,6 +235,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
                 </Link>
               );
             })}
+            <ThemePicker className="mx-1 mt-2" />
             <button type="button" onClick={signOut}
               className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-base text-ink-dim hover:bg-elevated">
               <LogOut className="h-5 w-5" /> Sign out

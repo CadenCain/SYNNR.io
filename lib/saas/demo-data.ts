@@ -185,6 +185,13 @@ export const DEMO_PACKAGES: { name: string; lines: { label: string; qty: number 
   { name: "Pump-down package", lines: [{ label: "2in 1502 plug valve", qty: 1 }, { label: "2in 1502 Chiksan swivel", qty: 1 }] },
 ];
 
+/** A manager's plan for CT-01's next job: two pup joints off the yard rack. */
+export const DEMO_PLAN = {
+  unitKey: "ct1", by: "Kevin Odom", daysAgo: 0, hour: 6, minute: 10,
+  lines: [{ label: "2in 1502 pup joint", qty: 2 }],
+  note: "Cleanout. Both pup joints off the rack go with it.",
+};
+
 /**
  * One upload waiting on the manager, so the demo shows the rule that matters
  * most: nobody can clear a test with a date that isn't on the paper. Logan

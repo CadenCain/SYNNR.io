@@ -37,12 +37,16 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
   const { rec, override } = got;
 
   const ids = rec.pieces.map((p) => p.asset_id);
-  const [{ data: co }, { data: yard }, { data: tags }] = await Promise.all([
+  const [{ data: co }, { data: yard }, { data: tags }, { data: rule }] = await Promise.all([
     admin.from("saas_companies").select("name").eq("id", rec.company_id).maybeSingle(),
     rec.yard_id ? admin.from("saas_yards").select("name").eq("id", rec.yard_id).maybeSingle() : Promise.resolve({ data: null }),
     ids.length ? admin.from("saas_assets").select("id, tag_token").eq("company_id", rec.company_id).in("id", ids) : Promise.resolve({ data: [] }),
+    admin.from("saas_enforcement_settings").select("require_tag_scan").eq("company_id", rec.company_id).maybeSingle(),
   ]);
-  const tagOf = new Map(((tags ?? []) as { id: string; tag_token: string | null }[]).map((t) => [t.id, t.tag_token]));
+  // A scan-only yard keeps tag links off a page that gets passed around: a
+  // tag link is a tag anyone could scan off a screen.
+  const scanOnly = Boolean((rule as { require_tag_scan: boolean } | null)?.require_tag_scan);
+  const tagOf = new Map(scanOnly ? [] : ((tags ?? []) as { id: string; tag_token: string | null }[]).map((t) => [t.id, t.tag_token]));
   const company = (co as { name: string } | null)?.name ?? "";
   const yardName = (yard as { name: string } | null)?.name ?? "";
 

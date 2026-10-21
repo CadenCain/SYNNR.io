@@ -6,6 +6,8 @@ import { logEvent } from "@/lib/saas/notify";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ async function saveRules(fd: FormData) {
     hand_uploads_need_ok: fd.get("hand_uploads_need_ok") === "on",
     allow_cert_on_the_way: fd.get("allow_cert_on_the_way") === "on",
     out_alert_days: days,
+    require_tag_scan: fd.get("require_tag_scan") === "on",
   };
   const { error } = await db.from("saas_enforcement_settings")
     .upsert({ company_id: company.id, ...next, updated_at: new Date().toISOString() }, { onConflict: "company_id" });
@@ -28,11 +31,13 @@ async function saveRules(fd: FormData) {
   if (before.handUploadsNeedOk !== next.hand_uploads_need_ok) changes.push(next.hand_uploads_need_ok ? "every hand upload now waits for a manager" : "clean hand uploads now go green on their own");
   if (before.allowCertOnTheWay !== next.allow_cert_on_the_way) changes.push(next.allow_cert_on_the_way ? "\"cert on the way\" turned on" : "\"cert on the way\" turned off");
   if (before.outAlertDays !== next.out_alert_days) changes.push(`iron out more than ${next.out_alert_days} days gets flagged`);
+  if (before.requireTagScan !== next.require_tag_scan) changes.push(next.require_tag_scan ? "pressure iron and anything on the list has to be scanned off its tag at load-out" : "pieces can be checked by hand at load-out again");
   if (changes.length) {
     const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
     void logEvent({ companyId: company.id, kind: "rules_changed", actor, message: `Rules changed${actor ? ` by ${actor}` : ""}: ${changes.join("; ")}` });
   }
   revalidatePath("/app/settings/rules");
+  revalidatePath("/app", "layout");
 }
 
 const FIXED = [
@@ -41,13 +46,19 @@ const FIXED = [
   "If everything matches, it goes green. If anything doesn't, it waits for a manager and the item stays red until a manager approves it.",
   "Managers can type a date in when setting up from the binder. A typed date that's later than what's on file doesn't count until a photo of the cert shows it. Typed dates are listed on the Review page.",
   "Truck check records, uploads, where-it's-been history, and the feed can't be edited or deleted by anyone, managers included.",
-  "Anyone can move iron or red-tag it. Only a manager can put red-tagged iron back in service, retire it, rename a test, change a serial or unit number, or delete anything. Each of those lands in the feed with a name on it.",
+  "Anyone can move iron or red-tag it. Only a manager can put red-tagged iron back in service, retire it, rename it or change what kind it is, rename a test, change a serial or unit number, move a tag to a different piece, or delete anything. Each of those lands in the feed with a name on it.",
+  "Pressure iron with no test on file can't go out. Neither can a piece filling a line on the list when the yard's other iron of that kind gets tested.",
+  "A scan only counts as scanned if the code read off the tag is that piece's own tag. Anything else goes on the record as checked by hand.",
 ];
 
 export default async function RulesPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const rules = await getYardRules(db, company.id);
+  const [rules, { count: pressureIron }, { count: neverScanned }] = await Promise.all([
+    getYardRules(db, company.id),
+    db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("status", "retired").in("category", [...TESTED_CATEGORIES]),
+    db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("status", "retired").in("category", [...TESTED_CATEGORIES]).is("tag_seen_at", null),
+  ]);
   const manager = isManagerRole(company.role);
 
   return (
@@ -89,6 +100,21 @@ export default async function RulesPage() {
               <span className="text-sm text-ink-dim">days</span>
             </span>
             <span className="block text-sm text-ink-dim">Past this, a truck or piece that hasn&apos;t been checked back in shows red on Load out, and managers get one email a day listing what&apos;s new. Not one email per piece.</span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" name="require_tag_scan" defaultChecked={rules.requireTagScan} disabled={!manager}
+              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+            <span>
+              <span className="block text-sm font-medium">Scan tags only at load-out. No checking by hand.</span>
+              <span className="block text-sm text-ink-dim">Pressure iron and anything on the truck&apos;s list has to be scanned off its tag (a QR code with any phone, or an NFC tag on Android). Typing a serial won&apos;t count. A tag that won&apos;t scan makes the truck NOT READY until a manager rolls it with a reason. Only managers can print tags, write NFC tags, or link a new tag while this is on.</span>
+              {(pressureIron ?? 0) > 0 ? (
+                <span className={`mt-1.5 block text-sm font-medium ${(neverScanned ?? 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                  {(neverScanned ?? 0) > 0
+                    ? <>{neverScanned} of {pressureIron} pieces of pressure iron have never been scanned off a tag. Tag them first, or those trucks will block. <Link href="/app/tags" className="underline underline-offset-2">Print QR tags</Link></>
+                    : <>Every piece of pressure iron has been scanned off its tag at least once.</>}
+                </span>
+              ) : null}
+            </span>
           </label>
           {manager && <Button type="submit" className="w-full sm:w-fit">Save the rules</Button>}
         </form>

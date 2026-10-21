@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { getEquipment, stateLabel } from "@/lib/saas/equipment";
-import type { ScanPiece } from "@/lib/saas/loadout";
+import { getScanPieces } from "@/lib/saas/scan-pieces";
+import { getOpenPlan } from "@/lib/saas/plans";
+import { getYardRules } from "@/lib/saas/yard-rules";
 import { fmtWhen } from "@/lib/saas/format";
 import { PageHeader } from "@/components/ui/page-header";
 import LoadoutScanner, { type KitLine, type PackageOption } from "./scanner";
@@ -16,10 +17,11 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   const { company } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
-  const [{ data: unitRow }, list, { data: tagRows }, { data: lastRow }, { data: pkgRows }] = await Promise.all([
+  const [{ data: unitRow }, { pieces }, plan, rules, { data: lastRow }, { data: pkgRows }] = await Promise.all([
     db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
-    getEquipment(db, company.id),
-    db.from("saas_assets").select("id, nfc_uid").eq("company_id", company.id).not("nfc_uid", "is", null),
+    getScanPieces(db, company.id),
+    getOpenPlan(db, company.id, unitId),
+    getYardRules(db, company.id),
     db.from("saas_loadout_scans").select("finished_at, scanned_by, verdict, packages")
       .eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
     db.from("saas_packages").select("id, name, unit_id, saas_package_lines(label, qty, sort)")
@@ -36,15 +38,6 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
     );
   }
 
-  const extTag = new Map(((tagRows ?? []) as { id: string; nfc_uid: string }[]).map((r) => [r.id, r.nfc_uid]));
-  const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
-    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where,
-    tagToken: r.tagToken, extTag: extTag.get(r.id) ?? null,
-    problem: r.state === "overdue" || r.state === "down" ? "red" : r.state === "due" ? "yellow" : null,
-    statusText: r.state === "down" ? stateLabel(r)
-      : r.next ? `${r.next.title}: ${r.next.detail}`
-      : "No test on file",
-  }));
   const last = lastRow as { finished_at: string; scanned_by: string | null; verdict: string | null; packages: string[] | null } | null;
   type Pkg = { id: string; name: string; unit_id: string | null; saas_package_lines: (KitLine & { sort: number })[] | null };
   const linesOf = (x: Pkg): KitLine[] => [...(x.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }));
@@ -64,6 +57,8 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
         kit={kitRow ? linesOf(kitRow) : []} packages={packages}
         lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
+        plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
+        tagRule={rules.requireTagScan}
         manager={company.role === "owner" || company.role === "admin"} demo={company.is_demo} />
     </div>
   );

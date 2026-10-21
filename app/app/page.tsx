@@ -9,6 +9,7 @@ import { getYardRules } from "@/lib/saas/yard-rules";
 import { daysOut } from "@/lib/saas/whereabouts";
 import LoadOutView, { type ActivityLine, type PersonWeek } from "./_components/loadout-view";
 import { WarmOffline } from "./_components/offline-support";
+import { getOpenPlans, planSummary } from "@/lib/saas/plans";
 import LockedCard from "./_components/locked-card";
 import WelcomeCard from "./_components/welcome-card";
 import HandTips from "./_components/hand-tips";
@@ -41,7 +42,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
-  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules] = await Promise.all([
+  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules, openPlans, { data: pkgNameRows }] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
@@ -57,7 +58,13 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     db.from("saas_assets").select("id, unit_id, yard_id, out_since").eq("company_id", company.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
     db.from("saas_events").select("kind, actor, unit_id").eq("company_id", company.id).gte("created_at", weekAgo).not("actor", "is", null).limit(2000),
     getYardRules(db, company.id),
+    getOpenPlans(db, company.id),
+    db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null),
   ]);
+  // Each truck's planned next job, in words.
+  const pkgNames = new Map(((pkgNameRows ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]));
+  const plans: Record<string, { text: string; by: string | null; note: string | null }> = {};
+  for (const [unitId, p] of openPlans) plans[unitId] = { text: planSummary(p, pkgNames), by: p.by, note: p.note };
 
   const yards = list.yards.map((y) => ({ id: y.id, name: y.name }));
   const yardId = yard && yards.some((y) => y.id === yard) ? yard : null;
@@ -131,6 +138,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
         </div>
       ) : null}
       <LoadOutView trucks={trucks} counts={counts} summary={summary} week={week} yards={yards} yardId={yardId} activity={activity}
+        plans={plans} manager={company.role === "owner" || company.role === "admin"}
         iron={iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} />
       <WarmOffline companyId={company.id} urls={["/app/return", ...rd.units.flatMap((u) => [`/app/units/${u.id}/scan`, `/app/units/${u.id}/return`])]} />
     </>

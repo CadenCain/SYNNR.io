@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX } from "lucide-react";
-import { identifyScan, scanMessage, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
-import { expectedLines, fillLines, shortLines } from "@/lib/saas/loadout-lines";
+import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ClipboardList } from "lucide-react";
+import { readScan, scanMessage, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
+import { expectedLines, fillLines, shortLines, needsTagScan, lineSourceLabel } from "@/lib/saas/loadout-lines";
+import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
+import { tagKey } from "@/lib/saas/tag-key";
 import { linkTag, finishLoadout } from "./actions";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -39,7 +41,8 @@ const ndef = (): NdefCtor | null =>
 const noSubscribe = () => () => {};
 const useHasNfc = () => useSyncExternalStore(noSubscribe, () => ndef() !== null, () => false);
 
-export type Scan = { how: ScanHow; at: number };
+/** A piece checked onto the truck. A tag scan carries the code read off the tag, for the server to check. */
+export type Scan = { how: ScanHow; at: number; proof?: string };
 type Outcome = "yard" | "missing";
 const HOW: Record<ScanHow, string> = { nfc: "NFC tap", qr: "QR", hand: "checked by hand" };
 const TONE = {
@@ -65,7 +68,9 @@ const readDraftRaw = (truckId: string): string | null => {
 const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
 const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); } catch { /* storage off */ } };
 
-export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, lastPackageIds, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export interface ScanPlan { by: string | null; at: string; note: string | null; packageIds: string[]; lines: KitLine[] }
+
+export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, lastPackageIds, plan = null, tagRule = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
@@ -75,8 +80,12 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   manager?: boolean;
   /** The demo yard: no iron to read, so checking by hand doesn't ask for the serial. */
   demo?: boolean;
-  /** Packages this truck's last load-out used, picked to start with. */
+  /** Packages this truck's last load-out used, picked to start with (when nobody planned the job). */
   lastPackageIds?: string[];
+  /** A manager's plan for this job: picked to start with, and the hand can't take any of it off. */
+  plan?: ScanPlan | null;
+  /** The yard scans tags only: pressure iron and anything on the list can't be checked by hand. */
+  tagRule?: boolean;
   /** Only for the marketing screenshot: packages already picked. */
   initialPackageIds?: string[];
   /** Only for the marketing screenshot: start partway through a load-out. */
@@ -111,7 +120,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string } | null>(null);
   const [saveErr, setSaveErr] = useState("");
-  const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? lastPackageIds ?? []);
+  const lockedIds = useMemo(() => plan?.packageIds ?? [], [plan]);
+  const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? (plan ? plan.packageIds : lastPackageIds) ?? []);
   // First, what's this job? Then scanning. (Straight to scanning when picking a load-out back up.)
   const [started, setStarted] = useState(Boolean(initialScans));
   const [quick, setQuick] = useState<KitLine[]>([]);
@@ -124,6 +134,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const lastCode = useRef<{ text: string; at: number }>({ text: "", at: 0 });
   // The handler a scanner calls must see the latest state.
   const handleRef = useRef<(i: { link: string | null; chipId: string | null; how: ScanHow }) => void>(() => {});
+  const handleScanSync = (i: { link: string | null; chipId: string | null; how: ScanHow }) => { void handleScan(i); };
 
   const expected = useMemo(() => list.filter((p) => p.unitId === truck.id), [list, truck.id]);
   const added = useMemo(() => list.filter((p) => p.unitId !== truck.id && scans[p.id]), [list, scans, truck.id]);
@@ -131,21 +142,25 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
 
   // The list, filled in as pieces get scanned.
   const picked = useMemo(() => packages.filter((x) => packageIds.includes(x.id)), [packages, packageIds]);
+  const planned = useMemo(() => plan?.lines ?? [], [plan]);
+  const lineLabels = useMemo(() => expectedLines({ kit, packages: picked, planned, quick }).map((l) => l.label), [kit, picked, planned, quick]);
+  /** In a scan-only yard: this piece has to be scanned off its tag. */
+  const needsTag = (p: ScanPiece) => tagRule && needsTagScan(p, lineLabels, TESTED_CATEGORIES);
   const lines = useMemo(() => fillLines(
-    expectedLines({ kit, packages: picked, quick }),
+    expectedLines({ kit, packages: picked, planned, quick }),
     list.filter((p) => scans[p.id]).sort((a, b) => scans[a.id].at - scans[b.id].at).map((p) => ({ id: p.id, name: p.name, serial: p.serial })),
-  ), [kit, picked, quick, list, scans]);
+  ), [kit, picked, planned, quick, list, scans]);
   // A bad piece on a line doesn't make it good: the line reads red until it comes off and a good one goes on.
   const redOnTruck = useMemo(() => new Set(list.filter((p) => scans[p.id] && p.problem === "red").map((p) => p.id)), [list, scans]);
   const lineBad = (l: { filled: { id: string }[] }) => l.filled.some((f) => redOnTruck.has(f.id));
   const linesDone = lines.filter((l) => l.filled.length >= l.qty && !lineBad(l)).length;
   const pieceNames = useMemo(() => [...new Set(list.map((p) => p.name.replace(/\s*#\s*\d+\b/g, "").trim()))].sort((a, b) => a.localeCompare(b)), [list]);
 
-  function markScanned(piece: ScanPiece, how: ScanHow) {
+  function markScanned(piece: ScanPiece, how: ScanHow, proof?: string) {
     const already = Boolean(scans[piece.id]);
     const msg = scanMessage({ kind: "match", piece, onTruck: piece.unitId === truck.id }, truck.name, already);
     setBanner(msg);
-    if (!already) setScans((s) => ({ ...s, [piece.id]: { how, at: Date.now() } }));
+    if (!already) setScans((s) => ({ ...s, [piece.id]: { how, at: Date.now(), ...(proof ? { proof } : {}) } }));
     try { navigator.vibrate?.(msg.tone === "good" ? 80 : [120, 80, 120]); } catch { /* no vibration */ }
   }
 
@@ -164,10 +179,14 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     setQuickLabel(""); setQuickQty("1");
   }
 
-  function handleScan(input: { link: string | null; chipId: string | null; how: ScanHow }) {
-    const r = identifyScan(input, list, truck.id);
-    if (r.kind === "match") { markScanned(r.piece, input.how); return; }
+  async function handleScan(input: { link: string | null; chipId: string | null; how: ScanHow }) {
+    const r = await readScan(input, list, truck.id);
+    if (r.kind === "match") { markScanned(r.piece, input.how, r.proof); return; }
     if (r.kind === "unknown") {
+      if (tagRule && !manager) {
+        setBanner({ tone: "warn", text: "New tag. This yard scans tags only, so a manager has to link it to its piece first." });
+        return;
+      }
       setPendingLink({ extTag: r.extTag, how: input.how });
       setLinkChoice("");
       setBanner({ tone: "warn", text: "New tag. Pick the piece it's on, and it'll be recognized from now on." });
@@ -175,7 +194,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     }
     setBanner({ tone: "warn", text: r.text });
   }
-  useEffect(() => { handleRef.current = handleScan; });
+  useEffect(() => { handleRef.current = handleScanSync; });
 
   // Keep the load-out on the phone as it happens.
   useEffect(() => {
@@ -186,7 +205,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   function pickUpDraft() {
     if (!draft) return;
     setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt);
-    setPackageIds((draft.packageIds ?? []).filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
+    setPackageIds([...new Set([...lockedIds, ...(draft.packageIds ?? [])])].filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
     setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
@@ -286,8 +305,9 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
       return;
     }
     if (!res.ok) { setBanner({ tone: "bad", text: res.error ?? "Couldn't link that tag." }); return; }
-    setList((l) => l.map((p) => (p.id === linkChoice ? { ...p, extTag: pendingLink.extTag } : p)));
-    if (piece) markScanned({ ...piece, extTag: pendingLink.extTag }, pendingLink.how);
+    const extKey = await tagKey(pendingLink.extTag);
+    setList((l) => l.map((p) => (p.id === linkChoice ? { ...p, extKey } : p)));
+    if (piece) markScanned({ ...piece, extKey }, pendingLink.how, pendingLink.extTag);
     setPendingLink(null); setLinkFilter("");
   }
 
@@ -301,6 +321,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     if (!want) return;
     const piece = list.find((p) => (p.serial ?? "").toLowerCase() === want);
     if (!piece) { setBanner({ tone: "warn", text: `No piece with serial ${serialText.trim()}. Check the stamp and try again.` }); return; }
+    if (needsTag(piece)) { setBanner({ tone: "bad", text: `This yard scans tags only. Find the tag on ${piece.name} ${piece.serial ?? ""} and scan it.`.replace(/\s+\./, ".") }); return; }
     markScanned(piece, "hand");
     setSerialText("");
   }
@@ -312,7 +333,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     try {
       res = await finishLoadout({
         unitId: truck.id, startedAt,
-        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at })),
+        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
         notScanned, packageIds, quick,
       });
     } catch {
@@ -389,7 +410,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const short = shortLines(lines);
   const missingNow = notYet.filter((p) => outcomes[p.id] === "missing");
   const nothingScanned = Object.keys(scans).length === 0;
-  const willBlock = nothingScanned || short.length + redScanned.length + missingNow.length > 0;
+  const byHandNotAllowed = list.filter((p) => scans[p.id]?.how === "hand" && needsTag(p));
+  const willBlock = nothingScanned || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
   const required = lines.reduce((n, l) => n + l.qty, 0);
@@ -424,8 +446,18 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
           <div>
             <h2 className="text-lg font-semibold">What&apos;s going on {truck.name} today?</h2>
-            <p className="text-sm text-ink-dim">The truck&apos;s kit always counts. Pick the package for this job, or add a quick line.</p>
+            <p className="text-sm text-ink-dim">{plan ? "A manager planned this job. You can add to it, not take anything off." : "The truck\u2019s kit always counts. Pick the package for this job, or add a quick line."}</p>
           </div>
+          {plan ? (
+            <div className="flex items-start gap-3 rounded-xl border-2 border-bone/50 bg-bone/10 px-4 py-3">
+              <ClipboardList className="mt-0.5 h-5 w-5 shrink-0 text-bone" />
+              <div className="min-w-0 text-sm">
+                <div className="font-semibold">Planned by {plan.by ?? "a manager"}, {plan.at}</div>
+                {plan.note ? <div className="break-words text-ink">&ldquo;{plan.note}&rdquo;</div> : null}
+                {planned.length ? <div className="break-words text-ink-dim">Extra for this job: {lineSummary(planned)}</div> : null}
+              </div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2">
             <div className="flex min-h-14 items-center gap-3 rounded-xl border-2 border-line-2 bg-elevated px-4 py-2">
               <Check className="h-5 w-5 shrink-0 text-emerald-400" />
@@ -436,13 +468,14 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             </div>
             {packages.map((x) => {
               const on = packageIds.includes(x.id);
+              const locked = lockedIds.includes(x.id);
               return (
-                <button key={x.id} type="button" aria-pressed={on}
+                <button key={x.id} type="button" aria-pressed={on} disabled={locked}
                   onClick={() => setPackageIds((ids) => on ? ids.filter((i) => i !== x.id) : [...ids, x.id])}
-                  className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left", on ? "border-bone bg-bone/10" : "border-line-2 hover:bg-elevated")}>
-                  {on ? <Check className="h-5 w-5 shrink-0 text-bone" /> : <Plus className="h-5 w-5 shrink-0 text-ink-faint" />}
+                  className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left", on ? "border-bone bg-bone/10" : "border-line-2 hover:bg-elevated", locked && "cursor-default")}>
+                  {locked ? <Lock className="h-5 w-5 shrink-0 text-bone" /> : on ? <Check className="h-5 w-5 shrink-0 text-bone" /> : <Plus className="h-5 w-5 shrink-0 text-ink-faint" />}
                   <div className="min-w-0">
-                    <div className="font-semibold">{x.name}{on && lastPackageIds?.includes(x.id) ? <span className="ml-2 text-xs font-normal text-ink-faint">same as last time</span> : null}</div>
+                    <div className="font-semibold">{x.name}{locked ? <span className="ml-2 text-xs font-normal text-ink-faint">planned</span> : on && lastPackageIds?.includes(x.id) ? <span className="ml-2 text-xs font-normal text-ink-faint">same as last time</span> : null}</div>
                     <div className="break-words text-[13px] text-ink-dim">{lineSummary(x.lines) || "No lines yet"}</div>
                   </div>
                 </button>
@@ -499,7 +532,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
           ? <button type="button" onClick={stopCamera} className={buttonClass("outline", "lg", "h-14 text-base")}><X className="h-5 w-5" /> Stop camera</button>
           : <button type="button" onClick={startCamera} className={buttonClass(hasNfc ? "outline" : "default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Scan QR codes</button>}
       </div>
-      {!hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes or check pieces by hand.</p> : null}
+      {!hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes{tagRule ? "." : " or check pieces by hand."}</p> : null}
+      {tagRule ? <p className="-mt-2 text-xs text-ink-faint">This yard scans tags only: pressure iron and anything on the list has to be scanned off its tag. A tag that won&apos;t scan means a manager signs off.</p> : null}
 
       {camOn ? (
         <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl border border-line bg-black">
@@ -540,12 +574,16 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         <div className="flex flex-wrap gap-2">
           {kit.length ? <span className="rounded-lg border border-line-2 bg-elevated px-3 py-2 text-sm font-medium">{truck.name} kit</span> : null}
           {picked.map((x) => (
-            <span key={x.id} className="inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 py-1 pl-3 pr-1 text-sm font-medium text-ink">
+            <span key={x.id} className={cn("inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 py-1 pl-3 text-sm font-medium text-ink", lockedIds.includes(x.id) ? "pr-3" : "pr-1")}>
+              {lockedIds.includes(x.id) ? <Lock className="h-3.5 w-3.5 text-bone" aria-label="Planned by a manager" /> : null}
               {x.name}
-              <button type="button" onClick={() => setPackageIds((ids) => ids.filter((i) => i !== x.id))} aria-label={`Take ${x.name} off the list`}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
+              {lockedIds.includes(x.id) ? null : (
+                <button type="button" onClick={() => setPackageIds((ids) => ids.filter((i) => i !== x.id))} aria-label={`Take ${x.name} off the list`}
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
+              )}
             </span>
           ))}
+          {planned.length ? <span className="inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 px-3 py-2 text-sm font-medium"><Lock className="h-3.5 w-3.5 text-bone" /> Planned extras</span> : null}
           {packages.filter((x) => !packageIds.includes(x.id)).length ? (
             <select value="" onChange={(e) => { const v = e.target.value; if (v) setPackageIds((ids) => [...ids, v]); }} aria-label="Add a package"
               className="h-11 min-w-0 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone">
@@ -574,7 +612,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
                   <div className="min-w-0 flex-1">
                     <div className="break-words text-sm font-semibold">{l.label}</div>
                     <div className={cn("break-words text-[13px]", bad ? "text-red-400" : "text-ink-faint")}>
-                      {l.source === "kit" ? "Truck kit" : l.source === "package" ? l.package : "Quick line"}
+                      {lineSourceLabel(l)}
                       {l.filled.length ? ` · ${l.filled.map((f) => `${f.serial ?? f.name}${redOnTruck.has(f.id) ? " (bad, take it off)" : ""}`).join(", ")}` : ""}
                     </div>
                   </div>
@@ -600,13 +638,13 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
           <div className="h-full rounded-full bg-bone transition-all" style={{ width: `${expected.length ? (scannedExpected / expected.length) * 100 : 0}%` }} />
         </div>
         {expected.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
-        {expected.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />)}
+        {expected.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />)}
       </section>
 
       {added.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Going on {truck.name} (logged somewhere else)</h2>
-          {added.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} onHand={() => {}} onTakeOff={() => takeOff(p)} />)}
+          {added.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} onHand={() => {}} onTakeOff={() => takeOff(p)} />)}
         </section>
       )}
 
@@ -657,6 +695,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
                 {short.map((l, i) => <li key={`s${i}`}>Short: {l.label}, {l.filled.length} of {l.qty} scanned</li>)}
                 {redScanned.map((p) => <li key={`r${p.id}`}>Bad piece on the truck: {pieceText(p)}. Take it off and scan a good one.</li>)}
                 {missingNow.map((p) => <li key={`m${p.id}`}>Can&apos;t find: {pieceText(p)}</li>)}
+                {byHandNotAllowed.map((p) => <li key={`h${p.id}`}>Checked by hand, not scanned off its tag: {pieceText(p)}</li>)}
               </ul>
             ) : (
               <p className="mt-0.5 text-sm text-ink-dim">Saving checks every piece against the records one more time.</p>
@@ -693,7 +732,7 @@ function maskSerial(serial: string): string {
  * piece is scanned, so the check proves someone looked at the iron. (Not in
  * the demo yard, where there's no iron to read.)
  */
-function Row({ p, scan, onHand, onTakeOff, demo = false }: { p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean }) {
+function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false }: { p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean; tagOnly?: boolean }) {
   const [asking, setAsking] = useState(false);
   const [typed, setTyped] = useState("");
   const [err, setErr] = useState("");
@@ -718,7 +757,9 @@ function Row({ p, scan, onHand, onTakeOff, demo = false }: { p: ScanPiece; scan?
           {p.statusText}{scan ? <span className="text-ink-faint"> · {HOW[scan.how]} {clock(scan.at)}</span> : null}
         </div>
       </div>
-      {!scan ? (
+      {!scan && tagOnly ? (
+        <span className="w-full shrink-0 text-[13px] font-medium text-ink-dim sm:w-auto">Scan its tag</span>
+      ) : !scan ? (
         <button type="button" onClick={check} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
           {asking ? "Check it" : "Check by hand"}
         </button>

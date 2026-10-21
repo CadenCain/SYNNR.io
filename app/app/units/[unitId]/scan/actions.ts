@@ -8,8 +8,11 @@ import { YARD_TZ } from "@/lib/saas/format";
 import type { ScanHow } from "@/lib/saas/loadout";
 import { judgeItem } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
-import { expectedLines, fillLines, loadoutVerdict, untestedPieces, lineTokens, lineMatches, type BadPiece } from "@/lib/saas/loadout-lines";
+import { expectedLines, fillLines, loadoutVerdict, untestedPieces, lineTokens, lineMatches, needsTagScan, type BadPiece } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
+import { provenHow } from "@/lib/saas/scan-proof";
+import { getOpenPlan } from "@/lib/saas/plans";
+import { getYardRules } from "@/lib/saas/yard-rules";
 
 type Outcome = "yard" | "missing";
 
@@ -26,6 +29,10 @@ export async function linkTag(input: { assetId: string; extTag: string }): Promi
   const extTag = input.extTag.trim().slice(0, 310);
   if (!input.assetId || !extTag) return { ok: false, error: "Pick the piece this tag is on." };
   const db = await saasDb();
+  const manager = company.role === "owner" || company.role === "admin";
+  if (!manager && (await getYardRules(db, company.id)).requireTagScan) {
+    return { ok: false, error: "This yard scans tags only, so a manager links new tags." };
+  }
   const { data: taken } = await db.from("saas_assets").select("id, name, identifier")
     .eq("company_id", company.id).eq("nfc_uid", extTag).maybeSingle();
   const t = taken as { id: string; name: string; identifier: string | null } | null;
@@ -72,7 +79,7 @@ async function savedLoadout(admin: Admin, companyId: string, userId: string, uni
 export async function finishLoadout(input: {
   unitId: string;
   startedAt: string;
-  scans: { assetId: string; how: ScanHow; at?: number }[];
+  scans: { assetId: string; how: ScanHow; at?: number; proof?: string }[];
   notScanned: { assetId: string; outcome: Outcome }[];
   packageIds?: string[];
   quick?: { label: string; qty: number }[];
@@ -95,9 +102,10 @@ export async function finishLoadout(input: {
   const already = await savedLoadout(admin, company.id, user.id, unit.id, startedIso);
   if (already) return already;
 
-  // The list. Kit and packages come from the database, not the phone, so a
-  // phone can only add lines (quick ones), never drop one.
-  const packageIds = [...new Set((input.packageIds ?? []).filter((x) => typeof x === "string"))].slice(0, 10);
+  // The list. Kit, packages, and the manager's plan come from the database,
+  // not the phone, so a phone can only add lines (quick ones), never drop one.
+  const [plan, rules] = await Promise.all([getOpenPlan(db, company.id, unit.id), getYardRules(db, company.id)]);
+  const packageIds = [...new Set([...(plan?.packageIds ?? []), ...(input.packageIds ?? []).filter((x) => typeof x === "string")])].slice(0, 12);
   const [{ data: kitRow }, { data: pkgRows }] = await Promise.all([
     db.from("saas_packages").select("id, name").eq("company_id", company.id).eq("unit_id", unit.id).maybeSingle(),
     packageIds.length
@@ -118,6 +126,7 @@ export async function finishLoadout(input: {
   const expected = expectedLines({
     kit: kit ? linesOf(kit.id) : [],
     packages: pkgs.map((x) => ({ name: x.name, lines: linesOf(x.id) })),
+    planned: plan?.lines ?? [],
     quick,
   });
 
@@ -126,9 +135,9 @@ export async function finishLoadout(input: {
   const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id);
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const label = (a: A) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}`;
 
@@ -147,7 +156,9 @@ export async function finishLoadout(input: {
     return true;
   }).map((s) => {
     const at = typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now;
-    return { ...s, at };
+    // A tag scan only counts if the code read off the tag is this piece's.
+    const how = provenHow(s.how, s.proof, byId.get(s.assetId)!);
+    return { assetId: s.assetId, how, at };
   });
   const scannedIds = scans.map((s) => s.assetId);
   const filled = fillLines(expected, scans.map((s) => { const a = byId.get(s.assetId)!; return { id: a.id, name: a.name, serial: a.identifier }; }));
@@ -228,7 +239,14 @@ export async function finishLoadout(input: {
     truckPaper,
     scanned: scans.length,
   });
-  const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`)];
+  // A yard that scans tags only: pressure iron and anything on the list
+  // checked by hand (or a scan whose code didn't check out) blocks the truck.
+  const handChecked = rules.requireTagScan
+    ? scans.filter((x) => x.how === "hand").map((x) => byId.get(x.assetId)!)
+        .filter((a) => needsTagScan(a, expected.map((l) => l.label), TESTED_CATEGORIES))
+    : [];
+  const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`),
+    ...handChecked.map((a) => `Checked by hand, not scanned off its tag: ${label(a)}`)];
   const verdict: "ready" | "not_ready" = reasons.length ? "not_ready" : "ready";
 
   // Move the iron. Scanned pieces are on this truck now; a piece flagged
@@ -267,6 +285,7 @@ export async function finishLoadout(input: {
     expected: onList + notScanned.length, scanned: onList,
     verdict, reasons,
     packages: pkgs.map((x) => x.name),
+    plan: plan ? { id: plan.id, by: plan.by, at: plan.at, note: plan.note, packages: pkgs.filter((x) => plan.packageIds.includes(x.id)).map((x) => x.name), lines: plan.lines } : null,
     lines: filled.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: l.filled.map((f) => ({ asset_id: f.id, name: f.name, serial: f.serial })) })),
     pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, added: a.unit_id !== unit.id, red: redIds.has(a.id), tests: testsOf.get(a.id) ?? [] }; }),
     not_scanned: notScanned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
@@ -290,6 +309,13 @@ export async function finishLoadout(input: {
   }
   const offIds = notScanned.filter((n) => n.outcome === "yard").map((n) => n.assetId);
   if (offIds.length) await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null }).eq("company_id", company.id).in("id", offIds);
+  // Pieces proven scanned off their tag: the tag works.
+  const tagged = scans.filter((x) => x.how !== "hand").map((x) => x.assetId);
+  if (tagged.length) await admin.from("saas_assets").update({ tag_seen_at: now }).eq("company_id", company.id).in("id", tagged);
+  // The truck rolled: the manager's plan for this job is used up.
+  if (plan && verdict === "ready") {
+    await admin.from("saas_loadout_plans").update({ used_at: now, used_loadout_id: saved.id }).eq("id", plan.id).eq("company_id", company.id).is("used_at", null);
+  }
 
   const summary = verdict === "ready"
     ? `${unit.name} loaded out READY by ${actor}: ${scans.length} ${scans.length === 1 ? "piece" : "pieces"} scanned`

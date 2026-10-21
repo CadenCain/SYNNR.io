@@ -40,6 +40,12 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
       .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).in("id", ids);
   }
 
+  // The truck rolled: the plan this load-out was checked against is used up.
+  if (got.rec.plan?.id) {
+    await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
+      .eq("id", got.rec.plan.id).eq("company_id", company.id).is("used_at", null);
+  }
+
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");
   const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason.replace(/[.\s]+$/, "")}". Not ready because: ${why}`;
   void logEvent({ companyId: company.id, kind: "rolled_override", unitId: got.rec.unit_id, actor, message });

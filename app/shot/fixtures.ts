@@ -35,7 +35,7 @@ export function demoEquipment(): { companyName: string; list: EquipmentList } {
   const items: RawItem[] = [];
   const add = (unitKey: string | null) => (a: (typeof DEMO_YARD_IRON)[number], n: number) => {
     const id = `${unitKey ?? "yard"}-${n}`;
-    assets.push({ id, name: a.name, category: a.category, identifier: a.identifier ?? null, status: a.status ?? "in_service", yard_id: "y1", unit_id: unitKey, tag_token: id, last_seen_where: a.note ?? null,
+    assets.push({ id, name: a.name, category: a.category, identifier: a.identifier ?? null, status: a.status ?? "in_service", yard_id: "y1", unit_id: unitKey, last_seen_where: a.note ?? null,
       scanned_at: loadoutAt(unitKey), scanned_unit_id: loadoutAt(unitKey) ? unitKey : null });
     (a.items ?? []).forEach((it, k) => items.push({
       id: `${id}-${k}`, title: it.title, expiration_date: it.exp === null ? null : addDaysIso(today, it.exp),
@@ -99,7 +99,7 @@ export function demoKitAndPackages(unitKey: string) {
 export function demoScanInProgress() {
   const { list } = demoEquipment();
   const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
-    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, tagToken: r.tagToken, extTag: null,
+    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, category: r.category, tagKey: r.id, extKey: null,
     problem: r.state === "overdue" || r.state === "down" ? "red" : r.state === "due" ? "yellow" : null,
     statusText: r.state === "down" ? stateLabel(r) : r.next ? `${r.next.title}: ${r.next.detail}` : "No test on file",
   }));

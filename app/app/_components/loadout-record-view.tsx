@@ -3,6 +3,7 @@ import { fmtWhen, YARD_TZ } from "@/lib/saas/format";
 import { plainDate } from "@/lib/saas/judge";
 import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
 import { cn } from "@/lib/utils";
+import { lineSourceLabel } from "@/lib/saas/loadout-lines";
 
 /**
  * One saved load-out, as the record reads: the answer, why, the list it was
@@ -36,6 +37,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
   const listNames = [
     rec.lines.some((l) => l.source === "kit") ? `${rec.unit_name} kit` : null,
     ...(rec.packages ?? []),
+    rec.lines.some((l) => l.source === "plan") ? "extras planned for the job" : null,
     rec.lines.some((l) => l.source === "quick") ? `${rec.lines.filter((l) => l.source === "quick").length} quick ${rec.lines.filter((l) => l.source === "quick").length === 1 ? "line" : "lines"}` : null,
   ].filter(Boolean) as string[];
 
@@ -54,6 +56,11 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
           {rec.unit_name} load-out, {fmtWhen(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
           {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} scanned on.
         </p>
+        {rec.plan ? (
+          <p className="mt-1 text-sm text-ink-dim">
+            Planned by {rec.plan.by ?? "a manager"} {fmtWhen(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note ? ` "${rec.plan.note}"` : ""}
+          </p>
+        ) : null}
         {byHand > 0 ? (
           <p className="mt-1 text-sm font-medium text-amber-400">
             {byHand} of {rec.pieces.length} checked by hand, not scanned off a tag.
@@ -87,7 +94,7 @@ export default function LoadoutRecordView({ rec, override, tagHref }: {
                   <div className="min-w-0">
                     <div className="break-words text-sm font-semibold">{l.label}</div>
                     <div className="text-[13px] text-ink-faint">
-                      {l.source === "kit" ? "Truck kit" : l.source === "package" ? l.package ?? "Package" : "Quick line"}
+                      {lineSourceLabel(l)}
                       {l.filled.length ? ` · ${l.filled.map((f) => `${f.serial ?? f.name}${red.has(f.asset_id) ? " (bad)" : ""}`).join(", ")}` : ""}
                     </div>
                   </div>

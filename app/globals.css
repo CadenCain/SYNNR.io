@@ -27,6 +27,8 @@
   --color-line-2:    #cfd7e2;
   --color-bone:      #1d4ed8;
   --color-bone-soft: #1e40af;
+  /* Text on a blue button. */
+  --color-on-bone:   #ffffff;
 
   /* shadcn semantic tokens, mapped onto the palette above. */
   --color-background: #f4f6f9;
@@ -70,6 +72,67 @@
   --radius-xl:  10px;
   --radius-2xl: 12px;
   --radius-3xl: 16px;
+}
+
+/* Dark: the same names with night values, for the app and sign-in pages
+   (data-theme="dark" on <html>, set by the theme switch; Auto follows the
+   phone). Screen only, so a record printed from dark mode still prints
+   black on white. Unlayered, so it wins over the @theme defaults. */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --color-coal:      #0b1220;
+    --color-surface:   #121a2b;
+    --color-elevated:  #1b2538;
+    --color-ink:       #e6ebf2;
+    --color-ink-dim:   #a9b3c4;
+    --color-ink-faint: #8a95a8;
+    --color-line:      #243049;
+    --color-line-2:    #34425e;
+    --color-bone:      #3b82f6;
+    --color-bone-soft: #60a5fa;
+    --color-on-bone:   #06101f;
+
+    --color-background: #0b1220;
+    --color-foreground: #e6ebf2;
+    --color-card: #121a2b;
+    --color-card-foreground: #e6ebf2;
+    --color-popover: #121a2b;
+    --color-popover-foreground: #e6ebf2;
+    --color-primary: #3b82f6;
+    --color-primary-foreground: #06101f;
+    --color-secondary: #1b2538;
+    --color-secondary-foreground: #e6ebf2;
+    --color-muted: #1b2538;
+    --color-muted-foreground: #a9b3c4;
+    --color-accent: #1b2538;
+    --color-accent-foreground: #e6ebf2;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #ffffff;
+    --color-border: #243049;
+    --color-input: #34425e;
+    --color-ring: #3b82f6;
+
+    /* Status colors bright enough to read on a dark card. */
+    --color-emerald-300: #6ee7b7;
+    --color-emerald-400: #34d399;
+    --color-emerald-500: #10b981;
+    --color-amber-300:   #fcd34d;
+    --color-amber-400:   #fbbf24;
+    --color-amber-500:   #f59e0b;
+    --color-red-300:     #fca5a5;
+    --color-red-400:     #f87171;
+    --color-red-500:     #ef4444;
+  }
+  html[data-theme="dark"] body {
+    background: var(--color-coal);
+    color: var(--color-ink);
+  }
+  /* A blue that reads as a link on a dark card is too light for white text,
+     so blue buttons carry dark text at night. */
+  html[data-theme="dark"] .bg-bone {
+    color: var(--color-on-bone);
+  }
 }
 
 *,

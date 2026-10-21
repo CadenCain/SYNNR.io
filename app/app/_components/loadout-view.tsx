@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck } from "lucide-react";
+import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ClipboardList } from "lucide-react";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,7 +23,7 @@ export interface ActivityLine { id: string; time: string; actor: string | null; 
 export interface PersonWeek { name: string; loadouts: number; returns: number; overrides: number; other: number }
 export interface IronCounts { out: number; outTooLong: number; outOfTest: number; dueSoon: number; down: number }
 
-export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7 }: {
+export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false }: {
   trucks: LoadOutTruckRow[];
   counts: LoadOutCounts;
   summary: string;
@@ -36,6 +36,10 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
   /** A hand's own truck (the one they last loaded out) goes first. */
   myTruckId?: string | null;
   alertDays?: number;
+  /** Each truck's planned next job, by truck id. */
+  plans?: Record<string, { text: string; by: string | null; note: string | null }>;
+  /** Managers plan jobs. */
+  manager?: boolean;
 }) {
   const mine = myTruckId ? allTrucks.find((x) => x.t.id === myTruckId) ?? null : null;
   const trucks = mine ? [mine, ...allTrucks.filter((x) => x !== mine)] : allTrucks;
@@ -132,6 +136,12 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
               </Link>
               {why ? <div className={cn("break-words text-sm", whyTone === "red" ? "font-medium text-red-400" : "text-amber-400")}>{why}</div> : null}
               {stillOut ? <div className="break-words text-sm text-amber-400">{stillOut}</div> : null}
+              {plans[t.id] ? (
+                <div className="flex items-start gap-1.5 break-words text-sm text-ink">
+                  <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-bone" />
+                  <span><span className="font-semibold">Next job:</span> {plans[t.id].text}{plans[t.id].note ? <> &middot; &ldquo;{plans[t.id].note}&rdquo;</> : null}{plans[t.id].by ? <span className="text-ink-faint"> &middot; {plans[t.id].by}</span> : null}</span>
+                </div>
+              ) : null}
               {loadoutId ? (
                 <Link href={`/app/loadouts/${loadoutId}`} className={cn("text-[13px] underline-offset-2 hover:underline", status === "blocked" ? "text-red-400" : overridden ? "text-amber-400" : "text-bone")}>
                   {loadoutLine} · See the record
@@ -149,6 +159,11 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
                     <ScanLine className="h-5 w-5" /> {doneToday ? "Scan again" : "Start load-out"}
                   </Link>
                 )}
+                {manager ? (
+                  <Link href={`/app/units/${t.id}/plan`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Plan ${t.name}'s next job`}>
+                    <ClipboardList className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
+                  </Link>
+                ) : null}
                 <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
                   <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Check</span>
                 </Link>

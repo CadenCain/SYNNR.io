@@ -88,7 +88,11 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const items = (ciData ?? []) as RowItem[];
   const itemCustomers = await getItemCustomers(db, company.id, items.map((i) => i.id));
   for (const it of items) it.customers = itemCustomers.get(it.id) ?? [];
-  const [paper, rules, qr] = await Promise.all([paperLinks(db, items), getYardRules(db, company.id), qrSvg(tagUrl(a.tag_token))]);
+  const rules = await getYardRules(db, company.id);
+  // In a yard that scans tags only, a tag on screen is a tag a hand could
+  // scan off a phone instead of off the iron. Managers make tags there.
+  const showTag = !rules.requireTagScan || isManagerRole(company.role);
+  const [paper, qr] = await Promise.all([paperLinks(db, items), showTag ? qrSvg(tagUrl(a.tag_token)) : Promise.resolve("")]);
   const isManager = isManagerRole(company.role);
 
   // The one line that matters: worst first, then the soonest due.
@@ -280,6 +284,9 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
             piece's tests and paper, no login. */}
         <Card className="flex flex-col items-center gap-3 p-5 text-center lg:col-span-2">
           <h2 className="self-start text-sm font-semibold text-ink-dim">Tag</h2>
+          {!showTag ? (
+            <p className="text-[13px] text-ink-dim">This yard scans tags only, so a manager prints and writes tags. Scan the tag on the iron.</p>
+          ) : <>
           <div className="w-40 rounded-lg border border-line bg-white p-2 [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qr }} />
           <p className="text-[13px] text-ink-dim">Stick the QR code on the iron, or put the same link on an NFC tag. Anyone who scans it with a phone sees its serial, test dates, and paper. No login.</p>
           <div className="flex flex-wrap justify-center gap-2">
@@ -288,6 +295,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           </div>
           <NfcWriteButton url={tagUrl(a.tag_token)} />
           <NfcHowTo url={tagUrl(a.tag_token)} />
+          </>}
         </Card>
       </div>
 

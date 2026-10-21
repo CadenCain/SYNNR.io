@@ -1,16 +1,18 @@
 import Link from "next/link";
+import { ThemeSync } from "@/components/theme";
 
 // Centered shell for /login, /signup, and getting started (/onboarding).
-// Same light theme as the app. noindex.
+// Same theme as the app (light or dark). noindex.
 export const metadata = { robots: { index: false, follow: false } };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="saas flex min-h-dvh flex-col bg-coal text-ink antialiased">
+      <ThemeSync />
       <header className="flex items-center justify-center px-4 py-6">
         <Link href="/" className="flex items-center gap-2.5">
           <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="#1d4ed8" />
+            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" className="fill-bone" />
           </svg>
           <span className="font-semibold tracking-tight">RollReady</span><span className="text-sm text-ink-faint">by SYNNR</span>
         </Link>

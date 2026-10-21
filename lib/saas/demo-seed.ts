@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, type DemoAsset,
 } from "./demo-data";
 import { demoLoadoutRecord } from "./demo-loadouts";
 import { kitLinesFrom } from "./loadout-lines";
@@ -141,6 +141,15 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
         return src.map((l, i) => ({ package_id: r.id, company_id: companyId, label: l.label, qty: l.qty, sort: i + 1 }));
       });
       if (lines.length) await admin.from("saas_package_lines").insert(lines);
+      // A manager planned CT-01's next job.
+      const planAt = tsAgo(DEMO_PLAN.daysAgo, DEMO_PLAN.hour, DEMO_PLAN.minute);
+      const planUnit = DEMO_UNITS.find((u) => u.key === DEMO_PLAN.unitKey)!;
+      await Promise.all([
+        admin.from("saas_loadout_plans").insert({ company_id: companyId, unit_id: unitId(DEMO_PLAN.unitKey), package_ids: [], lines: DEMO_PLAN.lines,
+          note: DEMO_PLAN.note, planned_by: DEMO_PLAN.by, created_at: planAt }),
+        admin.from("saas_events").insert({ company_id: companyId, kind: "plan_set", unit_id: unitId(DEMO_PLAN.unitKey), actor: DEMO_PLAN.by, created_at: planAt,
+          message: `${DEMO_PLAN.by} planned ${planUnit.name}'s next job: ${DEMO_PLAN.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}. "${DEMO_PLAN.note}"` }),
+      ]);
     })(),
 
     // Load-outs scanned at the truck, worked out by the same rules as a real
@@ -171,6 +180,8 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
         }).select("id").single();
         if (loErr) throw new Error(`load-out: ${loErr.message}`);
         const loadoutId = (saved as { id: string }).id;
+        // Scanned off the tag: the tag works.
+        if (ids.length) await admin.from("saas_assets").update({ tag_seen_at: at }).in("id", ids);
         const ovAt = lo.override ? new Date(atMs + lo.override.minutesLater * 60e3).toISOString() : null;
         // It rolled: out on the job until checked back in.
         const rolled = rec.verdict === "ready" || Boolean(lo.override);
@@ -317,7 +328,7 @@ export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
 // its members, and its proof links are kept: the reaper deletes those too,
 // a refresh must not.
 const YARD_TABLES = [
-  "saas_alerts_sent", "saas_asset_moves", "saas_returns", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_alerts_sent", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
   "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
@@ -376,7 +387,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const { data: members } = await admin.from("saas_memberships").select("user_id").eq("company_id", cid);
       // Child tables first (not everything cascades), company last, users after.
       const tables = [
-        "saas_alerts_sent", "saas_returns", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+        "saas_alerts_sent", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",

@@ -9,7 +9,7 @@
  * matches fills it; one piece fills one line.
  */
 
-export type LineSource = "kit" | "package" | "quick";
+export type LineSource = "kit" | "package" | "plan" | "quick";
 
 export interface ExpectedLine {
   label: string;
@@ -79,14 +79,30 @@ export const shortLines = (filled: FilledLine[]) => filled.filter((l) => l.fille
 export function expectedLines(input: {
   kit: { label: string; qty: number }[];
   packages: { name: string; lines: { label: string; qty: number }[] }[];
+  /** Extra pieces a manager planned for this job. */
+  planned?: { label: string; qty: number }[];
   quick: { label: string; qty: number }[];
 }): ExpectedLine[] {
   const clean = (s: string) => s.trim().slice(0, 80);
   return [
     ...input.kit.map((l) => ({ label: clean(l.label), qty: l.qty, source: "kit" as const })),
     ...input.packages.flatMap((p) => p.lines.map((l) => ({ label: clean(l.label), qty: l.qty, source: "package" as const, package: p.name }))),
+    ...(input.planned ?? []).map((l) => ({ label: clean(l.label), qty: l.qty, source: "plan" as const })),
     ...input.quick.map((l) => ({ label: clean(l.label), qty: l.qty, source: "quick" as const })),
   ].filter((l) => l.label);
+}
+
+/** Where a line on the list came from, in plain words. */
+export const lineSourceLabel = (l: { source: LineSource; package?: string }) =>
+  l.source === "kit" ? "Truck kit" : l.source === "package" ? l.package ?? "Package" : l.source === "plan" ? "Planned for this job" : "Quick line";
+
+/**
+ * In a yard that scans tags only, which pieces have to be scanned off their
+ * tag: pressure iron, and anything that fills a line on the list. A hand tool
+ * that isn't on the list can still be checked by hand.
+ */
+export function needsTagScan(p: { name: string; category: string }, lineLabels: string[], testedCategories: Set<string>): boolean {
+  return testedCategories.has(p.category) || lineLabels.some((label) => lineMatches(label, p.name));
 }
 
 /** "Quad BOP stack #3" → "Quad BOP stack": the kind of piece, not the one piece. */

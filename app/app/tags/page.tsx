@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import PrintButton from "./print-button";
 import { NfcWriteButton, NfcHowTo, NfcSheetHint } from "@/app/app/_components/nfc-write";
+import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +21,25 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
   const { company } = await requireCompany();
   const { ids, yard, size } = await searchParams;
   const db = await saasDb();
-  const list = await getEquipment(db, company.id);
+  const [list, rules] = await Promise.all([getEquipment(db, company.id), getYardRules(db, company.id)]);
+  // A scan-only yard: tags on a screen could be scanned instead of the iron.
+  if (rules.requireTagScan && !isManagerRole(company.role)) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHeader back={{ href: "/app/equipment", label: "Equipment" }} title="QR tags" />
+        <Card className="p-5 text-sm text-ink-dim">This yard scans tags only, so a manager prints tags.</Card>
+      </div>
+    );
+  }
   const want = ids ? new Set(ids.split(",")) : null;
   const rows = list.rows
     .filter((r) => r.state !== "retired")
     .filter((r) => !want || want.has(r.id))
     .filter((r) => !yard || r.yardOf === yard);
   const small = size === "small";
-  const codes = await Promise.all(rows.map((r) => qrSvg(tagUrl(r.tagToken))));
+  const { data: tokenRows } = await db.from("saas_assets").select("id, tag_token").eq("company_id", company.id).neq("status", "retired");
+  const tokenOf = new Map(((tokenRows ?? []) as { id: string; tag_token: string }[]).map((t) => [t.id, t.tag_token]));
+  const codes = await Promise.all(rows.map((r) => qrSvg(tagUrl(tokenOf.get(r.id) ?? ""))));
 
   const q = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
@@ -89,7 +101,7 @@ export default async function TagSheet({ searchParams }: { searchParams: Promise
                 <div className={cn("break-words font-bold leading-tight", small ? "text-[11px]" : "text-base")}>{r.name}</div>
                 {r.identifier ? <div className={cn("font-semibold tabular-nums", small ? "text-[10px]" : "text-sm")}>SN {r.identifier}</div> : null}
                 <div className={cn("mt-1 text-slate-500", small ? "text-[8px]" : "text-[11px]")}>Scan for test dates</div>
-                <div className="mt-1.5"><NfcWriteButton url={tagUrl(r.tagToken)} compact /></div>
+                <div className="mt-1.5"><NfcWriteButton url={tagUrl(tokenOf.get(r.id) ?? "")} compact /></div>
               </div>
             </div>
           ))}

@@ -9,6 +9,7 @@ import { judgeItem } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { daysOut } from "@/lib/saas/whereabouts";
 import type { ScanHow } from "@/lib/saas/loadout";
+import { provenHow } from "@/lib/saas/scan-proof";
 
 export type ReturnDest = "truck" | "yard";
 type Outcome = "still_out" | "missing";
@@ -47,7 +48,7 @@ export async function finishReturn(input: {
   unitId: string | null;
   yardId: string | null;
   startedAt: string;
-  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string }[];
+  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string }[];
   notReturned: { assetId: string; outcome: Outcome }[];
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string }> {
   const { company, user } = await requireBillableCompany();
@@ -74,9 +75,9 @@ export async function finishReturn(input: {
 
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notReturned.map((n) => n.assetId)])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since, tag_token, nfc_uid").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null; tag_token: string | null; nfc_uid: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const unitNames = new Map<string, string>();
   const otherUnitIds = [...new Set(((assetRows ?? []) as A[]).map((a) => a.unit_id).filter((x): x is string => Boolean(x)))];
@@ -97,7 +98,9 @@ export async function finishReturn(input: {
     seen.add(s.assetId);
     return true;
   }).map((s) => ({
-    ...s,
+    assetId: s.assetId,
+    // A tag scan only counts if the code read off the tag is this piece's.
+    how: provenHow(s.how, s.proof, byId.get(s.assetId)!),
     to: (s.to === "truck" && unit ? "truck" : "yard") as ReturnDest,
     rack: String(s.rack ?? "").trim().slice(0, 80),
     at: typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now,
@@ -155,6 +158,8 @@ export async function finishReturn(input: {
     const { error } = await admin.from("saas_assets").update(offJob).eq("company_id", company.id).in("id", offIds);
     if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };
   }
+  const tagged = scans.filter((x) => x.how !== "hand").map((x) => x.assetId);
+  if (tagged.length) await admin.from("saas_assets").update({ tag_seen_at: now }).eq("company_id", company.id).in("id", tagged);
 
   const { data: rec, error: recErr } = await admin.from("saas_returns").insert({
     company_id: company.id, yard_id: yard.id, unit_id: unit?.id ?? null, unit_name: unit?.name ?? null,
