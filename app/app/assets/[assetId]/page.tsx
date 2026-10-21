@@ -23,7 +23,7 @@ import { getItemCustomers } from "@/lib/saas/customers";
 import { updateAsset, deleteAsset } from "@/app/app/_actions";
 import { moveEquipment } from "@/app/app/equipment/actions";
 import { fmtWhen } from "@/lib/saas/format";
-import { judgeItem } from "@/lib/saas/judge";
+import { judgeItem, isNoPaper } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { qrSvg, tagUrl } from "@/lib/saas/qr";
 import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
@@ -105,6 +105,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
     : a.status === "missing" ? { label: "Missing", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : a.status === "retired" ? { label: "Retired", cls: "border-line-2 bg-elevated text-ink-faint" }
     : !next ? { label: "No paper yet", cls: "border-line-2 bg-elevated text-ink-dim" }
+    : isNoPaper(next.j) ? { label: "No paper", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : next.j.result === "expired" || next.j.result === "missing" ? { label: "Overdue", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : next.j.result === "ok" ? { label: "Current", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" }
     : { label: "Due soon", cls: "border-amber-500/30 bg-amber-500/10 text-amber-400" };

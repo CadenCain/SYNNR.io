@@ -354,6 +354,12 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
     setWaitingForSignal(false);
     clearDraft(truck.id);
+    // The save moved the iron: everything scanned is logged on this truck now
+    // (bad pieces too, until someone takes them off), and anything marked not
+    // going is back in the yard. Scanning again starts from there.
+    const went = new Set(Object.keys(scans));
+    setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
+      : p.unitId === truck.id && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
     stopNfc(); stopCamera();
     setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken });
     try { navigator.vibrate?.(res.verdict === "ready" ? 120 : [200, 100, 200, 100, 200]); } catch { /* no vibration */ }

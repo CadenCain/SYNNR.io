@@ -90,7 +90,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           {[
             { n: iron.out, label: "Pieces out on jobs", sub: iron.outTooLong ? `${iron.outTooLong} out ${alertDays}+ days` : "all within the limit", href: "/app/equipment?place=out", bad: iron.outTooLong > 0 },
-            { n: iron.outOfTest, label: "Out of test", sub: "can't go out", href: "/app/equipment?f=overdue", bad: iron.outOfTest > 0 },
+            { n: iron.outOfTest, label: "Out of test or no paper", sub: "can't go out", href: "/app/equipment?f=overdue", bad: iron.outOfTest > 0 },
             { n: iron.dueSoon, label: "Test due soon", sub: "book the recert", href: "/app/compliance", bad: false },
             { n: iron.down, label: "Red-tagged or missing", sub: "pulled from service", href: "/app/equipment?f=down", bad: iron.down > 0 },
           ].map((x) => (

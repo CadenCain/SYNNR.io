@@ -48,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ itemId:
     ["Good until", fmt(it.expiration_date)],
     ["Result", "Pass"],
   ];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="850" height="1100" viewBox="0 0 850 1100" font-family="Helvetica, Arial, sans-serif">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 850 1100" font-family="Helvetica, Arial, sans-serif">
   <rect width="850" height="1100" fill="#ffffff"/>
   <rect x="40" y="40" width="770" height="1020" fill="none" stroke="#1e293b" stroke-width="3"/>
   <text x="80" y="120" font-size="40" font-weight="700" fill="#0f172a">Test certificate</text>
