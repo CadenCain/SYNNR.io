@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ClipboardList } from "lucide-react";
+import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ListTodo } from "lucide-react";
 import { readScan, scanMessage, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
 import { expectedLines, fillLines, shortLines, needsTagScan, lineSourceLabel } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
@@ -450,7 +450,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
           </div>
           {plan ? (
             <div className="flex items-start gap-3 rounded-xl border-2 border-bone/50 bg-bone/10 px-4 py-3">
-              <ClipboardList className="mt-0.5 h-5 w-5 shrink-0 text-bone" />
+              <ListTodo className="mt-0.5 h-5 w-5 shrink-0 text-bone" />
               <div className="min-w-0 text-sm">
                 <div className="font-semibold">Planned by {plan.by ?? "a manager"}, {plan.at}</div>
                 {plan.note ? <div className="break-words text-ink">&ldquo;{plan.note}&rdquo;</div> : null}

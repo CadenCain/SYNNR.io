@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ClipboardList } from "lucide-react";
+import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ListTodo } from "lucide-react";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -138,7 +138,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
               {stillOut ? <div className="break-words text-sm text-amber-400">{stillOut}</div> : null}
               {plans[t.id] ? (
                 <div className="flex items-start gap-1.5 break-words text-sm text-ink">
-                  <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-bone" />
+                  <ListTodo className="mt-0.5 h-4 w-4 shrink-0 text-bone" />
                   <span><span className="font-semibold">Next job:</span> {plans[t.id].text}{plans[t.id].note ? <> &middot; &ldquo;{plans[t.id].note}&rdquo;</> : null}{plans[t.id].by ? <span className="text-ink-faint"> &middot; {plans[t.id].by}</span> : null}</span>
                 </div>
               ) : null}
@@ -161,7 +161,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
                 )}
                 {manager ? (
                   <Link href={`/app/units/${t.id}/plan`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Plan ${t.name}'s next job`}>
-                    <ClipboardList className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
+                    <ListTodo className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
                   </Link>
                 ) : null}
                 <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
