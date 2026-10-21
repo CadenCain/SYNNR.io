@@ -71,6 +71,8 @@ export async function moveEquipment(fd: FormData) {
     last_seen_where: note || null,
     last_seen_by: by,
     last_seen_at: new Date().toISOString(),
+    // Somebody has it in hand, so it isn't out on a job anymore.
+    out_since: null, out_loadout_id: null, out_alerted_at: null,
   }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/assets/${id}`);

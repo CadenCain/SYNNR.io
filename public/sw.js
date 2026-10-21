@@ -1,14 +1,14 @@
-/* RollReady offline: a load-out keeps working with no signal.
+/* RollReady offline: a load-out or a check-in keeps working with no signal.
  *
- * The back of a yard often has no signal. This keeps the Load out board and
- * every truck's load-out scan page on the phone, so a hand can open a
- * load-out and scan with no signal. Scans are kept on the phone by the page
+ * The back of a yard often has no signal. This keeps the Load out board,
+ * every truck's load-out scan page, and every check-in page on the phone, so
+ * a hand can load a truck out or check iron in with no signal. Scans are kept on the phone by the page
  * itself and sent when signal comes back; the server checks every piece
  * again when they arrive, so an old copy of a page can't make a truck READY.
  *
- *   Pages (/app and /app/units/<id>/scan): network first, the saved copy
- *   when there's no signal. The Load out board asks for every truck's scan
- *   page to be saved ahead of time ("warm").
+ *   Pages (/app, /app/return, /app/units/<id>/scan and /return): network
+ *   first, the saved copy when there's no signal. The Load out board asks
+ *   for every truck's pages to be saved ahead of time ("warm").
  *   Built files (/_next/static): saved the first time, they never change.
  *   Signing in or out throws the saved pages away.
  * Nothing outside /app is touched.
@@ -26,7 +26,7 @@ self.addEventListener("activate", (event) => {
   })());
 });
 
-const savable = (url) => url.pathname === "/app" || /^\/app\/units\/[^/]+\/scan$/.test(url.pathname);
+const savable = (url) => url.pathname === "/app" || url.pathname === "/app/return" || /^\/app\/units\/[^/]+\/(scan|return)$/.test(url.pathname);
 const keyOf = (url) => url.origin + url.pathname;
 const authPath = (p) => ["/login", "/logout", "/signup", "/auth", "/invite", "/demo", "/onboarding"].some((x) => p.startsWith(x));
 

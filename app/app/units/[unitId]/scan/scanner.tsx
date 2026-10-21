@@ -65,7 +65,7 @@ const readDraftRaw = (truckId: string): string | null => {
 const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
 const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); } catch { /* storage off */ } };
 
-export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, lastPackageIds, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
@@ -75,6 +75,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   manager?: boolean;
   /** The demo yard: no iron to read, so checking by hand doesn't ask for the serial. */
   demo?: boolean;
+  /** Packages this truck's last load-out used, picked to start with. */
+  lastPackageIds?: string[];
   /** Only for the marketing screenshot: packages already picked. */
   initialPackageIds?: string[];
   /** Only for the marketing screenshot: start partway through a load-out. */
@@ -109,7 +111,9 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string } | null>(null);
   const [saveErr, setSaveErr] = useState("");
-  const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? []);
+  const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? lastPackageIds ?? []);
+  // First, what's this job? Then scanning. (Straight to scanning when picking a load-out back up.)
+  const [started, setStarted] = useState(Boolean(initialScans));
   const [quick, setQuick] = useState<KitLine[]>([]);
   const [quickLabel, setQuickLabel] = useState("");
   const [quickQty, setQuickQty] = useState("1");
@@ -183,6 +187,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     if (!draft) return;
     setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt);
     setPackageIds((draft.packageIds ?? []).filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
+    setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
   }
@@ -387,6 +392,83 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const willBlock = nothingScanned || short.length + redScanned.length + missingNow.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
+  const required = lines.reduce((n, l) => n + l.qty, 0);
+  const lineSummary = (ls: KitLine[]) => ls.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ");
+  const quickEditor = (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <input value={quickLabel} onChange={(e) => setQuickLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }}
+        list="rr-piece-names" placeholder="Quick line for today, like Swivel 3-inch" aria-label="Quick line"
+        className="h-12 w-full min-w-0 grow rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
+      <datalist id="rr-piece-names">{pieceNames.map((n) => <option key={n} value={n} />)}</datalist>
+      <div className="flex gap-2">
+        <input value={quickQty} onChange={(e) => setQuickQty(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} inputMode="numeric" aria-label="How many"
+          className="h-12 w-16 shrink-0 rounded-lg border border-line-2 bg-coal px-3 text-center text-base text-ink outline-none focus:border-bone" />
+        <button type="button" onClick={addQuick} className={buttonClass("outline", "lg", "grow")}><Plus className="h-5 w-5" /> Add</button>
+      </div>
+    </div>
+  );
+
+  if (!started) {
+    return (
+      <div className="flex flex-col gap-5">
+        {draft && !draftHandled ? (
+          <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
+            <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
+            <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} pieces scanned, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={pickUpDraft} className={buttonClass("default", "lg")}>Pick it back up</button>
+              <button type="button" onClick={dropDraft} className={buttonClass("ghost", "lg")}>Start over</button>
+            </div>
+          </div>
+        ) : null}
+        <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
+          <div>
+            <h2 className="text-lg font-semibold">What&apos;s going on {truck.name} today?</h2>
+            <p className="text-sm text-ink-dim">The truck&apos;s kit always counts. Pick the package for this job, or add a quick line.</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex min-h-14 items-center gap-3 rounded-xl border-2 border-line-2 bg-elevated px-4 py-2">
+              <Check className="h-5 w-5 shrink-0 text-emerald-400" />
+              <div className="min-w-0">
+                <div className="font-semibold">{truck.name} kit</div>
+                <div className="break-words text-[13px] text-ink-dim">{kit.length ? lineSummary(kit) : <>No kit set yet{manager ? <>. <Link href={`/app/units/${truck.id}/kit`} className="text-bone underline underline-offset-2">Set it</Link></> : ". A manager can set one."}</>}</div>
+              </div>
+            </div>
+            {packages.map((x) => {
+              const on = packageIds.includes(x.id);
+              return (
+                <button key={x.id} type="button" aria-pressed={on}
+                  onClick={() => setPackageIds((ids) => on ? ids.filter((i) => i !== x.id) : [...ids, x.id])}
+                  className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left", on ? "border-bone bg-bone/10" : "border-line-2 hover:bg-elevated")}>
+                  {on ? <Check className="h-5 w-5 shrink-0 text-bone" /> : <Plus className="h-5 w-5 shrink-0 text-ink-faint" />}
+                  <div className="min-w-0">
+                    <div className="font-semibold">{x.name}{on && lastPackageIds?.includes(x.id) ? <span className="ml-2 text-xs font-normal text-ink-faint">same as last time</span> : null}</div>
+                    <div className="break-words text-[13px] text-ink-dim">{lineSummary(x.lines) || "No lines yet"}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {quick.length ? (
+            <div className="flex flex-wrap gap-2">
+              {quick.map((l, i) => (
+                <span key={`${l.label}-${i}`} className="inline-flex items-center gap-1 rounded-lg border border-line-2 py-1 pl-3 pr-1 text-sm">
+                  {l.label}{l.qty > 1 ? ` × ${l.qty}` : ""}
+                  <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => [...q.slice(0, i), ...q.slice(i + 1)])}
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {quickEditor}
+          <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
+            <ScanLine className="h-5 w-5" /> Start scanning{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
+          </button>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {draft && !draftHandled && Object.keys(scans).length === 0 ? (
@@ -506,17 +588,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             })}
           </div>
         )}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input value={quickLabel} onChange={(e) => setQuickLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }}
-            list="rr-piece-names" placeholder="Quick line for today, like Swivel 3-inch" aria-label="Quick line"
-            className="h-12 w-full min-w-0 grow rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
-          <datalist id="rr-piece-names">{pieceNames.map((n) => <option key={n} value={n} />)}</datalist>
-          <div className="flex gap-2">
-            <input value={quickQty} onChange={(e) => setQuickQty(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} inputMode="numeric" aria-label="How many"
-              className="h-12 w-16 shrink-0 rounded-lg border border-line-2 bg-coal px-3 text-center text-base text-ink outline-none focus:border-bone" />
-            <button type="button" onClick={addQuick} className={buttonClass("outline", "lg", "grow")}><Plus className="h-5 w-5" /> Add</button>
-          </div>
-        </div>
+        {quickEditor}
       </section>
 
       <section className="flex flex-col gap-2">
@@ -546,7 +618,19 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
       </div>
 
       {!finishing ? (
-        <button type="button" onClick={() => setFinishing(true)} className={buttonClass("default", "lg", "h-14 w-full text-base sm:w-auto sm:self-start")}>Done loading</button>
+        /* Always in reach: what's still needed, and Done. */
+        <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 rounded-2xl border border-line bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 text-sm">
+              {lines.length
+                ? <><span className="text-lg font-bold tabular-nums">{linesDone}/{lines.length}</span> lines filled</>
+                : <><span className="text-lg font-bold tabular-nums">{Object.keys(scans).length}</span> scanned</>}
+              {short.length ? <span className="block font-semibold text-amber-400 sm:inline"> · {short.length} still needed</span> : null}
+              {redScanned.length ? <span className="block font-semibold text-red-400 sm:inline"> · {redScanned.length} bad on the truck</span> : null}
+            </div>
+            <button type="button" onClick={() => setFinishing(true)} className={buttonClass("default", "lg", "h-14 shrink-0 px-6 text-base")}>Done loading</button>
+          </div>
+        </div>
       ) : (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>

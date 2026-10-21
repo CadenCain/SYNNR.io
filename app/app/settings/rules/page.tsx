@@ -15,9 +15,11 @@ async function saveRules(fd: FormData) {
   assertCan(company, "set_rules");
   const db = await saasDb();
   const before = await getYardRules(db, company.id);
+  const days = Math.min(90, Math.max(1, Math.floor(Number(fd.get("out_alert_days"))) || before.outAlertDays));
   const next = {
     hand_uploads_need_ok: fd.get("hand_uploads_need_ok") === "on",
     allow_cert_on_the_way: fd.get("allow_cert_on_the_way") === "on",
+    out_alert_days: days,
   };
   const { error } = await db.from("saas_enforcement_settings")
     .upsert({ company_id: company.id, ...next, updated_at: new Date().toISOString() }, { onConflict: "company_id" });
@@ -25,6 +27,7 @@ async function saveRules(fd: FormData) {
   const changes: string[] = [];
   if (before.handUploadsNeedOk !== next.hand_uploads_need_ok) changes.push(next.hand_uploads_need_ok ? "every hand upload now waits for a manager" : "clean hand uploads now go green on their own");
   if (before.allowCertOnTheWay !== next.allow_cert_on_the_way) changes.push(next.allow_cert_on_the_way ? "\"cert on the way\" turned on" : "\"cert on the way\" turned off");
+  if (before.outAlertDays !== next.out_alert_days) changes.push(`iron out more than ${next.out_alert_days} days gets flagged`);
   if (changes.length) {
     const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
     void logEvent({ companyId: company.id, kind: "rules_changed", actor, message: `Rules changed${actor ? ` by ${actor}` : ""}: ${changes.join("; ")}` });
@@ -36,7 +39,7 @@ const FIXED = [
   "Hands can't type or change a test date. They upload a photo of the new cert.",
   "The server reads the photo. The expiration typed in has to be printed on it, the serial on the cert has to match the iron, and it has to be the right kind of test. A photo can only clear one thing.",
   "If everything matches, it goes green. If anything doesn't, it waits for a manager and the item stays red until a manager approves it.",
-  "Managers can type a date in, for setting up from the binder or fixing a typo. Those show \"date typed in, no photo\" and are listed on the Review page.",
+  "Managers can type a date in when setting up from the binder. A typed date that's later than what's on file doesn't count until a photo of the cert shows it. Typed dates are listed on the Review page.",
   "Truck check records, uploads, where-it's-been history, and the feed can't be edited or deleted by anyone, managers included.",
   "Anyone can move iron or red-tag it. Only a manager can put red-tagged iron back in service, retire it, rename a test, change a serial or unit number, or delete anything. Each of those lands in the feed with a name on it.",
 ];
@@ -77,6 +80,15 @@ export default async function RulesPage() {
               <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
               <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>
             </span>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="block text-sm font-medium">Flag iron that&apos;s been out on a job longer than</span>
+            <span className="flex items-center gap-2">
+              <input type="number" name="out_alert_days" min={1} max={90} defaultValue={rules.outAlertDays} disabled={!manager}
+                className="h-12 w-24 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
+              <span className="text-sm text-ink-dim">days</span>
+            </span>
+            <span className="block text-sm text-ink-dim">Past this, a truck or piece that hasn&apos;t been checked back in shows red on Load out, and managers get one email a day listing what&apos;s new. Not one email per piece.</span>
           </label>
           {manager && <Button type="submit" className="w-full sm:w-fit">Save the rules</Button>}
         </form>

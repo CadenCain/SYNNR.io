@@ -168,6 +168,15 @@ export const DEMO_LOADOUTS: DemoLoadout[] = [
   { unitKey: "ct7", by: "Lupe Cardenas", how: "nfc", daysAgo: 3, hour: 5, minute: 10, packages: ["Pump-down package"],
     override: { by: "Kevin Odom", minutesLater: 14, reason: "Job changed to a cleanout before they left. The pump-down iron isn't needed. Called the company man and he's good with it." } },
   { unitKey: "p1", by: "J.R. Stanton", how: "qr", daysAgo: 5, hour: 5, minute: 50 },
+  // Back already: loaded out two days ago, checked in yesterday (DEMO_RETURNS).
+  { unitKey: "ct4", by: "Freddy Carrasco", how: "nfc", daysAgo: 2, hour: 5, minute: 20 },
+  // ← out too long: rolled 9 days ago and nobody has checked it back in.
+  { unitKey: "ct8", by: "Manuel Ortega", how: "nfc", daysAgo: 9, hour: 4, minute: 45 },
+];
+
+/** Trucks checked back in after a job. */
+export const DEMO_RETURNS: { unitKey: string; by: string; daysAgo: number; hour: number; minute: number }[] = [
+  { unitKey: "ct4", by: "Freddy Carrasco", daysAgo: 1, hour: 16, minute: 30 },
 ];
 
 /** Packages for kinds of jobs. Every truck's kit is made from what's on it (kitLinesFrom). */

@@ -1,5 +1,5 @@
 import { buildEquipment, type EquipmentList, type RawAsset, type RawItem } from "@/lib/saas/equipment";
-import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS, DEMO_PACKAGES } from "@/lib/saas/demo-data";
+import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS } from "@/lib/saas/demo-data";
 import { demoLoadoutRecord } from "@/lib/saas/demo-loadouts";
 import { kitLinesFrom } from "@/lib/saas/loadout-lines";
 import type { LoadoutScanRow } from "@/lib/saas/loadout-board";
@@ -76,7 +76,11 @@ export function demoLoadOut() {
     pieces: r.pieces.map((p) => ({ asset_id: p.key, name: p.name, serial: p.serial, how: l.how, red: p.red })),
   }));
   const overridden = new Set(DEMO_LOADOUTS.filter((l) => l.override).map((l) => `lo-${l.unitKey}`));
-  const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, overridden, today);
+  const returns = DEMO_RETURNS.map((r) => {
+    const d = new Date(); d.setDate(d.getDate() - r.daysAgo); d.setHours(r.hour, r.minute, 0, 0);
+    return { unit_id: r.unitKey, finished_at: d.toISOString() };
+  });
+  const board = buildLoadOutTrucks(demoTrucks(), list.rows, scans, overridden, today, new Map(), { returns, alertDays: 7 });
   const recent = recs.filter(({ l }) => l.daysAgo <= 7);
   const caught = recent.reduce((n, { r }) => n + r.pieces.filter((p) => p.red).length, 0);
   return { ...board, week: { loadouts: recent.length, caught, overrides: recent.filter(({ l }) => l.override).length } };

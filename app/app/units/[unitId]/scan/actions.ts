@@ -225,6 +225,18 @@ export async function finishLoadout(input: {
   if (recErr || !rec) return { ok: false, error: `Couldn't save the load-out record: ${recErr?.message ?? "unknown"}` };
   const saved = rec as { id: string; proof_token: string };
 
+  // Out on a job: a READY load-out puts what went on out until it's checked
+  // back in. A NOT READY one didn't leave (unless a manager overrides it, which
+  // starts the clock then). Anything taken off is back in the yard.
+  if (scannedIds.length) {
+    await admin.from("saas_assets").update(verdict === "ready"
+      ? { out_since: now, out_loadout_id: saved.id, out_alerted_at: null }
+      : { out_since: null, out_loadout_id: null, out_alerted_at: null })
+      .eq("company_id", company.id).in("id", scannedIds);
+  }
+  const offIds = notScanned.filter((n) => n.outcome === "yard").map((n) => n.assetId);
+  if (offIds.length) await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null }).eq("company_id", company.id).in("id", offIds);
+
   const summary = verdict === "ready"
     ? `${unit.name} loaded out READY by ${actor}: ${scans.length} ${scans.length === 1 ? "piece" : "pieces"} scanned`
     : `${unit.name} blocked at load-out (NOT READY) by ${actor}: ${reasons.slice(0, 3).join("; ")}${reasons.length > 3 ? `; and ${reasons.length - 3} more` : ""}`;

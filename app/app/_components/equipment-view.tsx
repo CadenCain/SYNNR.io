@@ -9,6 +9,7 @@ import { ASSET_CATEGORIES, categoryLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { placeOf, daysOut, PLACE_LABEL, DEFAULT_OUT_ALERT_DAYS, type Place } from "@/lib/saas/whereabouts";
 
 /**
  * The home screen: every piece of iron in one list. Search and filters run
@@ -48,17 +49,32 @@ const NEXT_TONE: Record<string, string> = {
   ok: "text-ink-dim",
 };
 
+export type PlaceFilter = "" | "out" | "out_too_long" | "on_truck" | "in_yard";
+const PLACE_CHIP: Partial<Record<Place, string>> = {
+  out_too_long: "border-red-500/40 bg-red-500/10 text-red-400",
+  out: "border-bone/30 bg-bone/10 text-bone",
+  on_truck: "border-line-2 bg-elevated text-ink-dim",
+  in_yard: "border-line-2 bg-elevated text-ink-dim",
+};
+
 export interface EquipmentViewProps {
   list: EquipmentList;
   companyName: string;
   initialFilter?: Filter;
   initialQuery?: string;
+  /** Where filter from the link (the board's "Pieces out" tile). */
+  initialPlace?: PlaceFilter;
+  /** Out this many days or more is "Out too long". */
+  alertDays?: number;
   /** Server action for the add form. Absent on the screenshot. */
   addAction?: (fd: FormData) => Promise<void>;
 }
 
-export default function EquipmentView({ list, companyName, initialFilter = "all", initialQuery = "", addAction }: EquipmentViewProps) {
+export default function EquipmentView({ list, companyName, initialFilter = "all", initialQuery = "", initialPlace = "", alertDays = DEFAULT_OUT_ALERT_DAYS, addAction }: EquipmentViewProps) {
   const [filter, setFilter] = useState<Filter>(initialFilter);
+  const [place, setPlace] = useState<PlaceFilter>(initialPlace);
+  const [now] = useState(() => Date.now());
+  const placeById = useMemo(() => new Map(list.rows.map((r) => [r.id, placeOf({ status: r.status, unit_id: r.unitId, out_since: r.outSince }, now, alertDays)])), [list.rows, now, alertDays]);
   const [q, setQ] = useState(initialQuery);
   const [yard, setYard] = useState("");
   const [type, setType] = useState("");
@@ -81,12 +97,13 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
       .filter((r) => (filter === "all" ? r.state !== "retired" : r.state === filter))
       .filter((r) => !yard || r.yardOf === yard)
       .filter((r) => !type || r.category === type)
+      .filter((r) => !place || (place === "out" ? ["out", "out_too_long"].includes(placeById.get(r.id)!) : placeById.get(r.id) === place))
       .filter((r) => !needle || [r.name, r.identifier ?? "", r.where, categoryLabel(r.category), r.next?.title ?? ""]
         .some((s) => s.toLowerCase().includes(needle)))
       .sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]
         || (a.next?.exp ?? "9999").localeCompare(b.next?.exp ?? "9999")
         || a.name.localeCompare(b.name));
-  }, [list.rows, filter, yard, type, q]);
+  }, [list.rows, filter, yard, type, q, place, placeById]);
 
   const c = list.counts;
   const countFor = (f: Filter) =>
@@ -157,6 +174,14 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
                   {list.yards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
                 </select>
               )}
+              <select value={place} onChange={(e) => setPlace(e.target.value as PlaceFilter)} aria-label="Where it is"
+                className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone sm:flex-none">
+                <option value="">Anywhere</option>
+                <option value="out">Out on jobs</option>
+                <option value="out_too_long">Out too long ({alertDays}+ days)</option>
+                <option value="on_truck">On a truck</option>
+                <option value="in_yard">In the yard</option>
+              </select>
               {types.length > 1 && (
                 <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type"
                   className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone sm:flex-none">
@@ -182,13 +207,13 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
 
           {shown.length === 0 ? (
             <Card className="px-6 py-10 text-center text-sm text-ink-dim">
-              Nothing matches. <button type="button" className="text-bone hover:underline" onClick={() => { setQ(""); setYard(""); setType(""); setFilterAndUrl("all"); }}>Clear the filters</button>
+              Nothing matches. <button type="button" className="text-bone hover:underline" onClick={() => { setQ(""); setYard(""); setType(""); setPlace(""); setFilterAndUrl("all"); }}>Clear the filters</button>
             </Card>
           ) : (
             <>
               {/* Phones: one card per piece */}
               <div className="flex flex-col gap-2 lg:hidden">
-                {shown.map((r) => <PhoneRow key={r.id} r={r} />)}
+                {shown.map((r) => <PhoneRow key={r.id} r={r} place={placeById.get(r.id)!} outDays={daysOut(r.outSince, now)} />)}
               </div>
               {/* Laptop and up: the table */}
               <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(15,23,42,0.05)] lg:block">
@@ -201,7 +226,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
                     </tr>
                   </thead>
                   <tbody>
-                    {shown.map((r) => <TableRow key={r.id} r={r} />)}
+                    {shown.map((r) => <TableRow key={r.id} r={r} place={placeById.get(r.id)!} outDays={daysOut(r.outSince, now)} />)}
                   </tbody>
                 </table>
               </div>
@@ -238,7 +263,14 @@ function Chip({ r }: { r: EquipRow }) {
   return <span className={cn("inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold", CHIP[r.state])}>{stateLabel(r)}</span>;
 }
 
-function TableRow({ r }: { r: EquipRow }) {
+function PlaceChip({ place, outDays }: { place: Place; outDays: number }) {
+  const cls = PLACE_CHIP[place];
+  if (!cls) return null;
+  const text = place === "out" || place === "out_too_long" ? `${PLACE_LABEL[place]}, ${outDays} ${outDays === 1 ? "day" : "days"}` : PLACE_LABEL[place];
+  return <span className={cn("inline-flex whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold", cls)}>{text}</span>;
+}
+
+function TableRow({ r, place, outDays }: { r: EquipRow; place: Place; outDays: number }) {
   return (
     <tr className="relative transition-colors hover:bg-elevated/60 [&:last-child>td]:border-0">
       <td className="border-b border-line/60 px-4 py-3 align-top">
@@ -246,14 +278,17 @@ function TableRow({ r }: { r: EquipRow }) {
         <div className="text-[13px] text-ink-faint">{categoryLabel(r.category)}</div>
       </td>
       <td className="whitespace-nowrap border-b border-line/60 px-4 py-3 align-top text-ink-dim">{r.identifier ?? "None"}</td>
-      <td className="border-b border-line/60 px-4 py-3 align-top text-ink-dim">{r.where}</td>
+      <td className="border-b border-line/60 px-4 py-3 align-top text-ink-dim">
+        <div>{r.where}</div>
+        <div className="mt-1"><PlaceChip place={place} outDays={outDays} /></div>
+      </td>
       <td className="border-b border-line/60 px-4 py-3 align-top"><NextCell r={r} /></td>
       <td className="border-b border-line/60 px-4 py-3 align-top"><Chip r={r} /></td>
     </tr>
   );
 }
 
-function PhoneRow({ r }: { r: EquipRow }) {
+function PhoneRow({ r, place, outDays }: { r: EquipRow; place: Place; outDays: number }) {
   return (
     <Link href={`/app/assets/${r.id}`}>
       <Card className="flex flex-col gap-1.5 p-4 transition-colors active:bg-elevated">
@@ -261,8 +296,9 @@ function PhoneRow({ r }: { r: EquipRow }) {
           <div className="min-w-0 break-words font-semibold">{r.name}</div>
           <Chip r={r} />
         </div>
-        <div className="break-words text-[13px] text-ink-dim">
-          {r.identifier ? `${r.identifier} · ` : ""}{r.where}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 break-words text-[13px] text-ink-dim">
+          <span>{r.identifier ? `${r.identifier} · ` : ""}{r.where}</span>
+          <PlaceChip place={place} outDays={outDays} />
         </div>
         {r.next ? (
           <div className={cn("break-words text-[13px]", NEXT_TONE[r.next.result])}>

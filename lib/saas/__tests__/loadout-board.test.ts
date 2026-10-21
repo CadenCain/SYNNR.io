@@ -10,6 +10,8 @@ const scan = (unit_id: string, finished_at: string, extra: Partial<LoadoutScanRo
   ({ id: `lo-${unit_id}-${finished_at}`, unit_id, finished_at, scanned_by: "Ray Hinojosa", verdict: "ready", reasons: [], pieces: [], not_scanned: [], ...extra });
 
 const TODAY = "2026-10-14";
+const NOW = Date.parse("2026-10-14T18:00:00Z");
+const o = (returns: { unit_id: string; finished_at: string }[] = [], alertDays = 7) => ({ returns, now: NOW, alertDays });
 
 describe("the Load out board", () => {
   it("blocked first, then ready to load, then loaded out", () => {
@@ -18,10 +20,10 @@ describe("the Load out board", () => {
       [],
       [scan("ready1", "2026-10-14T10:00:00Z")],
       new Set(),
-      TODAY,
+      TODAY, new Map(), o(),
     );
     expect(trucks.map((t) => [t.t.id, t.status])).toEqual([["red", "blocked"], ["due", "ready"], ["ready2", "ready"], ["ready1", "out"]]);
-    expect(counts).toEqual({ ready: 2, blocked: 1, out: 1 });
+    expect(counts).toEqual({ ready: 2, blocked: 1, out: 1, outTooLong: 0 });
   });
 
   it("today's NOT READY load-out blocks the truck with its first reason, even if the records look fine", () => {
@@ -36,19 +38,19 @@ describe("the Load out board", () => {
 
   it("a manager's override moves a blocked truck to loaded out, and says so", () => {
     const s = scan("a", "2026-10-14T10:55:00Z", { verdict: "not_ready", reasons: ["Short: Lubricator, 0 of 1 scanned"] });
-    const { trucks } = buildLoadOutTrucks([unit("a", "ready")], [], [s], new Set([s.id]), TODAY);
+    const { trucks } = buildLoadOutTrucks([unit("a", "ready")], [], [s], new Set([s.id]), TODAY, new Map(), o());
     expect(trucks[0].status).toBe("out");
     expect(trucks[0].overridden).toBe(true);
-    expect(trucks[0].loadoutLine).toBe("Rolled on a manager's override 5:55 AM by Ray Hinojosa");
+    expect(trucks[0].loadoutLine).toBe("Out on a manager's override since today 5:55 AM by Ray Hinojosa");
   });
 
   it("only the latest load-out counts: a re-scan that comes back READY clears the block", () => {
     const { trucks } = buildLoadOutTrucks([unit("a", "ready")], [], [
       scan("a", "2026-10-14T10:55:00Z", { verdict: "not_ready", reasons: ["Short: Lubricator, 0 of 1 scanned"] }),
       scan("a", "2026-10-14T11:20:00Z"),
-    ], new Set(), TODAY);
+    ], new Set(), TODAY, new Map(), o());
     expect(trucks[0].status).toBe("out");
-    expect(trucks[0].loadoutLine).toBe("Loaded out READY 6:20 AM by Ray Hinojosa");
+    expect(trucks[0].loadoutLine).toBe("Out on a job since today 6:20 AM by Ray Hinojosa");
   });
 
   it("an old record with no stored answer reads NOT READY if a bad piece went on", () => {
@@ -59,14 +61,35 @@ describe("the Load out board", () => {
     expect(trucks[0].why).toBe("Out of test or red-tagged: BOP Q1");
   });
 
-  it("yesterday's load-out doesn't make a truck 'out' today", () => {
-    const { trucks, summary } = buildLoadOutTrucks([unit("b", "ready"), unit("c", "due_soon")], [], [scan("b", "2026-10-09T11:50:00Z", { scanned_by: null })], new Set(), TODAY);
-    const byId = Object.fromEntries(trucks.map((t) => [t.t.id, t]));
-    expect(byId.b.status).toBe("ready");
-    expect(byId.b.loadoutLine).toBe("Last load-out Oct 9");
-    expect(byId.c.why).toBe("c why");
-    expect(byId.c.whyTone).toBe("amber");
-    expect(summary).toBe("2 trucks. 0 loaded out today. Nothing blocked.");
+  it("a truck that rolled stays out until it's checked back in", () => {
+    const rolled = scan("b", "2026-10-11T11:50:00Z", { scanned_by: null });
+    const stillOut = buildLoadOutTrucks([unit("b", "ready")], [], [rolled], new Set(), TODAY, new Map(), o());
+    expect(stillOut.trucks[0].status).toBe("out");
+    expect(stillOut.trucks[0].loadoutLine).toBe("Out on a job since Oct 11 (3 days)");
+    expect(stillOut.trucks[0].outTooLong).toBe(false);
+    const back = buildLoadOutTrucks([unit("b", "ready")], [], [rolled], new Set(), TODAY, new Map(), o([{ unit_id: "b", finished_at: "2026-10-13T20:00:00Z" }]));
+    expect(back.trucks[0].status).toBe("ready");
+    expect(back.trucks[0].loadoutLine).toBe("Last load-out Oct 11");
+  });
+
+  it("out past the limit is flagged red and sorts first among the trucks out", () => {
+    const { trucks, counts, summary } = buildLoadOutTrucks([unit("x", "ready"), unit("y", "ready")], [],
+      [scan("x", "2026-10-05T11:00:00Z"), scan("y", "2026-10-13T11:00:00Z")], new Set(), TODAY, new Map(), o([], 7));
+    expect(trucks.map((t) => [t.t.id, t.outTooLong])).toEqual([["x", true], ["y", false]]);
+    expect(trucks[0].why).toBe("Out 9 days. Check it in, or find out where it is.");
+    expect(counts).toEqual({ ready: 0, blocked: 0, out: 2, outTooLong: 1 });
+    expect(summary).toBe("2 trucks. 2 out on jobs (1 out too long). Nothing blocked.");
+  });
+
+  it("a NOT READY load-out nobody overrode never left", () => {
+    const { trucks } = buildLoadOutTrucks([unit("z", "ready")], [], [scan("z", "2026-10-12T11:00:00Z", { verdict: "not_ready", reasons: ["Short: BOP, 0 of 1 scanned"] })], new Set(), TODAY, new Map(), o());
+    expect(trucks[0].status).toBe("ready");
+  });
+
+  it("a due-soon test still shows on a truck in the yard", () => {
+    const { trucks } = buildLoadOutTrucks([unit("c", "due_soon")], [], [], new Set(), TODAY, new Map(), o());
+    expect(trucks[0].why).toBe("c why");
+    expect(trucks[0].whyTone).toBe("amber");
   });
 
   it("counts iron per truck, leaving out retired pieces", () => {

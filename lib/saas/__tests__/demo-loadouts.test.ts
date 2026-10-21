@@ -25,7 +25,9 @@ describe("the demo yard's load-outs, by the real rules", () => {
     ]);
     expect(DEMO_LOADOUTS.find((l) => l.unitKey === "ct7")!.override?.reason.length).toBeGreaterThanOrEqual(10);
   });
-  it("P-01 loads out READY", () => {
+  it("P-01, CT-04, and CT-08 load out READY", () => {
     expect(rec("p1").verdict).toBe("ready");
+    expect(rec("ct4").verdict).toBe("ready");
+    expect(rec("ct8").verdict).toBe("ready");
   });
 });

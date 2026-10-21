@@ -104,6 +104,19 @@ ${rec.errors.map((e) => `• ${e}`).join("\n")}
   // A reaper failure emails the operator but never flips the watchdog red —
   // stale demo data is untidy, not an outage.
   let demo = { deleted: 0, errors: [] as string[] };
+  // Iron out on jobs past each company's limit: one email per company, once per trip.
+  try {
+    const { sweepOutTooLong } = await import("@/lib/saas/out-alerts");
+    const out = await sweepOutTooLong(admin);
+    if (out.errors.length) {
+      await sendEmail([OWNER], "[SYNNR ops] out-too-long sweep hit errors",
+        `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${out.errors.join("\n")}</pre>`).catch(() => {});
+    }
+  } catch (e) {
+    await sendEmail([OWNER], "[SYNNR ops] out-too-long sweep CRASHED",
+      `<pre style="font:13px/1.6 monospace">${e instanceof Error ? e.message : String(e)}</pre>`).catch(() => {});
+  }
+
   try {
     const { cleanupDemoCompanies } = await import("@/lib/saas/demo-seed");
     demo = await cleanupDemoCompanies(admin);

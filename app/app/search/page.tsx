@@ -1,98 +1,139 @@
 import Link from "next/link";
-import { Truck, Box, ShieldCheck, Search } from "lucide-react";
+import { Truck, Box, Search, Warehouse, ScanLine, PackageCheck, MapPin } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
-import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
+import { saasDb } from "@/lib/saas/db";
+import { getEquipment, stateLabel } from "@/lib/saas/equipment";
+import { getYardRules } from "@/lib/saas/yard-rules";
+import { placeOf, daysOut, PLACE_LABEL, type Place } from "@/lib/saas/whereabouts";
+import { searchPieces, matchesName } from "@/lib/saas/search";
+import { unitTypeLabel, categoryLabel } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { unitTypeLabel, categoryLabel } from "@/lib/saas/taxonomy";
-import { fmtDate } from "@/lib/saas/format";
+import { buttonClass } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-/** One search across the whole yard: equipment (by name or serial), trucks, tests. */
+const PLACE_TONE: Record<Place, string> = {
+  red_tagged: "text-red-400", missing: "text-red-400", out_too_long: "text-red-400",
+  out: "text-bone", on_truck: "text-ink-dim", in_yard: "text-ink-dim", retired: "text-ink-faint",
+};
+const STATE_TONE: Record<string, string> = { down: "text-red-400", overdue: "text-red-400", due: "text-amber-400", no_paper: "text-ink-faint", ok: "text-emerald-400", retired: "text-ink-faint" };
+const clock = () => Date.now();
+const act = (extra = "") => buttonClass("outline", "default", `h-11 ${extra}`);
+
+/**
+ * One search across the yard: a serial, a description, a truck, a yard, a
+ * rack, a test, or a status ("red-tagged", "missing", "out", "out too long",
+ * "out of test", "due"). Every result can jump to the piece, to where it is,
+ * or straight into a load-out or a check-in.
+ */
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { company } = await requireCompany();
   const { q } = await searchParams;
-  const query = (q ?? "").trim();
+  const query = (q ?? "").trim().slice(0, 80);
   const db = await saasDb();
+  const [list, rules, { data: unitRows }] = await Promise.all([
+    getEquipment(db, company.id),
+    getYardRules(db, company.id),
+    db.from("saas_units").select("id, name, type, identifier, yard_id").eq("company_id", company.id).order("name"),
+  ]);
+  const units = (unitRows ?? []) as { id: string; name: string; type: string; identifier: string | null; yard_id: string }[];
+  const yardName = new Map(list.yards.map((y) => [y.id, y.name]));
+  const now = clock();
+  // A truck with iron out on a job hasn't been checked back in.
+  const truckOut = new Set(list.rows.filter((r) => r.outSince && r.unitId).map((r) => r.unitId as string));
 
-  let units: { id: string; name: string; type: string; identifier: string | null }[] = [];
-  let assets: { id: string; name: string; category: string; identifier: string | null; last_seen_where: string | null }[] = [];
-  let certs: { id: string; title: string; status: ComplianceStatus; parent_type: string; parent_id: string; expiration_date: string | null }[] = [];
-
-  if (query.length >= 2) {
-    const like = `%${query.replace(/[%_,().]/g, "")}%`; // strip PostgREST filter syntax too
-    const [u, a, ci] = await Promise.all([
-      // Name OR identifier — a dispatcher hunting "1482" means the truck
-      // number painted on the door, not what the office named it.
-      db.from("saas_units").select("id, name, type, identifier").eq("company_id", company.id)
-        .or(`name.ilike.${like},identifier.ilike.${like}`).limit(10),
-      // Serial numbers too: the number stamped on the iron is how it's found.
-      db.from("saas_assets").select("id, name, category, identifier, last_seen_where").eq("company_id", company.id)
-        .or(`name.ilike.${like},identifier.ilike.${like},last_seen_where.ilike.${like}`).limit(15),
-      db.from("saas_compliance_items_with_status")
-        .select("id, title, status, parent_type, parent_id, expiration_date")
-        .eq("company_id", company.id).neq("parent_type", "crew").ilike("title", like).limit(15),
-    ]);
-    units = (u.data ?? []) as typeof units;
-    assets = (a.data ?? []) as typeof assets;
-    certs = (ci.data ?? []) as typeof certs;
-  }
-
-  const total = units.length + assets.length + certs.length;
-  const certHref = (i: (typeof certs)[number]) =>
-    i.parent_type === "unit" ? `/app/units/${i.parent_id}` : `/app/assets/${i.parent_id}`;
-
-  const Row = ({ href, icon: Icon, title, sub, right }: { href: string; icon: typeof Truck; title: string; sub?: string; right?: React.ReactNode }) => (
-    <Link href={href}>
-      <Card className="flex items-center gap-3 p-4 transition-colors hover:border-line-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Icon className="h-4 w-4 text-ink-dim" /></span>
-        <div className="min-w-0 flex-1">
-          <div className="break-words font-medium">{title}</div>
-          {sub ? <div className="text-sm text-ink-dim">{sub}</div> : null}
-        </div>
-        {right}
-      </Card>
-    </Link>
-  );
+  const searchable = list.rows.filter((r) => r.state !== "retired").map((r) => ({
+    ...r, serial: r.identifier, typeLabel: categoryLabel(r.category), nextTitle: r.next?.title ?? null,
+    place: placeOf({ status: r.status, unit_id: r.unitId, out_since: r.outSince }, now, rules.outAlertDays),
+  }));
+  const pieces = query.length >= 2 ? searchPieces(searchable, query) : [];
+  const trucks = query.length >= 2 ? units.filter((u) => matchesName(query, u.name, u.identifier, unitTypeLabel(u.type))).slice(0, 10) : [];
+  const yards = query.length >= 2 ? list.yards.filter((y) => matchesName(query, y.name)).slice(0, 5) : [];
+  const total = pieces.length + trucks.length + yards.length;
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Search" description="Equipment, serial numbers, trucks, and tests across every yard." />
+      <PageHeader title="Search" description="A serial, a description, a truck, a yard, a rack, or a status like red-tagged, missing, out, out too long, out of test, or due." />
 
       <form action="/app/search" className="flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 focus-within:border-line-2">
-        <Search className="h-4 w-4 text-ink-faint" />
-        <input name="q" defaultValue={query} autoFocus placeholder="Name, serial number, truck, test"
-          className="h-10 w-full bg-transparent text-ink placeholder:text-ink-faint outline-none" />
+        <Search className="h-5 w-5 text-ink-faint" />
+        <input name="q" defaultValue={query} autoFocus enterKeyHint="search" placeholder="4471, plug valve, CT-03, out too long"
+          className="h-12 w-full bg-transparent text-base text-ink placeholder:text-ink-faint outline-none" />
       </form>
-
       {query.length < 2 ? (
-        <Card className="px-6 py-10 text-center text-sm text-ink-dim">Type at least two characters.</Card>
+        <div className="flex flex-wrap gap-2">
+          {["out too long", "out", "red-tagged", "missing", "out of test", "due"].map((s) => (
+            <Link key={s} href={`/app/search?q=${encodeURIComponent(s)}`} className="flex h-11 items-center rounded-full border border-line-2 bg-surface px-4 text-sm text-ink-dim hover:text-ink">{s}</Link>
+          ))}
+        </div>
       ) : total === 0 ? (
-        <Card className="px-6 py-10 text-center text-sm text-ink-dim">Nothing matches &ldquo;{query}&rdquo;.</Card>
+        <Card className="px-6 py-10 text-center text-sm text-ink-dim">Nothing matches &ldquo;{query}&rdquo;. Try the serial off the band, or part of the name.</Card>
       ) : (
-        <div className="flex flex-col gap-5">
-          {assets.length > 0 && (
+        <div className="flex flex-col gap-6">
+          {pieces.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-sm font-semibold text-ink-dim">Equipment</h2>
-              {assets.map((a) => <Row key={a.id} href={`/app/assets/${a.id}`} icon={Box} title={a.name}
-                sub={[categoryLabel(a.category), a.identifier ? `SN ${a.identifier}` : "", a.last_seen_where ?? ""].filter(Boolean).join(" · ")} />)}
+              <h2 className="text-sm font-semibold text-ink-dim">Equipment ({pieces.length}{pieces.length === 50 ? "+" : ""})</h2>
+              {pieces.map((p) => {
+                const out = p.place === "out" || p.place === "out_too_long";
+                const days = daysOut(p.outSince, now);
+                return (
+                  <Card key={p.id} className="flex flex-col gap-3 p-4">
+                    <Link href={`/app/assets/${p.id}`} className="group flex items-start gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Box className="h-4 w-4 text-ink-dim" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words font-semibold group-hover:text-bone">{p.name}{p.identifier ? <span className="font-normal text-ink-dim"> · {p.identifier}</span> : null}</div>
+                        <div className="break-words text-sm text-ink-dim">{p.where}{p.note ? `, ${p.note}` : ""}</div>
+                        <div className="mt-0.5 flex flex-wrap gap-x-3 text-sm">
+                          <span className={cn("font-medium", PLACE_TONE[p.place])}>{PLACE_LABEL[p.place]}{out ? `, ${days} ${days === 1 ? "day" : "days"}` : ""}</span>
+                          <span className={STATE_TONE[p.state]}>{p.state === "ok" || p.state === "due" || p.state === "overdue" ? (p.next ? `${p.next.title}: ${p.next.detail}` : stateLabel(p)) : stateLabel(p)}</span>
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={`/app/assets/${p.id}`} className={act()}>Open</Link>
+                      <Link href={p.unitId ? `/app/units/${p.unitId}` : "/app/map"} className={act()}><MapPin className="h-4 w-4" /> {p.unitName ?? "Yard map"}</Link>
+                      {out ? (
+                        <Link href={p.unitId ? `/app/units/${p.unitId}/return` : "/app/return"} className={buttonClass("default", "default", "h-11")}><PackageCheck className="h-4 w-4" /> Check in</Link>
+                      ) : p.unitId && !truckOut.has(p.unitId) ? (
+                        <Link href={`/app/units/${p.unitId}/scan`} className={act()}><ScanLine className="h-4 w-4" /> Load out {p.unitName}</Link>
+                      ) : null}
+                    </div>
+                  </Card>
+                );
+              })}
             </section>
           )}
-          {units.length > 0 && (
+          {trucks.length > 0 && (
             <section className="flex flex-col gap-2">
               <h2 className="text-sm font-semibold text-ink-dim">Trucks</h2>
-              {units.map((u) => <Row key={u.id} href={`/app/units/${u.id}`} icon={Truck} title={u.name} sub={`${unitTypeLabel(u.type)}${u.identifier ? ` · ${u.identifier}` : ""}`} />)}
+              {trucks.map((u) => (
+                <Card key={u.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <Link href={`/app/units/${u.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Truck className="h-4 w-4 text-ink-dim" /></span>
+                    <div className="min-w-0">
+                      <div className="font-semibold group-hover:text-bone">{u.name}</div>
+                      <div className="text-sm text-ink-dim">{unitTypeLabel(u.type)}{u.identifier ? ` · ${u.identifier}` : ""} · {yardName.get(u.yard_id) ?? ""}{truckOut.has(u.id) ? " · out on a job" : ""}</div>
+                    </div>
+                  </Link>
+                  {truckOut.has(u.id)
+                    ? <Link href={`/app/units/${u.id}/return`} className={buttonClass("default", "default", "h-11")}><PackageCheck className="h-4 w-4" /> Check in</Link>
+                    : <Link href={`/app/units/${u.id}/scan`} className={buttonClass("default", "default", "h-11")}><ScanLine className="h-4 w-4" /> Start load-out</Link>}
+                </Card>
+              ))}
             </section>
           )}
-          {certs.length > 0 && (
+          {yards.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-sm font-semibold text-ink-dim">Tests &amp; certs</h2>
-              {certs.map((i) => (
-                <Row key={i.id} href={certHref(i)} icon={ShieldCheck} title={i.title}
-                  sub={i.expiration_date ? `expires ${fmtDate(i.expiration_date)}` : "no date on file"}
-                  right={<StatusBadge status={i.status} />} />
+              <h2 className="text-sm font-semibold text-ink-dim">Yards</h2>
+              {yards.map((y) => (
+                <Card key={y.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal"><Warehouse className="h-4 w-4 text-ink-dim" /></span>
+                  <div className="min-w-0 flex-1 font-semibold">{y.name}</div>
+                  <Link href={`/app?yard=${y.id}`} className={act()}>Trucks</Link>
+                  <Link href="/app/map" className={act()}>Yard map</Link>
+                </Card>
               ))}
             </section>
           )}

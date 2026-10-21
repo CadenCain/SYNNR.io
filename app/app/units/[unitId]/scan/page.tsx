@@ -20,7 +20,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
     db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
     getEquipment(db, company.id),
     db.from("saas_assets").select("id, nfc_uid").eq("company_id", company.id).not("nfc_uid", "is", null),
-    db.from("saas_loadout_scans").select("finished_at, scanned_by, verdict")
+    db.from("saas_loadout_scans").select("finished_at, scanned_by, verdict, packages")
       .eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
     db.from("saas_packages").select("id, name, unit_id, saas_package_lines(label, qty, sort)")
       .eq("company_id", company.id).or(`unit_id.is.null,unit_id.eq.${unitId}`).order("name"),
@@ -45,7 +45,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       : r.next ? `${r.next.title}: ${r.next.detail}`
       : "No test on file",
   }));
-  const last = lastRow as { finished_at: string; scanned_by: string | null; verdict: string | null } | null;
+  const last = lastRow as { finished_at: string; scanned_by: string | null; verdict: string | null; packages: string[] | null } | null;
   type Pkg = { id: string; name: string; unit_id: string | null; saas_package_lines: (KitLine & { sort: number })[] | null };
   const linesOf = (x: Pkg): KitLine[] => [...(x.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }));
   const all = (pkgRows ?? []) as Pkg[];
@@ -63,6 +63,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       />
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
         kit={kitRow ? linesOf(kitRow) : []} packages={packages}
+        lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
         manager={company.role === "owner" || company.role === "admin"} demo={company.is_demo} />
     </div>
   );

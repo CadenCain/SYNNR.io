@@ -33,6 +33,13 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   });
   if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
 
+  // It rolled: what went on is out on the job from now until it's checked in.
+  const ids = got.rec.pieces.map((p) => p.asset_id);
+  if (ids.length && got.rec.unit_id) {
+    await admin.from("saas_assets").update({ out_since: new Date().toISOString(), out_loadout_id: id, out_alerted_at: null })
+      .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).in("id", ids);
+  }
+
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");
   const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason.replace(/[.\s]+$/, "")}". Not ready because: ${why}`;
   void logEvent({ companyId: company.id, kind: "rolled_override", unitId: got.rec.unit_id, actor, message });

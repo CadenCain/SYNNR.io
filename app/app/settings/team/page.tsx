@@ -143,7 +143,7 @@ export default async function TeamSettings() {
                   </button>
                 </form>
               </div>
-              <InviteLink url={`${origin}/invite/${iv.token}`} />
+              <InviteLink url={`${origin}/invite/${iv.token}`} company={company.name} />
             </Card>
           ))}
         </section>
@@ -162,9 +162,9 @@ export default async function TeamSettings() {
             <option value="member">Hand</option>
             <option value="admin">Manager</option>
           </select>
-          <Button type="submit">Create invite link</Button>
+          <Button type="submit" className="h-11">Make an invite link</Button>
         </form>
-        <p className="mt-2 text-xs text-ink-faint">Makes a link you can text or send however you like. Hands upload certs and run readiness checks. Managers also approve uploads, type in dates, and set the rules.</p>
+        <p className="mt-2 text-sm text-ink-faint">Makes a link to text a hand. They tap it, make a login in one form, and land on the trucks. Every scan they make has their name on it. Hands run load-outs and check-ins and upload cert photos. Managers also override a NOT READY truck, approve uploads, and set the rules.</p>
       </Card>
       )}
     </div>

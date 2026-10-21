@@ -46,6 +46,8 @@ export interface EquipRow {
   note: string | null;
   /** When a load-out scan last proved it was on the truck it's logged on (null if never, or it's moved since). */
   scannedAt: string | null;
+  /** Left on a load-out that rolled and not checked back in since. */
+  outSince: string | null;
   next: EquipNext | null;
   itemCount: number;
   state: EquipState;
@@ -61,12 +63,12 @@ export interface EquipmentList {
 const RANK: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, due_soon: 3, ok: 4 };
 export const STATE_ORDER: Record<EquipState, number> = { down: 0, overdue: 1, due: 2, no_paper: 3, ok: 4, retired: 5 };
 
-export interface RawAsset { id: string; name: string; category: string; identifier: string | null; status: string; yard_id: string | null; unit_id: string | null; tag_token: string; last_seen_where?: string | null; scanned_at?: string | null; scanned_unit_id?: string | null }
+export interface RawAsset { id: string; name: string; category: string; identifier: string | null; status: string; yard_id: string | null; unit_id: string | null; tag_token: string; last_seen_where?: string | null; scanned_at?: string | null; scanned_unit_id?: string | null; out_since?: string | null }
 export interface RawItem { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string }
 
 export async function getEquipment(db: SupabaseClient, companyId: string): Promise<EquipmentList> {
   const [{ data: assetData }, { data: unitData }, { data: yardData }, { data: itemData }] = await Promise.all([
-    db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, tag_token, last_seen_where, scanned_at, scanned_unit_id")
+    db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, tag_token, last_seen_where, scanned_at, scanned_unit_id, out_since")
       .eq("company_id", companyId).order("name"),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", companyId).order("name"),
     db.from("saas_yards").select("id, name").eq("company_id", companyId).order("name"),
@@ -126,6 +128,7 @@ export function buildEquipment(
       tagToken: a.tag_token, yardId: a.yard_id, unitId: a.unit_id, unitName: unit?.name ?? null,
       where, yardOf, note: a.last_seen_where?.trim() || null,
       scannedAt: a.scanned_at && a.unit_id && a.scanned_unit_id === a.unit_id ? a.scanned_at : null,
+      outSince: a.out_since ?? null,
       next, itemCount: items.length, state,
     };
   });
