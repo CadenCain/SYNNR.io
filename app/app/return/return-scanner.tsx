@@ -42,7 +42,7 @@ const readDraftRaw = (k: string): string | null => {
   } catch { return null; }
 };
 
-export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, demo = false }: {
+export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false }: {
   truck: { id: string; name: string } | null;
   pieces: ScanPiece[];
   /** Days out, for pieces out on a job. */
@@ -51,7 +51,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   defaultYardId: string | null;
   /** Out this many days or more reads red. */
   alertDays?: number;
-  demo?: boolean;
+  /** Checking a piece by hand means typing the last 4 of its serial (a yard setting). */
+  last4?: boolean;
 }) {
   const key = truck?.id ?? "yard";
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
@@ -220,8 +221,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         ) : null}
         {camOn
           ? <button type="button" onClick={stopCamera} className={buttonClass("outline", "lg", "h-14 text-base")}><X className="h-5 w-5" /> Stop camera</button>
-          : <button type="button" onClick={startCamera} className={buttonClass(hasNfc ? "outline" : "default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Scan QR codes</button>}
+          : <button type="button" onClick={startCamera} className={buttonClass("outline", "lg", hasNfc ? "h-14 text-base" : "h-12 text-sm")}><Camera className="h-5 w-5" /> {hasNfc ? "Scan QR codes" : "Scan a QR code"}</button>}
       </div>
+      {!hasNfc ? <p className="-mt-2 text-sm text-ink-dim">Tap <span className="font-semibold text-ink">It&apos;s back</span> on each piece as it comes off. If a piece has a QR code, you can scan that instead.</p> : null}
       {camOn ? (
         <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl border border-line bg-black">
           <video ref={video} playsInline muted className="aspect-[3/4] w-full object-cover" />
@@ -236,14 +238,14 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         </div>
         {expected.length === 0 ? <p className="text-sm text-ink-faint">{truck ? `Nothing is logged on ${truck.name}.` : "Nothing is out on a job right now."} Scan anything that came back and it gets checked in.</p> : null}
         {expected.map((p) => (
-          <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} demo={demo} destText={scans[p.id] ? destText(scans[p.id]) : ""}
+          <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={scans[p.id] ? destText(scans[p.id]) : ""}
             onHand={() => mark(p, "hand")} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />
         ))}
       </section>
       {extra.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Also came back</h2>
-          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} demo={demo} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
+          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
         </section>
       ) : null}
 
@@ -261,7 +263,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
               <p className="text-sm text-ink-dim">These went out on {truck.name} but didn&apos;t get scanned back. Where are they?</p>
               {notYet.map((p) => (
                 <label key={p.id} className="flex flex-col gap-1 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${!demo && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
+                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${last4 && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
                   <select value={outcomes[p.id] ?? "still_out"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
                     className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
                     <option value="still_out">Still out on the job</option>
@@ -293,8 +295,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   );
 }
 
-function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip, onRedTag }: {
-  p: ScanPiece; scan?: Scan; days?: number; alertDays: number; demo: boolean; destText: string; onHand: () => void; onFlip?: () => void;
+function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip, onRedTag }: {
+  p: ScanPiece; scan?: Scan; days?: number; alertDays: number; last4: boolean; strong: boolean; destText: string; onHand: () => void; onFlip?: () => void;
   onRedTag?: (why: string) => void;
 }) {
   const [asking, setAsking] = useState(false);
@@ -302,7 +304,7 @@ function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip, onRedTa
   const [why, setWhy] = useState("");
   const [typed, setTyped] = useState("");
   const [err, setErr] = useState("");
-  const needsSerial = !demo && checkable(p.serial);
+  const needsSerial = last4 && checkable(p.serial);
   function check() {
     if (!needsSerial) { onHand(); return; }
     if (!asking) { setAsking(true); return; }
@@ -325,8 +327,9 @@ function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip, onRedTa
         </div>
       </div>
       {!scan ? (
-        <button type="button" onClick={check} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
-          {asking ? "Check it" : "Check by hand"}
+        <button type="button" onClick={check} className={cn("min-h-12 w-full shrink-0 rounded-lg border px-4 text-sm hover:bg-elevated sm:w-auto",
+          strong ? "border-bone/60 font-semibold text-ink" : "border-line-2 text-ink-dim")}>
+          {asking ? "Check it" : "It\u2019s back"}
         </button>
       ) : onFlip ? (
         <button type="button" onClick={onFlip} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">

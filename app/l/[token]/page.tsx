@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { saasAdmin } from "@/lib/saas/db";
-import { getLoadout, RECORD_COLS, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { getLoadout, recordPhoto, RECORD_COLS, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
 import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 import LoadoutRecordView from "@/app/app/_components/loadout-record-view";
 import { recordPaper } from "@/lib/saas/paper";
@@ -51,6 +51,7 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
   const company = (co as { name: string } | null)?.name ?? "";
   // The paper behind every piece: the operator sees the cert, not just a date.
   const paper = await recordPaper(admin, rec.company_id, rec.pieces);
+  const photo = await recordPhoto(admin, rec);
   const yardName = (yard as { name: string } | null)?.name ?? "";
 
   return (
@@ -66,7 +67,7 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
           </div>
           <span className="text-sm text-ink-dim">{[company, yardName].filter(Boolean).join(" · ")}</span>
         </div>
-        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} />
+        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} photo={photo} />
         <p className="text-[13px] text-ink-faint">Tap a piece to see its tests and cert. Sent from RollReady by SYNNR.</p>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { provenHow } from "@/lib/saas/scan-proof";
 import { getOpenPlan } from "@/lib/saas/plans";
 import { getYardRules } from "@/lib/saas/yard-rules";
+import { photoPathOk } from "@/lib/saas/loadout-photo";
 
 type Outcome = "yard" | "missing";
 
@@ -66,6 +67,13 @@ async function savedLoadout(admin: Admin, companyId: string, userId: string, uni
   };
 }
 
+/** The photo of the loaded truck, if the phone sent one that's this load-out's and is really in storage. */
+async function loadoutPhoto(admin: Admin, path: unknown, companyId: string, unitId: string, startedMs: number, nowMs: number): Promise<string | null> {
+  if (!photoPathOk(path, companyId, unitId, startedMs, nowMs)) return null;
+  const { error } = await admin.storage.from("proofs").createSignedUrl(path, 60);
+  return error ? null : path;
+}
+
 /**
  * Save a load-out. The server works out READY or NOT READY from the records,
  * never from what the phone says: every line on the list (the truck's kit,
@@ -73,8 +81,9 @@ async function savedLoadout(admin: Admin, companyId: string, userId: string, uni
  * piece, and nothing scanned on can be out of test or red-tagged. Pieces
  * logged on the truck that didn't get scanned were taken off (to the yard)
  * or can't be found (missing, which blocks the truck). Writes one record
- * that nobody can edit, with who scanned each piece and when, and a proof
- * link. The database logs each piece's move by itself.
+ * that nobody can edit, with who scanned each piece and when, the photo of
+ * the loaded truck, and a proof link. The database logs each piece's move by
+ * itself.
  */
 export async function finishLoadout(input: {
   unitId: string;
@@ -83,6 +92,8 @@ export async function finishLoadout(input: {
   notScanned: { assetId: string; outcome: Outcome }[];
   packageIds?: string[];
   quick?: { label: string; qty: number }[];
+  /** Where the phone put the photo of the loaded truck (proofs bucket). */
+  photoPath?: string;
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
@@ -247,8 +258,13 @@ export async function finishLoadout(input: {
     ? scans.filter((x) => x.how === "hand").map((x) => byId.get(x.assetId)!)
         .filter((a) => needsTagScan(a, expected.map((l) => l.label), TESTED_CATEGORIES))
     : [];
+  // The photo of the loaded truck is the proof a hand looked at what went on.
+  // Required in a real yard unless a manager turned it off; never in the demo.
+  const photoPath = await loadoutPhoto(admin, input.photoPath, company.id, unit.id, startedMs, nowMs);
+  const needPhoto = rules.requireLoadoutPhoto && !company.is_demo && !photoPath;
   const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`),
-    ...handChecked.map((a) => `Checked by hand, not scanned off its tag: ${label(a)}`)];
+    ...handChecked.map((a) => `Checked by hand, not scanned off its tag: ${label(a)}`),
+    ...(needPhoto ? ["No photo of the loaded truck"] : [])];
   const verdict: "ready" | "not_ready" = reasons.length ? "not_ready" : "ready";
 
   // Move the iron. Scanned pieces are on this truck now; a piece flagged
@@ -285,7 +301,7 @@ export async function finishLoadout(input: {
     scanned_by: actor, scanned_by_user: user.id,
     started_at: startedIso, finished_at: now,
     expected: onList + notScanned.length, scanned: onList,
-    verdict, reasons,
+    verdict, reasons, photo_path: photoPath,
     packages: pkgs.map((x) => x.name),
     plan: plan ? { id: plan.id, by: plan.by, at: plan.at, note: plan.note, packages: pkgs.filter((x) => plan.packageIds.includes(x.id)).map((x) => x.name), lines: plan.lines } : null,
     lines: filled.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: l.filled.map((f) => ({ asset_id: f.id, name: f.name, serial: f.serial })) })),

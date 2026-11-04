@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { photoTakenMs } from "./loadout-photo";
 
 /**
  * A saved load-out, as stored (saas_loadout_scans, which nobody can edit)
@@ -44,12 +45,14 @@ export interface LoadoutRecord {
   proof_token: string;
   /** The manager's plan this load-out was checked against, as it stood. */
   plan?: RecordPlan | null;
+  /** The photo of the loaded truck (proofs bucket), named `<started ms>-<taken ms>.jpg`. */
+  photo_path?: string | null;
 }
 export interface RecordPlan { id: string; by: string | null; at: string; note: string | null; packages: string[]; lines: { label: string; qty: number }[] }
 export interface LoadoutOverride { loadout_id: string; by_name: string; reason: string; created_at: string }
 
 export const RECORD_COLS =
-  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token, plan";
+  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token, plan, photo_path";
 
 /**
  * READY or NOT READY. Load-outs saved before the server worked out the
@@ -87,4 +90,13 @@ export async function getLoadout(db: SupabaseClient, where: { id: string; compan
   const rec = data as LoadoutRecord;
   const { data: ov } = await db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", rec.id).maybeSingle();
   return { rec, override: (ov as LoadoutOverride | null) ?? null };
+}
+
+/** A signed link to the photo of the loaded truck, and when it was taken. */
+export async function recordPhoto(db: SupabaseClient, rec: Pick<LoadoutRecord, "photo_path" | "finished_at">): Promise<{ url: string; at: string } | null> {
+  if (!rec.photo_path) return null;
+  const { data } = await db.storage.from("proofs").createSignedUrl(rec.photo_path, 3600);
+  if (!data?.signedUrl) return null;
+  const taken = photoTakenMs(rec.photo_path);
+  return { url: data.signedUrl, at: taken ? new Date(taken).toISOString() : rec.finished_at };
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ScanLine } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { getLoadout, outcomeOf } from "@/lib/saas/loadout-record";
+import { getLoadout, outcomeOf, recordPhoto } from "@/lib/saas/loadout-record";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         description="The record of what went on the truck, who scanned each piece, and when."
       />
 
-      <LoadoutRecordView rec={rec} override={override} paper={await recordPaper(db, company.id, rec.pieces)} />
+      <LoadoutRecordView rec={rec} override={override} paper={await recordPaper(db, company.id, rec.pieces)} photo={await recordPhoto(db, rec)} />
 
       <Card className="flex flex-col gap-3 p-4">
         <div>

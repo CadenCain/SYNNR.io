@@ -59,7 +59,10 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
         lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
         plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
         tagRule={rules.requireTagScan}
-        manager={company.role === "owner" || company.role === "admin"} demo={company.is_demo} />
+        companyId={company.id}
+        photoRule={rules.requireLoadoutPhoto ? (company.is_demo ? "optional" : "required") : "off"}
+        last4={rules.requireLast4 && !company.is_demo}
+        manager={company.role === "owner" || company.role === "admin"} />
     </div>
   );
 }

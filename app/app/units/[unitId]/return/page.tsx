@@ -39,7 +39,7 @@ export default async function TruckReturnPage({ params }: { params: Promise<{ un
       <PageHeader back={{ href: `/app/units/${unit.id}`, label: unit.name }} title={`Check in ${unit.name}`}
         description={last ? `Last loaded out ${fmtWhen(last.finished_at)}${last.scanned_by ? ` by ${last.scanned_by}` : ""}. Scan what came back.` : "Scan what came back."} />
       <ReturnScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces} outDays={outDays}
-        yards={(yardRows ?? []) as { id: string; name: string }[]} defaultYardId={unit.yard_id} alertDays={rules.outAlertDays} demo={company.is_demo} />
+        yards={(yardRows ?? []) as { id: string; name: string }[]} defaultYardId={unit.yard_id} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} />
     </div>
   );
 }

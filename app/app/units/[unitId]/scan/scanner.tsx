@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ListTodo } from "lucide-react";
 import { readScan, scanMessage, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
 import { expectedLines, fillLines, shortLines, needsTagScan, lineSourceLabel, lineMatches } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { tagKey } from "@/lib/saas/tag-key";
 import { linkTag, finishLoadout } from "./actions";
+import { getBrowserSupabase } from "@/lib/supabase/client";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 // Loaded with the page (not on first camera use) so QR scanning works on a
@@ -67,11 +69,27 @@ const readDraftRaw = (truckId: string): string | null => {
   } catch { return null; }
 };
 const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
-const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); } catch { /* storage off */ } };
+const photoKey = (truckId: string) => `rr-loadout-photo-${truckId}`;
+const clearDraft = (truckId: string) => { try { localStorage.removeItem(draftKey(truckId)); localStorage.removeItem(photoKey(truckId)); } catch { /* storage off */ } };
+/** The photo of the loaded truck, kept on the phone with the scans until the load-out is saved. */
+type Photo = { file: Blob; url: string; at: number };
+const keepPhoto = (truckId: string, startedAt: string, file: Blob, at: number) => {
+  const r = new FileReader();
+  r.onload = () => { try { localStorage.setItem(photoKey(truckId), JSON.stringify({ startedAt, at, data: r.result })); } catch { /* too big or storage off: it's still in memory */ } };
+  r.readAsDataURL(file);
+};
+async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | null> {
+  try {
+    const k = JSON.parse(localStorage.getItem(photoKey(truckId)) ?? "null") as { startedAt: string; at: number; data: string } | null;
+    if (!k || k.startedAt !== startedAt) return null;
+    const file = await (await fetch(k.data)).blob();
+    return { file, url: URL.createObjectURL(file), at: k.at };
+  } catch { return null; }
+}
 
 export interface ScanPlan { by: string | null; at: string; note: string | null; packageIds: string[]; lines: KitLine[] }
 
-export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, demo = false, lastPackageIds, plan = null, tagRule = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
@@ -79,14 +97,18 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   /** Packages a hand can add for the job. */
   packages: PackageOption[];
   manager?: boolean;
-  /** The demo yard: no iron to read, so checking by hand doesn't ask for the serial. */
-  demo?: boolean;
   /** Packages this truck's last load-out used, picked to start with (when nobody planned the job). */
   lastPackageIds?: string[];
   /** A manager's plan for this job: picked to start with, and the hand can't take any of it off. */
   plan?: ScanPlan | null;
   /** The yard scans tags only: pressure iron and anything on the list can't be checked by hand. */
   tagRule?: boolean;
+  /** Where the photo of the loaded truck goes (the company's folder). */
+  companyId?: string;
+  /** A photo of the loaded truck: required to roll, offered but not required (the demo yard), or off. */
+  photoRule?: "required" | "optional" | "off";
+  /** Checking a piece by hand means typing the last 4 of its serial. */
+  last4?: boolean;
   /** Only for the marketing screenshot: packages already picked. */
   initialPackageIds?: string[];
   /** Only for the marketing screenshot: start partway through a load-out. */
@@ -128,6 +150,14 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const [quick, setQuick] = useState<KitLine[]>([]);
   const [quickLabel, setQuickLabel] = useState("");
   const [quickQty, setQuickQty] = useState("1");
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [photoErr, setPhotoErr] = useState("");
+  const photoInput = useRef<HTMLInputElement | null>(null);
+  const uploadedPath = useRef<string | null>(null);
+  const askPhoto = photoRule !== "off" && Boolean(companyId);
+  // iPhones can't read tags from a website, and most yards don't use QR codes:
+  // on those phones the hand checks pieces off the list and the photo is the proof.
+  const tapToCheck = !hasNfc && !tagRule;
 
   const nfcAbort = useRef<AbortController | null>(null);
   const video = useRef<HTMLVideoElement | null>(null);
@@ -210,6 +240,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
+    void keptPhoto(truck.id, draft.startedAt).then((p) => { if (p) setPhoto(p); });
   }
   function dropDraft() { clearDraft(truck.id); setDraftHandled(true); }
 
@@ -333,15 +364,51 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     setSerialText("");
   }
 
+  async function takePhoto(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setPhotoErr("");
+    const small = await shrinkPhoto(f, 1600, 0.8);
+    if (!small.type.startsWith("image/")) { setPhotoErr("That isn't a photo. Take one with the camera."); return; }
+    if (small.size > 12e6) { setPhotoErr("That photo is too big to send. Take it again."); return; }
+    const at = Date.now();
+    if (photo) URL.revokeObjectURL(photo.url);
+    setPhoto({ file: small, url: URL.createObjectURL(small), at });
+    keepPhoto(truck.id, startedAt, small, at);
+  }
+
+  /** Send the photo to storage (once per photo). Throws when there's no signal. */
+  async function sendPhoto(): Promise<string | undefined | false> {
+    if (!photo || !companyId) return undefined;
+    const path = `${companyId}/loadout/${truck.id}/${Date.parse(startedAt)}-${photo.at}.jpg`;
+    if (uploadedPath.current === path) return path;
+    const sb = getBrowserSupabase();
+    if (!sb) { setSaveErr("Couldn't send the photo. Reload the page and try again."); return false; }
+    const { error } = await sb.storage.from("proofs").upload(path, photo.file, { upsert: false, contentType: "image/jpeg" });
+    if (error) {
+      const status = Number((error as { statusCode?: string | number }).statusCode ?? (error as { status?: number }).status ?? 0);
+      // Sent already (the save after it didn't land): it's there.
+      if (status === 409 || /exists|duplicate/i.test(error.message)) { uploadedPath.current = path; return path; }
+      if (!navigator.onLine || !status) throw error;
+      setSaveErr(`Couldn't send the photo: ${error.message}`);
+      return false;
+    }
+    uploadedPath.current = path;
+    return path;
+  }
+
   async function save() {
     setSaving(true); setSaveErr("");
     const notScanned = expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "yard" as Outcome }));
     let res: Awaited<ReturnType<typeof finishLoadout>>;
     try {
+      const photoPath = await sendPhoto();
+      if (photoPath === false) { setSaving(false); return; }
       res = await finishLoadout({
         unitId: truck.id, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
-        notScanned, packageIds, quick,
+        notScanned, packageIds, quick, photoPath,
       });
     } catch {
       // No signal (or the request died). Everything is still on the phone.
@@ -406,7 +473,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           {!ready ? (
-            <button type="button" onClick={() => { setSaved(null); setScans({}); setOutcomes({}); setFinishing(false); setBanner(null); setStartedAt(new Date().toISOString()); }}
+            <button type="button" onClick={() => { setSaved(null); setScans({}); setOutcomes({}); setFinishing(false); setBanner(null); setPhoto(null); uploadedPath.current = null; setStartedAt(new Date().toISOString()); }}
               className={buttonClass("default", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Fix it and scan again</button>
           ) : null}
           <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready ? "default" : "outline", "lg", "h-14 text-base")}>
@@ -424,7 +491,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const missingNow = notYet.filter((p) => outcomes[p.id] === "missing");
   const nothingScanned = Object.keys(scans).length === 0;
   const byHandNotAllowed = list.filter((p) => scans[p.id]?.how === "hand" && needsTag(p));
-  const willBlock = nothingScanned || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
+  const noPhoto = photoRule === "required" && askPhoto && !photo;
+  const willBlock = nothingScanned || noPhoto || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
   const required = lines.reduce((n, l) => n + l.qty, 0);
@@ -551,7 +619,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         <div role="status" aria-live="polite" className={cn("rounded-2xl border px-4 py-4 text-lg font-semibold leading-snug", TONE[banner.tone])}>{banner.text}</div>
       ) : (
         <div className="rounded-2xl border border-line bg-surface px-4 py-3.5 text-sm text-ink-dim">
-          Scan each piece as it goes on {truck.name}. Anything out of test or not on this truck&apos;s list gets called out right away.
+          {tapToCheck ? "Check off each piece" : "Scan each piece"} as it goes on {truck.name}. Anything out of test or not on this truck&apos;s list gets called out right away.
         </div>
       )}
 
@@ -563,9 +631,11 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         ) : null}
         {camOn
           ? <button type="button" onClick={stopCamera} className={buttonClass("outline", "lg", "h-14 text-base")}><X className="h-5 w-5" /> Stop camera</button>
-          : <button type="button" onClick={startCamera} className={buttonClass(hasNfc ? "outline" : "default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Scan QR codes</button>}
+          : <button type="button" onClick={startCamera} className={buttonClass(hasNfc || tapToCheck ? "outline" : "default", "lg", tapToCheck ? "h-12 text-sm" : "h-14 text-base")}><Camera className="h-5 w-5" /> {tapToCheck ? "Scan a QR code" : "Scan QR codes"}</button>}
       </div>
-      {!hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes{tagRule ? "." : " or check pieces by hand."}</p> : null}
+      {tapToCheck
+        ? <p className="-mt-2 text-sm text-ink-dim">Tap <span className="font-semibold text-ink">It&apos;s on the truck</span> on each piece as it goes on{askPhoto ? ", then take one photo of the loaded truck" : ""}. If a piece has a QR code, you can scan that instead.</p>
+        : !hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes.</p> : null}
       {tagRule ? <p className="-mt-2 text-xs text-ink-faint">This yard scans tags only: pressure iron and anything on the list has to be scanned off its tag. A tag that won&apos;t scan means a manager signs off.</p> : null}
 
       {camOn ? (
@@ -622,7 +692,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         const leftover = expected.filter((p) => !used.has(p.id));
         const extras = added.filter((p) => !used.has(p.id));
         const rowOf = (p: ScanPiece, place?: string) => (
-          <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} nested place={place}
+          <Row key={p.id} p={p} scan={scans[p.id]} last4={last4} strong={tapToCheck} tagOnly={needsTag(p)} nested place={place}
             onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />
         );
         const yardPlace = (p: ScanPiece) => `${p.unitId ? `On ${p.where}` : `In ${p.where}`}${p.spot ? `, ${p.spot}` : ""}`;
@@ -742,7 +812,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
               <p className="text-sm text-ink-dim">These are logged on {truck.name} but didn&apos;t get scanned. Where are they?</p>
               {notYet.map((p) => (
                 <label key={p.id} className="flex flex-col gap-1 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${!demo && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
+                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${last4 && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
                   <select value={outcomes[p.id] ?? "yard"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
                     className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
                     <option value="yard">Not going this trip (stays in the yard)</option>
@@ -752,11 +822,32 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
               ))}
             </div>
           ) : null}
+          {askPhoto ? (
+            <div className={cn("flex flex-col gap-3 rounded-xl border p-3", photo ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-2 border-bone/60 bg-bone/[0.07]")}>
+              <div>
+                <div className="font-semibold">Photo of the loaded truck{photoRule === "optional" && !photo ? <span className="ml-2 text-xs font-normal text-ink-faint">optional in the demo</span> : null}</div>
+                {!photo ? <p className="text-sm text-ink-dim">Stand back so the whole load shows. It goes on the record with your name and the time, and the operator sees it on the proof link.</p> : null}
+              </div>
+              {photo ? (
+                <div className="flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a local photo that hasn't been sent yet */}
+                  <img src={photo.url} alt={`${truck.name} loaded`} className="h-24 w-32 shrink-0 rounded-lg border border-line object-cover" />
+                  <div className="min-w-0 flex-1 text-sm text-ink-dim">Taken {clock(photo.at)}. It goes on the record and the proof link.</div>
+                  <button type="button" onClick={() => photoInput.current?.click()} className={buttonClass("outline", "lg", "shrink-0")}>Retake</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => photoInput.current?.click()} className={buttonClass("default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Take the photo</button>
+              )}
+              {photoErr ? <p className="text-sm text-red-400">{photoErr}</p> : null}
+              <input ref={photoInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={takePhoto} aria-label="Photo of the loaded truck" />
+            </div>
+          ) : null}
           <div className={cn("rounded-xl border p-3", willBlock ? TONE.bad : TONE.good)}>
             <div className="text-lg font-bold">{willBlock ? `${truck.name} will be NOT READY` : `${truck.name} looks READY`}</div>
             {willBlock ? (
               <ul className="mt-1 flex flex-col gap-1 text-sm font-medium">
                 {nothingScanned ? <li>Nothing was scanned onto the truck</li> : null}
+                {noPhoto ? <li>No photo of the loaded truck</li> : null}
                 {short.map((l, i) => <li key={`s${i}`}>Short: {l.label}, {l.filled.length} of {l.qty} scanned</li>)}
                 {redScanned.map((p) => <li key={`r${p.id}`}>Bad piece on the truck: {pieceText(p)}. Take it off and scan a good one.</li>)}
                 {missingNow.map((p) => <li key={`m${p.id}`}>Can&apos;t find: {pieceText(p)}</li>)}
@@ -772,7 +863,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("outline", "lg", "h-14 self-start text-base")}>Reload the page</button>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saving} className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waitingForSignal ? "Try sending now" : "Save load-out"}</button>
+            <button type="button" onClick={save} disabled={saving} className={buttonClass(noPhoto ? "outline" : "default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waitingForSignal ? "Try sending now" : noPhoto ? "Save without a photo" : "Save load-out"}</button>
             <button type="button" onClick={() => setFinishing(false)} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
           </div>
         </section>
@@ -792,13 +883,15 @@ function maskSerial(serial: string): string {
 }
 
 /**
- * One piece logged on the truck. Checking it by hand means reading the last
- * 4 of its serial off the band or the stamp: the screen hides them until the
- * piece is scanned, so the check proves someone looked at the iron. (Not in
- * the demo yard, where there's no iron to read.)
+ * One piece logged on the truck. One tap checks it on by hand. A yard can
+ * make that tap ask for the last 4 of the serial off the band or the stamp:
+ * the screen hides them until the piece is checked, so the check proves
+ * someone looked at the iron.
  */
-function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false, nested = false, place }: {
-  p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean; tagOnly?: boolean;
+function Row({ p, scan, onHand, onTakeOff, last4 = false, strong = false, tagOnly = false, nested = false, place }: {
+  p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; last4?: boolean; tagOnly?: boolean;
+  /** This phone checks pieces off by hand (no tags): make the button the obvious thing to tap. */
+  strong?: boolean;
   /** Inside a line on the list: lighter, so it reads as part of that line. */
   nested?: boolean;
   /** Where it is, for a piece that isn't on this truck yet. */
@@ -807,7 +900,7 @@ function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false, nested
   const [asking, setAsking] = useState(false);
   const [typed, setTyped] = useState("");
   const [err, setErr] = useState("");
-  const needsSerial = !demo && checkable(p.serial);
+  const needsSerial = last4 && checkable(p.serial);
   function check() {
     if (!needsSerial) { onHand(); return; }
     if (!asking) { setAsking(true); return; }
@@ -832,8 +925,9 @@ function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false, nested
       {!scan && tagOnly ? (
         <span className="w-full shrink-0 text-[13px] font-medium text-ink-dim sm:w-auto">Scan its tag</span>
       ) : !scan ? (
-        <button type="button" onClick={check} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
-          {asking ? "Check it" : "Check by hand"}
+        <button type="button" onClick={check} className={cn("min-h-12 w-full shrink-0 rounded-lg border px-4 text-sm hover:bg-elevated sm:w-auto",
+          strong ? "border-bone/60 font-semibold text-ink" : "border-line-2 text-ink-dim")}>
+          {asking ? "Check it" : "It’s on the truck"}
         </button>
       ) : p.problem === "red" ? (
         <button type="button" onClick={onTakeOff} className="min-h-12 w-full shrink-0 rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:w-auto">Took it off</button>

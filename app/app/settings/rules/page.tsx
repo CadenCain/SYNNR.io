@@ -23,6 +23,8 @@ async function saveRules(fd: FormData) {
     allow_cert_on_the_way: fd.get("allow_cert_on_the_way") === "on",
     out_alert_days: days,
     require_tag_scan: fd.get("require_tag_scan") === "on",
+    require_loadout_photo: fd.get("require_loadout_photo") === "on",
+    require_last4: fd.get("require_last4") === "on",
   };
   const { error } = await db.from("saas_enforcement_settings")
     .upsert({ company_id: company.id, ...next, updated_at: new Date().toISOString() }, { onConflict: "company_id" });
@@ -32,6 +34,8 @@ async function saveRules(fd: FormData) {
   if (before.allowCertOnTheWay !== next.allow_cert_on_the_way) changes.push(next.allow_cert_on_the_way ? "\"cert on the way\" turned on" : "\"cert on the way\" turned off");
   if (before.outAlertDays !== next.out_alert_days) changes.push(`iron out more than ${next.out_alert_days} days gets flagged`);
   if (before.requireTagScan !== next.require_tag_scan) changes.push(next.require_tag_scan ? "pressure iron and anything on the list has to be scanned off its tag at load-out" : "pieces can be checked by hand at load-out again");
+  if (before.requireLoadoutPhoto !== next.require_loadout_photo) changes.push(next.require_loadout_photo ? "every load-out needs a photo of the loaded truck" : "a load-out can roll without a photo of the loaded truck");
+  if (before.requireLast4 !== next.require_last4) changes.push(next.require_last4 ? "checking a piece by hand means typing the last 4 of its serial" : "checking a piece by hand is one tap again");
   if (changes.length) {
     const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
     void logEvent({ companyId: company.id, kind: "rules_changed", actor, message: `Rules changed${actor ? ` by ${actor}` : ""}: ${changes.join("; ")}` });
@@ -50,6 +54,7 @@ const FIXED = [
   "Anyone can move iron or red-tag it. Only a manager can put red-tagged iron back in service, retire it, rename it or change what kind it is, rename a test, change a serial or unit number, move a tag to a different piece, or delete anything. Each of those lands in the feed with a name on it.",
   "Pressure iron with no test on file can't go out. Neither can a piece filling a line on the list when the yard's other iron of that kind gets tested.",
   "A scan only counts as scanned if the code read off the tag is that piece's own tag. Anything else goes on the record as checked by hand.",
+  "Every load-out record says how each piece was checked (tag or by hand), with the hand's name and the time.",
 ];
 
 export default async function RulesPage() {
@@ -91,6 +96,22 @@ export default async function RulesPage() {
             <span>
               <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
               <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" name="require_loadout_photo" defaultChecked={rules.requireLoadoutPhoto} disabled={!manager}
+              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+            <span>
+              <span className="block text-sm font-medium">Every load-out ends with a photo of the loaded truck</span>
+              <span className="block text-sm text-ink-dim">The hand takes one photo before saving. It goes on the record and the operator&apos;s proof link with their name and the time. No photo makes the truck NOT READY. This is the proof on phones that can&apos;t read tags, like iPhones. Off: a load-out can roll without one.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" name="require_last4" defaultChecked={rules.requireLast4} disabled={!manager}
+              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+            <span>
+              <span className="block text-sm font-medium">Checking a piece by hand means typing the last 4 of its serial</span>
+              <span className="block text-sm text-ink-dim">The screen hides the last 4 until the hand reads them off the band or the stamp, so a check proves someone looked at the iron. Off: one tap on &quot;It&apos;s on the truck,&quot; and the photo is the proof.</span>
             </span>
           </label>
           <label className="flex flex-col gap-1.5">

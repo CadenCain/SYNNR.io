@@ -25,13 +25,15 @@ const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p
 const testText = (t: { title: string; good_until: string | null; result: string }) =>
   `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached" : `good to ${plainDate(t.good_until)}`}`;
 
-export default function LoadoutRecordView({ rec, override, tagHref, paper = {} }: {
+export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null }: {
   rec: LoadoutRecord;
   override: LoadoutOverride | null;
   /** Link to a piece's public tag page (tests and the cert), when known. */
   tagHref?: (assetId: string) => string | null;
   /** The cert behind each piece's tests, by asset id: what the operator wants to see. */
   paper?: Record<string, { title: string; url: string }[]>;
+  /** The photo of the loaded truck: what was actually on it when it rolled. */
+  photo?: { url: string; at: string } | null;
 }) {
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
@@ -64,8 +66,8 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {} }
           </p>
         ) : null}
         {byHand > 0 ? (
-          <p className="mt-1 text-sm font-medium text-amber-400">
-            {byHand} of {rec.pieces.length} checked by hand, not scanned off a tag.
+          <p className={cn("mt-1 text-sm font-medium", photo ? "text-ink-dim" : "text-amber-400")}>
+            {byHand} of {rec.pieces.length} checked by hand, not scanned off a tag{photo ? ", with a photo of the loaded truck" : ""}.
           </p>
         ) : null}
         {override ? (
@@ -82,6 +84,17 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {} }
           </ul>
         ) : null}
       </section>
+
+      {photo ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold">Photo of the loaded truck</h2>
+          <a href={photo.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-line bg-surface">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a short-lived signed link */}
+            <img src={photo.url} alt={`${rec.unit_name} loaded`} className="max-h-[28rem] w-full object-cover" />
+          </a>
+          <p className="text-[13px] text-ink-faint">Taken {time(photo.at)}{rec.scanned_by ? ` by ${rec.scanned_by}` : ""}, before the record was saved. Tap it to see it full size.</p>
+        </section>
+      ) : null}
 
       {rec.lines.length > 0 ? (
         <section className="flex flex-col gap-2">
