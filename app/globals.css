@@ -81,36 +81,36 @@
 @media screen {
   html[data-theme="dark"] {
     color-scheme: dark;
-    --color-coal:      #0b1220;
-    --color-surface:   #121a2b;
-    --color-elevated:  #1b2538;
+    --color-coal:      #090c11;
+    --color-surface:   #10151c;
+    --color-elevated:  #171d26;
     --color-ink:       #e6ebf2;
     --color-ink-dim:   #a9b3c4;
     --color-ink-faint: #8a95a8;
-    --color-line:      #243049;
-    --color-line-2:    #34425e;
+    --color-line:      #212a35;
+    --color-line-2:    #303b48;
     --color-bone:      #3b82f6;
     --color-bone-soft: #60a5fa;
     --color-on-bone:   #06101f;
 
-    --color-background: #0b1220;
+    --color-background: #090c11;
     --color-foreground: #e6ebf2;
-    --color-card: #121a2b;
+    --color-card: #10151c;
     --color-card-foreground: #e6ebf2;
-    --color-popover: #121a2b;
+    --color-popover: #10151c;
     --color-popover-foreground: #e6ebf2;
     --color-primary: #3b82f6;
     --color-primary-foreground: #06101f;
-    --color-secondary: #1b2538;
+    --color-secondary: #171d26;
     --color-secondary-foreground: #e6ebf2;
-    --color-muted: #1b2538;
+    --color-muted: #171d26;
     --color-muted-foreground: #a9b3c4;
-    --color-accent: #1b2538;
+    --color-accent: #171d26;
     --color-accent-foreground: #e6ebf2;
     --color-destructive: #ef4444;
     --color-destructive-foreground: #ffffff;
-    --color-border: #243049;
-    --color-input: #34425e;
+    --color-border: #212a35;
+    --color-input: #303b48;
     --color-ring: #3b82f6;
 
     /* Status colors bright enough to read on a dark card. */

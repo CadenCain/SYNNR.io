@@ -1,3 +1,4 @@
+import { YARD_TZ } from "@/lib/saas/format";
 import { buildEquipment, type EquipmentList, type RawAsset, type RawItem } from "@/lib/saas/equipment";
 import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS } from "@/lib/saas/demo-data";
 import { demoLoadoutRecord } from "@/lib/saas/demo-loadouts";
@@ -95,8 +96,12 @@ export function demoKitAndPackages(unitKey: string) {
   };
 }
 
-/** CT-03 partway through a load-out: two pieces scanned clean, then the BOP stack that's out of test. */
-export function demoScanInProgress() {
+/**
+ * CT-03 partway through a load-out, a little before 5 AM yard time: two
+ * pieces checked on clean, then the BOP stack that's out of test. Tapped off
+ * NFC tags (an Android phone), or checked by hand (`how: "hand"`, an iPhone).
+ */
+export function demoScanInProgress(how: "nfc" | "hand" = "nfc") {
   const { list } = demoEquipment();
   const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
     id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, category: r.category, tagKey: r.id, extKey: null,
@@ -105,9 +110,9 @@ export function demoScanInProgress() {
   }));
   const onTruck = pieces.filter((p) => p.unitId === "ct3");
   const bop = onTruck.find((p) => p.serial === "QB-4471")!;
-  const now = Date.now();
+  const fiveAm = new Date(`${new Date().toLocaleDateString("en-CA", { timeZone: YARD_TZ })}T04:52:00-06:00`).getTime();
   const scanned = [...onTruck.filter((p) => p.id !== bop.id).slice(0, 2), bop];
-  const initialScans = Object.fromEntries(scanned.map((p, i) => [p.id, { how: "nfc" as const, at: now - (scanned.length - i) * 40000 }]));
+  const initialScans = Object.fromEntries(scanned.map((p, i) => [p.id, { how, at: fiveAm - (scanned.length - i) * 40000 }]));
   return {
     truck: { id: "ct3", name: "CT-03" },
     pieces,

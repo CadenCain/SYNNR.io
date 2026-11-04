@@ -16,21 +16,23 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * never drift from what ships. noindexed; it's a camera stand. The public,
  * linkable version of this is /demo.
  */
-export default async function Shot({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const { view } = await searchParams;
+export default async function Shot({ searchParams }: { searchParams: Promise<{ view?: string; theme?: string; nfc?: string }> }) {
+  const { view, theme, nfc } = await searchParams;
   const { companyName, list } = demoEquipment();
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
+      {/* ?theme=dark: the app's dark mode, for the dark homepage. */}
+      {theme === "dark" ? <script dangerouslySetInnerHTML={{ __html: 'document.documentElement.setAttribute("data-theme","dark")' }} /> : null}
       <AppNav companyName={companyName} userName="Demo manager" reviewCount={1} />
       <div className="relative z-10 min-w-0 flex-1">
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {view === "loadout"
             ? (() => { const b = demoLoadOut(); return <LoadOutView trucks={b.trucks} counts={b.counts} summary={b.summary} week={b.week} />; })()
             : view === "scan"
-            ? (() => { const d = demoScanInProgress(); const k = demoKitAndPackages("ct3"); return (
+            ? (() => { const d = demoScanInProgress(nfc === "off" ? "hand" : "nfc"); const k = demoKitAndPackages("ct3"); return (
                 <div className="flex flex-col gap-5">
                   <div><h1 className="text-[22px] font-semibold tracking-tight">Load-out scan: CT-03</h1></div>
-                  <LoadoutScanner truck={d.truck} pieces={d.pieces} kit={k.kit} packages={k.packages} initialScans={d.initialScans} initialBanner={d.initialBanner} previewNfc />
+                  <LoadoutScanner truck={d.truck} pieces={d.pieces} kit={k.kit} packages={k.packages} initialScans={d.initialScans} initialBanner={d.initialBanner} previewNfc={nfc !== "off"} />
                 </div>
               ); })()
             : view === "map"
