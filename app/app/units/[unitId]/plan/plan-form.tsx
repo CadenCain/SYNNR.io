@@ -17,12 +17,15 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
   kit: Line[];
   packages: { id: string; name: string; lines: Line[] }[];
   pieceNames: string[];
-  initial: { packageIds: string[]; lines: Line[]; note: string } | null;
+  initial: { packageIds: string[]; lines: Line[]; note: string; leavesAt: string | null } | null;
 }) {
   const router = useRouter();
   const [packageIds, setPackageIds] = useState<string[]>(initial?.packageIds ?? []);
   const [lines, setLines] = useState<Line[]>(initial?.lines ?? []);
   const [note, setNote] = useState(initial?.note ?? "");
+  // "2026-11-04T05:00" in this phone's time, for the time picker.
+  const local = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16); };
+  const [leaves, setLeaves] = useState(local(initial?.leavesAt ?? null));
   const [label, setLabel] = useState("");
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
@@ -108,6 +111,13 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
       </section>
 
       <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
+        <label htmlFor="plan-leaves" className="font-semibold">When does it leave? <span className="font-normal text-ink-faint">(optional)</span></label>
+        <input id="plan-leaves" type="datetime-local" value={leaves} onChange={(e) => setLeaves(e.target.value)}
+          className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
+        <p className="text-sm text-ink-dim">If that time passes and nobody has scanned it out, the truck shows red on Load out and it&apos;s in your morning email.</p>
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
         <label htmlFor="plan-note" className="font-semibold">Note for the hand <span className="font-normal text-ink-faint">(optional)</span></label>
         <input id="plan-note" value={note} onChange={(e) => setNote(e.target.value.slice(0, 120))} placeholder="Like: flowback, leaves at 5 AM"
           className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
@@ -117,7 +127,7 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
         <p className="text-sm"><span className="text-lg font-bold tabular-nums">{total}</span> {total === 1 ? "piece" : "pieces"} {truck.name} has to leave with</p>
         {err ? <p className="text-sm text-red-400">{err}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note }))}
+          <button type="button" disabled={busy} onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note, leavesAt: leaves ? new Date(leaves).toISOString() : null }))}
             className={buttonClass("default", "lg", "h-14 grow text-base")}>{busy ? "Saving…" : "Save the plan"}</button>
           {initial ? (
             <button type="button" disabled={busy} onClick={() => run(() => clearPlan(truck.id))} className={buttonClass("outline", "lg", "h-14 text-base")}>Clear the plan</button>

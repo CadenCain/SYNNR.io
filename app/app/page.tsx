@@ -1,5 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { getEquipment } from "@/lib/saas/equipment";
 import { localToday } from "@/lib/saas/status";
@@ -9,10 +9,12 @@ import { getYardRules } from "@/lib/saas/yard-rules";
 import { daysOut } from "@/lib/saas/whereabouts";
 import LoadOutView, { type ActivityLine, type PersonWeek } from "./_components/loadout-view";
 import { WarmOffline } from "./_components/offline-support";
-import { getOpenPlans, planSummary } from "@/lib/saas/plans";
+import { getOpenPlans, planSummary, lateLine } from "@/lib/saas/plans";
 import LockedCard from "./_components/locked-card";
 import WelcomeCard from "./_components/welcome-card";
 import HandTips from "./_components/hand-tips";
+import { cookies } from "next/headers";
+import { pickMyTruck, myTruckCookie } from "./my-truck";
 import { isBillableYard } from "@/lib/saas/billing-rules";
 import { isWritable } from "@/lib/saas/entitlements";
 
@@ -31,14 +33,14 @@ const sinceIso = () => new Date(Date.now() - 36 * 3600e3).toISOString();
 const clock = () => Date.now();
 
 const TONE: Record<string, ActivityLine["tone"]> = {
-  loadout_blocked: "red", check_not_ready: "red", alert_failed: "red", asset_status: "red",
+  loadout_blocked: "red", check_not_ready: "red", alert_failed: "red", asset_status: "red", unscanned_trip: "red",
   rolled_override: "amber",
   loadout_ready: "green", check_ready: "green", renewed: "green",
 };
 
-export default async function LoadOutHome({ searchParams }: { searchParams: Promise<{ yard?: string; welcome?: string; joined?: string }> }) {
+export default async function LoadOutHome({ searchParams }: { searchParams: Promise<{ yard?: string; welcome?: string; joined?: string; pick?: string }> }) {
   const { company, user } = await requireCompany();
-  const { yard, welcome, joined } = await searchParams;
+  const { yard, welcome, joined, pick } = await searchParams;
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
@@ -47,7 +49,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
       .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(300),
-    db.from("saas_loadout_scans").select("pieces, unit_id").eq("company_id", company.id).gte("finished_at", weekAgo),
+    db.from("saas_loadout_scans").select("pieces, unit_id, scanned_by").eq("company_id", company.id).gte("finished_at", weekAgo),
     db.from("saas_dispatch_checks").select("id", { count: "exact", head: true })
       .eq("company_id", company.id).eq("status", "not_ready_override").gte("started_at", weekAgo),
     db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).gte("created_at", weekAgo),
@@ -63,8 +65,21 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   ]);
   // Each truck's planned next job, in words.
   const pkgNames = new Map(((pkgNameRows ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]));
-  const plans: Record<string, { text: string; by: string | null; note: string | null }> = {};
-  for (const [unitId, p] of openPlans) plans[unitId] = { text: planSummary(p, pkgNames), by: p.by, note: p.note };
+  // A planned job past its leave time with nothing rolled: nobody scanned it out.
+  const latestScan = new Map<string, { finished_at: string; rolled: boolean }>();
+  const overriddenIds = new Set(((overrideRows ?? []) as { loadout_id: string }[]).map((o) => o.loadout_id));
+  for (const r of (scanRows ?? []) as { id: string; unit_id: string | null; finished_at: string; verdict: string | null }[]) {
+    if (r.unit_id && !latestScan.has(r.unit_id)) latestScan.set(r.unit_id, { finished_at: r.finished_at, rolled: r.verdict === "ready" || overriddenIds.has(r.id) });
+  }
+  const timeText = (iso: string) => {
+    const sameDay = new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ }) === today;
+    return new Date(iso).toLocaleString("en-US", { timeZone: YARD_TZ, ...(sameDay ? {} : { weekday: "short" }), hour: "numeric", minute: "2-digit" });
+  };
+  const planNow = clock();
+  const plans: Record<string, { text: string; by: string | null; note: string | null; late: string | null }> = {};
+  for (const [unitId, p] of openPlans) {
+    plans[unitId] = { text: planSummary(p, pkgNames), by: p.by, note: p.note, late: lateLine(p, latestScan.get(unitId) ?? null, planNow, timeText) };
+  }
 
   const yards = list.yards.map((y) => ({ id: y.id, name: y.name }));
   const yardId = yard && yards.some((y) => y.id === yard) ? yard : null;
@@ -103,13 +118,36 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     else p.other++;
     people.set(e.actor, p);
   }
-  const byPerson = [...people.values()].sort((a, b) => (b.loadouts + b.returns + b.overrides + b.other) - (a.loadouts + a.returns + a.overrides + a.other)).slice(0, 10);
+  // How each one checks pieces: scanned off a tag, or by hand.
+  for (const sc of (weekScans ?? []) as { pieces: { how?: string }[] | null; unit_id: string | null; scanned_by: string | null }[]) {
+    if (!sc.scanned_by || !inYard(sc)) continue;
+    const p = people.get(sc.scanned_by) ?? { name: sc.scanned_by, loadouts: 0, returns: 0, overrides: 0, other: 0 };
+    p.pieces = (p.pieces ?? 0) + (sc.pieces ?? []).length;
+    p.byHand = (p.byHand ?? 0) + (sc.pieces ?? []).filter((x) => x.how === "hand").length;
+    people.set(sc.scanned_by, p);
+  }
+  // Everyone on the crew shows, so a manager sees who hasn't used it at all.
+  const managerView = company.role === "owner" || company.role === "admin";
+  if (managerView) {
+    const admin = saasAdmin();
+    const { data: memberRows } = await db.from("saas_memberships").select("user_id, role").eq("company_id", company.id).eq("status", "active");
+    const names = admin ? await Promise.all(((memberRows ?? []) as { user_id: string; role: string }[]).slice(0, 60).map(async (m) => {
+      const { data } = await admin.auth.admin.getUserById(m.user_id);
+      return (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || null;
+    })) : [];
+    for (const n of names) if (n && !people.has(n)) people.set(n, { name: n, loadouts: 0, returns: 0, overrides: 0, other: 0, idle: true });
+  }
+  const total = (p: PersonWeek) => p.loadouts + p.returns + p.overrides + p.other;
+  const byPerson = [...people.values()].sort((a, b) => Number(a.idle ?? false) - Number(b.idle ?? false) || total(b) - total(a)).slice(0, 25);
 
-  // A hand's own truck (the one they last loaded out) goes first.
-  const { data: mine } = company.role === "member"
+  // A hand's own truck goes first: the one they picked on this phone, or the
+  // one they last loaded out.
+  const hand = company.role === "member";
+  const picked = hand ? (await cookies()).get(await myTruckCookie(company.id))?.value ?? null : null;
+  const { data: mine } = hand && !picked
     ? await db.from("saas_loadout_scans").select("unit_id").eq("company_id", company.id).eq("scanned_by_user", user.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
-  const myTruckId = (mine as { unit_id: string | null } | null)?.unit_id ?? null;
+  const myTruckId = (picked && units.some((u) => u.id === picked) ? picked : null) ?? (mine as { unit_id: string | null } | null)?.unit_id ?? null;
   const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.length + (yardId ? 0 : oldOverrides ?? 0));
 
   const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
@@ -126,11 +164,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   return (
     <>
       {!isWritable(company.subscription_status, company.comped) ? <div className="mb-6"><LockedCard owner={company.role === "owner"} /></div> : null}
-      {company.role === "member" && (joined === "1" || !myTruckId) ? (
-        <div className="mb-6">
-          <HandTips name={(user.user_metadata?.full_name as string | undefined)?.trim() || "there"} company={company.name} />
-        </div>
-      ) : null}
+
       {company.role !== "member" && !company.is_demo && isWritable(company.subscription_status, company.comped) && (welcome === "1" || list.rows.length === 0) ? (
         <div className="mb-6">
           <WelcomeCard justPaid={welcome === "1"} yards={yards.map((y) => y.name).filter(isBillableYard)}
@@ -139,6 +173,8 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
       ) : null}
       <LoadOutView trucks={trucks} counts={counts} summary={summary} week={week} yards={yards} yardId={yardId} activity={activity}
         plans={plans} manager={company.role === "owner" || company.role === "admin"}
+        hand={hand} picking={pick === "1"} pickAction={pickMyTruck}
+        tips={hand && (joined === "1" || !myTruckId) ? <HandTips name={(user.user_metadata?.full_name as string | undefined)?.trim() || "there"} company={company.name} /> : null}
         iron={iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} />
       <WarmOffline companyId={company.id} urls={["/app/return", ...rd.units.flatMap((u) => [`/app/units/${u.id}/scan`, `/app/units/${u.id}/return`])]} />
     </>

@@ -22,7 +22,7 @@ export async function getScanPieces(db: SupabaseClient, companyId: string): Prom
   const outDays: Record<string, number> = {};
   for (const r of (outRows ?? []) as { id: string; out_since: string }[]) outDays[r.id] = daysOut(r.out_since, now);
   const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
-    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, category: r.category,
+    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, spot: r.note, category: r.category,
     tagKey: keys.get(r.id)?.tag ?? "", extKey: keys.get(r.id)?.ext ?? null,
     // Pressure iron with no test on file can't go out, so it reads red on the phone too.
     problem: r.state === "overdue" || r.state === "down" || (r.state === "no_paper" && TESTED_CATEGORIES.has(r.category)) ? "red" : r.state === "due" ? "yellow" : null,

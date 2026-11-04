@@ -13,6 +13,8 @@ export interface ScanPiece {
   serial: string | null;
   unitId: string | null;
   where: string;
+  /** Where in the yard, if noted ("rack 2"). */
+  spot?: string | null;
   /** What kind of iron (flow_iron, pressure_control, ...): pressure iron has to be scanned in a scan-only yard. */
   category: string;
   /** Fingerprint of the piece's RollReady tag (tag-key.ts). The page never holds the code itself. */

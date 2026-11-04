@@ -20,6 +20,31 @@ const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-US", { ti
 
 type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
 
+/**
+ * Was this truck out without a load-out that cleared it? "never": no load-out
+ * since it was last checked in (and that wasn't just now: a second check-in of
+ * the same trip isn't a new trip). "not_ready": its newest load-out was NOT
+ * READY and nobody rolled it on an override.
+ */
+async function tripNotScanned(admin: Admin, companyId: string, unitId: string, now: string): Promise<"never" | "not_ready" | null> {
+  const [{ data: lo }, { data: ret }] = await Promise.all([
+    admin.from("saas_loadout_scans").select("id, finished_at, verdict").eq("company_id", companyId).eq("unit_id", unitId)
+      .order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("saas_returns").select("finished_at").eq("company_id", companyId).eq("unit_id", unitId).lt("finished_at", now)
+      .order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const last = lo as { id: string; finished_at: string; verdict: string | null } | null;
+  const lastBack = (ret as { finished_at: string } | null)?.finished_at ?? null;
+  if (!last || (lastBack && lastBack > last.finished_at)) {
+    // Checked in twice in a row the same day is one trip, not two.
+    if (lastBack && Date.parse(now) - Date.parse(lastBack) < 12 * 3600e3) return null;
+    return "never";
+  }
+  if (last.verdict === "ready") return null;
+  const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", last.id).maybeSingle();
+  return ov ? null : "not_ready";
+}
+
 /** This hand's check-in (of this truck, or of everything out) that started at this moment, if it already saved. */
 async function savedReturn(admin: Admin, companyId: string, userId: string, unitId: string | null, startedIso: string) {
   let q = admin.from("saas_returns").select("id, unit_name, returned_by, pieces, not_returned")
@@ -48,7 +73,7 @@ export async function finishReturn(input: {
   unitId: string | null;
   yardId: string | null;
   startedAt: string;
-  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string }[];
+  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string; redTag?: string }[];
   notReturned: { assetId: string; outcome: Outcome }[];
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string }> {
   const { company, user } = await requireBillableCompany();
@@ -102,6 +127,7 @@ export async function finishReturn(input: {
     // A tag scan only counts if the code read off the tag is this piece's.
     how: provenHow(s.how, s.proof, byId.get(s.assetId)!),
     to: (s.to === "truck" && unit ? "truck" : "yard") as ReturnDest,
+    redTag: String(s.redTag ?? "").trim().slice(0, 140) || null,
     rack: String(s.rack ?? "").trim().slice(0, 80),
     at: typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now,
   }));
@@ -141,6 +167,15 @@ export async function finishReturn(input: {
     }).eq("company_id", company.id).in("id", rackIds);
     if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };
   }
+  // Came back damaged: red-tagged right at check-in, with who and why. It
+  // can't go out again until a manager puts it back in service.
+  for (const s of scans.filter((x) => x.redTag)) {
+    const a = byId.get(s.assetId)!;
+    if (a.status === "out_of_service") continue;
+    await db.from("saas_assets").update({ status: "out_of_service", last_seen_where: `red-tagged at check-in: ${s.redTag}`, last_seen_by: actor, last_seen_at: now })
+      .eq("id", a.id).eq("company_id", company.id);
+    red.add(a.id);
+  }
   // Didn't come back: still out (clock keeps running), or can't be found.
   const notReturned = input.notReturned.filter((n) => byId.has(n.assetId) && !seen.has(n.assetId))
     .map((n) => ({ ...n, outcome: (n.outcome === "missing" ? "missing" : "still_out") as Outcome }));
@@ -167,7 +202,7 @@ export async function finishReturn(input: {
     pieces: scans.map((s) => {
       const a = byId.get(s.assetId)!;
       return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, to: s.to,
-        rack: s.to === "yard" ? s.rack || null : null, from_unit: a.unit_id ? unitNames.get(a.unit_id) ?? null : null,
+        rack: s.to === "yard" ? s.rack || null : null, from_unit: a.unit_id ? unitNames.get(a.unit_id) ?? null : null, red_tag: s.redTag,
         out_days: a.out_since ? daysOut(a.out_since, nowMs) : null, red: red.has(a.id) };
     }),
     not_returned: notReturned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
@@ -186,9 +221,22 @@ export async function finishReturn(input: {
   const missing = notReturned.filter((n) => n.outcome === "missing").length;
   if (stillOut) parts.push(`${stillOut} still out`);
   if (missing) parts.push(`${missing} can't be found`);
-  if (red.size) parts.push(`${red.size} came back out of test or red-tagged`);
+  const taggedNow = scans.filter((x) => x.redTag).length;
+  if (taggedNow) parts.push(`${taggedNow} red-tagged at check-in (${scans.filter((x) => x.redTag).map((x) => `${byId.get(x.assetId)!.name}: ${x.redTag}`).slice(0, 2).join("; ")})`);
+  if (red.size - taggedNow > 0) parts.push(`${red.size - taggedNow} came back out of test or red-tagged`);
   const summary = `${unit ? `${unit.name} checked in` : `Iron checked into ${yard.name}`} by ${actor}: ${parts.join(", ") || "nothing scanned"}`;
   void logEvent({ companyId: company.id, kind: "returned", unitId: unit?.id ?? null, actor, message: summary });
+  // A truck that comes back without having been cleared to roll: nobody
+  // scanned it out, or it left NOT READY with no override. That's the app not
+  // being used, and a manager needs to hear about it.
+  if (unit && scans.length) {
+    const unscanned = await tripNotScanned(admin, company.id, unit.id, now);
+    if (unscanned) {
+      void logEvent({ companyId: company.id, kind: "unscanned_trip", unitId: unit.id, actor,
+        message: unscanned === "never" ? `${unit.name} came back from a job it was never scanned out for. Checked in by ${actor}.`
+          : `${unit.name} came back, but its last load-out was NOT READY and nobody rolled it. It left without being cleared. Checked in by ${actor}.` });
+    }
+  }
 
   if (unit) revalidatePath(`/app/units/${unit.id}`);
   revalidatePath("/app");

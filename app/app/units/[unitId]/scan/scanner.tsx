@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ListTodo } from "lucide-react";
 import { readScan, scanMessage, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
-import { expectedLines, fillLines, shortLines, needsTagScan, lineSourceLabel } from "@/lib/saas/loadout-lines";
+import { expectedLines, fillLines, shortLines, needsTagScan, lineSourceLabel, lineMatches } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { tagKey } from "@/lib/saas/tag-key";
 import { linkTag, finishLoadout } from "./actions";
@@ -138,7 +138,6 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
 
   const expected = useMemo(() => list.filter((p) => p.unitId === truck.id), [list, truck.id]);
   const added = useMemo(() => list.filter((p) => p.unitId !== truck.id && scans[p.id]), [list, scans, truck.id]);
-  const scannedExpected = expected.filter((p) => scans[p.id]).length;
 
   // The list, filled in as pieces get scanned.
   const picked = useMemo(() => packages.filter((x) => packageIds.includes(x.id)), [packages, packageIds]);
@@ -472,37 +471,57 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
                 <div className="break-words text-[13px] text-ink-dim">{kit.length ? lineSummary(kit) : <>No kit set yet{manager ? <>. <Link href={`/app/units/${truck.id}/kit`} className="text-bone underline underline-offset-2">Set it</Link></> : ". A manager can set one."}</>}</div>
               </div>
             </div>
-            {packages.map((x) => {
-              const on = packageIds.includes(x.id);
-              const locked = lockedIds.includes(x.id);
-              return (
-                <button key={x.id} type="button" aria-pressed={on} disabled={locked}
-                  onClick={() => setPackageIds((ids) => on ? ids.filter((i) => i !== x.id) : [...ids, x.id])}
-                  className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left", on ? "border-bone bg-bone/10" : "border-line-2 hover:bg-elevated", locked && "cursor-default")}>
-                  {locked ? <Lock className="h-5 w-5 shrink-0 text-bone" /> : on ? <Check className="h-5 w-5 shrink-0 text-bone" /> : <Plus className="h-5 w-5 shrink-0 text-ink-faint" />}
-                  <div className="min-w-0">
-                    <div className="font-semibold">{x.name}{locked ? <span className="ml-2 text-xs font-normal text-ink-faint">planned</span> : on && lastPackageIds?.includes(x.id) ? <span className="ml-2 text-xs font-normal text-ink-faint">same as last time</span> : null}</div>
-                    <div className="break-words text-[13px] text-ink-dim">{lineSummary(x.lines) || "No lines yet"}</div>
-                  </div>
-                </button>
-              );
-            })}
           </div>
+          {(() => {
+            const extras = (
+              <>
+                <div className="flex flex-col gap-2">
+            {packages.map((x) => {
+                  const on = packageIds.includes(x.id);
+                  const locked = lockedIds.includes(x.id);
+                  return (
+                    <button key={x.id} type="button" aria-pressed={on} disabled={locked}
+                      onClick={() => setPackageIds((ids) => on ? ids.filter((i) => i !== x.id) : [...ids, x.id])}
+                      className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left", on ? "border-bone bg-bone/10" : "border-line-2 hover:bg-elevated", locked && "cursor-default")}>
+                      {locked ? <Lock className="h-5 w-5 shrink-0 text-bone" /> : on ? <Check className="h-5 w-5 shrink-0 text-bone" /> : <Plus className="h-5 w-5 shrink-0 text-ink-faint" />}
+                      <div className="min-w-0">
+                        <div className="font-semibold">{x.name}{locked ? <span className="ml-2 text-xs font-normal text-ink-faint">planned</span> : on && lastPackageIds?.includes(x.id) ? <span className="ml-2 text-xs font-normal text-ink-faint">same as last time</span> : null}</div>
+                        <div className="break-words text-[13px] text-ink-dim">{lineSummary(x.lines) || "No lines yet"}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                </div>
           {quick.length ? (
-            <div className="flex flex-wrap gap-2">
-              {quick.map((l, i) => (
-                <span key={`${l.label}-${i}`} className="inline-flex items-center gap-1 rounded-lg border border-line-2 py-1 pl-3 pr-1 text-sm">
-                  {l.label}{l.qty > 1 ? ` × ${l.qty}` : ""}
-                  <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => [...q.slice(0, i), ...q.slice(i + 1)])}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
-                </span>
-              ))}
-            </div>
-          ) : null}
-          {quickEditor}
-          <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
-            <ScanLine className="h-5 w-5" /> Start scanning{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
-          </button>
+                  <div className="flex flex-wrap gap-2">
+                    {quick.map((l, i) => (
+                      <span key={`${l.label}-${i}`} className="inline-flex items-center gap-1 rounded-lg border border-line-2 py-1 pl-3 pr-1 text-sm">
+                        {l.label}{l.qty > 1 ? ` × ${l.qty}` : ""}
+                        <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => [...q.slice(0, i), ...q.slice(i + 1)])}
+                          className="flex h-9 w-9 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {quickEditor}
+
+              </>
+            );
+            // A planned job is already set: anything extra is one tap away, not in the way.
+            return plan ? (
+              <details className="group rounded-xl border border-line-2">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-medium text-ink-dim">
+                  Add something to this job <Plus className="h-4 w-4" />
+                </summary>
+                <div className="flex flex-col gap-3 p-3 pt-0">{extras}</div>
+              </details>
+            ) : extras;
+          })()}
+          <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 -mx-1 rounded-2xl bg-surface/95 p-1 backdrop-blur md:bottom-4">
+            <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
+              <ScanLine className="h-5 w-5" /> Start scanning{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
+            </button>
+          </div>
         </section>
       </div>
     );
@@ -572,87 +591,119 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         </div>
       ) : null}
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-base font-semibold">What {truck.name} needs</h2>
-          {lines.length ? <span className="text-sm tabular-nums text-ink-dim">{linesDone} of {lines.length} {lines.length === 1 ? "line" : "lines"} filled</span> : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {kit.length ? <span className="rounded-lg border border-line-2 bg-elevated px-3 py-2 text-sm font-medium">{truck.name} kit</span> : null}
-          {picked.map((x) => (
-            <span key={x.id} className={cn("inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 py-1 pl-3 text-sm font-medium text-ink", lockedIds.includes(x.id) ? "pr-3" : "pr-1")}>
-              {lockedIds.includes(x.id) ? <Lock className="h-3.5 w-3.5 text-bone" aria-label="Planned by a manager" /> : null}
-              {x.name}
-              {lockedIds.includes(x.id) ? null : (
-                <button type="button" onClick={() => setPackageIds((ids) => ids.filter((i) => i !== x.id))} aria-label={`Take ${x.name} off the list`}
-                  className="flex h-9 w-9 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
-              )}
-            </span>
-          ))}
-          {planned.length ? <span className="inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 px-3 py-2 text-sm font-medium"><Lock className="h-3.5 w-3.5 text-bone" /> Planned extras</span> : null}
-          {packages.filter((x) => !packageIds.includes(x.id)).length ? (
-            <select value="" onChange={(e) => { const v = e.target.value; if (v) setPackageIds((ids) => [...ids, v]); }} aria-label="Add a package"
-              className="h-11 min-w-0 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone">
-              <option value="">+ Add a package</option>
-              {packages.filter((x) => !packageIds.includes(x.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-            </select>
-          ) : null}
-        </div>
-        {lines.length === 0 ? (
-          <p className="text-sm text-ink-dim">
-            No list for this load-out yet. Add a package or a quick line below. Without one, only what&apos;s logged on {truck.name} gets checked.
-            {manager ? <> <Link href={`/app/units/${truck.id}/kit`} className="text-bone underline underline-offset-2">Set {truck.name}&apos;s kit</Link></> : null}
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {lines.map((l, i) => {
+      {(() => {
+        // One list: each line on the job's list, with the pieces that fill it
+        // and the ones that could, right under it. What isn't on the truck
+        // shows where it is in the yard. (The verdict is worked out from what's
+        // scanned; this only decides what to show where.)
+        const byId = new Map(list.map((p) => [p.id, p]));
+        const used = new Set<string>();
+        for (const l of lines) for (const f of l.filled) used.add(f.id);
+        const view = lines.map((l) => {
+          const need = Math.max(0, l.qty - l.filled.length);
+          const onTruck = need ? expected.filter((p) => !scans[p.id] && !used.has(p.id) && lineMatches(l.label, p.name)).slice(0, need) : [];
+          onTruck.forEach((p) => used.add(p.id));
+          const stillNeed = need - onTruck.length;
+          const inYard = stillNeed
+            ? list.filter((p) => p.unitId !== truck.id && !scans[p.id] && !used.has(p.id) && p.problem !== "red" && lineMatches(l.label, p.name))
+                .sort((x, y) => Number(y.unitId === null) - Number(x.unitId === null)).slice(0, stillNeed + 1)
+            : [];
+          inYard.forEach((p) => used.add(p.id));
+          return { l, onTruck, inYard, stillNeed };
+        });
+        const leftover = expected.filter((p) => !used.has(p.id));
+        const extras = added.filter((p) => !used.has(p.id));
+        const rowOf = (p: ScanPiece, place?: string) => (
+          <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} nested place={place}
+            onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />
+        );
+        const yardPlace = (p: ScanPiece) => `${p.unitId ? `On ${p.where}` : `In ${p.where}`}${p.spot ? `, ${p.spot}` : ""}`;
+        return (
+          <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-base font-semibold">{lines.length ? `What goes on ${truck.name}` : `On ${truck.name}`}</h2>
+              {lines.length ? <span className="text-sm tabular-nums text-ink-dim">{linesDone} of {lines.length} done</span> : null}
+            </div>
+            {view.map(({ l, onTruck, inYard, stillNeed }, i) => {
               const bad = lineBad(l);
               const done = l.filled.length >= l.qty && !bad;
               return (
-                <div key={`${l.source}-${l.package ?? ""}-${l.label}-${i}`} className={cn("flex items-center gap-3 rounded-xl border p-3",
+                <div key={`${l.source}-${l.package ?? ""}-${l.label}-${i}`} className={cn("flex flex-col gap-2 rounded-xl border p-3",
                   bad ? "border-red-500/50 bg-red-500/[0.08]" : done ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-line bg-coal")}>
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
-                    bad ? "border-red-500/50 bg-red-500/15 text-red-400" : done ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-line-2 text-ink-faint")}>
-                    {bad ? <X className="h-4 w-4" /> : done ? <Check className="h-4 w-4" /> : null}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="break-words text-sm font-semibold">{l.label}</div>
-                    <div className={cn("break-words text-[13px]", bad ? "text-red-400" : "text-ink-faint")}>
-                      {lineSourceLabel(l)}
-                      {l.filled.length ? ` · ${l.filled.map((f) => `${f.serial ?? f.name}${redOnTruck.has(f.id) ? " (bad, take it off)" : ""}`).join(", ")}` : ""}
+                  <div className="flex items-center gap-3">
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
+                      bad ? "border-red-500/50 bg-red-500/15 text-red-400" : done ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-line-2 text-ink-faint")}>
+                      {bad ? <X className="h-4 w-4" /> : done ? <Check className="h-4 w-4" /> : null}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="break-words text-[15px] font-semibold">{l.label}{l.qty > 1 ? ` × ${l.qty}` : ""}</div>
+                      <div className="text-[13px] text-ink-faint">{lineSourceLabel(l)}</div>
                     </div>
+                    <span className={cn("shrink-0 text-base font-semibold tabular-nums", bad ? "text-red-400" : done ? "text-emerald-400" : "text-ink-dim")}>{l.filled.length}/{l.qty}</span>
+                    {l.source === "quick" ? (
+                      <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => { const idx = q.findIndex((x) => x.label === l.label && x.qty === l.qty); return idx < 0 ? q : [...q.slice(0, idx), ...q.slice(idx + 1)]; })}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                    ) : null}
                   </div>
-                  <span className={cn("shrink-0 text-base font-semibold tabular-nums", bad ? "text-red-400" : done ? "text-emerald-400" : "text-ink-dim")}>{l.filled.length}/{l.qty}</span>
-                  {l.source === "quick" ? (
-                    <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => { const idx = q.findIndex((x) => x.label === l.label && x.qty === l.qty); return idx < 0 ? q : [...q.slice(0, idx), ...q.slice(idx + 1)]; })}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                  {l.filled.map((f) => { const p = byId.get(f.id); return p ? rowOf(p) : null; })}
+                  {onTruck.map((p) => rowOf(p))}
+                  {stillNeed > 0 && inYard.length ? (
+                    <>
+                      <div className="text-[13px] font-medium text-amber-400">Not on {truck.name}. Grab {stillNeed === 1 ? "one" : stillNeed} from here:</div>
+                      {inYard.map((p) => rowOf(p, yardPlace(p)))}
+                    </>
+                  ) : null}
+                  {stillNeed > 0 && !inYard.length && !onTruck.length ? (
+                    <div className="text-[13px] font-medium text-red-400">No good {l.label} anywhere in RollReady. Tell a manager.</div>
                   ) : null}
                 </div>
               );
             })}
-          </div>
-        )}
-        {quickEditor}
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-semibold text-ink-dim">Logged on {truck.name}</h2>
-          <span className="text-sm tabular-nums text-ink-dim">{scannedExpected} of {expected.length} scanned</span>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-elevated">
-          <div className="h-full rounded-full bg-bone transition-all" style={{ width: `${expected.length ? (scannedExpected / expected.length) * 100 : 0}%` }} />
-        </div>
-        {expected.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
-        {expected.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />)}
-      </section>
-
-      {added.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink-dim">Going on {truck.name} (logged somewhere else)</h2>
-          {added.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} demo={demo} tagOnly={needsTag(p)} onHand={() => {}} onTakeOff={() => takeOff(p)} />)}
-        </section>
-      )}
+            {leftover.length ? (
+              <div className="flex flex-col gap-2">
+                {lines.length ? <h3 className="pt-1 text-sm font-semibold text-ink-dim">Also logged on {truck.name}</h3> : null}
+                {leftover.map((p) => rowOf(p))}
+              </div>
+            ) : null}
+            {extras.length ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="pt-1 text-sm font-semibold text-ink-dim">Also going on {truck.name}</h3>
+                {extras.map((p) => rowOf(p))}
+              </div>
+            ) : null}
+            {expected.length === 0 && lines.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
+            <details className="group rounded-xl border border-line-2">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-medium text-ink-dim">
+                Add to this job&apos;s list <Plus className="h-4 w-4" />
+              </summary>
+              <div className="flex flex-col gap-3 p-3 pt-0">
+        <div className="flex flex-wrap gap-2">
+                  {kit.length ? <span className="rounded-lg border border-line-2 bg-elevated px-3 py-2 text-sm font-medium">{truck.name} kit</span> : null}
+                  {picked.map((x) => (
+                    <span key={x.id} className={cn("inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 py-1 pl-3 text-sm font-medium text-ink", lockedIds.includes(x.id) ? "pr-3" : "pr-1")}>
+                      {lockedIds.includes(x.id) ? <Lock className="h-3.5 w-3.5 text-bone" aria-label="Planned by a manager" /> : null}
+                      {x.name}
+                      {lockedIds.includes(x.id) ? null : (
+                        <button type="button" onClick={() => setPackageIds((ids) => ids.filter((i) => i !== x.id))} aria-label={`Take ${x.name} off the list`}
+                          className="flex h-9 w-9 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
+                      )}
+                    </span>
+                  ))}
+                  {planned.length ? <span className="inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 px-3 py-2 text-sm font-medium"><Lock className="h-3.5 w-3.5 text-bone" /> Planned extras</span> : null}
+                  {packages.filter((x) => !packageIds.includes(x.id)).length ? (
+                    <select value="" onChange={(e) => { const v = e.target.value; if (v) setPackageIds((ids) => [...ids, v]); }} aria-label="Add a package"
+                      className="h-11 min-w-0 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone">
+                      <option value="">+ Add a package</option>
+                      {packages.filter((x) => !packageIds.includes(x.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    </select>
+                  ) : null}
+                </div>
+                {quickEditor}
+              </div>
+            </details>
+          </section>
+        );
+      })()}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <input value={serialText} onChange={(e) => setSerialText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addBySerial(); }}
@@ -738,7 +789,13 @@ function maskSerial(serial: string): string {
  * piece is scanned, so the check proves someone looked at the iron. (Not in
  * the demo yard, where there's no iron to read.)
  */
-function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false }: { p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean; tagOnly?: boolean }) {
+function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false, nested = false, place }: {
+  p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; demo?: boolean; tagOnly?: boolean;
+  /** Inside a line on the list: lighter, so it reads as part of that line. */
+  nested?: boolean;
+  /** Where it is, for a piece that isn't on this truck yet. */
+  place?: string;
+}) {
   const [asking, setAsking] = useState(false);
   const [typed, setTyped] = useState("");
   const [err, setErr] = useState("");
@@ -751,7 +808,7 @@ function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false }: { p:
   }
   const shownSerial = p.serial ? (!scan && needsSerial ? maskSerial(p.serial) : p.serial) : null;
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border p-3",
+    <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 border", nested ? "rounded-lg p-2.5" : "rounded-xl p-3",
       scan ? (p.problem === "red" ? TONE.bad : "border-emerald-500/40 bg-emerald-500/[0.06]") : "border-line bg-surface")}>
       <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
         scan ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-line-2 text-ink-faint")}>
@@ -762,6 +819,7 @@ function Row({ p, scan, onHand, onTakeOff, demo = false, tagOnly = false }: { p:
         <div className={cn("break-words text-[13px]", p.problem === "red" ? "text-red-400" : p.problem === "yellow" ? "text-amber-400" : "text-ink-dim")}>
           {p.statusText}{scan ? <span className="text-ink-faint"> · {HOW[scan.how]} {clock(scan.at)}</span> : null}
         </div>
+        {place && !scan ? <div className="break-words text-[13px] font-medium text-ink">{place}</div> : null}
       </div>
       {!scan && tagOnly ? (
         <span className="w-full shrink-0 text-[13px] font-medium text-ink-dim sm:w-auto">Scan its tag</span>

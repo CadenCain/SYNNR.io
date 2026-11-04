@@ -55,7 +55,7 @@ export default async function PlanPage({ params }: { params: Promise<{ unitId: s
     <div className="flex flex-col gap-5">
       {header}
       <PlanForm truck={unit} kit={kitRow ? linesOf(kitRow) : []} packages={packages} pieceNames={pieceNames}
-        initial={plan ? { packageIds: plan.packageIds, lines: plan.lines, note: plan.note ?? "" } : null} />
+        initial={plan ? { packageIds: plan.packageIds, lines: plan.lines, note: plan.note ?? "", leavesAt: plan.leavesAt } : null} />
     </div>
   );
 }

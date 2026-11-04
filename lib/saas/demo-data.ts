@@ -191,6 +191,8 @@ export const DEMO_PACKAGES: { name: string; lines: { label: string; qty: number 
 /** A manager's plan for CT-01's next job: two pup joints off the yard rack. */
 export const DEMO_PLAN = {
   unitKey: "ct1", by: "Kevin Odom", daysAgo: 0, hour: 6, minute: 10,
+  /** Supposed to leave at 7:00 this morning. Nobody's scanned it out, so the board shows it red. */
+  leavesHour: 7,
   lines: [{ label: "2in 1502 pup joint", qty: 2 }],
   note: "Cleanout. Both pup joints off the rack go with it.",
 };

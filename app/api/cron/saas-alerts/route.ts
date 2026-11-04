@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/saas/notify";
 import { escHtml } from "@/lib/saas/html";
 import { snapshotAllCompanies } from "@/lib/saas/readiness";
 import { logCronRun } from "@/lib/saas/cron-log";
+import { sendMorningSummaries } from "@/lib/saas/morning-summary";
 
 // Daily SaaS expiration-alert sweep. Vercel Cron sends Bearer CRON_SECRET.
 export const runtime = "nodejs";
@@ -40,7 +41,19 @@ export async function GET(req: Request) {
       await sendEmail([OPERATOR], `[SYNNR ops] alert sweep: ${result.errors.length} delivery failure(s)`,
         `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(`Sweep ran but some sends failed:\n\n${result.errors.map((x) => `• ${x}`).join("\n")}\n\nScanned ${result.companies_scanned} companies · ${result.emails_sent} emails · ${result.sms_sent} SMS sent.\nFailed items retry on tomorrow's sweep.`)}</pre>`);
     }
-    return NextResponse.json({ ok: true, ...result, snapshot });
+    // The managers' morning email: what happened, and where the app wasn't used.
+    let morning: Awaited<ReturnType<typeof sendMorningSummaries>> | { error: string };
+    try {
+      morning = await sendMorningSummaries(admin);
+      if (morning.errors.length) {
+        await sendEmail([OPERATOR], `[SYNNR ops] morning summary: ${morning.errors.length} problem(s)`,
+          `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(morning.errors.map((x) => `• ${x}`).join("\n"))}</pre>`);
+      }
+    } catch (e) {
+      morning = { error: e instanceof Error ? e.message : String(e) };
+      await sendEmail([OPERATOR], "[SYNNR ops] morning summary CRASHED", `<pre style="font:13px/1.6 monospace">${escHtml(morning.error)}</pre>`).catch(() => {});
+    }
+    return NextResponse.json({ ok: true, ...result, snapshot, morning });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await logCronRun(admin, { job: "saas-alerts", ok: false, detail: msg });

@@ -20,10 +20,16 @@ const CHIP: Record<TruckStatus, { cls: string; label: string; edge: string }> = 
 };
 
 export interface ActivityLine { id: string; time: string; actor: string | null; message: string; tone: "red" | "amber" | "green" | null }
-export interface PersonWeek { name: string; loadouts: number; returns: number; overrides: number; other: number }
+export interface PersonWeek {
+  name: string; loadouts: number; returns: number; overrides: number; other: number;
+  /** Pieces they loaded this week, and how many of those were checked by hand instead of scanned off a tag. */
+  pieces?: number; byHand?: number;
+  /** On the crew, but nothing in RollReady this week. */
+  idle?: boolean;
+}
 export interface IronCounts { out: number; outTooLong: number; outOfTest: number; dueSoon: number; down: number }
 
-export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false }: {
+export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false, hand = false, picking = false, pickAction, tips }: {
   trucks: LoadOutTruckRow[];
   counts: LoadOutCounts;
   summary: string;
@@ -37,12 +43,66 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
   myTruckId?: string | null;
   alertDays?: number;
   /** Each truck's planned next job, by truck id. */
-  plans?: Record<string, { text: string; by: string | null; note: string | null }>;
+  plans?: Record<string, { text: string; by: string | null; note: string | null; late?: string | null }>;
   /** Managers plan jobs. */
   manager?: boolean;
+  /** A hand (not a manager): their truck first, the rest folded away, no manager numbers. */
+  hand?: boolean;
+  /** Picking a different truck (?pick=1). */
+  picking?: boolean;
+  /** Saves "this is my truck" on this phone. */
+  pickAction?: (fd: FormData) => Promise<void>;
+  /** First-time tips for a hand, shown under their truck. */
+  tips?: React.ReactNode;
 }) {
   const mine = myTruckId ? allTrucks.find((x) => x.t.id === myTruckId) ?? null : null;
   const trucks = mine ? [mine, ...allTrucks.filter((x) => x !== mine)] : allTrucks;
+  const card = (row: LoadOutTruckRow, isMine = false) => (
+    <TruckCard key={row.t.id} row={row} isMine={isMine} plan={plans[row.t.id]} manager={manager} hand={hand}
+      showYard={yards.length > 1 && !yardId} />
+  );
+
+  if (hand) {
+    const others = trucks.filter((x) => x !== mine);
+    return (
+      <div className="flex flex-col gap-5">
+        <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
+        {trucks.length === 0 ? (
+          <Card className="p-5 text-sm text-ink-dim">No trucks set up yet. A manager adds them.</Card>
+        ) : mine && !picking ? (
+          <section className="flex flex-col gap-2">
+            {card(mine, true)}
+            <Link href="/app?pick=1" className="self-start px-1 text-sm text-ink-dim underline underline-offset-2">Not your truck today? Pick another</Link>
+          </section>
+        ) : (
+          <Card className="flex flex-col gap-3 p-4">
+            <h2 className="text-lg font-semibold">Which truck are you on today?</h2>
+            <form action={pickAction} className="flex flex-col gap-2">
+              <select name="unit_id" defaultValue={mine?.t.id ?? ""} required aria-label="Your truck"
+                className="h-14 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone">
+                <option value="" disabled>Pick your truck</option>
+                {trucks.map((x) => <option key={x.t.id} value={x.t.id}>{x.t.name}</option>)}
+              </select>
+              <button type="submit" className={buttonClass("default", "lg", "h-14 text-base")}>That&apos;s my truck</button>
+            </form>
+            <p className="text-sm text-ink-dim">Pick it once. This phone remembers it.</p>
+          </Card>
+        )}
+        <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check iron in from any truck</Link>
+        {tips}
+        {others.length > 0 ? (
+          <details className="group rounded-2xl border border-line bg-surface">
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between px-4 font-semibold">
+              <span>{mine ? "Other trucks" : "All trucks"} ({others.length})</span>
+              <ChevronRight className="h-5 w-5 text-ink-faint transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="grid grid-cols-1 gap-3 p-3 pt-0">{others.map((x) => card(x))}</div>
+          </details>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -57,6 +117,20 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
           <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; trucks</Link>
         </div>
       </div>
+
+      {(() => {
+        const late = allTrucks.filter((x) => plans[x.t.id]?.late);
+        return late.length ? (
+          <div role="alert" className="flex flex-col gap-1 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3">
+            <div className="font-semibold text-red-400">{late.length === 1 ? "A truck hasn't been scanned out" : `${late.length} trucks haven't been scanned out`}</div>
+            {late.map((x) => (
+              <Link key={x.t.id} href={`/app/units/${x.t.id}/scan`} className="break-words text-sm text-ink hover:underline">
+                <span className="font-semibold">{x.t.name}:</span> {plans[x.t.id]!.late}
+              </Link>
+            ))}
+          </div>
+        ) : null;
+      })()}
 
       {yards.length > 1 ? (
         <nav aria-label="Yard" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -116,60 +190,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {trucks.map(({ t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong, stillOut }) => (
-            <Card key={t.id} className={cn("flex flex-col gap-3 border-l-4 p-4", outTooLong ? "border-l-red-500" : CHIP[status].edge)}>
-              {mine && t.id === mine.t.id ? <div className="-mb-1 text-xs font-semibold text-bone">Your truck</div> : null}
-              <Link href={`/app/units/${t.id}`} className="group flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="break-words text-lg font-semibold group-hover:text-bone">{t.name}</span>
-                    <span className={cn("whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold",
-                      outTooLong ? "border-red-500/40 bg-red-500/10 text-red-400" : overridden ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : CHIP[status].cls)}>
-                      {outTooLong ? "Out too long" : overridden ? "Out on override" : CHIP[status].label}
-                    </span>
-                  </div>
-                  <div className="text-[13px] text-ink-faint">
-                    {unitTypeLabel(t.type)} · {pieces} {pieces === 1 ? "piece" : "pieces"} of iron{yards.length > 1 && !yardId ? ` · ${t.yardName}` : ""}
-                  </div>
-                </div>
-                <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-ink-faint" />
-              </Link>
-              {why ? <div className={cn("break-words text-sm", whyTone === "red" ? "font-medium text-red-400" : "text-amber-400")}>{why}</div> : null}
-              {stillOut ? <div className="break-words text-sm text-amber-400">{stillOut}</div> : null}
-              {plans[t.id] ? (
-                <div className="flex items-start gap-1.5 break-words text-sm text-ink">
-                  <ListTodo className="mt-0.5 h-4 w-4 shrink-0 text-bone" />
-                  <span><span className="font-semibold">Next job:</span> {plans[t.id].text}{plans[t.id].note ? <> &middot; &ldquo;{plans[t.id].note}&rdquo;</> : null}{plans[t.id].by ? <span className="text-ink-faint"> &middot; {plans[t.id].by}</span> : null}</span>
-                </div>
-              ) : null}
-              {loadoutId ? (
-                <Link href={`/app/loadouts/${loadoutId}`} className={cn("text-[13px] underline-offset-2 hover:underline", status === "blocked" ? "text-red-400" : overridden ? "text-amber-400" : "text-bone")}>
-                  {loadoutLine} · See the record
-                </Link>
-              ) : (
-                <div className="text-[13px] text-ink-faint">{loadoutLine ?? "No load-out scanned yet"}</div>
-              )}
-              <div className="flex gap-2">
-                {status === "out" ? (
-                  <Link href={`/app/units/${t.id}/return`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
-                    <PackageCheck className="h-5 w-5" /> Check in
-                  </Link>
-                ) : (
-                  <Link href={`/app/units/${t.id}/scan`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
-                    <ScanLine className="h-5 w-5" /> {doneToday ? "Scan again" : "Start load-out"}
-                  </Link>
-                )}
-                {manager ? (
-                  <Link href={`/app/units/${t.id}/plan`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Plan ${t.name}'s next job`}>
-                    <ListTodo className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
-                  </Link>
-                ) : null}
-                <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
-                  <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Check</span>
-                </Link>
-              </div>
-            </Card>
-          ))}
+          {trucks.map((x) => card(x, Boolean(mine && x.t.id === mine.t.id)))}
         </div>
       )}
 
@@ -197,15 +218,23 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[420px] text-left text-sm">
               <thead className="text-[13px] text-ink-dim">
-                <tr><th className="px-4 py-2 font-medium">Person</th><th className="px-3 py-2 text-right font-medium">Load-outs</th><th className="px-3 py-2 text-right font-medium">Check-ins</th><th className="px-3 py-2 text-right font-medium">Overrides</th><th className="px-4 py-2 text-right font-medium">Other</th></tr>
+                <tr><th className="px-4 py-2 font-medium">Person</th><th className="px-3 py-2 text-right font-medium">Load-outs</th><th className="px-3 py-2 text-right font-medium">Check-ins</th><th className="px-3 py-2 text-right font-medium">Overrides</th><th className="px-3 py-2 text-right font-medium">Checked by hand</th><th className="px-4 py-2 text-right font-medium">Other</th></tr>
               </thead>
               <tbody>
-                {byPerson.map((p) => (
+                {byPerson.map((p) => p.idle ? (
+                  <tr key={p.name} className="border-t border-line">
+                    <td className="px-4 py-2.5 font-medium">{p.name}</td>
+                    <td colSpan={5} className="px-3 py-2.5 text-right font-semibold text-red-400">Nothing in RollReady this week</td>
+                  </tr>
+                ) : (
                   <tr key={p.name} className="border-t border-line">
                     <td className="px-4 py-2.5 font-medium">{p.name}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{p.loadouts}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{p.returns}</td>
                     <td className={cn("px-3 py-2.5 text-right tabular-nums", p.overrides ? "font-semibold text-amber-400" : "")}>{p.overrides}</td>
+                    <td className={cn("px-3 py-2.5 text-right tabular-nums", p.pieces && (p.byHand ?? 0) / p.pieces > 0.5 ? "font-semibold text-amber-400" : "text-ink-dim")}>
+                      {p.pieces ? `${p.byHand ?? 0} of ${p.pieces}` : ""}
+                    </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-ink-dim">{p.other}</td>
                   </tr>
                 ))}
@@ -236,5 +265,70 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** One truck on the board: what state it's in, why, and the one thing to do next. */
+function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
+  row: LoadOutTruckRow; isMine: boolean; plan?: { text: string; by: string | null; note: string | null; late?: string | null };
+  manager: boolean; hand: boolean; showYard: boolean;
+}) {
+  const { t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong, stillOut } = row;
+  return (
+    <Card className={cn("flex flex-col gap-3 border-l-4 p-4", outTooLong ? "border-l-red-500" : CHIP[status].edge)}>
+          {isMine ? <div className="-mb-1 text-xs font-semibold text-bone">Your truck</div> : null}
+          <Link href={`/app/units/${t.id}`} className="group flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="break-words text-lg font-semibold group-hover:text-bone">{t.name}</span>
+                <span className={cn("whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold",
+                  outTooLong ? "border-red-500/40 bg-red-500/10 text-red-400" : overridden ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : CHIP[status].cls)}>
+                  {outTooLong ? "Out too long" : overridden ? "Out on override" : CHIP[status].label}
+                </span>
+              </div>
+              <div className="text-[13px] text-ink-faint">
+                {unitTypeLabel(t.type)} · {pieces} {pieces === 1 ? "piece" : "pieces"} of iron{showYard ? ` · ${t.yardName}` : ""}
+              </div>
+            </div>
+            <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-ink-faint" />
+          </Link>
+          {why ? <div className={cn("break-words text-sm", whyTone === "red" ? "font-medium text-red-400" : "text-amber-400")}>{why}</div> : null}
+          {stillOut ? <div className="break-words text-sm text-amber-400">{stillOut}</div> : null}
+          {plan?.late ? <div className="break-words text-sm font-semibold text-red-400">{plan.late}</div> : null}
+          {plan ? (
+            <div className="flex items-start gap-1.5 break-words text-sm text-ink">
+              <ListTodo className="mt-0.5 h-4 w-4 shrink-0 text-bone" />
+              <span><span className="font-semibold">Next job:</span> {plan.text}{plan.note ? <> &middot; &ldquo;{plan.note}&rdquo;</> : null}{plan.by ? <span className="text-ink-faint"> &middot; {plan.by}</span> : null}</span>
+            </div>
+          ) : null}
+          {loadoutId ? (
+            <Link href={`/app/loadouts/${loadoutId}`} className={cn("text-[13px] underline-offset-2 hover:underline", status === "blocked" ? "text-red-400" : overridden ? "text-amber-400" : "text-bone")}>
+              {loadoutLine} · See the record
+            </Link>
+          ) : (
+            <div className="text-[13px] text-ink-faint">{loadoutLine ?? "No load-out scanned yet"}</div>
+          )}
+          <div className="flex gap-2">
+            {status === "out" ? (
+              <Link href={`/app/units/${t.id}/return`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
+                <PackageCheck className="h-5 w-5" /> Check in
+              </Link>
+            ) : (
+              <Link href={`/app/units/${t.id}/scan`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
+                <ScanLine className="h-5 w-5" /> {doneToday ? "Scan again" : "Start load-out"}
+              </Link>
+            )}
+            {manager ? (
+              <Link href={`/app/units/${t.id}/plan`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Plan ${t.name}'s next job`}>
+                <ListTodo className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
+              </Link>
+            ) : null}
+            {hand ? null : (
+              <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
+                <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Check</span>
+              </Link>
+            )}
+          </div>
+        </Card>
   );
 }

@@ -15,14 +15,30 @@ export interface LoadoutPlan {
   note: string | null;
   by: string | null;
   at: string;
+  /** When the job is supposed to leave. Past it with no load-out that rolled = nobody scanned it out. */
+  leavesAt: string | null;
 }
 
-type Row = { id: string; unit_id: string; package_ids: string[] | null; lines: { label: string; qty: number }[] | null; note: string | null; planned_by: string | null; created_at: string };
-const PLAN_COLS = "id, unit_id, package_ids, lines, note, planned_by, created_at";
+type Row = { id: string; unit_id: string; package_ids: string[] | null; lines: { label: string; qty: number }[] | null; note: string | null; planned_by: string | null; created_at: string; leaves_at: string | null };
+const PLAN_COLS = "id, unit_id, package_ids, lines, note, planned_by, created_at, leaves_at";
 const toPlan = (r: Row): LoadoutPlan => ({
   id: r.id, unitId: r.unit_id, packageIds: r.package_ids ?? [], lines: cleanPlanLines(r.lines ?? []),
-  note: r.note, by: r.planned_by, at: r.created_at,
+  note: r.note, by: r.planned_by, at: r.created_at, leavesAt: r.leaves_at,
 });
+
+/**
+ * A planned job whose leave time has passed without a load-out that rolled:
+ * the red line on the board and in the morning email. Null while it's on time.
+ * lastLoadout: this truck's newest load-out, if any.
+ */
+export function lateLine(plan: Pick<LoadoutPlan, "at" | "leavesAt">, lastLoadout: { finished_at: string; rolled: boolean } | null, now: number, timeText: (iso: string) => string): string | null {
+  if (!plan.leavesAt || Date.parse(plan.leavesAt) > now) return null;
+  const since = lastLoadout && lastLoadout.finished_at > plan.at ? lastLoadout : null;
+  if (since?.rolled) return null;
+  return since
+    ? `Was planned to leave ${timeText(plan.leavesAt)}. Still NOT READY.`
+    : `Was planned to leave ${timeText(plan.leavesAt)}. Nobody has scanned it out.`;
+}
 
 /** Every open plan in the company, by truck. */
 export async function getOpenPlans(db: SupabaseClient, companyId: string): Promise<Map<string, LoadoutPlan>> {

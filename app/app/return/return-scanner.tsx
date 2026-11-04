@@ -18,7 +18,8 @@ import { finishReturn, type ReturnDest } from "./actions";
  * zone never loses them, and they send by themselves when signal is back.
  */
 
-type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string; proof?: string };
+/** A piece checked back in. redTag: it came back damaged or failed, and why. */
+type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string; proof?: string; redTag?: string };
 type Outcome = "still_out" | "missing";
 type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; savedAt: number };
 
@@ -102,6 +103,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     if (!p) { setBanner({ tone: "warn", text: `No piece with serial ${serialText.trim()}. Check the stamp and try again.` }); return; }
     mark(p, "hand"); setSerialText("");
   }
+  /** Came back damaged: red-tag it right here, with why. Empty reason takes it back off. */
+  const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined } } : x));
   const flip = (id: string) => setScans((x) => {
     const s = x[id]; if (!s || !truck) return x;
     return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim() } : { ...s, to: "truck", rack: "" } };
@@ -118,7 +121,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     try {
       res = await finishReturn({
         unitId: truck?.id ?? null, yardId: yardId || null, startedAt,
-        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof })),
+        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof, redTag: s.redTag })),
         notReturned: truck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
       });
     } catch {
@@ -232,13 +235,13 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         {expected.length === 0 ? <p className="text-sm text-ink-faint">{truck ? `Nothing is logged on ${truck.name}.` : "Nothing is out on a job right now."} Scan anything that came back and it gets checked in.</p> : null}
         {expected.map((p) => (
           <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} demo={demo} destText={scans[p.id] ? destText(scans[p.id]) : ""}
-            onHand={() => mark(p, "hand")} onFlip={truck ? () => flip(p.id) : undefined} />
+            onHand={() => mark(p, "hand")} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />
         ))}
       </section>
       {extra.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Also came back</h2>
-          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} demo={demo} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck ? () => flip(p.id) : undefined} />)}
+          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} demo={demo} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
         </section>
       ) : null}
 
@@ -288,10 +291,13 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   );
 }
 
-function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip }: {
+function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip, onRedTag }: {
   p: ScanPiece; scan?: Scan; days?: number; alertDays: number; demo: boolean; destText: string; onHand: () => void; onFlip?: () => void;
+  onRedTag?: (why: string) => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const [tagging, setTagging] = useState(false);
+  const [why, setWhy] = useState("");
   const [typed, setTyped] = useState("");
   const [err, setErr] = useState("");
   const needsSerial = !demo && checkable(p.serial);
@@ -324,6 +330,28 @@ function Row({ p, scan, days, alertDays, demo, destText, onHand, onFlip }: {
         <button type="button" onClick={onFlip} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
           {destText.startsWith("back on") ? "Into the yard instead" : "Back on the truck instead"}
         </button>
+      ) : null}
+      {scan && onRedTag ? (
+        scan.redTag ? (
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400">
+            <span className="min-w-0 break-words">Red-tagged: {scan.redTag}</span>
+            <button type="button" onClick={() => onRedTag("")} className="min-h-10 rounded-md px-2 text-[13px] text-ink-dim underline underline-offset-2">Undo</button>
+          </div>
+        ) : tagging ? (
+          <div className="flex w-full flex-col gap-2">
+            <label className="text-[13px] text-ink-dim" htmlFor={`rt-${p.id}`}>What&apos;s wrong with it?</label>
+            <input id={`rt-${p.id}`} value={why} onChange={(e) => setWhy(e.target.value.slice(0, 140))} autoFocus
+              placeholder="Like: washed out seat, bent, leaking, failed the test"
+              className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
+            <div className="flex gap-2">
+              <button type="button" disabled={why.trim().length < 3} onClick={() => { onRedTag(why.trim()); setTagging(false); }}
+                className="min-h-12 flex-1 rounded-lg border border-red-500/60 bg-red-500/10 px-4 text-sm font-semibold text-red-400 disabled:opacity-50">Red-tag it</button>
+              <button type="button" onClick={() => { setTagging(false); setWhy(""); }} className="min-h-12 rounded-lg px-4 text-sm text-ink-dim">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setTagging(true)} className="min-h-10 px-1 text-[13px] text-ink-dim underline underline-offset-2">Came back damaged? Red-tag it</button>
+        )
       ) : null}
       {asking && !scan ? (
         <div className="flex w-full flex-col gap-1">

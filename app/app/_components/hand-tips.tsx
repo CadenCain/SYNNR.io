@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 /** A hand's first look: the whole job in three lines. Gone after their first load-out. */
 export default function HandTips({ name, company }: { name: string; company: string }) {
   const steps = [
-    { icon: ScanLine, title: "Loading a truck", body: "Tap Start load-out on the truck, pick the job's package, then scan each piece as it goes on: tap its tag or scan its QR code. Hit Done loading." },
+    { icon: ScanLine, title: "Loading a truck", body: "Tap Start load-out on your truck. If a manager planned the job, the list is already set. Scan each piece as it goes on: tap its tag or scan its QR code. The list tells you what's still needed and where it is. Hit Done loading." },
     { icon: OctagonX, title: "Red means don't load it", body: "Out of test, red-tagged, or not on the list gets called out right then. Anything missing or bad makes the truck NOT READY. Only a manager can roll it anyway." },
     { icon: PackageCheck, title: "Back from a job", body: "Tap Check in on the truck and scan what came back: back on the truck, or into the yard at a rack." },
   ];
