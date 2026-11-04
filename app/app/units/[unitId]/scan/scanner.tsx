@@ -829,11 +829,13 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
                 {!photo ? <p className="text-sm text-ink-dim">Stand back so the whole load shows. It goes on the record with your name and the time, and the operator sees it on the proof link.</p> : null}
               </div>
               {photo ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element -- a local photo that hasn't been sent yet */}
                   <img src={photo.url} alt={`${truck.name} loaded`} className="h-24 w-32 shrink-0 rounded-lg border border-line object-cover" />
-                  <div className="min-w-0 flex-1 text-sm text-ink-dim">Taken {clock(photo.at)}. It goes on the record and the proof link.</div>
-                  <button type="button" onClick={() => photoInput.current?.click()} className={buttonClass("outline", "lg", "shrink-0")}>Retake</button>
+                  <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+                    <span className="text-sm text-ink-dim">Taken {clock(photo.at)}. Goes on the record and the proof link.</span>
+                    <button type="button" onClick={() => photoInput.current?.click()} className={buttonClass("outline", "default")}>Retake</button>
+                  </div>
                 </div>
               ) : (
                 <button type="button" onClick={() => photoInput.current?.click()} className={buttonClass("default", "lg", "h-14 text-base")}><Camera className="h-5 w-5" /> Take the photo</button>
