@@ -107,7 +107,7 @@ export default function OnePager() {
           <div><div className="n">$6,000</div><div className="k">a full year of RollReady</div></div>
         </div>
 
-        <div className="op-free">Setup is free for the first 10 yards. I&apos;ll do it with you in one afternoon. Bring the binder.</div>
+        <div className="op-free">Setup is free for the first 10 yards, then $1,000 a yard, one time. I&apos;ll do it with you in one afternoon. Bring the binder.</div>
 
         <div className="op-foot">
           <div className="who">

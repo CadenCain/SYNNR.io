@@ -102,9 +102,9 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div id="your-yard" className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-6 text-center sm:p-8">
           <h2 className="text-xl font-semibold">Want this set up with your iron?</h2>
           <p className="max-w-md text-sm leading-relaxed text-ink-dim">
-            Setup is free for the first 10 yards. Bring your binder or spreadsheets and we&apos;ll load your
-            iron, serials, and test dates together in one afternoon. After that it&apos;s $500 a yard per month. No contract, and never
-            per-seat.
+            Load it yourself for free, or I&apos;ll load it with you: free for the first 10 yards, then $1,000 a yard, one time.
+            Bring your binder or spreadsheets and we&apos;ll load your iron, serials, and test dates together in one afternoon.
+            After that it&apos;s $500 a yard per month. No contract, and never per-seat.
           </p>
           <DemoLeadForm />
           <Link href="/signup" className="flex min-h-12 items-center justify-center rounded-lg bg-bone px-6 text-base font-semibold text-white hover:bg-bone-soft">Get started with your yard</Link>

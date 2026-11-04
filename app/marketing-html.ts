@@ -197,7 +197,7 @@ export const MARKETING_HTML = `
         <ul class="x-checks">
           <li>${ICON.check}<span>Your whole crew, each with their own login. Never per-seat.</span></li>
           <li>${ICON.check}<span>No contract. Cancel anytime.</span></li>
-          <li>${ICON.check}<span>Setup is free for the first 10 yards. I'll load your iron with you.</span></li>
+          <li>${ICON.check}<span>Load it yourself, free. Or I'll load it for you: free for the first 10 yards, then $1,000 a yard, one time.</span></li>
           <li>${ICON.check}<span>Your data is yours. Export it as a spreadsheet anytime.</span></li>
         </ul>
         <a href="/signup" class="btn btn-primary x-block">Get started</a>

@@ -25,7 +25,7 @@ export default function WelcomeCard({ justPaid, yards, manager }: { justPaid: bo
         <Link href="/app/welcome" className={buttonClass("ghost", "lg")}>Full setup checklist</Link>
       </div>
       <p className="text-sm text-ink-faint">
-        Rather hand the list off? Email it in any format to cadencain@synnr.io, or call or text <a href={OWNER_PHONE_TEL} className="underline underline-offset-2">{OWNER_PHONE}</a>. Setup is free for the first 10 yards.
+        Rather hand the list off? Email it in any format to cadencain@synnr.io, or call or text <a href={OWNER_PHONE_TEL} className="underline underline-offset-2">{OWNER_PHONE}</a>. Caden loads it with you: free for the first 10 yards, then $1,000 a yard, one time.
       </p>
     </Card>
   );

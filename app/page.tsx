@@ -263,7 +263,7 @@ export default function Home() {
               <ul className="rr-checks">
                 <li>Your whole crew, each with their own login. Never per seat.</li>
                 <li>No contract. Cancel anytime.</li>
-                <li>Setup is free for the first 10 yards. I’ll load your iron with you.</li>
+                <li>Load it yourself, free. Or I’ll load it for you: free for the first 10 yards, then $1,000 a yard, one time.</li>
                 <li>Your data is yours. Export it as a spreadsheet anytime.</li>
               </ul>
               <Link href="/signup" className="rr-btn rr-block">Get started</Link>
