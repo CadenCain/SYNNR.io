@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ScanHow } from "@/lib/saas/loadout";
 // Loaded with the page so QR scanning works on a page saved for no signal.
 import jsQR from "jsqr";
+import { useWakeLock, useResumeWhenVisible, primeSound } from "./scan-aids";
 
 /**
  * Reading tags at the truck: NFC taps (Chrome on Android, the testing
@@ -42,6 +43,7 @@ export function useTagReader(onRead: (r: TagRead) => void, onNote: (n: ReaderNot
   async function startNfc() {
     const Ctor = ndef();
     if (!Ctor) return;
+    primeSound();
     nfcAbort.current?.abort();
     const ac = new AbortController();
     nfcAbort.current = ac;
@@ -68,6 +70,7 @@ export function useTagReader(onRead: (r: TagRead) => void, onNote: (n: ReaderNot
   function stopNfc() { nfcAbort.current?.abort(); setNfcOn(false); }
 
   async function startCamera() {
+    primeSound();
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       setCamOn(true);
@@ -114,5 +117,8 @@ export function useTagReader(onRead: (r: TagRead) => void, onNote: (n: ReaderNot
 
   useEffect(() => () => { nfcAbort.current?.abort(); stream.current?.getTracks().forEach((t) => t.stop()); }, []);
 
+  // Keep the screen on while scanning, and pick tag listening back up after the phone locks.
+  useWakeLock(nfcOn || camOn);
+  useResumeWhenVisible(nfcOn, () => { void startNfc(); });
   return { hasNfc, nfcOn, camOn, startNfc, stopNfc, startCamera, stopCamera, video, stopAll: () => { stopNfc(); stopCamera(); } };
 }

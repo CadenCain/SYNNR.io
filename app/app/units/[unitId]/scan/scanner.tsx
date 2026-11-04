@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 // page this phone saved for no signal.
 import jsQR from "jsqr";
 import ProofLink from "../../../_components/proof-link";
+import { useWakeLock, useResumeWhenVisible, primeSound, scanSound } from "../../../_components/scan-aids";
 
 /**
  * The load-out scan. The list comes first: the truck's kit, any packages
@@ -160,7 +161,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
     const msg = scanMessage({ kind: "match", piece, onTruck: piece.unitId === truck.id }, truck.name, already);
     setBanner(msg);
     if (!already) setScans((s) => ({ ...s, [piece.id]: { how, at: Date.now(), ...(proof ? { proof } : {}) } }));
-    try { navigator.vibrate?.(msg.tone === "good" ? 80 : [120, 80, 120]); } catch { /* no vibration */ }
+    try { navigator.vibrate?.(msg.tone === "good" ? 80 : msg.tone === "bad" ? [300, 120, 300] : [120, 80, 120]); } catch { /* no vibration */ }
+    scanSound(msg.tone);
   }
 
   /** A bad piece came back off the truck: it's not part of this load-out. */
@@ -214,6 +216,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   async function startNfc() {
     const Ctor = ndef();
     if (!Ctor) return;
+    primeSound();
     nfcAbort.current?.abort();
     const ac = new AbortController();
     nfcAbort.current = ac;
@@ -240,6 +243,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   function stopNfc() { nfcAbort.current?.abort(); setNfcOn(false); }
 
   async function startCamera() {
+    primeSound();
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       stream.current = s;
@@ -288,6 +292,10 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   }, [camOn]);
 
   useEffect(() => () => { nfcAbort.current?.abort(); stream.current?.getTracks().forEach((t) => t.stop()); }, []);
+  // Out in the yard: keep the screen on while scanning, and pick tag
+  // listening back up when the hand comes back to the phone.
+  useWakeLock(nfcOn || camOn);
+  useResumeWhenVisible(nfcOn, () => { void startNfc(); });
 
   async function doLink() {
     if (!pendingLink || !linkChoice) return;

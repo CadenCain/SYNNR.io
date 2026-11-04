@@ -7,6 +7,7 @@ import { readScan, type ScanHow, type ScanPiece } from "@/lib/saas/loadout";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTagReader, type ReaderNote } from "../_components/use-tag-reader";
+import { scanSound } from "../_components/scan-aids";
 import { checkable, maskSerial, lastFourMatch } from "../_components/serial-check";
 import { finishReturn, type ReturnDest } from "./actions";
 
@@ -85,7 +86,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     setBanner(already ? { tone: "warn", text: `${label} is already checked in.` }
       : p.problem === "red" ? { tone: "bad", text: `${label} is back, ${destText(s)}. ${p.statusText}. It can't go out again until that's fixed.` }
       : { tone: "good", text: `${label}: ${destText(s)}.` });
-    try { navigator.vibrate?.(p.problem === "red" ? [120, 80, 120] : 80); } catch { /* no vibration */ }
+    try { navigator.vibrate?.(p.problem === "red" ? [300, 120, 300] : already ? [120, 80, 120] : 80); } catch { /* no vibration */ }
+    scanSound(p.problem === "red" ? "bad" : already ? "warn" : "good");
   }
   async function onReadTag(r: { link: string | null; chipId: string | null; how: ScanHow }) {
     const hit = await readScan(r, pieces, truck?.id ?? "");
