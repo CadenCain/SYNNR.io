@@ -40,8 +40,9 @@ html:has(.rr) body { background: #07090c; }
 .rr *, .rr *::before, .rr *::after { box-sizing: border-box; }
 .rr a { color: inherit; }
 .rr p a, .rr .rr-fine a { color: var(--blue-2); text-underline-offset: 3px; }
-.rr h1, .rr h2, .rr h3, .rr p, .rr ul, .rr ol, .rr figure { margin: 0; }
-.rr ul, .rr ol { padding: 0; list-style: none; }
+/* Resets with no weight (:where), so every spacing rule below wins. */
+.rr :where(h1, h2, h3, p, ul, ol, figure) { margin: 0; }
+.rr :where(ul, ol) { padding: 0; list-style: none; }
 .rr b { color: var(--fg); font-weight: 600; }
 .rr :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
 
