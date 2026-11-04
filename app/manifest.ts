@@ -6,11 +6,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "RollReady by SYNNR",
     short_name: "RollReady",
     description:
-      "Equipment & cert readiness for oilfield service shops. Track every asset and cert; get a text before anything expires.",
+      "Load-out checks for oilfield service yards. Nothing rolls without proof: every piece on the list, in test, and backed by its cert.",
     start_url: "/app",
     display: "standalone",
-    background_color: "#131110",
-    theme_color: "#131110",
+    background_color: "#090c11",
+    theme_color: "#090c11",
     orientation: "portrait",
     icons: [
       { src: "/icon", sizes: "64x64", type: "image/png", purpose: "any" },

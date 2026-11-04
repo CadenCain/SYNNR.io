@@ -5,7 +5,7 @@ import "./globals.css";
 import { THEME_SCRIPT } from "@/components/theme";
 
 export const viewport: Viewport = {
-  themeColor: "#131110",
+  themeColor: "#07090c",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

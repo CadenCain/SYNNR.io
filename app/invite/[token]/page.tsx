@@ -7,11 +7,26 @@ import { getSaasUser } from "@/lib/saas/auth";
 import { isDemoUser } from "@/lib/saas/plan";
 import { Button } from "@/components/ui/button";
 import JoinForm from "./join-form";
+import { logEvent } from "@/lib/saas/notify";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Join your crew · RollReady", robots: { index: false, follow: false } };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Why joining didn't work, in words a hand can act on. */
+const joinError = (message: string) => /removed/i.test(message)
+  ? "A manager took you off this crew. Ask them for a personal invite."
+  : "That invite has expired or was already used. Ask for a new one.";
+
+/** Joined: it goes in the feed so the manager sees who's on. */
+async function noteJoin(sb: SupabaseClient, companyId: unknown) {
+  const { data } = await sb.auth.getUser();
+  const u = data.user;
+  if (!u || typeof companyId !== "string") return;
+  const name = (u.user_metadata?.full_name as string | undefined)?.trim() || u.email?.split("@")[0] || "Someone";
+  await logEvent({ companyId, kind: "crew_joined", actor: name, message: `${name} joined the crew` });
+}
 
 /** Signed in already: accept and go to the trucks. */
 async function accept(formData: FormData) {
@@ -19,8 +34,9 @@ async function accept(formData: FormData) {
   const token = String(formData.get("token") ?? "");
   const sb = (await getServerSupabase()) as unknown as SupabaseClient | null;
   if (!sb) redirect("/login");
-  const { error } = await sb.rpc("saas_accept_invitation", { p_token: token });
-  if (error) redirect(`/invite/${encodeURIComponent(token)}?err=${encodeURIComponent("That invite has expired or was already used. Ask for a new one.")}`);
+  const { data: companyId, error } = await sb.rpc("saas_accept_invitation", { p_token: token });
+  if (error) redirect(`/invite/${encodeURIComponent(token)}?err=${encodeURIComponent(joinError(error.message))}`);
+  await noteJoin(sb, companyId);
   redirect("/app?joined=1");
 }
 
@@ -54,8 +70,9 @@ async function joinWithNewLogin(formData: FormData) {
   }
   const { error: signErr } = await sb!.auth.signInWithPassword({ email, password });
   if (signErr) redirect(`/login?next=/invite/${encodeURIComponent(token)}`);
-  const { error: acceptErr } = await sb!.rpc("saas_accept_invitation", { p_token: token });
-  if (acceptErr) back("That invite has expired or was already used. Ask for a new one.");
+  const { data: companyId, error: acceptErr } = await sb!.rpc("saas_accept_invitation", { p_token: token });
+  if (acceptErr) back(joinError(acceptErr.message));
+  await noteJoin(sb!, companyId);
   redirect("/app?joined=1");
 }
 
@@ -94,7 +111,7 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
             <h1 className="text-xl font-semibold">Join {preview.company_name}</h1>
             <p className="mt-1 text-sm text-ink-dim">You&apos;re joining as {asWhat}. Make your login and you&apos;ll go straight to the trucks.</p>
             <JoinForm action={joinWithNewLogin} token={token} error={err} />
-            <p className="mt-4 text-center text-sm text-ink-dim">Already have a RollReady login? <Link href={`/login?next=/invite/${token}`} className="font-medium text-[#1d4ed8] hover:underline">Log in</Link></p>
+            <p className="mt-4 text-center text-sm text-ink-dim">Already have a RollReady login? <Link href={`/login?next=/invite/${token}`} className="font-medium text-bone hover:underline">Log in</Link></p>
           </>
         ) : (
           <>
