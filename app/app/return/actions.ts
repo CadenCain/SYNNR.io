@@ -149,6 +149,10 @@ export async function finishReturn(input: {
     at: typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now,
   }));
 
+  // Loose iron or a tool with nothing tapped: nothing came back, so there's
+  // nothing to save (a truck's check-in can still say what didn't come back).
+  if (!unit && !scans.length) return { ok: false, error: "Nothing was checked in. Tap It's back on each piece that came back." };
+
   // What came back bad: worth a note on the record (it can't roll again until fixed).
   const scanIds = scans.map((s) => s.assetId);
   const { data: itemRows } = scanIds.length

@@ -6,7 +6,7 @@ import { getSaasUser } from "@/lib/saas/auth";
 import { judgeItem, isNoPaper, type LineResult } from "@/lib/saas/judge";
 import { paperLinks } from "@/lib/saas/paper";
 import { localToday } from "@/lib/saas/status";
-import { categoryLabel } from "@/lib/saas/taxonomy";
+import { categoryLabel, TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { fmtDate, fmtWhen } from "@/lib/saas/format";
 
 /**
@@ -60,9 +60,9 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   }
 
   const { data: assetData } = await admin.from("saas_assets")
-    .select("id, company_id, name, category, identifier, status, needs_redress_since")
+    .select("id, company_id, name, category, identifier, status, needs_redress_since, redress_each_run, out_since, out_with_name")
     .eq("tag_token", token).maybeSingle();
-  const a = assetData as { id: string; company_id: string; name: string; category: string; identifier: string | null; status: string; needs_redress_since: string | null } | null;
+  const a = assetData as { id: string; company_id: string; name: string; category: string; identifier: string | null; status: string; needs_redress_since: string | null; redress_each_run: boolean | null; out_since: string | null; out_with_name: string | null } | null;
   if (!a) {
     return <Shell><div className="rounded-2xl border border-line bg-surface p-6 text-center"><p className="font-semibold">This tag isn&apos;t in RollReady.</p><p className="mt-1 text-sm text-ink-dim">The iron may have been removed from the shop&apos;s records. Ask the shop.</p></div></Shell>;
   }
@@ -99,11 +99,15 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   const down = a.status === "out_of_service" || a.status === "missing";
   const retired = a.status === "retired";
   const failing = items.filter((x) => x.j.result === "expired" || x.j.result === "missing");
-  const good = !down && !retired && !a.needs_redress_since && items.length > 0 && failing.length === 0;
+  // A tool redressed after every run, with no tests to keep: ready is "redressed".
+  const redressOnly = Boolean(a.redress_each_run) && items.length === 0 && !TESTED_CATEGORIES.has(a.category);
+  const good = !down && !retired && !a.needs_redress_since && (items.length > 0 || redressOnly) && failing.length === 0;
   const verdict = retired ? { title: "Retired", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop has taken this out of service for good. Don't use it." }
     : a.status === "out_of_service" ? { title: "Red-tagged. Do not use.", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has pulled this from service." }
     : a.status === "missing" ? { title: "Flagged missing", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has this marked missing. Let them know where it is." }
     : a.needs_redress_since ? { title: "Needs redress", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "It came back from a run and hasn't been redressed. Don't run it until it is." }
+    : redressOnly ? { title: "Redressed, ready to run", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
+        note: a.out_with_name ? `Signed out to ${a.out_with_name}.` : a.out_since ? "Out on a job right now." : "Redressed since its last run." }
     : items.length === 0 ? { title: "No test on file", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop hasn't put this piece's paper in RollReady yet." }
     : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due, missing a date, or missing their paper.` }
     : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today, with the paper behind it." };

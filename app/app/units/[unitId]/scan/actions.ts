@@ -20,6 +20,8 @@ type Outcome = "yard" | "missing";
 
 const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string | null }) =>
   user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || "someone";
+/** Out longer than a shift: it went on a job. */
+const RUN_MS = 12 * 3600e3;
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
 
 /**
@@ -202,9 +204,9 @@ export async function finishLoadout(input: {
   const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !stillOut.has(id));
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user, redress_each_run, out_since").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null; needs_redress_since: string | null; out_with_user: string | null };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null; needs_redress_since: string | null; out_with_user: string | null; redress_each_run: boolean | null; out_since: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const label = (a: A) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}`;
 
@@ -228,6 +230,14 @@ export async function finishLoadout(input: {
     return { assetId: s.assetId, how, at };
   });
   const scannedIds = scans.map((s) => s.assetId);
+  // A tool redressed after every run that shows up here off an earlier job
+  // (it rolled on a truck, or went out with someone, more than a shift ago,
+  // or it was lost and turned up) never came back through a check-in. It's
+  // back from a run all the same, so it needs a redress before it goes again.
+  const backFromRun = (a: A) => !!a.redress_each_run && !a.needs_redress_since && a.status !== "out_of_service"
+    && (a.status === "missing" || (!!a.out_since && nowMs - Date.parse(a.out_since) > RUN_MS));
+  const ranIds = scannedIds.filter((id) => backFromRun(byId.get(id)!));
+  for (const id of ranIds) byId.set(id, { ...byId.get(id)!, needs_redress_since: now });
   const filled = fillLines(expected, scans.map((s) => { const a = byId.get(s.assetId)!; return { id: a.id, name: a.name, serial: a.identifier }; }));
 
   // What's wrong with the pieces that went on, worked out here from the records.
@@ -423,8 +433,25 @@ export async function finishLoadout(input: {
         .eq("company_id", company.id).in("asset_id", handed).is("back_at", null);
     }
   }
+  // Back from a run without a check-in: it reads "Needs redress" now, and
+  // whoever had it signed out doesn't anymore (it's here).
+  if (ranIds.length) {
+    await admin.from("saas_assets").update({ needs_redress_since: now }).eq("company_id", company.id).in("id", ranIds).is("needs_redress_since", null);
+    await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null }).eq("company_id", company.id).in("id", ranIds);
+    await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `came back on ${unit.name} load-out` })
+      .eq("company_id", company.id).in("asset_id", ranIds).is("back_at", null);
+  }
+  // Taken off and back in the yard: off the job, and off whoever signed it
+  // out (a tool back off a run gets its redress flag, the same as a check-in).
   const offIds = notScanned.filter((n) => n.outcome === "yard").map((n) => n.assetId);
-  if (offIds.length) await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null }).eq("company_id", company.id).in("id", offIds);
+  if (offIds.length) {
+    const offRan = offIds.filter((id) => backFromRun(byId.get(id)!));
+    if (offRan.length) await admin.from("saas_assets").update({ needs_redress_since: now }).eq("company_id", company.id).in("id", offRan).is("needs_redress_since", null);
+    await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null }).eq("company_id", company.id).in("id", offIds);
+    const offWith = offIds.filter((id) => byId.get(id)!.out_with_user);
+    if (offWith.length) await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `taken off ${unit.name} at load-out` })
+      .eq("company_id", company.id).in("asset_id", offWith).is("back_at", null);
+  }
   // Pieces proven scanned off their tag: the tag works.
   const tagged = scans.filter((x) => x.how !== "hand").map((x) => x.assetId);
   if (tagged.length) await admin.from("saas_assets").update({ tag_seen_at: now }).eq("company_id", company.id).in("id", tagged);

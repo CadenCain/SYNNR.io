@@ -6,6 +6,7 @@ import { isWritable } from "./entitlements";
 import { lateLine, type LoadoutPlan } from "./plans";
 import { daysOut, DEFAULT_OUT_ALERT_DAYS } from "./whereabouts";
 import { YARD_TZ } from "./format";
+import { getToolStocks, isLow, lowLine, lateOutLines } from "./tool-stock";
 
 /**
  * The manager's morning email: what happened in the last day, and where the
@@ -24,6 +25,8 @@ export interface DaySummary {
   outTooLong: string[];   // "CT-08: 5 pieces, out 9 days" or "With Dale Wooten: Silver Fox #2, out 9 days"
   damaged: string[];      // "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy."
   redressWaiting?: number; // tools back from a run, not redressed yet
+  /** Setting tool shelves at or under the manager's warning number: "Odessa Yard, Silver Fox setting tools: 1 ready, 5 used waiting on pickup. Call Silver Fox." */
+  toolsLow?: string[];
   /** Monday: crew who haven't used it all week count as news, so a yard that stopped using it still hears. */
   weekly?: boolean;
   idle: string[];         // crew with nothing in RollReady in 7 days
@@ -33,7 +36,7 @@ export interface DaySummary {
 
 export function summaryText(s: DaySummary): { subject: string; body: string } | null {
   const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + s.outTooLong.length + s.damaged.length
-    + (s.weekly ? s.idle.length : 0);
+    + (s.toolsLow?.length ?? 0) + (s.weekly ? s.idle.length : 0);
   if (s.loadouts + s.checkins + problems === 0) return null;
   const out: string[] = [];
   out.push(`${s.company}, the last 24 hours:`);
@@ -43,6 +46,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   section("Came back damaged:", s.damaged);
   section("Blocked at load-out:", s.blocked);
   section("Rolled on a manager's override:", s.overrides);
+  section("Setting tools running low:", s.toolsLow ?? []);
   section("Out too long, not checked back in:", s.outTooLong);
   section("On the crew, nothing in RollReady this week:", s.idle);
   if (s.redressWaiting) out.push("", `${s.redressWaiting} ${s.redressWaiting === 1 ? "tool is" : "tools are"} back from a run and waiting on redress. They can't go out until someone redresses them.`);
@@ -54,6 +58,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
     : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
     : s.weekly && s.idle.length && (s.crew ? s.idle.length >= s.crew : s.loadouts + s.checkins === 0) ? `RollReady: nobody at ${s.company} used it this week`
     : s.weekly && s.idle.length ? `RollReady: ${s.idle.length} ${s.idle.length === 1 ? "person hasn't" : "people haven't"} used it this week at ${s.company}`
+    : s.toolsLow?.length ? `RollReady: setting tools running low at ${s.company}`
     : `RollReady: yesterday at ${s.company}`;
   return { subject, body: out.join("\n") };
 }
@@ -143,12 +148,17 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         if (r.out_with_name) withPeople.push(`With ${r.out_with_name}: ${r.name}${r.identifier ? ` ${r.identifier}` : ""}, out ${d} days`);
         else outByTruck.set(r.unit_id ?? "", [...(outByTruck.get(r.unit_id ?? "") ?? []), d]);
       }
-      const outTooLong = [...[...outByTruck].map(([u, ds]) => `${unitName.get(u) ?? "In the yard"}: ${ds.length} ${ds.length === 1 ? "piece" : "pieces"}, out ${Math.max(...ds)} days`), ...withPeople];
+      // Setting tools by count: the shelves running low, and who's had some out too long.
+      const stocks = await getToolStocks(admin, c.id).catch(() => []);
+      const toolsLow = stocks.filter(isLow).map(lowLine);
+      const outTooLong = [...[...outByTruck].map(([u, ds]) => `${unitName.get(u) ?? "In the yard"}: ${ds.length} ${ds.length === 1 ? "piece" : "pieces"}, out ${Math.max(...ds)} days`), ...withPeople,
+        ...lateOutLines(stocks, limit, now)];
 
       // Came back damaged: red-tagged at check-in, with whose job it came back from.
       const [{ data: rets }, { count: redressWaiting }] = await Promise.all([
         admin.from("saas_returns").select("returned_by, pieces").eq("company_id", c.id).gte("finished_at", since),
-        admin.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", c.id).not("needs_redress_since", "is", null).neq("status", "retired"),
+        // The same tools Tools out lists: red-tagged or missing ones aren't waiting on a redress.
+        admin.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", c.id).not("needs_redress_since", "is", null).not("status", "in", "(retired,out_of_service,missing)"),
       ]);
       const damaged = ((rets ?? []) as { returned_by: string; pieces: ReturnedPiece[] | null }[])
         .flatMap((r) => (r.pieces ?? []).filter((p) => p.red_tag).map((p) => damagedLine(p, r.returned_by)));
@@ -182,7 +192,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         overrides: ovs.map((o) => `${ovTruck.get(o.loadout_id) ?? "A truck"} by ${o.by_name}: "${o.reason}"`),
         checkins: checkins ?? 0,
         unscanned: ((ev ?? []) as { message: string }[]).map((e) => e.message),
-        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0, crew: hands.length,
+        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0, crew: hands.length, toolsLow,
         weekly: new Date().toLocaleDateString("en-US", { timeZone: YARD_TZ, weekday: "short" }) === "Mon",
         noPaper: noPaper ?? 0,
       };

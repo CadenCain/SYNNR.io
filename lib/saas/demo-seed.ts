@@ -3,7 +3,7 @@ import { isDemoUser } from "./plan";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_KIT_CHECKS, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_KIT_CHECKS, DEMO_TOOL_STOCKS, type DemoAsset,
 } from "./demo-data";
 import { demoLoadoutRecord } from "./demo-loadouts";
 import { kitLinesFrom } from "./loadout-lines";
@@ -88,7 +88,8 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
   const assetIdByKey = new Map(((assetRows ?? []) as { id: string; name: string; identifier: string | null }[])
     .map((r) => [r.identifier ?? r.name, r.id]));
 
-  // The sign-out sheet: the setting tool out with a hand now, and earlier runs back.
+  // The sign-out sheet for tools tracked one by one (none in the demo now:
+  // its setting tools are counted, below), with earlier runs back.
   const sheet = DEMO_YARD_IRON.filter((a) => a.redress).flatMap((a) => {
     const id = assetIdByKey.get(keyOf(a))!;
     const base = { company_id: companyId, asset_id: id, asset_name: a.name, serial: a.identifier ?? null };
@@ -100,6 +101,34 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
         : [];
   });
   if (sheet.length) await admin.from("saas_signouts").insert(sheet);
+
+  // Setting tools the vendor stocks, by count: the shelf, who has some out,
+  // what came back from jobs, and the vendor's last swap.
+  for (const t of DEMO_TOOL_STOCKS) {
+    const { data: st, error: stErr } = await admin.from("saas_tool_stocks").insert({
+      company_id: companyId, yard_id: yardId, name: t.name, vendor: t.vendor, ready: t.ready, used: t.used, low_at: t.lowAt, created_at: tsAgo(40, 9, 0),
+    }).select("id").single();
+    if (stErr || !st) throw new Error(`tool stock: ${stErr?.message}`);
+    const stockId = (st as { id: string }).id;
+    const log = (kind: string, at: string, d: { ready?: number; used?: number; out?: number }, note: string, by: string) => ({
+      company_id: companyId, stock_id: stockId, kind, ready_delta: d.ready ?? 0, used_delta: d.used ?? 0, out_delta: d.out ?? 0, note, by_name: by, created_at: at,
+    });
+    const v = t.vendor_visit;
+    await admin.from("saas_tool_outs").insert([
+      ...t.outs.map((o) => ({ company_id: companyId, stock_id: stockId, out_name: o.to, qty: o.qty, job_note: o.job, out_at: tsAgo(o.daysAgo, o.hour, 10), out_by: o.to })),
+      ...t.backs.map((b) => ({ company_id: companyId, stock_id: stockId, out_name: b.from, qty: b.qty, job_note: b.job,
+        out_at: tsAgo(b.daysAgo + 1, 5, 40), out_by: b.from, back_at: tsAgo(b.daysAgo, b.hour, 20), back_by: b.from, back_used: b.ran, back_unused: b.qty - b.ran })),
+    ]);
+    await admin.from("saas_tool_stock_log").insert([
+      log("added", tsAgo(40, 9, 0), { ready: 6 }, "Started counting: 6 ready, 0 used", "Kevin Odom"),
+      log("vendor", tsAgo(v.daysAgo, 10, 30), { ready: v.dropped, used: -v.picked }, `Vendor picked up ${v.picked} used, dropped off ${v.dropped} ready`, "Kevin Odom"),
+      ...t.backs.flatMap((b) => [
+        log("out", tsAgo(b.daysAgo + 1, 5, 40), { ready: -b.qty, out: b.qty }, `${b.qty} to ${b.from}, ${b.job}`, b.from),
+        log("back", tsAgo(b.daysAgo, b.hour, 20), { ready: b.qty - b.ran, used: b.ran, out: -b.qty }, `${b.qty} back from ${b.from}: ${b.ran} ran, ${b.qty - b.ran} didn't`, b.from),
+      ]),
+      ...t.outs.map((o) => log("out", tsAgo(o.daysAgo, o.hour, 10), { ready: -o.qty, out: o.qty }, `${o.qty} to ${o.to}, ${o.job}`, o.to)),
+    ]);
+  }
 
   // Every test and cert, truck paper and iron, one batch.
   // Each test's paper: a sample cert drawn for that piece (app/demo-cert),
@@ -367,7 +396,7 @@ const YARD_TABLES = [
   "saas_alerts_sent", "saas_signouts", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_link_offs", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
-  "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
+  "saas_unit_crew", "saas_tool_stock_log", "saas_tool_outs", "saas_tool_stocks", "saas_assets", "saas_units", "saas_yards",
 ];
 
 /**
@@ -426,7 +455,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
         "saas_alerts_sent", "saas_signouts", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_link_offs", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
-        "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",
+        "saas_unit_crew", "saas_tool_stock_log", "saas_tool_outs", "saas_tool_stocks", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",
         "saas_notification_settings", "saas_enforcement_settings", "saas_invitations", "saas_memberships",
       ];
       for (const t of tables) await admin.from(t).delete().eq("company_id", cid);

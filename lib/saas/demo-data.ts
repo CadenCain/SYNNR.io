@@ -149,10 +149,32 @@ export const DEMO_YARD_IRON: DemoAsset[] = [
   { name: "2in 1502 pup joint, 10 ft", category: "flow_iron", identifier: "PJ-3312", items: [annual(RECERT, "test", 200)] },
   { name: "2in 1502 pup joint, 6 ft", category: "flow_iron", identifier: "PJ-3318", items: [annual(RECERT, "test", 28)] },
   { name: "Test pump & chart recorder", category: "equipment", identifier: "TP-01", items: [{ title: "Chart recorder calibration", kind: "inspection", exp: 50, issued: -130 }] },
-  // Setting tools: signed out to a hand, not a truck, and redressed after every run.
-  { name: "Silver Fox setting tool #1", category: "tool", identifier: "SF-101", redress: true, note: "tool room, shelf B" },
-  { name: "Silver Fox setting tool #2", category: "tool", identifier: "SF-102", redress: true, signedOut: { to: "Dale Wooten", daysAgo: 9, job: "plug set, Pecos County" } },
-  { name: "Silver Fox setting tool #3", category: "tool", identifier: "SF-103", redress: true, needsRedressDaysAgo: 1, note: "tool room, back from a run" },
+];
+
+/**
+ * Setting tools the vendor keeps the yard stocked with, counted, not tracked
+ * by serial: the vendor swaps the used batch for a ready one about once a
+ * month. Ready on the shelf, out with hands, used waiting on the pickup.
+ */
+export interface DemoToolStock {
+  name: string; vendor: string; ready: number; used: number; lowAt: number;
+  outs: { to: string; qty: number; daysAgo: number; hour: number; job: string }[];
+  /** Came back from a job: how many ran. */
+  backs: { from: string; qty: number; ran: number; daysAgo: number; hour: number; job: string }[];
+  vendor_visit: { daysAgo: number; picked: number; dropped: number };
+}
+export const DEMO_TOOL_STOCKS: DemoToolStock[] = [
+  { name: "Silver Fox setting tool", vendor: "Silver Fox", ready: 4, used: 3, lowAt: 2,
+    outs: [
+      { to: "Dale Wooten", qty: 1, daysAgo: 9, hour: 6, job: "plug set, Pecos County" },
+      { to: "Lupe Cardenas", qty: 2, daysAgo: 0, hour: 5, job: "packer set, Ward County" },
+    ],
+    backs: [
+      { from: "Freddy Carrasco", qty: 1, ran: 1, daysAgo: 11, hour: 17, job: "plug set, Reeves County" },
+      { from: "Lupe Cardenas", qty: 2, ran: 1, daysAgo: 6, hour: 16, job: "packer set, Ward County" },
+      { from: "Dale Wooten", qty: 1, ran: 1, daysAgo: 2, hour: 18, job: "plug set, Loving County" },
+    ],
+    vendor_visit: { daysAgo: 18, picked: 6, dropped: 8 } },
 ];
 
 /** Where some of it has been. Every other piece starts where it sits now. */

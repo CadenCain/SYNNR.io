@@ -113,6 +113,57 @@ export async function signOutTools(input: { assetIds: string[]; note?: string; t
   return { ok: true, summary };
 }
 
+/**
+ * Hand a signed-out tool to someone else on the crew, on location, without
+ * bringing it back to the yard. The person holding it, or a manager, can.
+ * The old line on the sheet closes ("handed to Dale"), a new one opens, and
+ * the out clock keeps running. If it ran on the last job, a tool redressed
+ * after every run reads "Needs redress" and can't go out again until it is.
+ */
+export async function handOffTool(input: { assetId: string; to: string; ran?: boolean }): Promise<{ ok: boolean; error?: string; summary?: string }> {
+  const { company, user } = await requireBillableCompany();
+  const admin = saasAdmin();
+  if (!admin) return { ok: false, error: "Saving is down right now. Try again in a minute." };
+  const manager = company.role === "owner" || company.role === "admin";
+  const { data } = await admin.from("saas_assets").select("id, name, identifier, unit_id, out_with_user, out_with_name, redress_each_run, needs_redress_since")
+    .eq("company_id", company.id).eq("id", String(input.assetId ?? "")).maybeSingle();
+  const a = data as { id: string; name: string; identifier: string | null; unit_id: string | null; out_with_user: string | null; out_with_name: string | null; redress_each_run: boolean | null; needs_redress_since: string | null } | null;
+  if (!a) return { ok: false, error: "That tool isn't in your account anymore. Reload the page." };
+  if (!a.out_with_user) return { ok: false, error: "That tool isn't signed out to anyone. Sign it out instead." };
+  if (a.out_with_user !== user.id && !manager) return { ok: false, error: `Only ${a.out_with_name ?? "the person who has it"} or a manager can hand it off.` };
+  const toId = String(input.to ?? "");
+  // Already with them: a resend after a dropped signal.
+  if (toId === a.out_with_user) return { ok: true, summary: `Already with ${a.out_with_name ?? "them"}` };
+  const { data: m } = await admin.from("saas_memberships").select("user_id").eq("company_id", company.id).eq("user_id", toId).eq("status", "active").maybeSingle();
+  if (!m) return { ok: false, error: "That person isn't on the crew." };
+  const { data: who } = await admin.auth.admin.getUserById(toId);
+  const toName = (who?.user?.user_metadata?.full_name as string | undefined)?.trim() || who?.user?.email?.split("@")[0] || "someone";
+  const actor = actorOf(user);
+  const now = new Date().toISOString();
+  const ran = Boolean(input.ran) && Boolean(a.redress_each_run);
+  // Only while it's still with the person this screen showed: two taps at
+  // once can't hand it to two people.
+  const { data: moved, error } = await admin.from("saas_assets").update({
+    out_with_user: toId, out_with_name: toName,
+    ...(ran && !a.needs_redress_since ? { needs_redress_since: now } : {}),
+    last_seen_where: `handed to ${toName} ${dayLabel(now)}`, last_seen_by: actor, last_seen_at: now,
+  }).eq("company_id", company.id).eq("id", a.id).eq("out_with_user", a.out_with_user).select("id");
+  if (error) return { ok: false, error: `Couldn't hand it off: ${error.message}` };
+  if (!(moved ?? []).length) return { ok: false, error: "Someone just moved that tool. Reload to see who has it." };
+  const { data: open } = await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `handed to ${toName}${ran ? " after a run" : ""}` })
+    .eq("company_id", company.id).eq("asset_id", a.id).is("back_at", null).select("job_note");
+  const job = ((open ?? []) as { job_note: string | null }[])[0]?.job_note ?? null;
+  await admin.from("saas_signouts").insert({
+    company_id: company.id, asset_id: a.id, asset_name: a.name, serial: a.identifier,
+    out_user: toId, out_name: toName, job_note: job, out_at: now,
+  });
+  const summary = `${actor} handed ${label(a)} from ${a.out_with_name ?? "someone"} to ${toName}${ran ? " after a run (needs redress)" : ""}`;
+  void logEvent({ companyId: company.id, kind: "signed_out", unitId: a.unit_id, actor, message: summary });
+  refresh();
+  revalidatePath(`/app/assets/${a.id}`);
+  return { ok: true, summary };
+}
+
 /** Redressed and ready to run again. Anyone on the crew can, with their name on it. */
 export async function markRedressed(fd: FormData) {
   const { company, user } = await requireBillableCompany();

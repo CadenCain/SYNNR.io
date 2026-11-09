@@ -186,7 +186,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         </div>
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           {/* A tool that gets redressed after every run just came back: say where to clear it. */}
-          {/needs? redress/.test(saved) ? <Link href="/app/signout" className={buttonClass("outline", "lg", "h-14 text-base")}>Mark it redressed</Link> : null}
+          {/needs? redress/.test(saved) ? <Link href="/app/signout" className={buttonClass("outline", "lg", "h-14 text-base")}>See what needs redress</Link> : null}
           <Link href="/app" className={buttonClass("default", "lg", "h-14 text-base")}>Back to Load out</Link>
           {truck ? <Link href={`/app/units/${truck.id}/scan`} className={buttonClass("outline", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Load {truck.name} out again</Link> : null}
         </div>
@@ -316,7 +316,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 rounded-2xl border border-line bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm"><span className="text-lg font-bold tabular-nums">{Object.keys(scans).length}</span> checked in{expected.length ? <span className="text-ink-dim"> · {notYet.length} not back yet</span> : null}</div>
-            <button type="button" onClick={() => setFinishing(true)} disabled={Object.keys(scans).length === 0 && notYet.length === 0}
+            <button type="button" onClick={() => setFinishing(true)} disabled={Object.keys(scans).length === 0 && (notYet.length === 0 || !truck)}
               className={buttonClass("default", "lg", "h-14 px-6 text-base")}>Done</button>
           </div>
         </div>

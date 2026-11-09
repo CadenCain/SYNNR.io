@@ -9,7 +9,9 @@ import { daysOut } from "./whereabouts";
  * valve doesn't nag every morning; checking it back in resets it.
  */
 
-export interface OutPiece { id: string; name: string; identifier: string | null; unit_id: string | null; out_since: string }
+export interface OutPiece { id: string; name: string; identifier: string | null; unit_id: string | null; out_since: string;
+  /** Signed out to this person, not a truck. */
+  out_with_name?: string | null }
 
 /** "CT-08: 5 pieces, out 9 days · Lubricator #3 LB-813, out 12 days" */
 export function outDigest(pieces: OutPiece[], unitName: Map<string, string>, now: number): string {
@@ -19,7 +21,7 @@ export function outDigest(pieces: OutPiece[], unitName: Map<string, string>, now
   for (const [unitId, list] of byTruck) {
     const days = Math.max(...list.map((p) => daysOut(p.out_since, now)));
     if (unitId) parts.push(`${unitName.get(unitId) ?? "A truck"}: ${list.length} ${list.length === 1 ? "piece" : "pieces"}, out ${days} days`);
-    else for (const p of list) parts.push(`${p.name}${p.identifier ? ` ${p.identifier}` : ""}, out ${daysOut(p.out_since, now)} days`);
+    else for (const p of list) parts.push(`${p.out_with_name ? `With ${p.out_with_name}: ` : ""}${p.name}${p.identifier ? ` ${p.identifier}` : ""}, out ${daysOut(p.out_since, now)} days`);
   }
   return parts.join(" · ");
 }
@@ -30,12 +32,12 @@ export async function sweepOutTooLong(admin: SupabaseClient): Promise<{ companie
   const now = Date.now();
   const { data: cos } = await admin.from("saas_companies").select("id, name, subscription_status, comped, is_demo").eq("is_demo", false);
   for (const c of (cos ?? []) as { id: string; name: string; subscription_status: string; comped: boolean; is_demo: boolean }[]) {
-    if (!(c.comped || c.subscription_status === "active" || c.subscription_status === "past_due")) continue;
+    if (!(c.comped || c.subscription_status === "active" || c.subscription_status === "trialing" || c.subscription_status === "past_due")) continue;
     try {
       const { data: rules } = await admin.from("saas_enforcement_settings").select("out_alert_days").eq("company_id", c.id).maybeSingle();
       const limit = (rules as { out_alert_days: number } | null)?.out_alert_days ?? 7;
       const cutoff = new Date(now - limit * 86400e3).toISOString();
-      const { data: rows } = await admin.from("saas_assets").select("id, name, identifier, unit_id, out_since, out_alerted_at")
+      const { data: rows } = await admin.from("saas_assets").select("id, name, identifier, unit_id, out_since, out_alerted_at, out_with_name")
         .eq("company_id", c.id).not("status", "in", "(retired,missing)").not("out_since", "is", null).lte("out_since", cutoff);
       const fresh = ((rows ?? []) as (OutPiece & { out_alerted_at: string | null })[])
         .filter((r) => !r.out_alerted_at || r.out_alerted_at < r.out_since);

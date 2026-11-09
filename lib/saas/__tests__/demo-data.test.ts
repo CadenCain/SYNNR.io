@@ -23,12 +23,12 @@ function state(a: DemoAsset): string {
 }
 
 describe("the equipment list: a working yard, not all green", () => {
-  it("2 overdue · 3 down (one waiting on redress) · 4 due soon · 4 with no paper (two untested setting tools) · 1 retired", () => {
+  it("2 overdue · 2 down · 4 due soon · 2 with no paper · 1 retired (setting tools are counted on their own)", () => {
     const count = (s: string) => allIron.filter((a) => state(a) === s).length;
     expect(count("overdue")).toBe(2);
-    expect(count("down")).toBe(3);
+    expect(count("down")).toBe(2);
     expect(count("due")).toBe(4);
-    expect(count("no_paper")).toBe(4);
+    expect(count("no_paper")).toBe(2);
     expect(count("retired")).toBe(1);
     expect(allIron.length).toBeGreaterThanOrEqual(60);
   });
