@@ -158,7 +158,7 @@ export const STATE_LABEL: Record<EquipState, string> = {
   down: "Red-tagged",
   overdue: "Overdue",
   due: "Due soon",
-  no_paper: "No paper yet",
+  no_paper: "Nothing tracked yet",
   ok: "Current",
   retired: "Retired",
 };

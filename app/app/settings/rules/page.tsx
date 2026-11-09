@@ -86,7 +86,7 @@ export default async function RulesPage() {
         <form action={saveRules} className="mt-4 flex flex-col gap-5">
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="hand_uploads_need_ok" defaultChecked={rules.handUploadsNeedOk} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
             <span>
               <span className="block text-sm font-medium">Every upload from a hand waits for a manager</span>
               <span className="block text-sm text-ink-dim">Off: a clean match goes green on its own, and anything that doesn&apos;t match waits for you. On: you OK every upload a hand sends, even clean ones.</span>
@@ -94,7 +94,7 @@ export default async function RulesPage() {
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="allow_cert_on_the_way" defaultChecked={rules.allowCertOnTheWay} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
             <span>
               <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
               <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>
@@ -102,7 +102,7 @@ export default async function RulesPage() {
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="require_loadout_photo" defaultChecked={rules.requireLoadoutPhoto} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
             <span>
               <span className="block text-sm font-medium">Every load-out ends with a photo of the loaded truck</span>
               <span className="block text-sm text-ink-dim">The hand takes one photo before saving. It goes on the record and the operator&apos;s proof link with their name and the time. No photo makes the truck NOT READY. This is the proof on phones that can&apos;t read tags, like iPhones. Off: a load-out can roll without one.</span>
@@ -110,7 +110,7 @@ export default async function RulesPage() {
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="require_last4" defaultChecked={rules.requireLast4} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
             <span>
               <span className="block text-sm font-medium">Checking a piece by hand means typing the last 4 of its serial</span>
               <span className="block text-sm text-ink-dim">The screen hides the last 4 until the hand reads them off the band or the stamp, so a check proves someone looked at the iron. Off: one tap on &quot;It&apos;s on the truck,&quot; and the photo is the proof.</span>
@@ -127,7 +127,7 @@ export default async function RulesPage() {
           </label>
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="require_tag_scan" defaultChecked={rules.requireTagScan} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#1d4ed8]" />
+              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
             <span>
               <span className="block text-sm font-medium">Scan tags only at load-out. No checking by hand.</span>
               <span className="block text-sm text-ink-dim">Pressure iron and anything on the truck&apos;s list has to be scanned off its tag (a QR code with any phone, or an NFC tag on Android). Typing a serial won&apos;t count. A tag that won&apos;t scan makes the truck NOT READY until a manager rolls it with a reason. Only managers can print tags, write NFC tags, or link a new tag while this is on.</span>

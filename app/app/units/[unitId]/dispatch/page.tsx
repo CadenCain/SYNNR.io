@@ -56,7 +56,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${unitId}`, label: comp.unitName }}
-        title={`Readiness check: ${comp.unitName}`}
+        title={`Paper check: ${comp.unitName}`}
         description="Checks this truck's own paper and every piece of iron on it against the job date. A NOT READY truck only rolls on a manager's override, on the record."
       />
 
@@ -75,7 +75,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link href={`/app/units/${unitId}/kit`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-white"><PencilRuler className="h-4 w-4" /> Set the truck&apos;s kit</Link>
-            <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm text-ink">Add certs &amp; assets</Link>
+            <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm text-ink">Add certs &amp; iron</Link>
           </div>
         </Card>
       ) : (
@@ -149,7 +149,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       {comp.verdict === "not_ready" && (
         company.role === "owner" || company.role === "admin" ? (
           <details className="rounded-2xl border border-line bg-surface p-4">
-            <summary className="cursor-pointer text-sm font-semibold text-ink">Roll anyway (manager override)</summary>
+            <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold text-ink">Roll anyway (manager override)</summary>
             <form action={rollAnyway} className="mt-3 flex flex-col gap-2">
               <input type="hidden" name="unit_id" value={unitId} />
               <input type="hidden" name="job_date" value={comp.jobDate} />
@@ -160,7 +160,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
               <label className="text-xs text-ink-faint">Why is it rolling NOT READY?
                 <textarea name="reason" required minLength={10} maxLength={500} rows={3}
                   placeholder="e.g. New BOP test cert is in the truck, upload failed. Company man saw it on location."
-                  className="mt-1 w-full rounded-lg border border-line-2 bg-coal px-3 py-2 text-sm text-ink outline-none focus:border-bone" />
+                  className="mt-1 w-full rounded-lg border border-line-2 bg-coal px-3 py-2 text-base text-ink outline-none focus:border-bone" />
               </label>
               <button type="submit" className="inline-flex h-11 items-center justify-center rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:self-start">
                 Roll NOT READY on my override

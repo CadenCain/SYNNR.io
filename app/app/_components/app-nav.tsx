@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History, Wrench } from "lucide-react";
+import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History, Wrench, Warehouse } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ThemePicker } from "@/components/theme";
@@ -12,12 +12,13 @@ type NavItem = { href: string; label: string; icon: typeof Boxes; exact?: boolea
 
 // Load out first: the home screen is the trucks and their load-out scans,
 // and owns the yard, truck, truck-check, and record pages too.
-const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records", "/app/trucks"];
+const TRUCK_PAGES = ["/app/units", "/app/dispatch", "/app/records", "/app/trucks"];
 const MAIN: NavItem[] = [
   { href: "/app", label: "Load out", icon: ScanLine, exact: true, also: TRUCK_PAGES },
   { href: "/app/loadouts", label: "Load-out records", icon: History },
   { href: "/app/signout", label: "Tools out", icon: Wrench },
   { href: "/app/packages", label: "Packages & kits", icon: Package },
+  { href: "/app/yards", label: "Yards & trucks", icon: Warehouse },
   { href: "/app/equipment", label: "Equipment", icon: Boxes, also: ["/app/assets", "/app/import"] },
   { href: "/app/map", label: "Yard map", icon: MapIcon },
   { href: "/app/compliance", label: "Tests due", icon: CalendarClock },
@@ -55,7 +56,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
   const path = usePathname() || "/app";
   const router = useRouter();
   const [more, setMore] = useState(false);
-  const moreActive = ["/app/tags", "/app/quick", "/app/review", "/app/settings", "/app/search"].some((h) => isActive(path, h));
+  const moreActive = ["/app/tags", "/app/quick", "/app/review", "/app/settings", "/app/search", "/app/yards", "/app/loadouts", "/app/signout", "/app/packages", "/app/welcome"].some((h) => isActive(path, h));
   const loadOutActive = isActive(path, "/app", true, TRUCK_PAGES);
 
   async function signOut() {
@@ -147,7 +148,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
           href="/app/quick"
           className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-bone px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-bone-soft"
         >
-          <Plus className="h-[18px] w-[18px]" /> Quick action
+          <Plus className="h-[18px] w-[18px]" /> Add or renew
         </Link>
 
         <ThemePicker className="mt-3" />
@@ -160,7 +161,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
               </span>
               <span className="min-w-0 flex-1 truncate text-sm text-ink">{userName}</span>
             </Link>
-            <button onClick={signOut} title="Sign out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-elevated hover:text-ink">
+            <button onClick={signOut} title="Log out" aria-label="Log out" className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint hover:bg-elevated hover:text-ink">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -172,12 +173,12 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">RollReady</span>
-        <Link href="/app/search" aria-label="Search" className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
+        <Link href="/app/search" aria-label="Search" className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
           <Search className="h-[18px] w-[18px]" />
         </Link>
         {userName ? (
           <Link href="/app/settings" aria-label="Settings" title={userName}
-            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-elevated">
+            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-elevated">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bone text-xs font-semibold text-coal">
               {userName.slice(0, 1).toUpperCase()}
             </span>
@@ -216,11 +217,12 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
             </div>
             {[
               { href: "/app/loadouts", label: "Load-out records", icon: History },
-              { href: "/app/signout", label: "Tools out (sign-out)", icon: Wrench },
+              { href: "/app/signout", label: "Tools out", icon: Wrench },
               { href: "/app/packages", label: "Packages & kits", icon: Package },
+              { href: "/app/yards", label: "Yards & trucks", icon: Warehouse },
               { href: "/app/welcome", label: "Getting set up", icon: Plus },
               { href: "/app/tags", label: "QR tags", icon: QrCode },
-              { href: "/app/quick", label: "Quick add or renew", icon: Plus },
+              { href: "/app/quick", label: "Add or renew", icon: Plus },
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
               { href: "/app/search", label: "Search", icon: Search },
               { href: "/app/settings", label: "Settings", icon: Settings },
@@ -240,7 +242,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
             <ThemePicker className="mx-1 mt-2" />
             <button type="button" onClick={signOut}
               className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-base text-ink-dim hover:bg-elevated">
-              <LogOut className="h-5 w-5" /> Sign out
+              <LogOut className="h-5 w-5" /> Log out
             </button>
           </div>
         </div>

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireOperator } from "@/lib/op/auth";
 import { requireReadinessDb } from "@/lib/readiness/db";
 
+/** The clock, read once per request (kept out of render for the React compiler). */
+const clock = () => Date.now();
+
 export const dynamic = "force-dynamic";
 
 export default async function OpDashboard() {
@@ -17,8 +20,8 @@ export default async function OpDashboard() {
       .select("id", { count: "exact", head: true })
       .is("deleted_at", null)
       .not("expires_at", "is", null)
-      .lte("expires_at", new Date(Date.now() + 14 * 86400e3).toISOString().slice(0, 10))
-      .gte("expires_at", new Date(Date.now() - 1 * 86400e3).toISOString().slice(0, 10)),
+      .lte("expires_at", new Date(clock() + 14 * 86400e3).toISOString().slice(0, 10))
+      .gte("expires_at", new Date(clock() - 1 * 86400e3).toISOString().slice(0, 10)),
   ]);
 
   return (

@@ -37,7 +37,7 @@ export default function AccountForms({ name, email, companyName, canRename }: { 
         <form action={passAction} className="flex flex-col gap-2">
           <input name="password" type={show ? "text" : "password"} required minLength={8} autoComplete="new-password" placeholder="New password, at least 8 characters" aria-label="New password" className={field} />
           <label className="flex items-center gap-2 text-sm text-ink-dim">
-            <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-[#1d4ed8]" /> Show password
+            <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
           </label>
           <button type="submit" disabled={passPending} className={buttonClass("outline", "lg", "h-12 self-start")}>{passPending ? "Saving…" : "Change password"}</button>
         </form>

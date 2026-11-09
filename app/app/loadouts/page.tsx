@@ -71,7 +71,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
       </form>
 
       {list.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-ink-dim">{all.length ? "Nothing matches." : "No load-outs yet. Start one from the Load out screen."}</Card>
+        <Card className="p-6 text-center text-sm text-ink-dim">{all.length ? "Nothing matches." : <>No load-outs yet. Start one from the <Link href="/app" className="font-medium text-bone hover:underline">Load out screen</Link>.</>}</Card>
       ) : (
         <div className="flex flex-col gap-2">
           {list.map(({ r, o }) => {

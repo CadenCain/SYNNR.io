@@ -334,7 +334,7 @@ function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip
       {!scan ? (
         <button type="button" onClick={check} className={cn("min-h-12 w-full shrink-0 rounded-lg border px-4 text-sm hover:bg-elevated sm:w-auto",
           strong ? "border-bone/60 font-semibold text-ink" : "border-line-2 text-ink-dim")}>
-          {asking ? "Check it" : "It\u2019s back"}
+          {asking ? "Confirm last 4" : "It\u2019s back"}
         </button>
       ) : onFlip ? (
         <button type="button" onClick={onFlip} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">

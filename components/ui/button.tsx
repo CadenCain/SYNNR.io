@@ -17,13 +17,13 @@ const VARIANTS: Record<Variant, string> = {
 };
 const SIZES: Record<Size, string> = {
   default: "h-11 px-4 text-sm",
-  sm: "h-9 px-3 text-[13px]",
+  sm: "h-11 px-3 text-sm md:h-9 md:text-[13px]",
   lg: "h-12 px-6 text-base",
   icon: "h-11 w-11",
 };
 
 const BASE =
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8]/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0";
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bone/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0";
 
 /** Style a non-button element (e.g. a Next.js <Link>) as a Button. */
 export function buttonClass(variant: Variant = "default", size: Size = "default", className?: string) {

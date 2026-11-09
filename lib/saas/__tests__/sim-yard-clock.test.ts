@@ -88,7 +88,7 @@ describe("no paper, pending, and how a piece reads on the equipment list", () =>
     expect(row("pending").next?.detail).toBe("retested, cert on the way (counts through Nov 12, 2026)");
     expect(stateLabel(row("expired"))).toBe("Overdue");
     expect(stateLabel(row("due"))).toBe("Due soon");
-    expect(stateLabel(row("untracked"))).toBe("No paper yet");
+    expect(stateLabel(row("untracked"))).toBe("Nothing tracked yet");
     expect(stateLabel(row("tagged"))).toBe("Red-tagged");
     expect(stateLabel(row("lost"))).toBe("Missing");
     expect(stateLabel(row("redress"))).toBe("Needs redress");

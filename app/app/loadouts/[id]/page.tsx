@@ -76,7 +76,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
           ) : null}
           {manager ? (
             <details className="rounded-xl border border-line p-3">
-              <summary className="cursor-pointer text-sm font-semibold">Roll anyway (manager override)</summary>
+              <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold">Roll anyway (manager override)</summary>
               <form action={rollLoadoutAnyway} className="mt-3 flex flex-col gap-2">
                 <input type="hidden" name="loadout_id" value={rec.id} />
                 <label className="text-sm text-ink-dim" htmlFor="reason">Why is it OK to roll? Your name and this reason go on the record and the proof link, and anyone set up for alerts gets an email.</label>

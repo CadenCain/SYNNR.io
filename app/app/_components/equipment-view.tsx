@@ -28,7 +28,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "overdue", label: "Overdue" },
   { key: "due", label: "Due soon" },
   { key: "down", label: "Pulled from service" },
-  { key: "no_paper", label: "No paper yet" },
+  { key: "no_paper", label: "Nothing tracked yet" },
   { key: "retired", label: "Retired" },
 ];
 
@@ -169,13 +169,13 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
             <div className="flex gap-2">
               {list.yards.length > 1 && (
                 <select value={yard} onChange={(e) => setYard(e.target.value)} aria-label="Yard"
-                  className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone sm:flex-none">
+                  className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone sm:flex-none">
                   <option value="">All yards</option>
                   {list.yards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
                 </select>
               )}
               <select value={place} onChange={(e) => setPlace(e.target.value as PlaceFilter)} aria-label="Where it is"
-                className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone sm:flex-none">
+                className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone sm:flex-none">
                 <option value="">Anywhere</option>
                 <option value="out">Out on jobs</option>
                 <option value="out_too_long">Out too long ({alertDays}+ days)</option>
@@ -184,7 +184,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
               </select>
               {types.length > 1 && (
                 <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type"
-                  className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone sm:flex-none">
+                  className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone sm:flex-none">
                   <option value="">All types</option>
                   {types.map((t) => <option key={t} value={t}>{categoryLabel(t)}</option>)}
                 </select>
@@ -196,10 +196,10 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
             <div className="flex w-max gap-1.5 sm:w-auto sm:flex-wrap">
               {FILTERS.filter((f) => f.key === "all" || countFor(f.key) > 0 || filter === f.key).map((f) => (
                 <button key={f.key} type="button" onClick={() => setFilterAndUrl(f.key)}
-                  className={cn("inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-[13px] font-medium transition-colors",
+                  className={cn("inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-sm md:h-9 md:text-[13px] font-medium transition-colors",
                     filter === f.key ? "border-bone bg-bone text-white" : "border-line-2 bg-surface text-ink-dim hover:text-ink")}>
                   {f.label}
-                  <span className={cn("tabular-nums", filter === f.key ? "text-white/80" : "text-ink-faint")}>{countFor(f.key)}</span>
+                  <span className={cn("tabular-nums", filter === f.key ? "opacity-80" : "text-ink-faint")}>{countFor(f.key)}</span>
                 </button>
               ))}
             </div>
@@ -221,7 +221,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
                   <thead>
                     <tr>
                       {["Equipment", "Serial", "Where", "Next test", "Status"].map((h) => (
-                        <th key={h} className="whitespace-nowrap border-b border-line bg-elevated/60 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-dim">{h}</th>
+                        <th key={h} className="whitespace-nowrap border-b border-line bg-elevated/60 px-4 py-3 text-left text-xs font-semibold text-ink-dim">{h}</th>
                       ))}
                     </tr>
                   </thead>

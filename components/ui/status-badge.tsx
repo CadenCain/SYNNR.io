@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export type ComplianceStatus = "valid" | "expiring" | "expired" | "no_paper" | "none";
 
 const STYLES: Record<ComplianceStatus, { dot: string; chip: string; label: string }> = {
-  valid: { dot: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Valid" },
+  valid: { dot: "bg-emerald-500", chip: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Current" },
   expiring: { dot: "bg-amber-500", chip: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Due soon" },
   expired: { dot: "bg-red-500", chip: "bg-red-500/10 text-red-400 border-red-500/30", label: "Expired" },
   no_paper: { dot: "bg-red-500", chip: "bg-red-500/10 text-red-400 border-red-500/30", label: "No paper" },

@@ -136,7 +136,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
       )}
 
       <Card className="p-5">
-        <h2 className="mb-3 text-sm font-medium text-ink">{units.length ? "Add another unit" : "Add a truck, rig, or shop"}</h2>
+        <h2 className="mb-3 text-sm font-medium text-ink">{units.length ? "Add another truck" : "Add a truck, rig, or shop"}</h2>
         <form action={createUnit} className="flex flex-col gap-3">
           <input type="hidden" name="yard_id" value={y.id} />
           <div className="flex flex-col gap-3 lg:flex-row">
@@ -147,7 +147,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
           </div>
           <div className="flex flex-col gap-3 lg:flex-row">
             <input name="identifier" placeholder="VIN / unit # (optional)" className={`${fld} w-full min-w-0 grow`} />
-            <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add unit</Button>
+            <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add truck</Button>
           </div>
         </form>
       </Card>

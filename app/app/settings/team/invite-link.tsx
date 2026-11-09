@@ -19,7 +19,7 @@ export default function InviteLink({ url, company }: { url: string; company?: st
       <div className="flex gap-2">
         {canShare ? (
           <button type="button" onClick={() => { navigator.share({ text }).catch(() => {}); }}
-            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1d4ed8] px-4 text-sm font-semibold text-white hover:bg-[#1e40af] sm:flex-none">
+            className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg bg-bone px-4 text-sm font-semibold text-on-bone hover:bg-bone-soft sm:flex-none">
             <Share2 className="h-4 w-4" /> Send it
           </button>
         ) : null}

@@ -139,7 +139,7 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
           <label className="flex flex-col gap-1 text-xs text-ink-faint">
             NPT cost per day ($)
             <input name="npt" type="number" min={0} max={1000000} defaultValue={nptDay}
-              className="h-11 w-40 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]" />
+              className="h-11 w-40 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
           </label>
           <Button type="submit" size="sm">Save</Button>
         </form>

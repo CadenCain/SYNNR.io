@@ -24,10 +24,10 @@ export interface CompItem {
 const STATUS_FILTERS: { key: string; label: string; match: (s: ComplianceStatus) => boolean }[] = [
   { key: "all", label: "All", match: () => true },
   { key: "expired", label: "Expired", match: (s) => s === "expired" },
-  { key: "missing", label: "Missing date", match: (s) => s === "none" },
+  { key: "missing", label: "No date", match: (s) => s === "none" },
   { key: "no_paper", label: "No paper", match: (s) => s === "no_paper" },
   { key: "expiring", label: "Due soon", match: (s) => s === "expiring" },
-  { key: "valid", label: "Valid", match: (s) => s === "valid" },
+  { key: "valid", label: "Current", match: (s) => s === "valid" },
 ];
 const KIND_FILTERS = [
   { key: "all", label: "Iron + trucks" },
@@ -79,7 +79,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
           <>
             <span className="mx-1 h-4 w-px bg-line-2" />
             <select value={customer} onChange={(e) => setCustomer(e.target.value)}
-              className="h-8 rounded-lg border border-line-2 bg-coal px-2 text-xs text-ink-dim outline-none">
+              className="h-11 rounded-lg border border-line-2 bg-coal px-2 text-base text-ink-dim outline-none md:h-8 md:text-xs">
               <option value="all">All customers</option>
               {customerNames.map((c) => <option key={c} value={c}>Relevant to {c}</option>)}
             </select>
@@ -87,7 +87,7 @@ export default function ComplianceTable({ items }: { items: CompItem[] }) {
         )}
         <span className="mx-1 h-4 w-px bg-line-2" />
         <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}
-          className="h-8 rounded-lg border border-line-2 bg-coal px-2 text-xs text-ink-dim outline-none">
+          className="h-11 rounded-lg border border-line-2 bg-coal px-2 text-base text-ink-dim outline-none md:h-8 md:text-xs">
           <option value="severity">Worst first</option>
           <option value="soonest">Soonest expiring</option>
           <option value="title">A–Z</option>

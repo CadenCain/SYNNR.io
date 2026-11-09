@@ -102,7 +102,7 @@ export default function ShareProof({
     <div className="flex items-center gap-2">
       {error ? <span className="max-w-48 truncate text-xs text-red-400" title={error}>{error}</span> : null}
       <button onClick={go} disabled={busy}
-        className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink disabled:opacity-50">
+        className="flex h-12 shrink-0 items-center sm:h-9 gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink disabled:opacity-50">
         <Share2 className="h-4 w-4" /> {busy ? "Creating…" : "Share proof"}
       </button>
     </div>

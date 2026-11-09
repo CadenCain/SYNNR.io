@@ -155,25 +155,25 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <>
           <ShareProof scope="unit" unitId={u.id} warn={tile?.state === "not_ready" ? `${u.name} is NOT READY right now, and the link will say so.` : undefined} />
           <Link href={`/app/units/${unitId}/scan`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-white hover:bg-bone-soft">
+            className="flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg sm:h-9 bg-bone px-3 text-sm font-semibold text-white hover:bg-bone-soft">
             <ScanLine className="h-4 w-4" /> Start load-out
           </Link>
           <Link href={`/app/units/${unitId}/return`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
+            className="flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg sm:h-9 border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
             <PackageCheck className="h-4 w-4" /> Check in
           </Link>
           {isManager ? (
             <Link href={`/app/units/${unitId}/plan`}
-              className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
+              className="flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg sm:h-9 border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
               <ListTodo className="h-4 w-4" /> Plan next job
             </Link>
           ) : null}
           <Link href={`/app/units/${unitId}/dispatch`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
-            <Truck className="h-4 w-4" /> Truck paper check
+            className="flex h-12 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg sm:h-9 border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
+            <Truck className="h-4 w-4" /> Paper check
           </Link>
           <Popover>
-            <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
+            <PopoverTrigger className="flex h-12 cursor-pointer items-center sm:h-9 gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
               <Settings2 className="h-4 w-4" /> Manage
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-3">
@@ -193,12 +193,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete unit
+                    <Trash2 className="h-3.5 w-3.5" /> Delete truck
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete {u.name}?</AlertDialogTitle>
-                      <AlertDialogDescription>Every asset riding on it and all their certs go with it. There is no undo.</AlertDialogDescription>
+                      <AlertDialogDescription>Every piece of iron on it and all their certs go with it. There is no undo.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Keep it</AlertDialogCancel>
@@ -245,11 +245,11 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               </ul>
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <a href={fixHref} className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-white">
+              <a href={fixHref} className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-on-bone">
                 Upload the new cert
               </a>
               <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
-                Run the check anyway
+                Run the paper check anyway
               </Link>
             </div>
           </div>
@@ -335,14 +335,14 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-coal sm:flex"><Truck className="h-4 w-4 text-ink-dim" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="font-medium">
-                      {h.type === "checkin" ? "Checked in" : "Readiness check"} · {fmtWhen(h.started_at)}
+                      {h.type === "checkin" ? "Checked in" : "Paper check"} · {fmtWhen(h.started_at)}
                     </div>
                     <div className="text-sm text-ink-dim">by {h.performed_by_name ?? "unknown"}</div>
                   </div>
                   {h.status === "not_ready_override" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Rolled on override</span>
                   ) : h.status === "not_ready" ? (
-                    <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT ready</span>
+                    <span className="shrink-0 rounded-sm border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">NOT READY</span>
                   ) : h.status === "partial" ? (
                     <span className="shrink-0 rounded-sm border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">Items not returned</span>
                   ) : (
@@ -402,7 +402,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
-              <input name="name" required placeholder="Asset name (e.g. BOP #3)" className={`${fld} w-full min-w-0 grow`} />
+              <input name="name" required placeholder="Name (e.g. BOP #3)" className={`${fld} w-full min-w-0 grow`} />
               <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
                 {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -410,7 +410,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             {/* Both shots at intake — the iron and its paper. Skippable in a
                 hurry; the asset wears an amber flag until they exist. */}
             <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Photo of the asset
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-faint">Photo of the iron
                 <input type="file" name="photo" accept="image/*" capture="environment"
                   className="h-11 w-full rounded-lg border border-line-2 bg-coal px-2.5 py-2 text-sm text-ink-dim file:mr-3 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1 file:text-ink" />
               </label>

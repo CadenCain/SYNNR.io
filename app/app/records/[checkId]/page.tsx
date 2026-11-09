@@ -66,8 +66,8 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
       : isOverride
         ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Rolled NOT READY on a manager's override" }
         : c.status === "not_ready"
-          ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Readiness check: NOT READY" }
-          : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Readiness check: Ready" };
+          ? { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Paper check: NOT READY" }
+          : { cls: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", label: "Paper check: READY" };
 
   const gearLines = items.filter((i) => i.source_type === "loadout_item" || i.source_type === "asset");
   const paperLines = items.filter((i) => i.source_type === "cert" || i.source_type === "crew_cert");
@@ -76,8 +76,8 @@ export default async function DispatchRecord({ params }: { params: Promise<{ che
     <div className="flex flex-col gap-6">
       <PageHeader
         back={{ href: `/app/units/${c.unit_id}`, label: unitName }}
-        title={`Check record: ${unitName}`}
-        description={`${c.type === "checkin" ? "Check-in" : "Readiness check"} · run ${fmtWhen(c.started_at)}${c.job_date ? ` · for the job on ${fmtDate(c.job_date)}` : ""}`}
+        title={`Paper check: ${unitName}`}
+        description={`${c.type === "checkin" ? "Check-in" : "Paper check"} · run ${fmtWhen(c.started_at)}${c.job_date ? ` · for the job on ${fmtDate(c.job_date)}` : ""}`}
       />
 
       <div className={`flex items-center gap-3 rounded-2xl border p-4 ${verdict.cls}`}>

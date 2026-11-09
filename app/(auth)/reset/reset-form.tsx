@@ -39,7 +39,7 @@ export default function ResetForm() {
           placeholder="At least 8 characters" />
       </label>
       <label className="-mt-2 flex items-center gap-2 text-sm text-ink-dim">
-        <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-[#1d4ed8]" /> Show password
+        <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
       <Button type="submit" disabled={busy} className="h-12 w-full text-base">{busy ? "Saving…" : "Set password and go to the trucks"}</Button>

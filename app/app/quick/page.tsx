@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 import QuickClient, { type QuickItem, type QuickUnit, type QuickAsset } from "./quick-client";
 
-export const metadata = { title: "Quick add" };
+export const metadata = { title: "Add or renew" };
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,7 @@ export default async function QuickPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Quick action" description="Upload a new cert, add what's new, or say where something is." />
+      <PageHeader title="Add or renew" description="Upload a new cert, add what's new, or say where something is." />
       <QuickClient items={items} units={units} assets={assets} companyId={company.id}
         isManager={isManagerRole(company.role)} allowOnTheWay={rules.allowCertOnTheWay} />
     </div>

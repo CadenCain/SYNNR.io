@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
 /**
@@ -15,10 +16,10 @@ export function SiteNav() {
   return (
     <header className="nav nav-static">
       <div className="nav-pill">
-        <a className="brand" href="/" aria-label="RollReady by SYNNR">{MARK}<span className="wordmark">RollReady</span><span className="by-synnr">by SYNNR</span></a>
+        <Link className="brand" href="/" aria-label="RollReady by SYNNR">{MARK}<span className="wordmark">RollReady</span><span className="by-synnr">by SYNNR</span></Link>
         <nav className="nav-links">
-          <a href="/#trip">How it works</a>
-          <a href="/#pricing">Pricing</a>
+          <Link href="/#trip">How it works</Link>
+          <Link href="/#pricing">Pricing</Link>
           <a href="/demo">Live demo</a>
         </nav>
         <div className="nav-cta">
@@ -32,8 +33,8 @@ export function SiteNav() {
         </div>
         <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
         <nav className="nav-mobile">
-          <a href="/#trip">How it works</a>
-          <a href="/#pricing">Pricing</a>
+          <Link href="/#trip">How it works</Link>
+          <Link href="/#pricing">Pricing</Link>
           <a href="/demo">Live demo</a>
           <a href="/signup">Get started</a>
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
@@ -53,7 +54,7 @@ export function SiteFooter() {
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
           <a href="/demo">Live demo</a>
           <a href="/readiness-audit">Send your iron list</a>
-          <a href="/glossary">Glossary</a>
+          <Link href="/glossary">Glossary</Link>
           <a href="/login">Log in</a>
           <a href="/legal/terms">Terms</a>
           <a href="/legal/privacy">Privacy</a>

@@ -195,7 +195,7 @@ export function UploadCert({ itemId, isManager, allowOnTheWay, failing, noPaper 
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)}
-        className={cn(failing || noPaper ? primary : secondary, "min-h-10 px-3.5 text-[13px]")}>
+        className={cn(failing || noPaper ? primary : secondary, "min-h-12 px-4 text-sm")}>
         <Upload className="h-4 w-4" /> {noPaper ? "Upload the cert" : "Upload new cert"}
       </button>
     );

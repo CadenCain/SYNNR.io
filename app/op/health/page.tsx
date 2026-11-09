@@ -5,6 +5,9 @@ import { isBillableYard } from "@/lib/saas/billing-rules";
 import { getStripe } from "@/lib/stripe";
 import { YARD_PRICE_LOOKUP_KEY, isYardPrice } from "@/lib/saas/plan";
 
+/** The clock, read once per request (kept out of render for the React compiler). */
+const clock = () => Date.now();
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -115,7 +118,7 @@ export default async function OpHealth() {
     .eq("job", "saas-alerts").order("ran_at", { ascending: false }).limit(1);
   const lastRun = (lastRunRows?.[0] ?? null) as
     { ran_at: string; ok: boolean; alerts_sent: number; errors: number; detail: string | null } | null;
-  const ranRecently = lastRun ? (Date.now() - new Date(lastRun.ran_at).getTime()) < 26 * 3600e3 : false;
+  const ranRecently = lastRun ? (clock() - new Date(lastRun.ran_at).getTime()) < 26 * 3600e3 : false;
 
   add({
     name: "Alert cron fired in the last day",

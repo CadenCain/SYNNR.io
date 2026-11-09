@@ -73,7 +73,7 @@ export default function SubscribeCard({ initialYards, canPay }: { initialYards: 
 
         {canPay ? (
           <button onClick={pay} disabled={busy}
-            className="h-12 w-full rounded-lg bg-[#1d4ed8] text-base font-semibold text-white transition-colors hover:bg-[#1e40af] disabled:opacity-60">
+            className="h-12 w-full rounded-lg bg-bone text-base font-semibold text-on-bone transition-colors hover:bg-bone-soft disabled:opacity-60">
             {busy ? "Opening Stripe…" : `Pay ${money(monthlyDollars(yards))}/month by card`}
           </button>
         ) : (

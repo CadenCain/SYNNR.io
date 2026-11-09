@@ -117,7 +117,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
     : a.status === "missing" ? { label: "Missing", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : a.status === "retired" ? { label: "Retired", cls: "border-line-2 bg-elevated text-ink-faint" }
     : a.needs_redress_since ? { label: "Needs redress", cls: "border-amber-500/40 bg-amber-500/10 text-amber-400" }
-    : !next ? { label: "No paper yet", cls: "border-line-2 bg-elevated text-ink-dim" }
+    : !next ? { label: "Nothing tracked yet", cls: "border-line-2 bg-elevated text-ink-dim" }
     : isNoPaper(next.j) ? { label: "No paper", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : next.j.result === "expired" || next.j.result === "missing" ? { label: "Overdue", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : next.j.result === "ok" ? { label: "Current", cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" }
@@ -133,7 +133,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
         description={`${categoryLabel(a.category)}${a.identifier ? ` · Serial ${a.identifier}` : " · No serial on file"}`}
         actions={
           <Popover>
-            <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
+            <PopoverTrigger className="flex h-12 cursor-pointer items-center sm:h-9 gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">
               <Settings2 className="h-4 w-4" /> Manage
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-3">
@@ -177,7 +177,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
               <div className="mt-2 border-t border-line pt-2">
                 <AlertDialog>
                   <AlertDialogTrigger className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-red-400 hover:bg-red-500/10">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete asset
+                    <Trash2 className="h-3.5 w-3.5" /> Delete this piece
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -248,7 +248,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
           <p className="min-w-0 text-amber-300">Needs redress. Came back from a run {fmtWhen(a.needs_redress_since)}, and it can&apos;t go out again until it&apos;s redressed.</p>
           <form action={markRedressed}>
             <input type="hidden" name="asset_id" value={a.id} />
-            <Button type="submit">Redressed</Button>
+            <Button type="submit">Mark it redressed</Button>
           </form>
         </Card>
       ) : null}

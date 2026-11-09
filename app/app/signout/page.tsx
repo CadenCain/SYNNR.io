@@ -103,7 +103,7 @@ export default async function ToolsOutPage() {
               <Link href={`/app/assets/${r.id}`} className="min-w-0 break-words text-sm font-semibold hover:text-bone">{r.name}{r.identifier ? <span className="font-normal text-ink-dim"> · {r.identifier}</span> : null}</Link>
               <form action={markRedressed}>
                 <input type="hidden" name="asset_id" value={r.id} />
-                <button type="submit" className={buttonClass("default", "default", "min-h-11")}>Redressed</button>
+                <button type="submit" className={buttonClass("default", "default", "min-h-11")}>Mark it redressed</button>
               </form>
             </div>
           ))}

@@ -117,10 +117,10 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
           <p className="mt-0.5 text-sm text-ink-dim">{summary}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check iron in</Link>
+          <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check in tools or loose iron</Link>
           <Link href="/app/signout" className={buttonClass("outline", "sm")}><Wrench className="h-4 w-4" /> Tools out</Link>
           <Link href="/app/packages" className={buttonClass("outline", "sm")}><Boxes className="h-4 w-4" /> Packages &amp; kits</Link>
-          <Link href="/app/loadouts" className={buttonClass("outline", "sm")}><History className="h-4 w-4" /> All load-outs</Link>
+          <Link href="/app/loadouts" className={buttonClass("outline", "sm")}><History className="h-4 w-4" /> Load-out records</Link>
           <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; trucks</Link>
         </div>
       </div>
@@ -332,7 +332,7 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
             ) : null}
             {hand ? null : (
               <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
-                <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Check</span>
+                <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Paper check</span>
               </Link>
             )}
           </div>

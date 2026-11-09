@@ -1,4 +1,5 @@
 import "./legal.css";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const MARK = (
@@ -21,12 +22,12 @@ export function LegalShell({
   return (
     <div className="legal">
       <div className="lbar">
-        <a className="lback" href="/">
+        <Link className="lback" href="/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5M11 18l-6-6 6-6" />
           </svg>
           Back to SYNNR
-        </a>
+        </Link>
         <span className="lbrand">{MARK} SYNNR</span>
       </div>
       <article className="ldoc">

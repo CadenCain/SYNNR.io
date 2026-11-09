@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { clampYards, planLine, MAX_YARDS } from "@/lib/saas/plan";
 
-const field = "h-12 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-[#1d4ed8]";
+const field = "h-12 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
 
 /** Getting started, step 2: the company and its yards. The price adds up as they go, then it's straight to Stripe. */
 export default function OnboardingForm({ action, defaults, error }: {
@@ -40,7 +40,7 @@ export default function OnboardingForm({ action, defaults, error }: {
               onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 2); setTyped(v); if (v) setYards(clampYards(v)); }}
               onBlur={() => setTyped(String(yards))}
               onFocus={(e) => e.target.select()}
-              className="h-12 w-14 rounded-lg border border-line-2 bg-coal text-center text-xl font-semibold tabular-nums text-ink outline-none focus:border-[#1d4ed8]" />
+              className="h-12 w-14 rounded-lg border border-line-2 bg-coal text-center text-xl font-semibold tabular-nums text-ink outline-none focus:border-bone" />
             <button type="button" onClick={() => step(1)} disabled={yards >= MAX_YARDS} aria-label="More yards"
               className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>
           </div>
@@ -56,7 +56,7 @@ export default function OnboardingForm({ action, defaults, error }: {
       </label>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-[#1d4ed8] text-base font-semibold text-white hover:bg-[#1e40af] disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-bone text-base font-semibold text-on-bone hover:bg-bone-soft disabled:opacity-60">
         {busy ? "Opening secure checkout…" : "Continue to payment"}
       </button>
       <p className="text-center text-xs text-ink-faint">You&apos;ll pay by card on Stripe&apos;s secure page, then you&apos;re in, with your yards already set up.</p>

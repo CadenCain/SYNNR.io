@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import LockedCard from "../_components/locked-card";
 import ReturnScanner from "./return-scanner";
 
-export const metadata = { title: "Check iron in" };
+export const metadata = { title: "Check in tools or loose iron" };
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function YardReturnPage({ searchParams }: { searchParams: P
   if (!isWritable(company.subscription_status, company.comped)) {
     return (
       <div className="flex flex-col gap-5">
-        <PageHeader back={{ href: "/app", label: "Load out" }} title="Check iron in" />
+        <PageHeader back={{ href: "/app", label: "Load out" }} title="Check in tools or loose iron" />
         <LockedCard owner={company.role === "owner"} what="Check-ins" />
       </div>
     );
@@ -32,8 +32,8 @@ export default async function YardReturnPage({ searchParams }: { searchParams: P
   const { pieces, outDays } = await getScanPieces(db, company.id);
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader back={{ href: "/app", label: "Load out" }} title="Check iron in"
-        description="For iron that came back without its truck (a hotshot, the testing company, a pickup) and tools signed out to someone. Tap each one and say where it sits." />
+      <PageHeader back={{ href: "/app", label: "Load out" }} title="Check in tools or loose iron"
+        description="For iron that came back without its truck (a hotshot, the testing company, a pickup) and tools signed out to someone. Scan each one or tap It's back, and say where it sits." />
       <ReturnScanner truck={null} pieces={pieces} outDays={outDays} yards={yards} defaultYardId={yards[0]?.id ?? null} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} firstId={asset && /^[0-9a-f-]{36}$/.test(asset) ? asset : null} />
     </div>
   );

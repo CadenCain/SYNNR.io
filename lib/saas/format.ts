@@ -30,7 +30,7 @@ export function seenAge(iso: string | null | undefined, now: Date = new Date()):
  *  Parsed as LOCAL midnight — `new Date("2026-08-14")` alone is UTC midnight,
  *  which renders as the previous day anywhere west of Greenwich. */
 export function fmtDate(d: string | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "No date";
   const dt = new Date(`${d}T00:00:00`);
   if (isNaN(dt.getTime())) return d;
   return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -42,14 +42,14 @@ export function fmtDate(d: string | null | undefined): string {
 export const YARD_TZ = "America/Chicago";
 
 export function fmtWhen(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "No date";
   const dt = new Date(iso);
   if (isNaN(dt.getTime())) return iso;
   return dt.toLocaleString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export function fmtDay(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "No date";
   const dt = new Date(iso);
   if (isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", year: "numeric" });

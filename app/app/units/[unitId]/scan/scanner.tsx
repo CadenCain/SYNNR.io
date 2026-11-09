@@ -524,7 +524,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
               className={buttonClass("default", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Fix it and scan again</button>
           ) : null}
           <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready ? "default" : "outline", "lg", "h-14 text-base")}>
-            {ready ? "See the record" : manager ? "See the record (manager override)" : "See the record"}
+            {ready ? "See the record" : manager ? "Open the record to roll anyway" : "See the record"}
           </Link>
           <Link href="/app" className={buttonClass("outline", "lg", "h-14 text-base")}>Back to Load out</Link>
         </div>
@@ -1008,7 +1008,7 @@ function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false
       ) : !scan ? (
         <button type="button" onClick={check} className={cn("min-h-12 w-full shrink-0 rounded-lg border px-4 text-sm hover:bg-elevated sm:w-auto",
           strong ? "border-bone/60 font-semibold text-ink" : "border-line-2 text-ink-dim")}>
-          {asking ? "Check it" : "It’s on the truck"}
+          {asking ? "Confirm last 4" : "It’s on the truck"}
         </button>
       ) : p.problem === "red" ? (
         <button type="button" onClick={onTakeOff} className="min-h-12 w-full shrink-0 rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:w-auto">Took it off</button>

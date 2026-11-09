@@ -90,7 +90,7 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
         <div className="flex flex-wrap items-center gap-2">
           {yards.length > 1 && (
             <select value={yard} onChange={(e) => setYard(e.target.value)} aria-label="Yard"
-              className="h-9 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone">
+              className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone md:h-9 md:text-sm">
               {yards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
               <option value="">All yards</option>
             </select>
@@ -108,7 +108,7 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
         {(["ok", "due", "overdue", "down", "no_paper"] as EquipState[]).map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={cn("h-2.5 w-2.5 rounded-full", DOT[s])} />
-            {s === "ok" ? "Current" : s === "due" ? "Due in 30 days" : s === "overdue" ? "Overdue" : s === "down" ? "Red-tagged or missing" : "No paper yet"}
+            {s === "ok" ? "Current" : s === "due" ? "Due in 30 days" : s === "overdue" ? "Overdue" : s === "down" ? "Red-tagged or missing" : "Nothing tracked yet"}
           </span>
         ))}
       </div>

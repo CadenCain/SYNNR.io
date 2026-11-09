@@ -117,10 +117,10 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => run(false)} disabled={busy} variant="outline">
-            <Eye className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Preview (dry run)"}
+            <Eye className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Check the list first"}
           </Button>
           <Button onClick={() => run(true)} disabled={busy || !result || !result.ok || (!result.committed && result.errors === result.rows.length)}>
-            <Upload className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Commit import"}
+            <Upload className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Add it all"}
           </Button>
         </div>
       </Card>
@@ -158,7 +158,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
                 ))}
               </div>
               {!result.committed && result.errors === 0 ? (
-                <p className="text-xs text-ink-faint">Looks clean. Tap Commit import to save it.</p>
+                <p className="text-xs text-ink-faint">Looks clean. Tap Add it all to save it.</p>
               ) : !result.committed && result.errors > 0 ? (
                 <p className="text-xs text-amber-400">Rows with errors are skipped on commit; the rest import fine.</p>
               ) : null}

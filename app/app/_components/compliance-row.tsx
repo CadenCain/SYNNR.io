@@ -14,7 +14,7 @@ import { localToday } from "@/lib/saas/status";
 import { UploadCert } from "./cert-upload";
 import { updateComplianceItem, deleteComplianceItem } from "../_actions";
 
-const inputCls = "h-10 rounded-lg border border-line-2 bg-coal px-3 text-sm text-ink outline-none focus:border-bone";
+const inputCls = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
 
 export interface RowItem {
   id: string; title: string; kind: string;
@@ -99,7 +99,7 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
         {isManager && (
         <div className="flex items-center gap-2">
           <Popover>
-            <PopoverTrigger aria-label="Edit item" className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink">
+            <PopoverTrigger aria-label="Edit item" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-line-2 text-ink-dim hover:bg-elevated hover:text-ink">
               <Pencil className="h-3.5 w-3.5" />
             </PopoverTrigger>
             <PopoverContent align="end" className="w-72 p-3">

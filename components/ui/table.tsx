@@ -11,7 +11,7 @@ export function Table({ children, className }: { children: React.ReactNode; clas
 
 export function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
-    <th className={cn("whitespace-nowrap border-b border-line bg-elevated/60 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-dim sm:px-4", className)}>
+    <th className={cn("whitespace-nowrap border-b border-line bg-elevated/60 px-3 py-3 text-left text-xs font-semibold text-ink-dim sm:px-4", className)}>
       {children}
     </th>
   );

@@ -35,8 +35,8 @@ export default function ReadinessAuditForm() {
       <div className="ra-form-done">
         <b>Got it.</b>
         <p>
-          I'll call or text you this week. Send the list whenever it's handy, and I'll tell you what's expired, coming due, and missing.
-          If RollReady fits, I'll load your iron with you. If not, you still get the list back.
+          I&apos;ll call or text you this week. Send the list whenever it&apos;s handy, and I&apos;ll tell you what&apos;s expired, coming due, and missing.
+          If RollReady fits, I&apos;ll load your iron with you. If not, you still get the list back.
         </p>
       </div>
     );

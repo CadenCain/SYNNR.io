@@ -25,7 +25,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-[#1d4ed8] hover:underline">
+        <Link href="/login" className="font-medium text-bone hover:underline">
           Log in
         </Link>
       </p>
