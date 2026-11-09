@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import InviteLink from "./invite-link";
 
+export const metadata = { title: "Team" };
+
 const ROLE_LABEL: Record<string, string> = { owner: "Owner", admin: "Manager", member: "Hand" };
 const isManager = (c: Pick<ActiveCompany, "role">) => c.role === "owner" || c.role === "admin";
 const actorOf = (u: { user_metadata?: { full_name?: string }; email?: string | null }) =>

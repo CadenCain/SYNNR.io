@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "Load-out records" };
+
 export const dynamic = "force-dynamic";
 
 type Row = Pick<LoadoutRecord, "id" | "unit_id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned">;

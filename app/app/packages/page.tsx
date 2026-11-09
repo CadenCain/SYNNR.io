@@ -8,6 +8,8 @@ import { buttonClass } from "@/components/ui/button";
 import { createPackage, fillEmptyKits } from "./actions";
 import { Wand2 } from "lucide-react";
 
+export const metadata = { title: "Packages & kits" };
+
 export const dynamic = "force-dynamic";
 
 type Pkg = { id: string; name: string; unit_id: string | null; saas_package_lines: { label: string; qty: number; sort: number }[] | null };

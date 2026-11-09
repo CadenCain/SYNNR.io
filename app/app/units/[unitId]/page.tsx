@@ -155,8 +155,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
           <>
           <ShareProof scope="unit" unitId={u.id} warn={tile?.state === "not_ready" ? `${u.name} is NOT READY right now, and the link will say so.` : undefined} />
           <Link href={`/app/units/${unitId}/scan`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
-            <ScanLine className="h-4 w-4" /> Load-out scan
+            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-white hover:bg-bone-soft">
+            <ScanLine className="h-4 w-4" /> Start load-out
           </Link>
           <Link href={`/app/units/${unitId}/return`}
             className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
@@ -169,8 +169,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             </Link>
           ) : null}
           <Link href={`/app/units/${unitId}/dispatch`}
-            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-bone px-3 text-sm font-semibold text-white hover:bg-bone-soft">
-            <Truck className="h-4 w-4" /> Check readiness
+            className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 px-3 text-sm font-medium text-ink hover:bg-elevated">
+            <Truck className="h-4 w-4" /> Truck paper check
           </Link>
           <Popover>
             <PopoverTrigger className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-line-2 px-3 text-sm text-ink-dim hover:bg-elevated hover:text-ink">

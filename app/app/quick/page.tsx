@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 import QuickClient, { type QuickItem, type QuickUnit, type QuickAsset } from "./quick-client";
 
+export const metadata = { title: "Quick add" };
+
 export const dynamic = "force-dynamic";
 
 const ORDER: Record<ComplianceStatus, number> = { expired: 0, no_paper: 1, expiring: 2, valid: 3, none: 4 };

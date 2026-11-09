@@ -15,7 +15,7 @@ import { markRedressed } from "./actions";
 import SignOutPicker, { type Pickable } from "./picker";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Tools out · RollReady" };
+export const metadata = { title: "Tools out" };
 
 /** The time now, read outside render (the page renders once per request). */
 const clock = () => Date.now();
@@ -52,8 +52,9 @@ export default async function ToolsOutPage() {
       : r.state === "overdue" ? (r.next ? `${r.next.title}: ${r.next.detail}` : "Out of test")
       : r.state === "no_paper" && TESTED_CATEGORIES.has(r.category) ? (r.next ? "No paper" : "No test on file")
       : null;
-    return { id: r.id, name: r.name, serial: r.identifier, where: r.where, blocked: why, redress: redressKind.has(r.id) };
-  }).sort((a, b) => Number(b.redress) - Number(a.redress) || a.name.localeCompare(b.name));
+    return { id: r.id, name: r.name, serial: r.identifier, where: r.where, blocked: why, redress: redressKind.has(r.id),
+      usual: redressKind.has(r.id) || r.category === "tool" || !r.unitId };
+  }).sort((a, b) => Number(b.redress) - Number(a.redress) || Number(b.usual) - Number(a.usual) || a.name.localeCompare(b.name));
 
   const row = (r: (typeof live)[number], me: boolean) => {
     const d = r.outSince ? daysOut(r.outSince, now) : 0;

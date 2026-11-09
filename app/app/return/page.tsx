@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import LockedCard from "../_components/locked-card";
 import ReturnScanner from "./return-scanner";
 
+export const metadata = { title: "Check iron in" };
+
 export const dynamic = "force-dynamic";
 
 /** Check loose iron into the yard: a hotshot, the testing company's truck, a pickup. */

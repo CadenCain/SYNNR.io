@@ -27,7 +27,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "overdue", label: "Overdue" },
   { key: "due", label: "Due soon" },
-  { key: "down", label: "Red-tagged or missing" },
+  { key: "down", label: "Pulled from service" },
   { key: "no_paper", label: "No paper yet" },
   { key: "retired", label: "Retired" },
 ];
@@ -113,7 +113,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
   const tiles: { f: Filter; label: string; short?: string; value: number; tone: string; sub: string }[] = [
     { f: "overdue", label: "Overdue", value: c.overdue, tone: c.overdue ? "text-red-400" : "text-ink", sub: "test or cert past due" },
     { f: "due", label: "Due in 30 days", value: c.due, tone: c.due ? "text-amber-400" : "text-ink", sub: "get these scheduled" },
-    { f: "down", label: "Red-tagged or missing", short: "Red-tagged / missing", value: c.down, tone: c.down ? "text-red-400" : "text-ink", sub: "can't go out" },
+    { f: "down", label: "Pulled from service", short: "Pulled from service", value: c.down, tone: c.down ? "text-red-400" : "text-ink", sub: "can't go out" },
     { f: "all", label: "Current", value: current, tone: "text-emerald-400", sub: `of ${c.tracked} pieces tracked` },
   ];
 

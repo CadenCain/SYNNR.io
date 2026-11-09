@@ -13,7 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Getting set up · RollReady" };
+export const metadata = { title: "Getting set up" };
 
 /** Name every yard they paid for in one form (each still checked against the plan). */
 async function nameYards(formData: FormData) {

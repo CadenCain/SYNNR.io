@@ -5,6 +5,8 @@ import EquipmentView, { type Filter, type PlaceFilter } from "@/app/app/_compone
 import { getYardRules } from "@/lib/saas/yard-rules";
 import { addEquipment } from "./actions";
 
+export const metadata = { title: "Equipment" };
+
 export const dynamic = "force-dynamic";
 
 const FILTERS = new Set<Filter>(["all", "overdue", "due", "down", "no_paper", "retired"]);

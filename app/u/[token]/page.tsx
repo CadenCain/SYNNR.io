@@ -12,7 +12,7 @@ import SubmitForm from "./submit-form";
  */
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Card update · SYNNR",
+  title: "Card update · RollReady",
   robots: { index: false, follow: false },
 };
 

@@ -13,6 +13,11 @@ import { Table, Th, Td, Tr } from "@/components/ui/table";
 import { buttonClass } from "@/components/ui/button";
 import ComplianceTable, { type CompItem } from "./compliance-table";
 
+export const metadata = { title: "Tests due" };
+
+/** The time now, read outside render (the page renders once per request). */
+const clock = () => Date.now();
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -44,7 +49,7 @@ export default async function CompliancePage() {
       .limit(50),
     db.from("saas_alert_recipients").select("name, channels").eq("company_id", company.id),
     db.from("saas_events").select("message, created_at").eq("company_id", company.id).eq("kind", "alert_failed")
-      .gte("created_at", new Date(Date.now() - 7 * 86400e3).toISOString())
+      .gte("created_at", new Date(clock() - 7 * 86400e3).toISOString())
       .order("created_at", { ascending: false }).limit(5),
   ]);
   // Retired iron is kept for the record but isn't due for anything.

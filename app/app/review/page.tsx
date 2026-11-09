@@ -9,6 +9,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import ReviewButtons from "./review-buttons";
 
+export const metadata = { title: "Review uploads" };
+
+/** The time now, read outside render (the page renders once per request). */
+const clock = () => Date.now();
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -38,7 +43,7 @@ export default async function ReviewPage() {
     );
   }
   const db = await saasDb();
-  const since = new Date(Date.now() - 30 * 86400e3).toISOString();
+  const since = new Date(clock() - 30 * 86400e3).toISOString();
 
   const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: checkData }] = await Promise.all([
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).eq("status", "waiting").order("created_at", { ascending: true }),

@@ -10,6 +10,8 @@ import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
 import { canLowerAllowance } from "@/lib/saas/entitlements";
 import { STATUS_LABEL, PER_YARD_DOLLARS, monthlyDollars, money, planLine } from "@/lib/saas/plan";
 
+export const metadata = { title: "Billing" };
+
 export const dynamic = "force-dynamic";
 
 async function saveNptRate(formData: FormData) {

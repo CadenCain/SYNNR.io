@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 
+export const metadata = { title: "Rules" };
+
 export const dynamic = "force-dynamic";
 
 async function saveRules(fd: FormData) {

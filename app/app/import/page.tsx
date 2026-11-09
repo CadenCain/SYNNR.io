@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import ImportClient from "./import-client";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Import a list · RollReady" };
+export const metadata = { title: "Import a list" };
 
 /**
  * Hardened import: dry-run preview, row-level errors, idempotent re-import,

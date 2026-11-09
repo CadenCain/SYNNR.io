@@ -7,6 +7,8 @@ import { smsConfigured } from "@/lib/saas/notify";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+export const metadata = { title: "Notifications" };
+
 export const dynamic = "force-dynamic";
 
 const fld = "h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]";

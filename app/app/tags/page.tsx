@@ -10,6 +10,8 @@ import PrintButton from "./print-button";
 import { NfcWriteButton, NfcHowTo, NfcSheetHint } from "@/app/app/_components/nfc-write";
 import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
 
+export const metadata = { title: "QR tags" };
+
 export const dynamic = "force-dynamic";
 
 /**

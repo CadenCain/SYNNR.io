@@ -7,7 +7,9 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { signOutTools } from "./actions";
 
-export interface Pickable { id: string; name: string; serial: string | null; where: string; blocked: string | null; redress: boolean }
+export interface Pickable { id: string; name: string; serial: string | null; where: string; blocked: string | null; redress: boolean;
+  /** A tool, or anything sitting in the yard (not on a truck): what people sign out. Shown before searching. */
+  usual: boolean }
 
 /**
  * Sign tools out to yourself: find it, tap it, say what job (if you want),
@@ -24,7 +26,8 @@ export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
 
   const shown = useMemo(() => {
     const f = q.trim().toLowerCase();
-    const hits = pieces.filter((p) => !f || `${p.name} ${p.serial ?? ""} ${p.where}`.toLowerCase().includes(f));
+    // Before searching: the tools and what's in the yard. Searching finds anything.
+    const hits = pieces.filter((p) => f ? `${p.name} ${p.serial ?? ""} ${p.where}`.toLowerCase().includes(f) : p.usual);
     // Picked ones stay in view; otherwise a short list, sign-out tools first.
     return [...pieces.filter((p) => picked.includes(p.id) && !hits.includes(p)), ...hits].slice(0, f ? 40 : 12);
   }, [pieces, q, picked]);
@@ -78,7 +81,7 @@ export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
             </button>
           );
         })}
-        {!shown.length ? <p className="text-sm text-ink-faint">Nothing matches. Check the name or serial.</p> : null}
+        {!shown.length ? <p className="text-sm text-ink-faint">{q.trim() ? "Nothing matches. Check the name or serial." : "Type a name or serial to find any piece."}</p> : null}
       </div>
       {picked.length ? (
         <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 flex flex-col gap-2 rounded-2xl border border-line bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">

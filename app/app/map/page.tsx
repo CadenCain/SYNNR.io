@@ -5,6 +5,8 @@ import { getCompanyReadiness } from "@/lib/saas/readiness";
 import YardMap from "@/app/app/_components/yard-map";
 import { fmtWhen } from "@/lib/saas/format";
 
+export const metadata = { title: "Yard map" };
+
 export const dynamic = "force-dynamic";
 
 /** Every truck and rack in the yard, and the iron on it, colored by status. */

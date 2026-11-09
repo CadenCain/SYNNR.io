@@ -5,7 +5,7 @@ import { isDemoUser } from "@/lib/saas/plan";
 import LoginForm from "./login-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Log in · SYNNR" };
+export const metadata = { title: "Log in · RollReady" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; invite?: string }> }) {
   const { next, invite } = await searchParams;

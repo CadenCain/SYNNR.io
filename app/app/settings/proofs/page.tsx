@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
 import { revokeReadinessProof } from "@/app/app/_proof-actions";
 
+export const metadata = { title: "Proof links" };
+
 export const dynamic = "force-dynamic";
 
 export default async function ProofsSettings() {

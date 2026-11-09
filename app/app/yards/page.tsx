@@ -13,6 +13,8 @@ import { monthlyDollars, money } from "@/lib/saas/plan";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
 
+export const metadata = { title: "Yards & trucks" };
+
 export const dynamic = "force-dynamic";
 
 /**

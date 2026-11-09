@@ -3,6 +3,8 @@ import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck } 
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
 
+export const metadata = { title: "Settings" };
+
 export const dynamic = "force-dynamic";
 
 export default async function SettingsHub() {

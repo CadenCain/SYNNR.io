@@ -18,7 +18,7 @@ import { saasDb } from "@/lib/saas/db";
 // and this layout wears the banner. Locking a lapsed shop out entirely
 // would break "cancel anytime, your data stays exportable."
 export const metadata: Metadata = {
-  title: "RollReady",
+  title: { default: "RollReady", template: "%s · RollReady" },
   robots: { index: false, follow: false },
 };
 
