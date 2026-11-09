@@ -85,6 +85,19 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         ) : null}
       </section>
 
+      {rec.roll_checks?.length ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold">Before it rolled</h2>
+          {rec.roll_checks.map((c) => (
+            <div key={c.label} className={cn("flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border p-3 text-sm",
+              c.ok ? "border-line bg-surface" : "border-red-500/40 bg-red-500/[0.06]")}>
+              <span className="break-words font-medium">{c.ok ? "✓" : "✕"} {c.label}</span>
+              <span className={c.ok ? "text-ink-dim" : "text-red-400"}>{c.ok ? `${c.by ?? ""}${c.at ? ` ${time(c.at)}` : ""}` : "Not confirmed"}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
       {photo ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold">Photo of the loaded truck</h2>

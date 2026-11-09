@@ -45,8 +45,12 @@ export interface EquipRow {
   note: string | null;
   /** When a load-out scan last proved it was on the truck it's logged on (null if never, or it's moved since). */
   scannedAt: string | null;
-  /** Left on a load-out that rolled and not checked back in since. */
+  /** Left on a load-out that rolled (or signed out to a person) and not checked back in since. */
   outSince: string | null;
+  /** Signed out to this person, not a truck. */
+  outWith: string | null;
+  /** Came back from a run and hasn't been redressed yet: it can't go out. */
+  needsRedress: boolean;
   next: EquipNext | null;
   itemCount: number;
   state: EquipState;
@@ -62,12 +66,12 @@ export interface EquipmentList {
 const RANK: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, due_soon: 3, ok: 4 };
 export const STATE_ORDER: Record<EquipState, number> = { down: 0, overdue: 1, due: 2, no_paper: 3, ok: 4, retired: 5 };
 
-export interface RawAsset { id: string; name: string; category: string; identifier: string | null; status: string; yard_id: string | null; unit_id: string | null; last_seen_where?: string | null; scanned_at?: string | null; scanned_unit_id?: string | null; out_since?: string | null }
+export interface RawAsset { id: string; name: string; category: string; identifier: string | null; status: string; yard_id: string | null; unit_id: string | null; last_seen_where?: string | null; scanned_at?: string | null; scanned_unit_id?: string | null; out_since?: string | null; out_with_name?: string | null; needs_redress_since?: string | null }
 export interface RawItem { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string; last_upload_id: string | null }
 
 export async function getEquipment(db: SupabaseClient, companyId: string): Promise<EquipmentList> {
   const [{ data: assetData }, { data: unitData }, { data: yardData }, { data: itemData }] = await Promise.all([
-    db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, last_seen_where, scanned_at, scanned_unit_id, out_since")
+    db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, last_seen_where, scanned_at, scanned_unit_id, out_since, out_with_name, needs_redress_since")
       .eq("company_id", companyId).order("name"),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", companyId).order("name"),
     db.from("saas_yards").select("id, name").eq("company_id", companyId).order("name"),
@@ -100,8 +104,8 @@ export function buildEquipment(
   const rows: EquipRow[] = raw.assets.map((a) => {
     const unit = a.unit_id ? unitById.get(a.unit_id) ?? null : null;
     const yardOf = unit?.yard_id ?? a.yard_id ?? null;
-    const where = unit
-      ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}`
+    const where = a.out_with_name ? `With ${a.out_with_name}`
+      : unit ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}`
       : (a.yard_id && yardName.get(a.yard_id)) || "No location";
 
     const items = itemsByAsset.get(a.id) ?? [];
@@ -116,7 +120,7 @@ export function buildEquipment(
 
     let state: EquipState;
     if (a.status === "retired") state = "retired";
-    else if (a.status === "out_of_service" || a.status === "missing") state = "down";
+    else if (a.status === "out_of_service" || a.status === "missing" || a.needs_redress_since) state = "down";
     else if (!next) state = "no_paper";
     else if (next.result === "expired" || next.result === "missing") state = "overdue";
     else if (next.result === "due_soon" || next.result === "pending") state = "due";
@@ -128,6 +132,8 @@ export function buildEquipment(
       where, yardOf, note: a.last_seen_where?.trim() || null,
       scannedAt: a.scanned_at && a.unit_id && a.scanned_unit_id === a.unit_id ? a.scanned_at : null,
       outSince: a.out_since ?? null,
+      outWith: a.out_with_name ?? null,
+      needsRedress: Boolean(a.needs_redress_since),
       next, itemCount: items.length, state,
     };
   });
@@ -155,7 +161,7 @@ export const STATE_LABEL: Record<EquipState, string> = {
 };
 
 /** Status chip text for one row: red-tagged and missing read differently. */
-export function stateLabel(r: Pick<EquipRow, "state" | "status">): string {
-  if (r.state === "down") return r.status === "missing" ? "Missing" : "Red-tagged";
+export function stateLabel(r: Pick<EquipRow, "state" | "status"> & { needsRedress?: boolean }): string {
+  if (r.state === "down") return r.status === "missing" ? "Missing" : r.status === "out_of_service" ? "Red-tagged" : r.needsRedress ? "Needs redress" : "Red-tagged";
   return STATE_LABEL[r.state];
 }

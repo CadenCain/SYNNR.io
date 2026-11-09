@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { summaryText, type DaySummary } from "../morning-summary";
+import { summaryText, damagedLine, type DaySummary } from "../morning-summary";
 import { lateLine } from "../plans";
 
-const base: DaySummary = { company: "Caprock", loadouts: 0, ready: 0, blocked: [], overrides: [], checkins: 0, unscanned: [], late: [], outTooLong: [], idle: [], noPaper: 0 };
+const base: DaySummary = { company: "Caprock", loadouts: 0, ready: 0, blocked: [], overrides: [], checkins: 0, unscanned: [], late: [], outTooLong: [], idle: [], damaged: [], noPaper: 0 };
 
 describe("the managers' morning email", () => {
   it("a quiet yard gets no email", () => {
@@ -41,5 +41,16 @@ describe("planned to leave, never scanned out", () => {
   });
   it("rolled: fine", () => {
     expect(lateLine(plan, { finished_at: "2026-11-04T10:30:00Z", rolled: true }, after, t)).toBeNull();
+  });
+  it("names whose job a damaged piece came back from", () => {
+    const line = damagedLine({ name: "Quad BOP #11", serial: "QB-4411", red_tag: "rams bent",
+      went_out: { truck: "CT-03", by: "Dale Wooten", at: "2026-11-02T10:00:00Z" } }, "Freddy Carrasco");
+    expect(line).toBe("Quad BOP #11 QB-4411: rams bent. Went out on CT-03 Nov 2, loaded by Dale Wooten. Checked in by Freddy Carrasco.");
+    expect(damagedLine({ name: "Silver Fox setting tool #2", serial: null, red_tag: "threads galled", went_out: { with: "Lupe Cardenas", at: "2026-11-01T15:00:00Z" } }, "Lupe Cardenas"))
+      .toBe("Silver Fox setting tool #2: threads galled. Signed out to Lupe Cardenas Nov 1. Checked in by Lupe Cardenas.");
+    const m = summaryText({ ...base, checkins: 1, damaged: [line], redressWaiting: 2 })!;
+    expect(m.subject).toBe("RollReady: 1 piece came back damaged at Caprock");
+    expect(m.body).toContain("Came back damaged:\n  Quad BOP #11 QB-4411: rams bent.");
+    expect(m.body).toContain("2 tools are back from a run and waiting on redress.");
   });
 });

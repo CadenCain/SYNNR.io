@@ -25,6 +25,12 @@ export interface DemoAsset {
   name: string; category: string; identifier?: string; status?: string; items?: DemoItem[];
   /** Where-it-is note ("rack 2"). */
   note?: string;
+  /** Redressed after every run (setting tools). */
+  redress?: boolean;
+  /** Back from a run this many days ago and not redressed yet. */
+  needsRedressDaysAgo?: number;
+  /** Signed out to a person, not a truck. */
+  signedOut?: { to: string; daysAgo: number; job: string };
 }
 export interface DemoUnit {
   key: string; name: string; type: string; identifier?: string;
@@ -143,6 +149,10 @@ export const DEMO_YARD_IRON: DemoAsset[] = [
   { name: "2in 1502 pup joint, 10 ft", category: "flow_iron", identifier: "PJ-3312", items: [annual(RECERT, "test", 200)] },
   { name: "2in 1502 pup joint, 6 ft", category: "flow_iron", identifier: "PJ-3318", items: [annual(RECERT, "test", 28)] },
   { name: "Test pump & chart recorder", category: "equipment", identifier: "TP-01", items: [{ title: "Chart recorder calibration", kind: "inspection", exp: 50, issued: -130 }] },
+  // Setting tools: signed out to a hand, not a truck, and redressed after every run.
+  { name: "Silver Fox setting tool #1", category: "tool", identifier: "SF-101", redress: true, note: "tool room, shelf B" },
+  { name: "Silver Fox setting tool #2", category: "tool", identifier: "SF-102", redress: true, signedOut: { to: "Dale Wooten", daysAgo: 9, job: "plug set, Pecos County" } },
+  { name: "Silver Fox setting tool #3", category: "tool", identifier: "SF-103", redress: true, needsRedressDaysAgo: 1, note: "tool room, back from a run" },
 ];
 
 /** Where some of it has been. Every other piece starts where it sits now. */
@@ -183,10 +193,13 @@ export const DEMO_RETURNS: { unitKey: string; by: string; daysAgo: number; hour:
 ];
 
 /** Packages for kinds of jobs. Every truck's kit is made from what's on it (kitLinesFrom). */
-export const DEMO_PACKAGES: { name: string; lines: { label: string; qty: number }[] }[] = [
-  { name: "Standard Coil Package", lines: [{ label: "Lubricator", qty: 1 }, { label: "2in 1502 pup joint", qty: 2 }] },
+export const DEMO_PACKAGES: { name: string; lines: { label: string; qty: number }[]; checks?: string[] }[] = [
+  { name: "Standard Coil Package", lines: [{ label: "Lubricator", qty: 1 }, { label: "2in 1502 pup joint", qty: 2 }], checks: ["Everything strapped and padded"] },
   { name: "Pump-down package", lines: [{ label: "2in 1502 plug valve", qty: 1 }, { label: "2in 1502 Chiksan swivel", qty: 1 }] },
 ];
+
+/** What every truck's kit asks the hand to tap before it rolls. */
+export const DEMO_KIT_CHECKS = ["BOP rams closed for travel"];
 
 /** A manager's plan for CT-01's next job: two pup joints off the yard rack. */
 export const DEMO_PLAN = {

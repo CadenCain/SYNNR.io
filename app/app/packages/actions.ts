@@ -6,6 +6,7 @@ import { requireBillableCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
 import { kitLinesFrom } from "@/lib/saas/loadout-lines";
+import { cleanChecks } from "@/lib/saas/roll-checks";
 
 /**
  * Packages (a list for a kind of job, like "Standard Coil Package") and
@@ -61,6 +62,22 @@ export async function createPackage(fd: FormData) {
   void logEvent({ companyId: company.id, kind: "package_changed", actor: actorOf(user), message: `Package made: ${name}` });
   revalidatePath("/app/packages");
   redirect(`/app/packages/${(data as { id: string }).id}`);
+}
+
+/** The taps a hand makes before the truck rolls ("BOP rams closed for travel"), up to three. */
+export async function setRollChecks(fd: FormData) {
+  const { company, user, db } = await manager();
+  const actor = actorOf(user);
+  const packageId = str(fd, "package_id");
+  const unitId = str(fd, "unit_id");
+  const pkg = packageId ? await ownPackage(db, company.id, packageId) : unitId ? await kitFor(db, company.id, unitId, actor) : null;
+  if (!pkg) return;
+  const checks = cleanChecks(fd.getAll("check"));
+  const { error } = await db.from("saas_packages").update({ roll_checks: checks }).eq("id", pkg.id).eq("company_id", company.id);
+  if (error) throw new Error(error.message);
+  void logEvent({ companyId: company.id, kind: "package_changed", unitId: pkg.unit_id, actor,
+    message: checks.length ? `${pkg.name}: before it rolls, ${checks.join("; ")}` : `${pkg.name}: no checks before it rolls` });
+  refresh(pkg);
 }
 
 export async function renamePackage(fd: FormData) {

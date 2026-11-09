@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ListTodo } from "lucide-react";
+import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ListTodo, Wrench } from "lucide-react";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -88,7 +88,10 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
             <p className="text-sm text-ink-dim">Pick it once. This phone remembers it.</p>
           </Card>
         )}
-        <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check iron in from any truck</Link>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check iron in</Link>
+          <Link href="/app/signout" className={buttonClass("outline", "lg", "h-12 text-base")}><Wrench className="h-5 w-5" /> Sign out a tool</Link>
+        </div>
         {tips}
         {others.length > 0 ? (
           <details className="group rounded-2xl border border-line bg-surface">
@@ -112,6 +115,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check iron in</Link>
+          <Link href="/app/signout" className={buttonClass("outline", "sm")}><Wrench className="h-4 w-4" /> Tools out</Link>
           <Link href="/app/packages" className={buttonClass("outline", "sm")}><Boxes className="h-4 w-4" /> Packages &amp; kits</Link>
           <Link href="/app/loadouts" className={buttonClass("outline", "sm")}><History className="h-4 w-4" /> All load-outs</Link>
           <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; trucks</Link>

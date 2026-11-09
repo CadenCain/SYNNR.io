@@ -30,7 +30,7 @@ export default async function YardReturnPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader back={{ href: "/app", label: "Load out" }} title="Check iron in"
-        description="For iron that came back without its truck: a hotshot, the testing company, a pickup. Scan it and say where it sits." />
+        description="For iron that came back without its truck (a hotshot, the testing company, a pickup) and tools signed out to someone. Tap each one and say where it sits." />
       <ReturnScanner truck={null} pieces={pieces} outDays={outDays} yards={yards} defaultYardId={yards[0]?.id ?? null} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} />
     </div>
   );

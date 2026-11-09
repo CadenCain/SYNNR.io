@@ -24,7 +24,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
     getYardRules(db, company.id),
     db.from("saas_loadout_scans").select("finished_at, scanned_by, verdict, packages")
       .eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
-    db.from("saas_packages").select("id, name, unit_id, saas_package_lines(label, qty, sort)")
+    db.from("saas_packages").select("id, name, unit_id, roll_checks, saas_package_lines(label, qty, sort)")
       .eq("company_id", company.id).or(`unit_id.is.null,unit_id.eq.${unitId}`).order("name"),
   ]);
   const unit = unitRow as { id: string; name: string } | null;
@@ -39,11 +39,11 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   }
 
   const last = lastRow as { finished_at: string; scanned_by: string | null; verdict: string | null; packages: string[] | null } | null;
-  type Pkg = { id: string; name: string; unit_id: string | null; saas_package_lines: (KitLine & { sort: number })[] | null };
+  type Pkg = { id: string; name: string; unit_id: string | null; roll_checks: string[] | null; saas_package_lines: (KitLine & { sort: number })[] | null };
   const linesOf = (x: Pkg): KitLine[] => [...(x.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }));
   const all = (pkgRows ?? []) as Pkg[];
   const kitRow = all.find((x) => x.unit_id === unit.id);
-  const packages: PackageOption[] = all.filter((x) => !x.unit_id).map((x) => ({ id: x.id, name: x.name, lines: linesOf(x) }));
+  const packages: PackageOption[] = all.filter((x) => !x.unit_id).map((x) => ({ id: x.id, name: x.name, lines: linesOf(x), checks: x.roll_checks ?? [] }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,7 +55,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
           : "No load-out scanned on this truck yet."}
       />
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
-        kit={kitRow ? linesOf(kitRow) : []} packages={packages}
+        kit={kitRow ? linesOf(kitRow) : []} kitChecks={kitRow?.roll_checks ?? []} packages={packages}
         lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
         plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
         tagRule={rules.requireTagScan}

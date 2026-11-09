@@ -9,6 +9,7 @@ import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { tagKey } from "@/lib/saas/tag-key";
 import { linkTag, finishLoadout } from "./actions";
 import { getBrowserSupabase } from "@/lib/supabase/client";
+import { requiredChecks } from "@/lib/saas/roll-checks";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,7 @@ import { useWakeLock, useResumeWhenVisible, primeSound, scanSound } from "../../
  */
 
 export interface KitLine { label: string; qty: number }
-export interface PackageOption { id: string; name: string; lines: KitLine[] }
+export interface PackageOption { id: string; name: string; lines: KitLine[]; checks?: string[] }
 
 interface NdefRecordLike { recordType: string; data?: DataView; encoding?: string }
 interface NdefReadingLike { serialNumber: string; message: { records: NdefRecordLike[] } }
@@ -57,7 +58,7 @@ const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "nu
 
 // Scans live on the phone until the load-out is saved, so a dead zone, a
 // dropped call, or a closed tab never loses them.
-type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; savedAt: number };
+type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; savedAt: number };
 const draftKey = (truckId: string) => `rr-loadout-${truckId}`;
 /** The saved draft's raw text if it's from the last 18 hours and has scans, else null. */
 const readDraftRaw = (truckId: string): string | null => {
@@ -89,11 +90,13 @@ async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | nu
 
 export interface ScanPlan { by: string | null; at: string; note: string | null; packageIds: string[]; lines: KitLine[] }
 
-export default function LoadoutScanner({ truck, pieces, kit, packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
   kit: KitLine[];
+  /** What the truck's kit asks the hand to confirm before it rolls. */
+  kitChecks?: string[];
   /** Packages a hand can add for the job. */
   packages: PackageOption[];
   manager?: boolean;
@@ -151,6 +154,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const [quickLabel, setQuickLabel] = useState("");
   const [quickQty, setQuickQty] = useState("1");
   const [photo, setPhoto] = useState<Photo | null>(null);
+  // Roll checks tapped, by label, with when.
+  const [checked, setChecked] = useState<Record<string, number>>({});
   const [photoErr, setPhotoErr] = useState("");
   const photoInput = useRef<HTMLInputElement | null>(null);
   const uploadedPath = useRef<string | null>(null);
@@ -173,6 +178,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   // The list, filled in as pieces get scanned.
   const picked = useMemo(() => packages.filter((x) => packageIds.includes(x.id)), [packages, packageIds]);
   const planned = useMemo(() => plan?.lines ?? [], [plan]);
+  const askChecks = useMemo(() => requiredChecks(kitChecks, ...picked.map((x) => x.checks)), [kitChecks, picked]);
   const lineLabels = useMemo(() => expectedLines({ kit, packages: picked, planned, quick }).map((l) => l.label), [kit, picked, planned, quick]);
   /** In a scan-only yard: this piece has to be scanned off its tag. */
   const needsTag = (p: ScanPiece) => tagRule && needsTagScan(p, lineLabels, TESTED_CATEGORIES);
@@ -230,13 +236,14 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   // Keep the load-out on the phone as it happens.
   useEffect(() => {
     if (saved || Object.keys(scans).length === 0) return;
-    writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, savedAt: Date.now() });
-  }, [scans, outcomes, packageIds, quick, startedAt, saved, truck.id]);
+    writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, checks: checked, savedAt: Date.now() });
+  }, [scans, outcomes, packageIds, quick, checked, startedAt, saved, truck.id]);
 
   function pickUpDraft() {
     if (!draft) return;
     setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt);
     setPackageIds([...new Set([...lockedIds, ...(draft.packageIds ?? [])])].filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
+    setChecked(draft.checks ?? {});
     setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
@@ -409,6 +416,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         unitId: truck.id, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
         notScanned, packageIds, quick, photoPath,
+        checks: askChecks.filter((c) => checked[c]).map((c) => ({ label: c, at: checked[c] })),
       });
     } catch {
       // No signal (or the request died). Everything is still on the phone.
@@ -473,7 +481,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           {!ready ? (
-            <button type="button" onClick={() => { setSaved(null); setScans({}); setOutcomes({}); setFinishing(false); setBanner(null); setPhoto(null); uploadedPath.current = null; setStartedAt(new Date().toISOString()); }}
+            <button type="button" onClick={() => { setSaved(null); setScans({}); setOutcomes({}); setFinishing(false); setBanner(null); setPhoto(null); setChecked({}); uploadedPath.current = null; setStartedAt(new Date().toISOString()); }}
               className={buttonClass("default", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Fix it and scan again</button>
           ) : null}
           <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready ? "default" : "outline", "lg", "h-14 text-base")}>
@@ -492,7 +500,8 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
   const nothingScanned = Object.keys(scans).length === 0;
   const byHandNotAllowed = list.filter((p) => scans[p.id]?.how === "hand" && needsTag(p));
   const noPhoto = photoRule === "required" && askPhoto && !photo;
-  const willBlock = nothingScanned || noPhoto || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
+  const notTapped = askChecks.filter((c) => !checked[c]);
+  const willBlock = nothingScanned || noPhoto || notTapped.length > 0 || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
   const required = lines.reduce((n, l) => n + l.qty, 0);
@@ -822,11 +831,33 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
               ))}
             </div>
           ) : null}
+          {askChecks.length ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
+              <div className="font-semibold">Before it rolls</div>
+              <p className="-mt-1 text-sm text-ink-dim">Tap each one when it&apos;s done. Your name goes on it.</p>
+              {askChecks.map((c) => {
+                const on = Boolean(checked[c]);
+                return (
+                  <button key={c} type="button" aria-pressed={on}
+                    onClick={() => setChecked((x) => { const n = { ...x }; if (on) delete n[c]; else n[c] = Date.now(); return n; })}
+                    className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left",
+                      on ? "border-emerald-500/50 bg-emerald-500/10" : "border-line-2 hover:bg-elevated")}>
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
+                      on ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400" : "border-line-2 text-ink-faint")}>
+                      {on ? <Check className="h-4 w-4" /> : null}
+                    </span>
+                    <span className="min-w-0 flex-1 break-words text-[15px] font-semibold">{c}</span>
+                    {on ? <span className="shrink-0 text-[13px] text-ink-faint">{clock(checked[c])}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           {askPhoto ? (
             <div className={cn("flex flex-col gap-3 rounded-xl border p-3", photo ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-2 border-bone/60 bg-bone/[0.07]")}>
               <div>
                 <div className="font-semibold">Photo of the loaded truck{photoRule === "optional" && !photo ? <span className="ml-2 text-xs font-normal text-ink-faint">optional in the demo</span> : null}</div>
-                {!photo ? <p className="text-sm text-ink-dim">Stand back so the whole load shows. It goes on the record with your name and the time, and the operator sees it on the proof link.</p> : null}
+                {!photo ? <p className="text-sm text-ink-dim">Stand back so the whole load shows, strapped down. It goes on the record with your name and the time, and the operator sees it on the proof link.</p> : null}
               </div>
               {photo ? (
                 <div className="flex items-start gap-3">
@@ -849,6 +880,7 @@ export default function LoadoutScanner({ truck, pieces, kit, packages, manager =
             {willBlock ? (
               <ul className="mt-1 flex flex-col gap-1 text-sm font-medium">
                 {nothingScanned ? <li>Nothing was scanned onto the truck</li> : null}
+                {notTapped.map((c) => <li key={`c${c}`}>Not confirmed: {c}</li>)}
                 {noPhoto ? <li>No photo of the loaded truck</li> : null}
                 {short.map((l, i) => <li key={`s${i}`}>Short: {l.label}, {l.filled.length} of {l.qty} scanned</li>)}
                 {redScanned.map((p) => <li key={`r${p.id}`}>Bad piece on the truck: {pieceText(p)}. Take it off and scan a good one.</li>)}

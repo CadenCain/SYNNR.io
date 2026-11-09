@@ -4,6 +4,7 @@ import { saasDb } from "@/lib/saas/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonClass } from "@/components/ui/button";
 import LinesEditor from "../../_components/lines-editor";
+import RollChecksEditor from "../../_components/roll-checks-editor";
 import { renamePackage, deletePackage } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +15,12 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const db = await saasDb();
   const [{ data: pkg }, { data: lineRows }, { data: names }] = await Promise.all([
-    db.from("saas_packages").select("id, name, unit_id").eq("id", id).eq("company_id", company.id).maybeSingle(),
+    db.from("saas_packages").select("id, name, unit_id, roll_checks").eq("id", id).eq("company_id", company.id).maybeSingle(),
     db.from("saas_package_lines").select("id, label, qty").eq("package_id", id).eq("company_id", company.id).order("sort"),
     db.from("saas_assets").select("name").eq("company_id", company.id).neq("status", "retired").limit(2000),
   ]);
   if (!pkg) notFound();
-  const p = pkg as { id: string; name: string; unit_id: string | null };
+  const p = pkg as { id: string; name: string; unit_id: string | null; roll_checks: string[] | null };
   if (p.unit_id) redirect(`/app/units/${p.unit_id}/kit`);
   const manager = company.role === "owner" || company.role === "admin";
   const pieceNames = [...new Set(((names ?? []) as { name: string }[]).map((n) => n.name.replace(/\s*#\s*\d+\b/g, "").trim()))].sort();
@@ -37,6 +38,7 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
         </form>
       ) : null}
       <LinesEditor lines={(lineRows ?? []) as { id: string; label: string; qty: number }[]} editable={manager} packageId={p.id} pieceNames={pieceNames} />
+      <RollChecksEditor checks={p.roll_checks ?? []} editable={manager} packageId={p.id} />
       {manager ? (
         <details className="self-start text-sm">
           <summary className="cursor-pointer text-ink-dim">Delete this package</summary>

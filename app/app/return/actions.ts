@@ -100,9 +100,9 @@ export async function finishReturn(input: {
 
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notReturned.map((n) => n.assetId)])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since, tag_token, nfc_uid").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since, tag_token, nfc_uid, out_loadout_id, out_with_name, redress_each_run").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null; tag_token: string | null; nfc_uid: string | null };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null; tag_token: string | null; nfc_uid: string | null; out_loadout_id: string | null; out_with_name: string | null; redress_each_run: boolean };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const unitNames = new Map<string, string>();
   const otherUnitIds = [...new Set(((assetRows ?? []) as A[]).map((a) => a.unit_id).filter((x): x is string => Boolean(x)))];
@@ -110,6 +110,20 @@ export async function finishReturn(input: {
     const { data: u } = await db.from("saas_units").select("id, name").eq("company_id", company.id).in("id", otherUnitIds);
     for (const r of (u ?? []) as { id: string; name: string }[]) unitNames.set(r.id, r.name);
   }
+
+  // Where each piece had been: the load-out it rolled on (truck, who loaded
+  // it, when) or the person it was signed out to. Kept on the record, so a
+  // piece that comes back damaged says whose job it came back from.
+  const loIds = [...new Set(((assetRows ?? []) as A[]).map((a) => a.out_loadout_id).filter((x): x is string => Boolean(x)))];
+  const { data: loRows } = loIds.length
+    ? await admin.from("saas_loadout_scans").select("id, unit_name, scanned_by, finished_at").eq("company_id", company.id).in("id", loIds)
+    : { data: [] };
+  const loById = new Map(((loRows ?? []) as { id: string; unit_name: string; scanned_by: string | null; finished_at: string }[]).map((l) => [l.id, l]));
+  const wentOut = (a: A) => {
+    if (a.out_with_name) return { with: a.out_with_name, at: a.out_since };
+    const l = a.out_loadout_id ? loById.get(a.out_loadout_id) : null;
+    return l ? { truck: l.unit_name, by: l.scanned_by, at: l.finished_at, loadout_id: l.id } : null;
+  };
 
   const now = new Date().toISOString();
   const nowMs = Date.parse(now);
@@ -146,7 +160,7 @@ export async function finishReturn(input: {
 
   const back = { last_seen_by: actor, last_seen_at: now };
   // Off the job: only the server writes these (the database turns a phone away).
-  const offJob = { returned_at: now, returned_by: actor, out_since: null, out_loadout_id: null, out_alerted_at: null };
+  const offJob = { returned_at: now, returned_by: actor, out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null };
   // Back on the truck, one write.
   const onTruck = scans.filter((s) => s.to === "truck");
   if (onTruck.length && unit) {
@@ -195,6 +209,16 @@ export async function finishReturn(input: {
   }
   const tagged = scans.filter((x) => x.how !== "hand").map((x) => x.assetId);
   if (tagged.length) await admin.from("saas_assets").update({ tag_seen_at: now }).eq("company_id", company.id).in("id", tagged);
+  // Signed out to someone and back now: the sign-out closes.
+  const scanIdsAll = scans.map((x) => x.assetId);
+  if (scanIdsAll.length) {
+    await admin.from("saas_signouts").update({ back_at: now, back_by: actor })
+      .eq("company_id", company.id).in("asset_id", scanIdsAll).is("back_at", null);
+  }
+  // Tools that get redressed after every run come back reading "Needs
+  // redress" and can't go out again until someone redresses them.
+  const redress = scans.filter((x) => byId.get(x.assetId)!.redress_each_run).map((x) => x.assetId);
+  if (redress.length) await admin.from("saas_assets").update({ needs_redress_since: now }).eq("company_id", company.id).in("id", redress);
 
   const { data: rec, error: recErr } = await admin.from("saas_returns").insert({
     company_id: company.id, yard_id: yard.id, unit_id: unit?.id ?? null, unit_name: unit?.name ?? null,
@@ -203,7 +227,8 @@ export async function finishReturn(input: {
       const a = byId.get(s.assetId)!;
       return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, to: s.to,
         rack: s.to === "yard" ? s.rack || null : null, from_unit: a.unit_id ? unitNames.get(a.unit_id) ?? null : null, red_tag: s.redTag,
-        out_days: a.out_since ? daysOut(a.out_since, nowMs) : null, red: red.has(a.id) };
+        out_days: a.out_since ? daysOut(a.out_since, nowMs) : null, red: red.has(a.id), went_out: wentOut(a),
+        needs_redress: redress.includes(a.id) };
     }),
     not_returned: notReturned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   }).select("id").single();
@@ -224,6 +249,7 @@ export async function finishReturn(input: {
   const taggedNow = scans.filter((x) => x.redTag).length;
   if (taggedNow) parts.push(`${taggedNow} red-tagged at check-in (${scans.filter((x) => x.redTag).map((x) => `${byId.get(x.assetId)!.name}: ${x.redTag}`).slice(0, 2).join("; ")})`);
   if (red.size - taggedNow > 0) parts.push(`${red.size - taggedNow} came back out of test or red-tagged`);
+  if (redress.length) parts.push(`${redress.length} ${redress.length === 1 ? "needs" : "need"} redress`);
   const summary = `${unit ? `${unit.name} checked in` : `Iron checked into ${yard.name}`} by ${actor}: ${parts.join(", ") || "nothing scanned"}`;
   void logEvent({ companyId: company.id, kind: "returned", unitId: unit?.id ?? null, actor, message: summary });
   // A truck that comes back without having been cleared to roll: nobody

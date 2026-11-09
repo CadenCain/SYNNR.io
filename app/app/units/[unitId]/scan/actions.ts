@@ -14,6 +14,7 @@ import { provenHow } from "@/lib/saas/scan-proof";
 import { getOpenPlan } from "@/lib/saas/plans";
 import { getYardRules } from "@/lib/saas/yard-rules";
 import { photoPathOk } from "@/lib/saas/loadout-photo";
+import { requiredChecks, missingChecks } from "@/lib/saas/roll-checks";
 
 type Outcome = "yard" | "missing";
 
@@ -94,6 +95,8 @@ export async function finishLoadout(input: {
   quick?: { label: string; qty: number }[];
   /** Where the phone put the photo of the loaded truck (proofs bucket). */
   photoPath?: string;
+  /** The roll checks the hand tapped, and when. */
+  checks?: { label: string; at?: number }[];
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
@@ -118,13 +121,13 @@ export async function finishLoadout(input: {
   const [plan, rules] = await Promise.all([getOpenPlan(db, company.id, unit.id), getYardRules(db, company.id)]);
   const packageIds = [...new Set([...(plan?.packageIds ?? []), ...(input.packageIds ?? []).filter((x) => typeof x === "string")])].slice(0, 12);
   const [{ data: kitRow }, { data: pkgRows }] = await Promise.all([
-    db.from("saas_packages").select("id, name").eq("company_id", company.id).eq("unit_id", unit.id).maybeSingle(),
+    db.from("saas_packages").select("id, name, roll_checks").eq("company_id", company.id).eq("unit_id", unit.id).maybeSingle(),
     packageIds.length
-      ? db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null).in("id", packageIds)
+      ? db.from("saas_packages").select("id, name, roll_checks").eq("company_id", company.id).is("unit_id", null).in("id", packageIds)
       : Promise.resolve({ data: [] }),
   ]);
-  const kit = kitRow as { id: string; name: string } | null;
-  const pkgs = (pkgRows ?? []) as { id: string; name: string }[];
+  const kit = kitRow as { id: string; name: string; roll_checks: string[] | null } | null;
+  const pkgs = (pkgRows ?? []) as { id: string; name: string; roll_checks: string[] | null }[];
   const listIds = [...(kit ? [kit.id] : []), ...pkgs.map((x) => x.id)];
   const { data: lineRows } = listIds.length
     ? await db.from("saas_package_lines").select("package_id, label, qty, sort").in("package_id", listIds).order("sort")
@@ -146,9 +149,9 @@ export async function finishLoadout(input: {
   const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id);
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null; needs_redress_since: string | null; out_with_user: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const label = (a: A) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}`;
 
@@ -184,10 +187,12 @@ export async function finishLoadout(input: {
   for (const id of scannedIds) {
     const a = byId.get(id)!;
     if (a.status === "out_of_service") bad.push({ id, name: a.name, serial: a.identifier, why: "red_tagged" });
+    // Back from its last run and not redressed yet.
+    else if (a.needs_redress_since) bad.push({ id, name: a.name, serial: a.identifier, why: "needs_redress" });
   }
   for (const it of (itemRows ?? []) as Item[]) {
     const a = byId.get(it.parent_id)!;
-    if (a.status === "out_of_service") continue;
+    if (a.status === "out_of_service" || a.needs_redress_since) continue;
     const r = judgeItem(it, today, today);
     if (r.result === "expired") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "out_of_test", detail: `${it.title} ${r.detail}` });
     else if (isNoPaper(r)) bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "no_paper", detail: it.title });
@@ -216,7 +221,7 @@ export async function finishLoadout(input: {
   bad.push(...untestedPieces({
     scanned: scannedIds.map((id) => { const a = byId.get(id)!; return { id, name: a.name, serial: a.identifier, category: a.category }; }),
     hasTest, filled, testedCategories: TESTED_CATEGORIES, lineIsTested: (label) => testedLabels.has(label),
-  }).filter((p) => byId.get(p.id)!.status !== "out_of_service"));
+  }).filter((p) => byId.get(p.id)!.status !== "out_of_service" && !byId.get(p.id)!.needs_redress_since));
   const redIds = new Set(bad.map((b) => b.id));
   // Each piece's tests as they stood when it went on, kept on the record.
   const testsOf = new Map<string, { title: string; good_until: string | null; result: string; paper: string | null }[]>();
@@ -262,8 +267,16 @@ export async function finishLoadout(input: {
   // Required in a real yard unless a manager turned it off; never in the demo.
   const photoPath = await loadoutPhoto(admin, input.photoPath, company.id, unit.id, startedMs, nowMs);
   const needPhoto = rules.requireLoadoutPhoto && !company.is_demo && !photoPath;
+  // Roll checks: what the kit and the job's packages ask the hand to confirm
+  // before it rolls, from the database, never from the phone.
+  const asked = requiredChecks(kit?.roll_checks, ...pkgs.map((x) => x.roll_checks));
+  const tapped = new Map((input.checks ?? []).filter((c) => typeof c?.label === "string")
+    .map((c) => [c.label.trim().toLowerCase(), typeof c.at === "number" && c.at >= startedMs - 60e3 && c.at <= nowMs + 60e3 ? new Date(c.at).toISOString() : now]));
+  const notTapped = missingChecks(asked, [...tapped.keys()]);
+  const rollChecks = asked.map((label) => ({ label, ok: tapped.has(label.toLowerCase()), at: tapped.get(label.toLowerCase()) ?? null, by: tapped.has(label.toLowerCase()) ? actor : null }));
   const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`),
     ...handChecked.map((a) => `Checked by hand, not scanned off its tag: ${label(a)}`),
+    ...notTapped.map((c) => `Not confirmed: ${c}`),
     ...(needPhoto ? ["No photo of the loaded truck"] : [])];
   const verdict: "ready" | "not_ready" = reasons.length ? "not_ready" : "ready";
 
@@ -301,7 +314,7 @@ export async function finishLoadout(input: {
     scanned_by: actor, scanned_by_user: user.id,
     started_at: startedIso, finished_at: now,
     expected: onList + notScanned.length, scanned: onList,
-    verdict, reasons, photo_path: photoPath,
+    verdict, reasons, photo_path: photoPath, roll_checks: rollChecks.length ? rollChecks : null,
     packages: pkgs.map((x) => x.name),
     plan: plan ? { id: plan.id, by: plan.by, at: plan.at, note: plan.note, packages: pkgs.filter((x) => plan.packageIds.includes(x.id)).map((x) => x.name), lines: plan.lines } : null,
     lines: filled.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: l.filled.map((f) => ({ asset_id: f.id, name: f.name, serial: f.serial })) })),
@@ -321,9 +334,16 @@ export async function finishLoadout(input: {
   // starts the clock then). Anything taken off is back in the yard.
   if (scannedIds.length) {
     await admin.from("saas_assets").update(verdict === "ready"
-      ? { out_since: now, out_loadout_id: saved.id, out_alerted_at: null }
+      ? { out_since: now, out_loadout_id: saved.id, out_alerted_at: null, out_with_user: null, out_with_name: null }
       : { out_since: null, out_loadout_id: null, out_alerted_at: null })
       .eq("company_id", company.id).in("id", scannedIds);
+    // A tool signed out to someone that went on a truck that rolled: it's on
+    // the truck now, so the sign-out closes.
+    const handed = scannedIds.filter((id) => byId.get(id)!.out_with_user);
+    if (verdict === "ready" && handed.length) {
+      await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `went out on ${unit.name}` })
+        .eq("company_id", company.id).in("asset_id", handed).is("back_at", null);
+    }
   }
   const offIds = notScanned.filter((n) => n.outcome === "yard").map((n) => n.assetId);
   if (offIds.length) await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null }).eq("company_id", company.id).in("id", offIds);

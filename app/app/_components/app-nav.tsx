@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History } from "lucide-react";
+import { Boxes, Map as MapIcon, ScanLine, CalendarClock, QrCode, Settings, Plus, LogOut, Search, FileCheck, Menu, X, Package, History, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ThemePicker } from "@/components/theme";
@@ -16,6 +16,7 @@ const TRUCK_PAGES = ["/app/units", "/app/yards", "/app/dispatch", "/app/records"
 const MAIN: NavItem[] = [
   { href: "/app", label: "Load out", icon: ScanLine, exact: true, also: TRUCK_PAGES },
   { href: "/app/loadouts", label: "Load-out records", icon: History },
+  { href: "/app/signout", label: "Tools out", icon: Wrench },
   { href: "/app/packages", label: "Packages & kits", icon: Package },
   { href: "/app/equipment", label: "Equipment", icon: Boxes, also: ["/app/assets", "/app/import"] },
   { href: "/app/map", label: "Yard map", icon: MapIcon },
@@ -215,6 +216,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
             </div>
             {[
               { href: "/app/loadouts", label: "Load-out records", icon: History },
+              { href: "/app/signout", label: "Tools out (sign-out)", icon: Wrench },
               { href: "/app/packages", label: "Packages & kits", icon: Package },
               { href: "/app/welcome", label: "Getting set up", icon: Plus },
               { href: "/app/tags", label: "QR tags", icon: QrCode },

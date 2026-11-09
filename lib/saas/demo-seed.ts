@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_KIT_CHECKS, type DemoAsset,
 } from "./demo-data";
 import { demoLoadoutRecord } from "./demo-loadouts";
 import { kitLinesFrom } from "./loadout-lines";
@@ -77,12 +77,28 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
     .insert(specs.map(({ a, unitKey }) => ({
       company_id: companyId, yard_id: yardId, unit_id: unitKey ? unitId(unitKey) : null,
       name: a.name, category: a.category, identifier: a.identifier ?? null, status: a.status ?? "in_service",
-      last_seen_where: a.note ?? null,
+      last_seen_where: a.signedOut ? `signed out to ${a.signedOut.to} (${a.signedOut.job})` : a.note ?? null,
+      redress_each_run: a.redress ?? false,
+      needs_redress_since: a.needsRedressDaysAgo != null ? tsAgo(a.needsRedressDaysAgo, 16, 40) : null,
+      ...(a.signedOut ? { out_since: tsAgo(a.signedOut.daysAgo, 6, 15), out_with_name: a.signedOut.to } : {}),
     })))
     .select("id, name, identifier");
   if (aErr) throw new Error(`assets: ${aErr.message}`);
   const assetIdByKey = new Map(((assetRows ?? []) as { id: string; name: string; identifier: string | null }[])
     .map((r) => [r.identifier ?? r.name, r.id]));
+
+  // The sign-out sheet: the setting tool out with a hand now, and earlier runs back.
+  const sheet = DEMO_YARD_IRON.filter((a) => a.redress).flatMap((a) => {
+    const id = assetIdByKey.get(keyOf(a))!;
+    const base = { company_id: companyId, asset_id: id, asset_name: a.name, serial: a.identifier ?? null };
+    const earlier = { ...base, out_name: "Freddy Carrasco", job_note: "plug set, Reeves County", out_at: tsAgo(16, 6, 5), back_at: tsAgo(14, 17, 30), back_by: "Freddy Carrasco" };
+    return a.signedOut
+      ? [earlier, { ...base, out_name: a.signedOut.to, job_note: a.signedOut.job, out_at: tsAgo(a.signedOut.daysAgo, 6, 15) }]
+      : a.needsRedressDaysAgo != null
+        ? [{ ...base, out_name: "Lupe Cardenas", job_note: "packer set, Ward County", out_at: tsAgo(a.needsRedressDaysAgo + 2, 5, 50), back_at: tsAgo(a.needsRedressDaysAgo, 16, 40), back_by: "Lupe Cardenas" }]
+        : [];
+  });
+  if (sheet.length) await admin.from("saas_signouts").insert(sheet);
 
   // Every test and cert, truck paper and iron, one batch.
   // Each test's paper: a sample cert drawn for that piece (app/demo-cert),
@@ -145,8 +161,10 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
     // Packages for kinds of jobs, and every truck's kit made from what's on it.
     (async () => {
       const { data: pk, error } = await admin.from("saas_packages").insert([
-        ...DEMO_PACKAGES.map((p) => ({ company_id: companyId, name: p.name, created_by: "Kevin Odom" })),
-        ...DEMO_UNITS.filter((u) => (u.assets ?? []).length).map((u) => ({ company_id: companyId, unit_id: unitId(u.key), name: `${u.name} kit`, created_by: "Kevin Odom" })),
+        ...DEMO_PACKAGES.map((p) => ({ company_id: companyId, name: p.name, created_by: "Kevin Odom", roll_checks: p.checks ?? [] })),
+        ...DEMO_UNITS.filter((u) => (u.assets ?? []).length).map((u) => ({ company_id: companyId, unit_id: unitId(u.key), name: `${u.name} kit`, created_by: "Kevin Odom",
+          // Trucks that carry a BOP ask for the rams closed before they roll.
+          roll_checks: (u.assets ?? []).some((a) => /\bBOP\b/i.test(a.name)) ? DEMO_KIT_CHECKS : [] })),
       ]).select("id, name, unit_id");
       if (error) throw new Error(`packages: ${error.message}`);
       const rows = (pk ?? []) as { id: string; name: string; unit_id: string | null }[];
@@ -344,7 +362,7 @@ export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
 // its members, and its proof links are kept: the reaper deletes those too,
 // a refresh must not.
 const YARD_TABLES = [
-  "saas_alerts_sent", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_alerts_sent", "saas_signouts", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
   "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
@@ -403,7 +421,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const { data: members } = await admin.from("saas_memberships").select("user_id").eq("company_id", cid);
       // Child tables first (not everything cascades), company last, users after.
       const tables = [
-        "saas_alerts_sent", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+        "saas_alerts_sent", "saas_signouts", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",

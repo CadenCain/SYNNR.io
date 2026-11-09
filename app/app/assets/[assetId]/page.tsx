@@ -28,6 +28,7 @@ import { localToday } from "@/lib/saas/status";
 import { qrSvg, tagUrl } from "@/lib/saas/qr";
 import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
 import PhotoUpload from "./photo-upload";
+import { markRedressed, setRedressEachRun } from "@/app/app/signout/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +41,10 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const here = `/app/assets/${assetId}`;
 
   const { data: asset } = await db
-    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id, yard_id, tag_token, last_seen_where, last_seen_by, last_seen_at, scanned_at, scanned_by, scanned_unit_id")
+    .from("saas_assets").select("id, name, category, identifier, status, primary_photo_path, unit_id, yard_id, tag_token, last_seen_where, last_seen_by, last_seen_at, scanned_at, scanned_by, scanned_unit_id, redress_each_run, needs_redress_since, out_with_name, out_since")
     .eq("id", assetId).eq("company_id", company.id).maybeSingle();
   if (!asset) notFound();
-  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; yard_id: string | null; tag_token: string; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null; scanned_at: string | null; scanned_by: string | null; scanned_unit_id: string | null };
+  const a = asset as { id: string; name: string; category: string; identifier: string | null; status: string; primary_photo_path: string | null; unit_id: string | null; yard_id: string | null; tag_token: string; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null; scanned_at: string | null; scanned_by: string | null; scanned_unit_id: string | null; redress_each_run: boolean; needs_redress_since: string | null; out_with_name: string | null; out_since: string | null };
 
   // Where it is, the places it could move to, and where it's been.
   const [{ data: unitData }, { data: yardData }, { data: moveData }] = await Promise.all([
@@ -104,6 +105,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const status = a.status === "out_of_service" ? { label: "Red-tagged", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : a.status === "missing" ? { label: "Missing", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : a.status === "retired" ? { label: "Retired", cls: "border-line-2 bg-elevated text-ink-faint" }
+    : a.needs_redress_since ? { label: "Needs redress", cls: "border-amber-500/40 bg-amber-500/10 text-amber-400" }
     : !next ? { label: "No paper yet", cls: "border-line-2 bg-elevated text-ink-dim" }
     : isNoPaper(next.j) ? { label: "No paper", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
     : next.j.result === "expired" || next.j.result === "missing" ? { label: "Overdue", cls: "border-red-500/40 bg-red-500/10 text-red-400" }
@@ -223,6 +225,29 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
       ) : a.status === "retired" ? (
         <Card className="p-4 text-sm text-ink-dim">Retired. It&apos;s kept for the record but left out of every count, alert, and truck check.</Card>
       ) : null}
+
+      {a.needs_redress_since && a.status !== "retired" ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-amber-500/40 bg-amber-500/[0.06] p-4 text-sm">
+          <p className="min-w-0 text-amber-300">Needs redress. Came back from a run {fmtWhen(a.needs_redress_since)}, and it can&apos;t go out again until it&apos;s redressed.</p>
+          <form action={markRedressed}>
+            <input type="hidden" name="asset_id" value={a.id} />
+            <Button type="submit">Redressed</Button>
+          </form>
+        </Card>
+      ) : null}
+      {a.out_with_name ? (
+        <Card className="p-4 text-sm text-ink-dim">Signed out to <span className="font-medium text-ink">{a.out_with_name}</span>{a.out_since ? ` since ${fmtWhen(a.out_since)}` : ""}. It stays out with them until it&apos;s checked back in. <Link href="/app/signout" className="text-bone underline underline-offset-2">Tools out</Link></Card>
+      ) : null}
+      {isManager && a.status !== "retired" ? (
+        <form action={setRedressEachRun} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
+          <input type="hidden" name="asset_id" value={a.id} />
+          <input type="hidden" name="on" value={a.redress_each_run ? "0" : "1"} />
+          <span className="min-w-0 text-ink-dim">{a.redress_each_run
+            ? "Redressed after every run: when it comes back, it reads Needs redress until someone redresses it."
+            : "Gets redressed after every run, like a setting tool? Turn this on and it can't go back out until someone marks it redressed."}</span>
+          <button type="submit" className={buttonClass("outline", "default")}>{a.redress_each_run ? "Turn off" : "Redress after every run"}</button>
+        </form>
+      ) : a.redress_each_run ? <p className="text-[13px] text-ink-faint">Redressed after every run.</p> : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-ink-dim">Tests, certs &amp; inspections</h2>

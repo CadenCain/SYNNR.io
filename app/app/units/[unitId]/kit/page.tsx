@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import LinesEditor from "../../../_components/lines-editor";
+import RollChecksEditor from "../../../_components/roll-checks-editor";
 import { kitFromTruck } from "../../../packages/actions";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +18,14 @@ export default async function TruckKitPage({ params }: { params: Promise<{ unitI
   const db = await saasDb();
   const [{ data: unit }, { data: kit }, { data: names }, { count: onTruck }] = await Promise.all([
     db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
-    db.from("saas_packages").select("id, saas_package_lines(id, label, qty, sort)").eq("company_id", company.id).eq("unit_id", unitId).maybeSingle(),
+    db.from("saas_packages").select("id, roll_checks, saas_package_lines(id, label, qty, sort)").eq("company_id", company.id).eq("unit_id", unitId).maybeSingle(),
     db.from("saas_assets").select("name").eq("company_id", company.id).neq("status", "retired").limit(2000),
     db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("unit_id", unitId).neq("status", "retired"),
   ]);
   if (!unit) notFound();
   const u = unit as { id: string; name: string };
-  const lines = [...((kit as { saas_package_lines: { id: string; label: string; qty: number; sort: number }[] } | null)?.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort);
+  const k = kit as { roll_checks: string[] | null; saas_package_lines: { id: string; label: string; qty: number; sort: number }[] } | null;
+  const lines = [...(k?.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort);
   const manager = company.role === "owner" || company.role === "admin";
   const pieceNames = [...new Set(((names ?? []) as { name: string }[]).map((n) => n.name.replace(/\s*#\s*\d+\b/g, "").trim()))].sort();
 
@@ -41,6 +43,7 @@ export default async function TruckKitPage({ params }: { params: Promise<{ unitI
         </Card>
       ) : null}
       <LinesEditor lines={lines} editable={manager} unitId={u.id} pieceNames={pieceNames} />
+      <RollChecksEditor checks={k?.roll_checks ?? []} editable={manager} unitId={u.id} />
       {!manager ? <p className="text-sm text-ink-faint">A manager keeps the kit. Ask one if something should be on it.</p> : null}
     </div>
   );

@@ -20,30 +20,48 @@ export interface DaySummary {
   checkins: number;
   unscanned: string[];    // event messages: came back without being cleared
   late: string[];         // "CT-01: Was planned to leave 5:00 AM. Nobody has scanned it out."
-  outTooLong: string[];   // "CT-08: 5 pieces, out 9 days"
+  outTooLong: string[];   // "CT-08: 5 pieces, out 9 days" or "With Dale Wooten: Silver Fox #2, out 9 days"
+  damaged: string[];      // "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy."
+  redressWaiting?: number; // tools back from a run, not redressed yet
   idle: string[];         // crew with nothing in RollReady in 7 days
   noPaper: number;        // tests with a date but no cert attached
 }
 
 export function summaryText(s: DaySummary): { subject: string; body: string } | null {
-  const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + s.outTooLong.length;
+  const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + s.outTooLong.length + s.damaged.length;
   if (s.loadouts + s.checkins + problems === 0) return null;
   const out: string[] = [];
   out.push(`${s.company}, the last 24 hours:`);
   out.push(`${s.loadouts} ${s.loadouts === 1 ? "load-out" : "load-outs"} (${s.ready} READY${s.blocked.length ? `, ${s.blocked.length} blocked` : ""}), ${s.checkins} ${s.checkins === 1 ? "check-in" : "check-ins"}.`);
   const section = (title: string, rows: string[]) => { if (rows.length) out.push("", title, ...rows.map((r) => `  ${r}`)); };
   section("Not scanned out (the app wasn't used):", [...s.late, ...s.unscanned]);
+  section("Came back damaged:", s.damaged);
   section("Blocked at load-out:", s.blocked);
   section("Rolled on a manager's override:", s.overrides);
   section("Out too long, not checked back in:", s.outTooLong);
   section("On the crew, nothing in RollReady this week:", s.idle);
+  if (s.redressWaiting) out.push("", `${s.redressWaiting} ${s.redressWaiting === 1 ? "tool is" : "tools are"} back from a run and waiting on redress. They can't go out until someone redresses them.`);
   if (s.noPaper) out.push("", `${s.noPaper} ${s.noPaper === 1 ? "test has" : "tests have"} a date but no cert attached, so that iron can't go out.`);
   out.push("", "Open RollReady: https://www.synnr.io/app");
   const flag = s.late.length + s.unscanned.length;
   const subject = flag
     ? `RollReady: ${flag} ${flag === 1 ? "truck" : "trucks"} not scanned out at ${s.company}`
+    : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
     : `RollReady: yesterday at ${s.company}`;
   return { subject, body: out.join("\n") };
+}
+
+/** A piece as a check-in record keeps it (the parts the morning email reads). */
+interface ReturnedPiece { name: string; serial: string | null; red_tag: string | null; went_out?: { truck?: string; by?: string | null; with?: string; at?: string | null } | null }
+
+const dayText = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
+
+/** "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy." */
+export function damagedLine(p: ReturnedPiece, checkedInBy: string): string {
+  const w = p.went_out;
+  const where = !w ? "" : w.with ? ` Signed out to ${w.with}${w.at ? ` ${dayText(w.at)}` : ""}.`
+    : w.truck ? ` Went out on ${w.truck}${w.at ? ` ${dayText(w.at)}` : ""}${w.by ? `, loaded by ${w.by}` : ""}.` : "";
+  return `${p.name}${p.serial ? ` ${p.serial}` : ""}: ${p.red_tag}.${where} Checked in by ${checkedInBy}.`;
 }
 
 const timeText = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: YARD_TZ, weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -65,7 +83,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         admin.from("saas_events").select("message").eq("company_id", c.id).eq("kind", "unscanned_trip").gte("created_at", since),
         admin.from("saas_loadout_plans").select("unit_id, created_at, leaves_at").eq("company_id", c.id).is("used_at", null).not("leaves_at", "is", null),
         admin.from("saas_units").select("id, name").eq("company_id", c.id),
-        admin.from("saas_assets").select("unit_id, out_since").eq("company_id", c.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
+        admin.from("saas_assets").select("unit_id, out_since, out_with_name, name, identifier").eq("company_id", c.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
         admin.from("saas_enforcement_settings").select("out_alert_days").eq("company_id", c.id).maybeSingle(),
         admin.from("saas_memberships").select("user_id").eq("company_id", c.id).eq("status", "active"),
         admin.from("saas_events").select("actor").eq("company_id", c.id).gte("created_at", weekAgo).not("actor", "is", null).limit(3000),
@@ -90,11 +108,23 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
 
       const limit = (rules as { out_alert_days: number | null } | null)?.out_alert_days ?? DEFAULT_OUT_ALERT_DAYS;
       const outByTruck = new Map<string, number[]>();
-      for (const r of (outRows ?? []) as { unit_id: string | null; out_since: string }[]) {
+      const withPeople: string[] = [];
+      for (const r of (outRows ?? []) as { unit_id: string | null; out_since: string; out_with_name: string | null; name: string; identifier: string | null }[]) {
         const d = daysOut(r.out_since, now);
-        if (d >= limit) outByTruck.set(r.unit_id ?? "", [...(outByTruck.get(r.unit_id ?? "") ?? []), d]);
+        if (d < limit) continue;
+        // Signed out to a person: name the person and the tool.
+        if (r.out_with_name) withPeople.push(`With ${r.out_with_name}: ${r.name}${r.identifier ? ` ${r.identifier}` : ""}, out ${d} days`);
+        else outByTruck.set(r.unit_id ?? "", [...(outByTruck.get(r.unit_id ?? "") ?? []), d]);
       }
-      const outTooLong = [...outByTruck].map(([u, ds]) => `${unitName.get(u) ?? "In the yard"}: ${ds.length} ${ds.length === 1 ? "piece" : "pieces"}, out ${Math.max(...ds)} days`);
+      const outTooLong = [...[...outByTruck].map(([u, ds]) => `${unitName.get(u) ?? "In the yard"}: ${ds.length} ${ds.length === 1 ? "piece" : "pieces"}, out ${Math.max(...ds)} days`), ...withPeople];
+
+      // Came back damaged: red-tagged at check-in, with whose job it came back from.
+      const [{ data: rets }, { count: redressWaiting }] = await Promise.all([
+        admin.from("saas_returns").select("returned_by, pieces").eq("company_id", c.id).gte("finished_at", since),
+        admin.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", c.id).not("needs_redress_since", "is", null).neq("status", "retired"),
+      ]);
+      const damaged = ((rets ?? []) as { returned_by: string; pieces: ReturnedPiece[] | null }[])
+        .flatMap((r) => (r.pieces ?? []).filter((p) => p.red_tag).map((p) => damagedLine(p, r.returned_by)));
 
       // Who's on the crew but hasn't done anything in a week.
       const active = new Set(((weekEv ?? []) as { actor: string }[]).map((e) => e.actor));
@@ -113,7 +143,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         overrides: ovs.map((o) => `${loads.find((l) => l.id === o.loadout_id)?.unit_name ?? "A truck"} by ${o.by_name}: "${o.reason}"`),
         checkins: checkins ?? 0,
         unscanned: ((ev ?? []) as { message: string }[]).map((e) => e.message),
-        late, outTooLong, idle,
+        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0,
         noPaper: noPaper ?? 0,
       };
       const msg = summaryText(s);
