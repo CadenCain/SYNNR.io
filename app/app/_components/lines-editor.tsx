@@ -23,7 +23,7 @@ export default function LinesEditor({ lines, editable, packageId, unitId, pieceN
       {lines.length === 0 ? <Card className="p-4 text-sm text-ink-dim">Nothing on this list yet.</Card> : null}
       {lines.map((l) => (
         <Card key={l.id} className="flex flex-wrap items-center gap-3 p-3">
-          <div className="min-w-0 flex-1 break-words font-medium">{l.label}</div>
+          <div className="w-full min-w-0 break-words font-medium sm:w-auto sm:flex-1">{l.label}</div>
           {editable ? (
             <>
               <form action={setLineQty} className="flex items-center gap-2">

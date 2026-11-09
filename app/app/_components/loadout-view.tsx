@@ -89,7 +89,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
           </Card>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check iron in</Link>
+          <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check in tools or loose iron</Link>
           <Link href="/app/signout" className={buttonClass("outline", "lg", "h-12 text-base")}><Wrench className="h-5 w-5" /> Sign out a tool</Link>
         </div>
         {tips}
@@ -170,7 +170,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
             { n: iron.out, label: "Pieces out on jobs", sub: iron.outTooLong ? `${iron.outTooLong} out ${alertDays}+ days` : "all within the limit", href: "/app/equipment?place=out", bad: iron.outTooLong > 0 },
             { n: iron.outOfTest, label: "Out of test or no paper", sub: "can't go out", href: "/app/equipment?f=overdue", bad: iron.outOfTest > 0 },
             { n: iron.dueSoon, label: "Test due soon", sub: "book the recert", href: "/app/compliance", bad: false },
-            { n: iron.down, label: "Red-tagged or missing", sub: "pulled from service", href: "/app/equipment?f=down", bad: iron.down > 0 },
+            { n: iron.down, label: "Pulled from service", sub: "red-tagged, missing, or needs redress", href: "/app/equipment?f=down", bad: iron.down > 0 },
           ].map((x) => (
             <Link key={x.label} href={x.href} className="rounded-2xl border border-line bg-surface px-3 py-3 hover:border-bone/50 sm:px-4">
               <div className="text-[12px] font-medium leading-tight text-ink-dim sm:text-[13px]">{x.label}</div>

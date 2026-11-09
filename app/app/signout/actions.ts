@@ -73,18 +73,25 @@ export async function signOutTools(input: { assetIds: string[]; note?: string })
   if (refused.length) return { ok: false, refused, error: "Nothing was signed out. Leave these behind or get them fixed first." };
 
   const now = new Date().toISOString();
-  const { error } = await admin.from("saas_assets").update({
+  // Only what's still free right now: two hands tapping the same tool at
+  // the same moment can't both walk off with it on paper.
+  const { data: took, error } = await admin.from("saas_assets").update({
     out_since: now, out_with_user: user.id, out_with_name: actor, out_loadout_id: null, out_alerted_at: null,
     unit_id: null, last_seen_where: `signed out to ${actor} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
-  }).eq("company_id", company.id).in("id", ids);
+  }).eq("company_id", company.id).in("id", ids).is("out_since", null).is("needs_redress_since", null).select("id");
   if (error) return { ok: false, error: `Couldn't sign it out: ${error.message}` };
-  await admin.from("saas_signouts").insert(assets.map((a) => ({
+  const gotIds = new Set(((took ?? []) as { id: string }[]).map((r) => r.id));
+  const missed = assets.filter((a) => !gotIds.has(a.id));
+  const got = assets.filter((a) => gotIds.has(a.id));
+  if (!got.length) return { ok: false, error: "Someone else just signed that out. Reload to see who has it." };
+  await admin.from("saas_signouts").insert(got.map((a) => ({
     company_id: company.id, asset_id: a.id, asset_name: a.name, serial: a.identifier,
     out_user: user.id, out_name: actor, job_note: note, out_at: now,
   })));
-  const summary = `${actor} signed out ${assets.map(label).join(", ")}${note ? ` for ${note}` : ""}`;
+  const summary = `${actor} signed out ${got.map(label).join(", ")}${note ? ` for ${note}` : ""}`;
   void logEvent({ companyId: company.id, kind: "signed_out", actor, message: summary });
   refresh();
+  if (missed.length) return { ok: true, summary, refused: missed.map((a) => ({ name: label(a), why: "Someone else just signed it out" })) };
   return { ok: true, summary };
 }
 

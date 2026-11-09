@@ -89,7 +89,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                         <div className="break-words text-sm text-ink-dim">{p.where}{p.note ? `, ${p.note}` : ""}</div>
                         <div className="mt-0.5 flex flex-wrap gap-x-3 text-sm">
                           <span className={cn("font-medium", PLACE_TONE[p.place])}>{PLACE_LABEL[p.place]}{out ? outText(days) : ""}</span>
-                          {p.state === "down" ? null : <span className={STATE_TONE[p.state]}>{p.state === "ok" || p.state === "due" || p.state === "overdue" ? (p.next ? `${p.next.title}: ${p.next.detail}` : stateLabel(p)) : stateLabel(p)}</span>}
+                          {p.state === "down" ? (p.needsRedress && p.status !== "out_of_service" && p.status !== "missing" ? <span className="font-medium text-amber-400">Needs redress</span> : null) : <span className={STATE_TONE[p.state]}>{p.state === "ok" || p.state === "due" || p.state === "overdue" ? (p.next ? `${p.next.title}: ${p.next.detail}` : stateLabel(p)) : stateLabel(p)}</span>}
                         </div>
                       </div>
                     </Link>

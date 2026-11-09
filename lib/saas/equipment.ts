@@ -129,7 +129,10 @@ export function buildEquipment(
     return {
       id: a.id, name: a.name, category: a.category, identifier: a.identifier, status: a.status,
       yardId: a.yard_id, unitId: a.unit_id, unitName: unit?.name ?? null,
-      where, yardOf, note: a.last_seen_where?.trim() || null,
+      // Signed out: "With Dale Wooten" already says who, so the note keeps only the job.
+      where, yardOf, note: a.out_with_name && /^signed out to /i.test(a.last_seen_where ?? "")
+        ? (/\(([^)]*)\)\s*$/.exec(a.last_seen_where ?? "")?.[1] ?? null)
+        : a.last_seen_where?.trim() || null,
       scannedAt: a.scanned_at && a.unit_id && a.scanned_unit_id === a.unit_id ? a.scanned_at : null,
       outSince: a.out_since ?? null,
       outWith: a.out_with_name ?? null,

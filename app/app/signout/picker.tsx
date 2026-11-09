@@ -35,7 +35,8 @@ export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
     try {
       const r = await signOutTools({ assetIds: picked, note });
       if (r.ok) {
-        setMsg({ tone: "good", text: `Signed out to you: ${picked.length} ${picked.length === 1 ? "tool" : "tools"}. Check it back in when it comes back.` });
+        const n = picked.length - (r.refused?.length ?? 0);
+        setMsg({ tone: r.refused?.length ? "bad" : "good", text: `Signed out to you: ${n} ${n === 1 ? "tool" : "tools"}. Check it back in when it comes back.`, list: r.refused });
         setPicked([]); setNote(""); setQ("");
         router.refresh();
       } else {
