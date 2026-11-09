@@ -5,23 +5,24 @@ import { LegalShell } from "../LegalShell";
 // login" pivot, the opposite of what customers now sign up for.
 //
 // LAWYER FLAGS (get real counsel before serious revenue):
-//  - Entity name: confirm "Darkstar Dynamics LLC" is still the operating
-//    entity behind the business bank account, or update it.
+//  - Entity name: Darkstar Dynamics LLC, confirmed by Caden 2026-11-09. The
+//    site and company brand is SYNNR; RollReady is the product under it.
 //  - Liability cap + disclaimer wording (§6–7) — the compliance disclaimer is
 //    the load-bearing wall of this document.
 //  - Governing law / venue (§10) and whether Texas arbitration is preferred.
 //  - Data-retention window after cancellation (§4).
 
-export const metadata = { title: "Terms of Service · RollReady" };
+export const metadata = { title: "Terms of Service · SYNNR" };
 
 export default function TermsPage() {
   return (
     <LegalShell eyebrow="Legal" title="Terms of Service" updated="November 9, 2026">
       <h2>1. Who we are, what this covers</h2>
       <p>
-        RollReady is load-out software for oilfield service yards, made by SYNNR (&ldquo;SYNNR,&rdquo;
-        &ldquo;we,&rdquo; &ldquo;us&rdquo;) and operated by Darkstar Dynamics LLC. These terms govern your use of the
-        website and application at synnr.io. By creating an account or using the service you agree to them.
+        SYNNR (synnr.io) is owned and run by Darkstar Dynamics LLC (&ldquo;SYNNR,&rdquo; &ldquo;we,&rdquo;
+        &ldquo;us&rdquo;). RollReady is SYNNR&apos;s load-out software for oilfield service yards. These terms
+        govern your use of the website and application at synnr.io. By creating an account or using the
+        service you agree to them.
       </p>
 
       <h2>2. What the service is, and what it isn&apos;t</h2>

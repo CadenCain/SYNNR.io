@@ -4,11 +4,16 @@ import { LegalShell } from "../LegalShell";
 // marketing site). Rewritten 2026-08-19. Lawyer flags: retention windows,
 // whether Texas/CCPA-style rights language is needed as customers grow.
 
-export const metadata = { title: "Privacy Policy · RollReady" };
+export const metadata = { title: "Privacy Policy · SYNNR" };
 
 export default function PrivacyPage() {
   return (
     <LegalShell eyebrow="Legal" title="Privacy Policy" updated="November 9, 2026">
+      <p>
+        SYNNR (synnr.io) is owned and run by Darkstar Dynamics LLC (&ldquo;SYNNR,&rdquo; &ldquo;we,&rdquo;
+        &ldquo;us&rdquo;). This covers the website and RollReady, SYNNR&apos;s load-out software.
+      </p>
+
       <h2>1. What we collect</h2>
       <p>
         <strong>Account data:</strong> your email, name, and company name when you sign up.{" "}

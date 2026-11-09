@@ -311,7 +311,7 @@ export default function Home() {
             <Link href="/legal/terms">Terms</Link>
             <Link href="/legal/privacy">Privacy</Link>
           </nav>
-          <span className="rr-copy">© 2026 SYNNR</span>
+          <span className="rr-copy">© 2026 SYNNR · Darkstar Dynamics LLC</span>
         </div>
       </footer>
     </div>

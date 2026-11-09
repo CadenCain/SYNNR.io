@@ -58,7 +58,7 @@ export function SiteFooter() {
           <a href="/login">Log in</a>
           <a href="/legal/terms">Terms</a>
           <a href="/legal/privacy">Privacy</a>
-          <span className="copy">&copy; 2026 SYNNR</span>
+          <span className="copy">&copy; 2026 SYNNR · Darkstar Dynamics LLC</span>
         </div>
       </div>
     </footer>

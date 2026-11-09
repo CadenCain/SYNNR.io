@@ -35,11 +35,8 @@ export function LegalShell({
         <h1>{title}</h1>
         <div className="updated">Last updated {updated}</div>
         {children}
-        <div className="note">
-          <b>This is placeholder legal copy</b> for the SYNNR.io preview, not
-          reviewed by counsel. Replace it with attorney-reviewed Terms and a
-          Privacy Policy before processing live payments or production data.
-        </div>
+        {/* Not yet reviewed by a lawyer (see the flags at the top of terms/page.tsx).
+            Get it reviewed before signing big customers; the public page doesn't say "placeholder". */}
       </article>
     </div>
   );
