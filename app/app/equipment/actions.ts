@@ -79,6 +79,11 @@ export async function moveEquipment(fd: FormData) {
   // sign-out closes, or it would read "With Dale" forever.
   const admin = saasAdmin();
   const now = new Date().toISOString();
+  // Back from a run, the same as a check-in: a tool set to be redressed after
+  // every run needs it now. (First, while it still reads as out.)
+  await admin?.from("saas_assets").update({ needs_redress_since: now })
+    .eq("id", id).eq("company_id", company.id).eq("redress_each_run", true).is("needs_redress_since", null)
+    .or("out_since.not.is.null,out_with_user.not.is.null");
   await admin?.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null })
     .eq("id", id).eq("company_id", company.id).or("out_since.not.is.null,out_with_user.not.is.null,out_with_name.not.is.null");
   await admin?.from("saas_signouts").update({ back_at: now, back_by: by, back_note: `moved${note ? `: ${note}` : ""}` })

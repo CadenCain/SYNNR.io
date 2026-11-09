@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isReservedYardName } from "@/lib/saas/billing-rules";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { Check, ArrowRight } from "lucide-react";
@@ -20,7 +21,8 @@ async function nameYards(formData: FormData) {
   "use server";
   const { company } = await requireBillableCompany();
   assertCan(company, "create_yard");
-  const names = formData.getAll("yard").map((v) => String(v).trim().slice(0, 80)).filter(Boolean);
+  // The sample yard's name is the app's own (it doesn't count toward the bill).
+  const names = formData.getAll("yard").map((v) => String(v).trim().slice(0, 80)).filter((n) => n && !isReservedYardName(n));
   const db = await saasDb();
   let room = company.comped ? names.length : Math.max(0, company.yard_quantity - (await billableYardCount(company.id)));
   for (const name of names) {

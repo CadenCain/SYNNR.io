@@ -144,11 +144,18 @@ export async function finishLoadout(input: {
   // manager rolled the first try, it was checked in, or someone loaded it out
   // since) is stale: saving it would rewrite a truck that's already gone.
   if (firstTry?.id) {
-    const [{ data: ov }, { data: back }, { data: newer }] = await Promise.all([
-      admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", firstTry.id).maybeSingle(),
+    const [{ data: back }, { data: laterRows }] = await Promise.all([
       admin.from("saas_returns").select("id").eq("company_id", company.id).eq("unit_id", unit.id).gt("finished_at", firstTry.finishedAt).limit(1).maybeSingle(),
-      admin.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", unit.id).gt("finished_at", firstTry.finishedAt).limit(1).maybeSingle(),
+      admin.from("saas_loadout_scans").select("id, scanned_by_user, started_at, verdict").eq("company_id", company.id).eq("unit_id", unit.id).gt("finished_at", firstTry.finishedAt).limit(50),
     ]);
+    // This hand's own NOT READY tries since the first one are the same fix
+    // chain, not a newer load-out. Anyone else's, or a READY one, is.
+    const later = (laterRows ?? []) as { id: string; scanned_by_user: string | null; started_at: string; verdict: string | null }[];
+    const chain = later.filter((r) => r.scanned_by_user === user.id && r.verdict !== "ready" && Date.parse(r.started_at) >= keptMs);
+    const newer = later.some((r) => !chain.includes(r));
+    // An override on any try in the chain means the truck already rolled.
+    const { data: ovRows } = await admin.from("saas_loadout_overrides").select("loadout_id").in("loadout_id", [firstTry.id, ...chain.map((r) => r.id)]).limit(1);
+    const ov = ((ovRows ?? []) as unknown[]).length > 0;
     if (ov || back || newer) {
       return { ok: false, stale: true, error: `${unit.name} already ${ov ? "rolled on a manager's override" : back ? "came back and was checked in" : "has a newer load-out"}. This one can't be saved. Start a new load-out from the truck.` };
     }

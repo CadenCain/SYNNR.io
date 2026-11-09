@@ -256,7 +256,13 @@ export async function finishReturn(input: {
   const parts: string[] = [];
   if (onTruck.length && unit) parts.push(`${onTruck.length} back on ${unit.name}`);
   const toYard = scans.length - onTruck.length;
-  if (toYard) parts.push(`${toYard} into ${yard.name}${byRack.size === 1 && [...byRack.keys()][0] ? ` (${[...byRack.keys()][0]})` : ""}`);
+  if (toYard) {
+    // Each yard the pieces went into, by name, and the rack when there's just one.
+    const groups = [...byRack.values()];
+    const yardNames = [...new Set(groups.map((g) => yards.find((y) => y.id === g.yardId)?.name ?? yard.name))];
+    const oneRack = groups.length === 1 && groups[0].rack ? ` (${groups[0].rack})` : "";
+    parts.push(`${toYard} into ${yardNames.join(" and ")}${oneRack}`);
+  }
   const stillOut = notReturned.filter((n) => n.outcome === "still_out").length;
   const missing = notReturned.filter((n) => n.outcome === "missing").length;
   if (stillOut) parts.push(`${stillOut} still out`);

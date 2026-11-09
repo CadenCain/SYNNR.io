@@ -141,12 +141,20 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   // the piece of gear, or the hand. The cert that turned CT-03 red is often
   // on its BOP stack, not the truck.
   const bad = (st: ComplianceStatus | null | undefined) => st === "expired" || st === "none" || st === "no_paper";
+  // A tool waiting on redress, or pressure iron with no test, is fixed on the
+  // piece's own page, and the button says what to do there.
+  const heldPiece = failingCerts.length > 0 ? null
+    : assets.find((x) => x.needs_redress_since) ?? assets.find((x) => TESTED_CATEGORIES.has(x.category) && !certsByAsset.has(x.id)) ?? null;
   const fixHref = failingCerts.length > 0 ? "#book"
     : (() => {
         const a = assets.find((x) => bad(worstByAsset.get(x.id)));
         if (a) return `/app/assets/${a.id}`;
+        if (heldPiece) return `/app/assets/${heldPiece.id}`;
         return "#book";
       })();
+  const fixLabel = failingCerts.length === 0 && !assets.some((x) => bad(worstByAsset.get(x.id))) && heldPiece
+    ? (heldPiece.needs_redress_since ? "Mark it redressed" : "Add its test")
+    : "Upload the new cert";
   const dueHref = (() => {
     const a = assets.find((x) => worstByAsset.get(x.id) === "expiring");
     if (a) return `/app/assets/${a.id}`;
@@ -260,7 +268,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             )}
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <a href={fixHref} className="flex min-h-14 items-center justify-center rounded-xl bg-white px-5 text-base font-bold text-red-700 sm:min-h-10 sm:bg-bone sm:text-sm sm:text-on-bone">
-                Upload the new cert
+                {fixLabel}
               </a>
               <Link href={`/app/units/${unitId}/dispatch`} className="flex min-h-14 items-center justify-center rounded-xl border-2 border-white/40 px-5 text-base font-semibold text-white sm:min-h-10 sm:border sm:border-line-2 sm:text-sm sm:text-ink">
                 Run the paper check anyway

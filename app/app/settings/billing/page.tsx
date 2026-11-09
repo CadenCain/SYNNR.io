@@ -31,7 +31,7 @@ async function changeAllowance(formData: FormData) {
   const { requireCompany } = await import("@/lib/saas/auth");
   const { company } = await requireCompany();
   assertCan(company, "billing"); // owner only: this moves money
-  if (company.subscription_status !== "active" && company.subscription_status !== "past_due") {
+  if (!["active", "past_due", "trialing"].includes(company.subscription_status)) {
     redirect(`/app/settings/billing?err=${encodeURIComponent("Restart the subscription first, then change yards.")}`);
   }
   const dir = String(formData.get("dir"));
@@ -58,7 +58,7 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
   const c = comp as { subscription_status: string; stripe_customer_id: string | null; npt_day_estimate: number; cancel_at: string | null } | null;
   const status = c?.subscription_status ?? "none";
   const nptDay = c?.npt_day_estimate ?? 10000;
-  const subscribed = status === "active" || status === "past_due";
+  const subscribed = status === "active" || status === "past_due" || status === "trialing";
   const owner = company.role === "owner";
   const plan = company.yard_quantity;
 

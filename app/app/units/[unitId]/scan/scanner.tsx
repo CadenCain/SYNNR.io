@@ -215,7 +215,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const linesDone = lines.filter((l) => l.filled.length >= l.qty && !lineBad(l)).length;
   const pieceNames = useMemo(() => [...new Set(list.map((p) => p.name.replace(/\s*#\s*\d+\b/g, "").trim()))].sort((a, b) => a.localeCompare(b)), [list]);
 
+  // While a save is still sending, the list stays as it was sent, so the
+  // record that lands matches what the hand sees.
+  const lockedNote = () => setBanner({ tone: "warn", text: "Still sending this load-out. Wait for it to land before changing anything." });
   function markScanned(piece: ScanPiece, how: ScanHow, proof?: string) {
+    if (waitingForSignal) { lockedNote(); return; }
     const already = Boolean(scans[piece.id]);
     const msg = scanMessage({ kind: "match", piece, onTruck: piece.unitId === truck.id }, truck.name, already);
     setBanner(msg);
@@ -226,12 +230,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
 
   /** Tapped the wrong row: that one isn't on the truck after all. */
   function undo(piece: ScanPiece) {
+    if (waitingForSignal) { lockedNote(); return; }
     setScans((s) => { const n = { ...s }; delete n[piece.id]; return n; });
     setBanner({ tone: "warn", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is unchecked.` });
   }
 
   /** A bad piece came back off the truck: it's not part of this load-out. */
   function takeOff(piece: ScanPiece) {
+    if (waitingForSignal) { lockedNote(); return; }
     setScans((s) => { const n = { ...s }; delete n[piece.id]; return n; });
     if (piece.unitId === truck.id) setOutcomes((o) => ({ ...o, [piece.id]: "yard" }));
     setBanner({ tone: "good", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is off the truck. Scan the one going in its place.` });
@@ -246,6 +252,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }
 
   async function handleScan(input: { link: string | null; chipId: string | null; how: ScanHow }) {
+    if (waitingForSignal) { lockedNote(); return; }
     const r = await readScan(input, list, truck.id);
     if (r.kind === "match") { markScanned(r.piece, input.how, r.proof); return; }
     if (r.kind === "unknown") {
@@ -525,10 +532,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       // truck that this phone didn't show, and packages the plan added. Show
       // them now, so the next try can account for them.
       const left = res.left ?? [];
+      // Logged on the truck now, so not "still out on the last job" either.
+      if (left.length) setBackOn((b) => [...new Set([...b, ...left.map((x) => x.id)])]);
       if (left.length) setList((l) => [
         ...l.map((p) => left.some((x) => x.id === p.id) ? { ...p, unitId: truck.id } : p),
         ...left.filter((x) => !l.some((p) => p.id === x.id)).map((x) => ({ id: x.id, name: x.name, serial: x.serial, unitId: truck.id, where: truck.name,
-          category: x.category, tagKey: "", extKey: null, problem: null, statusText: "Logged on this truck since this page opened" } satisfies ScanPiece)),
+          category: x.category, tagKey: "", extKey: null, problem: null, statusText: "Logged on this truck since this page opened. Reload the page to scan its tag, or say below where it is" } satisfies ScanPiece)),
       ]);
       const pk = (res.packageIds ?? []).filter((id) => packages.some((x) => x.id === id));
       if (pk.length) setPackageIds((ids) => [...new Set([...ids, ...pk])]);
@@ -947,7 +956,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
               {notYet.map((p) => (
                 <label key={p.id} className="flex flex-col gap-1 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
                   <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${last4 && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
-                  <select value={outcomes[p.id] ?? "yard"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
+                  <select disabled={waitingForSignal} value={outcomes[p.id] ?? "yard"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
                     className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
                     <option value="yard">Not going this trip (stays in the yard)</option>
                     <option value="missing">Can&apos;t find it (flag missing)</option>
@@ -964,6 +973,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
                 const on = Boolean(checked[c]);
                 return (
                   <button key={c} type="button" aria-pressed={on}
+                    disabled={waitingForSignal}
                     onClick={() => setChecked((x) => { const n = { ...x }; if (on) delete n[c]; else n[c] = Date.now(); return n; })}
                     className={cn("flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-2 text-left",
                       on ? "border-emerald-500/50 bg-emerald-500/10" : "border-line-2 hover:bg-elevated")}>
@@ -1019,7 +1029,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             {willBlock ? <p className="mt-2 text-sm text-ink-dim">You can still save it. The record will say NOT READY, and only a manager can roll it anyway.</p> : null}
           </div>
           {saveErr ? <p className={cn("text-sm", waitingForSignal ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
-          {waitingForSignal ? <p className="text-[13px] text-ink-faint">It sends the list as it was when you tapped Save. Anything you change now goes in a new load-out after this one lands.</p> : null}
+          {waitingForSignal ? <p className="text-[13px] text-ink-faint">The list is locked until it sends, so the record matches what you saved. If something needs to change, do it after it lands with Fix it and scan again.</p> : null}
           {failsWithSignal >= 2 ? (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("outline", "lg", "h-14 self-start text-base")}>Reload the page</button>
           ) : null}

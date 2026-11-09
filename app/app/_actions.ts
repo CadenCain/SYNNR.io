@@ -74,7 +74,9 @@ export async function deleteYard(fd: FormData) {
     // delete (unit_id/yard_id are SET NULL, not CASCADE) — collect both.
     const { data: assetRows } = await db.from("saas_assets").select("id")
       .eq("company_id", company.id)
-      .or(`yard_id.eq.${id}${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
+      // Loose in this yard, or riding one of its trucks. Never iron on a truck
+      // that has moved to another yard (its old yard_id can lag).
+      .or(`and(yard_id.eq.${id},unit_id.is.null)${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
     const assetIds = ((assetRows ?? []) as { id: string }[]).map((a) => a.id);
     await purgeItemsFor(db, company.id, "unit", unitIds);
     await purgeItemsFor(db, company.id, "asset", assetIds);
@@ -107,8 +109,13 @@ export async function updateUnit(fd: FormData) {
   }
   const { error } = await db.from("saas_units").update({ name, type, ...identifier, ...yard }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+  // Its iron goes with it: alerts, yard counts and yard proof links follow the piece's yard.
+  if (yard.yard_id) {
+    const { error: ironErr } = await db.from("saas_assets").update({ yard_id: yard.yard_id }).eq("company_id", company.id).eq("unit_id", id);
+    if (ironErr) throw new Error(ironErr.message);
+  }
   revalidatePath(`/app/units/${id}`);
-  if (yard.yard_id) { revalidatePath("/app"); revalidatePath("/app/yards"); }
+  if (yard.yard_id) { revalidatePath("/app"); revalidatePath("/app/yards"); revalidatePath("/app/equipment"); }
 }
 export async function deleteUnit(fd: FormData) {
   const { company } = await requireBillableCompany();
@@ -364,7 +371,7 @@ export async function clearSampleYard() {
     const { data: units } = await db.from("saas_units").select("id").eq("yard_id", yardId);
     const unitIds = ((units ?? []) as { id: string }[]).map((x) => x.id);
     const { data: assets } = await db.from("saas_assets").select("id")
-      .eq("company_id", company.id).or(`yard_id.eq.${yardId}${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
+      .eq("company_id", company.id).or(`and(yard_id.eq.${yardId},unit_id.is.null)${unitIds.length ? `,unit_id.in.(${unitIds.join(",")})` : ""}`);
     const assetIds = ((assets ?? []) as { id: string }[]).map((x) => x.id);
     const parentIds = [...unitIds, ...assetIds];
     if (parentIds.length) {

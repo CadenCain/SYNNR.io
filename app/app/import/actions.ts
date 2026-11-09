@@ -110,9 +110,10 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     if (isReservedYardName(newYard)) {
       return { ok: false, error: "That name is RollReady's own. Pick another name for the yard.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
     }
-    const { data: same } = await db.from("saas_yards").select("id").eq("company_id", company.id)
-      .ilike("name", newYard.trim().replace(/[%_\\]/g, (c) => `\\${c}`)).limit(1).maybeSingle();
-    if (same) resolvedYard = (same as { id: string }).id;
+    // Compared here, not with a database pattern (where % _ and * are wildcards).
+    const { data: yardRows } = await db.from("saas_yards").select("id, name").eq("company_id", company.id);
+    const same = ((yardRows ?? []) as { id: string; name: string }[]).find((y) => y.name.trim().toLowerCase() === newYard.trim().toLowerCase());
+    if (same) resolvedYard = same.id;
   }
   if (!resolvedYard && newYard.trim()) {
     const { count: inUseCount } = await db.from("saas_yards").select("id", { count: "exact", head: true })

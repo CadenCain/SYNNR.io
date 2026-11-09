@@ -135,7 +135,11 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   // Anyone who did anything this week, in any yard: never called idle. (On
   // one yard's view, a hand who worked another yard, or signed a tool out,
   // just isn't listed there.)
+  // Moving iron counts as using it too (left out of the tallies, not out of "active").
+  const { data: moverRows } = await db.from("saas_events").select("actor").eq("company_id", company.id).eq("kind", "asset_moved")
+    .gte("created_at", weekAgo).not("actor", "is", null).order("created_at", { ascending: false }).limit(1000);
   const activeAnywhere = new Set([
+    ...((moverRows ?? []) as { actor: string }[]).map((e) => e.actor),
     ...((weekEvents ?? []) as { actor: string | null }[]).map((e) => e.actor),
     ...((weekScans ?? []) as { scanned_by: string | null }[]).map((s) => s.scanned_by),
   ].filter(Boolean) as string[]);

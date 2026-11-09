@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isReservedYardName } from "@/lib/saas/billing-rules";
 import { cookies, headers } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -28,7 +29,9 @@ async function startCompany(formData: FormData) {
   const name = clip(formData.get("name"), 120);
   const phone = clip(formData.get("contact_phone"), 40);
   const yards = clampYards(formData.get("yards"));
-  const firstYard = clip(formData.get("first_yard"), 80) || null;
+  const typedYard = clip(formData.get("first_yard"), 80) || null;
+  // The sample yard's name is the app's own (it doesn't count toward the bill).
+  const firstYard = typedYard && isReservedYardName(typedYard) ? null : typedYard;
   const bad = (m: string) => redirect(`/onboarding?err=${encodeURIComponent(m)}`);
   if (!name) bad("Add your company's name.");
   if (phone.replace(/\D/g, "").length < 10) bad("Add a phone number with the area code.");

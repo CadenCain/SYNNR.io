@@ -156,13 +156,16 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       // Hands on the crew who haven't done anything in a week. (An owner or
       // office manager who only reads the board isn't idle.) Load-outs and
       // check-ins count even if the feed line didn't land.
-      const [{ data: weekLoads }, { data: weekBacks }] = await Promise.all([
+      const [{ data: weekLoads }, { data: weekBacks }, { data: weekMoves }] = await Promise.all([
         admin.from("saas_loadout_scans").select("scanned_by").eq("company_id", c.id).gte("finished_at", weekAgo).not("scanned_by", "is", null).limit(1000),
         admin.from("saas_returns").select("returned_by").eq("company_id", c.id).gte("finished_at", weekAgo).not("returned_by", "is", null).limit(1000),
+        // Moving iron counts as using it too.
+        admin.from("saas_events").select("actor").eq("company_id", c.id).eq("kind", "asset_moved").gte("created_at", weekAgo).not("actor", "is", null).order("created_at", { ascending: false }).limit(1000),
       ]);
       const active = new Set([...((weekEv ?? []) as { actor: string }[]).map((e) => e.actor),
         ...((weekLoads ?? []) as { scanned_by: string }[]).map((r) => r.scanned_by),
-        ...((weekBacks ?? []) as { returned_by: string }[]).map((r) => r.returned_by)]);
+        ...((weekBacks ?? []) as { returned_by: string }[]).map((r) => r.returned_by),
+        ...((weekMoves ?? []) as { actor: string }[]).map((r) => r.actor)]);
       const hands = ((members ?? []) as { user_id: string; role: string }[]).filter((m) => m.role === "member");
       const idle: string[] = [];
       for (const m of hands.slice(0, 60)) {

@@ -1,4 +1,6 @@
 import { fmtWhen, fmtDate } from "@/lib/saas/format";
+import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
+import { readAll } from "@/lib/saas/read-all";
 import type { Metadata } from "next";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
@@ -77,23 +79,27 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
 
   // Assets in scope
-  let assetQ = admin.from("saas_assets").select("id, name, category, identifier, status, unit_id").eq("company_id", proof.company_id).neq("status", "retired");
-  if (proof.scope === "yard" && proof.yard_id) {
-    const inYard = unitFilter ?? [];
-    assetQ = inYard.length
-      ? assetQ.or(`yard_id.eq.${proof.yard_id},unit_id.in.(${inYard.join(",")})`)
-      : assetQ.eq("yard_id", proof.yard_id);
-  }
-  if (proof.scope === "unit" && proof.unit_id) assetQ = assetQ.eq("unit_id", proof.unit_id);
-  const { data: assetData } = await assetQ.order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; identifier: string | null; status: string; unit_id: string | null }[];
+  // A fresh query per page (query builders change in place).
+  const assetQ = () => {
+    let q = admin.from("saas_assets").select("id, name, category, identifier, status, unit_id, needs_redress_since", { count: "exact" }).eq("company_id", proof.company_id).neq("status", "retired");
+    if (proof.scope === "yard" && proof.yard_id) {
+      const inYard = unitFilter ?? [];
+      q = inYard.length
+        ? q.or(`yard_id.eq.${proof.yard_id},unit_id.in.(${inYard.join(",")})`)
+        : q.eq("yard_id", proof.yard_id);
+    }
+    if (proof.scope === "unit" && proof.unit_id) q = q.eq("unit_id", proof.unit_id);
+    return q;
+  };
+  // Every piece and every test in scope, however big the shop.
+  const assets = await readAll<{ id: string; name: string; category: string; identifier: string | null; status: string; unit_id: string | null; needs_redress_since: string | null }>((a, b) => assetQ().order("name").order("id").range(a, b));
   const assetIds = new Set(assets.map((a) => a.id));
 
   // Compliance items in scope
-  const { data: itemData } = await admin
+  const itemData = await readAll<unknown>((a, b) => admin
     .from("saas_compliance_items_with_status")
-    .select("id, title, kind, expiration_date, pending_until, reminder_days, parent_type, parent_id, last_upload_id")
-    .eq("company_id", proof.company_id).neq("parent_type", "crew");
+    .select("id, title, kind, expiration_date, pending_until, reminder_days, parent_type, parent_id, last_upload_id", { count: "exact" })
+    .eq("company_id", proof.company_id).neq("parent_type", "crew").order("id").range(a, b));
   type Item = { id: string; title: string; kind: string; expiration_date: string | null; pending_until: string | null; reminder_days: number | null; parent_type: string; parent_id: string; last_upload_id: string | null };
   let items = ((itemData ?? []) as Item[]).filter((i) => i.parent_type !== "asset" || assetIds.has(i.parent_id));
   if (unitFilter) {
@@ -129,6 +135,12 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
 
   // The verdict comes from the same rules as the app (lib/saas/judge.ts).
   const gearDown = assets.filter((a) => FAILING_GEAR.has(a.status));
+  // The load-out blocks these too: a tool waiting on redress, pressure iron with no test.
+  const withTests = new Set(items.filter((i) => i.parent_type === "asset").map((i) => i.parent_id));
+  const heldWhy = (a: (typeof assets)[number]) => FAILING_GEAR.has(a.status) ? null
+    : a.needs_redress_since ? "needs redress"
+    : TESTED_CATEGORIES.has(a.category) && !withTests.has(a.id) ? "no test on file" : null;
+  const held = assets.filter((a) => heldWhy(a));
   const failingCount = items.filter((i) => ["expired", "missing"].includes(judged.get(i.id)!.result)).length;
   let blockedUnits = 0;
   let notChecked: string[] = [];
@@ -143,7 +155,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
   // Nothing tracked = nothing proven. An empty scope must never read "Ready".
   const configured = items.length > 0 || assets.length > 0;
-  let ready = configured && failingCount === 0 && gearDown.length === 0 && blockedUnits === 0;
+  let ready = configured && failingCount === 0 && gearDown.length === 0 && held.length === 0 && blockedUnits === 0;
   const generatedAt = fmtWhen(new Date().toISOString());
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
@@ -239,6 +251,8 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               {[
                 failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired, missing a date, or missing the cert` : "",
                 gearDown.length > 0 ? `${gearDown.length} piece${gearDown.length === 1 ? "" : "s"} of iron missing or red-tagged` : "",
+                held.length > 0 ? held.slice(0, 3).map((a) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}: ${heldWhy(a)}`).join("; ") + (held.length > 3 ? ` (and ${held.length - 3} more)` : "") : "",
+                proof.scope !== "unit" && blockedUnits > 0 ? `${blockedUnits} truck${blockedUnits === 1 ? "" : "s"} not ready` : "",
                 blockedAtLoadout ? "NOT READY at its last load-out" : "",
               ].filter(Boolean).join(" · ")}
             </p>
@@ -393,8 +407,8 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                     <td className="border-b border-line/60 px-4 py-3 font-medium">{a.name}</td>
                     <td className="border-b border-line/60 px-4 py-3 text-ink-dim">{a.identifier ?? "None"}</td>
                     <td className="border-b border-line/60 px-4 py-3">
-                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${a.status === "in_service" ? CHIP.valid : CHIP.expired}`}>
-                        {a.status === "out_of_service" ? "red-tagged" : a.status.replace(/_/g, " ")}
+                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${a.status === "in_service" && !heldWhy(a) ? CHIP.valid : CHIP.expired}`}>
+                        {heldWhy(a) ?? (a.status === "out_of_service" ? "red-tagged" : a.status.replace(/_/g, " "))}
                       </span>
                     </td>
                   </tr>

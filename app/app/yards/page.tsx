@@ -63,8 +63,10 @@ async function addYardWithUpgrade(formData: FormData) {
   if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/yards");
   // A name that's taken is refused before the bill moves, not after.
   const db = await saasDb();
-  const { data: taken } = await db.from("saas_yards").select("id").eq("company_id", company.id).ilike("name", name.replace(/[%_\\]/g, (c) => `\\${c}`)).limit(1);
-  if ((taken ?? []).length) redirect(`/app/yards?err=${encodeURIComponent(`You already have a yard named ${name}. Nothing was added to your bill.`)}`);
+  // Compared here, not with a database pattern (where % _ and * are wildcards).
+  const { data: yardNames } = await db.from("saas_yards").select("name").eq("company_id", company.id);
+  const taken = ((yardNames ?? []) as { name: string }[]).some((y) => y.name.trim().toLowerCase() === name.toLowerCase());
+  if (taken) redirect(`/app/yards?err=${encodeURIComponent(`You already have a yard named ${name}. Nothing was added to your bill.`)}`);
   const inUse = await billableYardCount(company.id);
   // One tap: quantity up (prorated), then the yard, same flow. If Stripe
   // refuses, NO yard is created and the real error is shown.

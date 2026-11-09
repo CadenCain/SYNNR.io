@@ -63,7 +63,7 @@ export default async function ToolsOutPage() {
   // What can be picked: everything not out. Bad pieces show why and can't be picked.
   const pickable: Pickable[] = live.filter((r) => !r.outSince).map((r) => {
     const why = r.state === "down" ? stateLabel(r)
-      : r.state === "overdue" ? (r.next ? `${r.next.title}: ${r.next.detail}` : "Out of test")
+      : r.state === "overdue" ? (r.next ? `${r.next.title}: ${r.next.detail}` : "No test on file")
       : r.state === "no_paper" && TESTED_CATEGORIES.has(r.category) ? (r.next ? "No paper" : "No test on file")
       : null;
     return { id: r.id, name: r.name, serial: r.identifier, where: r.where, blocked: why, redress: redressKind.has(r.id),
