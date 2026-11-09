@@ -16,9 +16,12 @@ import {
 
 import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { updateYard, deleteYard } from "@/app/app/_actions";
+import { deleteYard } from "@/app/app/_actions";
+import { saveYard } from "./actions";
 import ShareProof from "@/app/app/_components/share-proof";
 import { titled } from "@/lib/saas/page-title";
+import { YARD_ZONES, yardZone, zoneName } from "@/lib/saas/format";
+import { yardZones } from "@/lib/saas/loadout-record";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +62,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
   const { data: yard } = await db.from("saas_yards").select("id, name, location").eq("id", yardId).eq("company_id", company.id).maybeSingle();
   if (!yard) notFound();
   const y = yard as { id: string; name: string; location: string | null };
+  const tz = yardZone((await yardZones(db, [y.id])).get(y.id));
 
   const { data: unitsData } = await db.from("saas_units").select("id, name, type, identifier").eq("yard_id", yardId).order("name");
   const units = (unitsData ?? []) as { id: string; name: string; type: string; identifier: string | null }[];
@@ -78,7 +82,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
       <PageHeader
         back={{ href: "/app/yards", label: "Yards" }}
         title={y.name}
-        description={y.location ?? undefined}
+        description={[y.location, `${zoneName(tz)} time`].filter(Boolean).join(" · ")}
         actions={
           <>
           <Link href="/app/import" className={buttonClass("outline", "sm")}>
@@ -90,10 +94,16 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
               <Settings2 className="h-4 w-4" /> Manage
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-3">
-              <form action={updateYard} className="flex flex-col gap-2">
+              <form action={saveYard} className="flex flex-col gap-2">
                 <input type="hidden" name="id" value={y.id} />
+                <input type="hidden" name="time_zone_was" value={tz} />
                 <label className="text-xs text-ink-faint">Name<input name="name" defaultValue={y.name} required className={`${fld} mt-1 w-full`} /></label>
                 <label className="text-xs text-ink-faint">Location<input name="location" defaultValue={y.location ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                <label className="text-xs text-ink-faint">Time zone
+                  <select name="time_zone" defaultValue={tz} className={`${fld} mt-1 w-full`}>
+                    {YARD_ZONES.map((z) => <option key={z.tz} value={z.tz}>{z.name} time ({z.short})</option>)}
+                  </select>
+                </label>
                 <Button type="submit" size="sm">Save</Button>
               </form>
               {company.role !== "member" && (

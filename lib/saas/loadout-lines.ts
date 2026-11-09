@@ -121,19 +121,49 @@ export function needsTagScan(p: { name: string; category: string }, lineLabels: 
   return testedCategories.has(p.category) || lineLabels.some((label) => lineMatches(label, p.name));
 }
 
-/** "Quad BOP stack #3" → "Quad BOP stack": the kind of piece, not the one piece. */
-export const pieceKind = (name: string) => name.replace(/\s*#\s*\d+\b/g, "").replace(/\s{2,}/g, " ").trim().slice(0, 80);
+/** A serial or truck name worth taking out of a name: letters and digits both, 3 or more long ("P-01", "R-1", "FE-201"). A bare "1502" or "2" is a size, not a name. */
+const nameLike = (s: string) => s.length >= 3 && /[a-z]/i.test(s) && /\d/.test(s);
+const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
 
-/** A truck's kit from the pieces on it: one line per kind of piece, with how many, in first-seen order. */
-export function kitLinesFrom(names: string[]): { label: string; qty: number }[] {
+/**
+ * "Quad BOP stack #3" → "Quad BOP stack": the kind of piece, not the one
+ * piece. Also takes out what only names the one piece: its serial and the
+ * truck it rides on ("Fluid end, P-01" → "Fluid end"; "Reel R-1, 2-3/8in,
+ * 16,400 ft" with serial R-1 → "Reel, 2-3/8in"), and what's left on a reel
+ * (1,000 ft or more, which changes every time the tubing is cut). A short
+ * length like a pup joint's "10 ft" is part of the kind and stays.
+ */
+export function pieceKind(name: string, strip: (string | null | undefined)[] = []): string {
+  const plain = name.replace(/\s*#\s*\d+\b/g, "").replace(/\s{2,}/g, " ").trim().slice(0, 80);
+  let s = name.replace(/\s*#\s*\d+\b/g, " ");
+  for (const w of new Set(strip.map((x) => String(x ?? "").trim()).filter(nameLike))) {
+    s = s.replace(new RegExp(`(?<![a-z0-9])${escRe(w)}(?![a-z0-9])`, "gi"), " ");
+  }
+  s = s.replace(/(?<![\d,.])(?:\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?\s*(?:ft|feet|foot|')(?![a-z])\.?/gi, " ")
+    .replace(/\(\s*\)/g, " ");
+  const kind = s.split(",").map((p) => p.replace(/\s+/g, " ").replace(/^[\s\-:;]+|[\s\-:;]+$/g, "")).filter(Boolean).join(", ").slice(0, 80);
+  // Nothing that names a kind is left (a piece named just "P-01"): keep the name.
+  return /[a-z]/i.test(kind) ? kind : plain;
+}
+
+/**
+ * A truck's kit from the pieces on it: one line per kind of piece, with how
+ * many, in first-seen order. Pass each piece's serial and the truck names
+ * (this truck's, or every truck's) so a line names the kind of piece, and
+ * any good one of that kind fills it, not only the one that was on it.
+ */
+export function kitLinesFrom(pieces: (string | { name: string; serial?: string | null })[], truckNames: string[] = []): { label: string; qty: number }[] {
   const counts = new Map<string, number>();
-  for (const n of names) { const k = pieceKind(n); if (k) counts.set(k, (counts.get(k) ?? 0) + 1); }
+  for (const p of pieces) {
+    const k = typeof p === "string" ? pieceKind(p, truckNames) : pieceKind(p.name, [p.serial, ...truckNames]);
+    if (k) counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
   return [...counts].map(([label, qty]) => ({ label, qty }));
 }
 
 export const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
-export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file" | "no_paper" | "needs_redress"; detail?: string }
+export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file" | "no_paper" | "needs_redress" | "out_on_job"; detail?: string }
 
 /**
  * Pieces with no test on file that can't go on: pressure iron always, and any
@@ -180,7 +210,7 @@ export function loadoutVerdict(input: {
   for (const p of input.bad) {
     const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file"
       : p.why === "no_test_on_file" ? "No test on file" : p.why === "no_paper" ? "No paper on file"
-      : p.why === "needs_redress" ? "Needs redress" : "Out of test";
+      : p.why === "needs_redress" ? "Needs redress" : p.why === "out_on_job" ? "Out on another truck's job" : "Out of test";
     reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? `, ${p.detail}` : ""}`);
   }
   for (const t of input.truckPaper) reasons.push(`Truck paper: ${t.title} ${t.detail}`);

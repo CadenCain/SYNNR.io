@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
-import { logEvent } from "@/lib/saas/notify";
+import { logEvent, notifyEvent } from "@/lib/saas/notify";
 import { YARD_TZ } from "@/lib/saas/format";
-import { judgeItem } from "@/lib/saas/judge";
+import { judgeItem, withSerial } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { daysOut } from "@/lib/saas/whereabouts";
 import type { ScanHow } from "@/lib/saas/loadout";
@@ -75,6 +75,8 @@ export async function finishReturn(input: {
   startedAt: string;
   scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string; redTag?: string; yardId?: string }[];
   notReturned: { assetId: string; outcome: Outcome }[];
+  /** The hand says the truck never left the yard since its last check-in (a yard check, not a trip). */
+  yardCheck?: boolean;
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
@@ -153,6 +155,16 @@ export async function finishReturn(input: {
   // nothing to save (a truck's check-in can still say what didn't come back).
   if (!unit && !scans.length) return { ok: false, error: "Nothing was checked in. Tap It's back on each piece that came back." };
 
+  // Was this trip cleared to roll? Decided before anything moves. A truck with
+  // no load-out since its last check-in either never left the yard (a hand
+  // checking a sling in the yard) or left without a scan, and only the hand
+  // knows which. Said it never left: a yard check, so no "never scanned out"
+  // flag and nothing on it is "still out". A truck that loaded out since did
+  // leave, so its word isn't asked for or taken.
+  const unscanned = unit ? await tripNotScanned(admin, company.id, unit.id, now) : null;
+  const yardCheck = Boolean(input.yardCheck) && unscanned === "never";
+  if (yardCheck && !scans.length) return { ok: false, error: "Nothing was checked in. Tap It's back on each piece you checked." };
+
   // What came back bad: worth a note on the record (it can't roll again until fixed).
   const scanIds = scans.map((s) => s.assetId);
   const { data: itemRows } = scanIds.length
@@ -209,13 +221,21 @@ export async function finishReturn(input: {
       .eq("id", a.id).eq("company_id", company.id);
     red.add(a.id);
   }
-  // Didn't come back: still out (clock keeps running), or can't be found.
-  const notReturned = input.notReturned.filter((n) => byId.has(n.assetId) && !seen.has(n.assetId))
-    .map((n) => ({ ...n, outcome: (n.outcome === "missing" ? "missing" : "still_out") as Outcome }));
+  // Didn't come back: still out (clock keeps running), or can't be found. Only
+  // iron that's on this truck now counts (a piece moved to another truck since
+  // this screen opened isn't this truck's to flag). A yard check has none.
+  const notReturned = (yardCheck ? [] : input.notReturned).filter((n) => {
+    const a = byId.get(n.assetId);
+    return Boolean(a && unit && a.unit_id === unit.id && a.status !== "retired" && !seen.has(n.assetId));
+  }).map((n) => ({ ...n, outcome: (n.outcome === "missing" ? "missing" : "still_out") as Outcome }));
   for (const n of notReturned.filter((x) => x.outcome === "missing")) {
     const a = byId.get(n.assetId)!;
+    // Known not to be on the truck: it comes off it, so it stops blocking the
+    // truck and isn't on its next load-out. It stays on its yard's books,
+    // flagged missing, with where it was last.
     await db.from("saas_assets").update({
       ...(a.status === "out_of_service" ? {} : { status: "missing" }),
+      unit_id: null,
       last_seen_where: `didn't come back${unit ? ` on ${unit.name}` : ""}, ${day}`, last_seen_by: actor, last_seen_at: now,
     }).eq("id", a.id).eq("company_id", company.id);
   }
@@ -249,7 +269,8 @@ export async function finishReturn(input: {
         out_days: a.out_since ? daysOut(a.out_since, nowMs) : null, red: red.has(a.id), went_out: wentOut(a),
         needs_redress: redress.includes(a.id) };
     }),
-    not_returned: notReturned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
+    // Where each one had been, so a piece that can't be found says whose trip it went out on.
+    not_returned: notReturned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome, went_out: wentOut(a) }; }),
   }).select("id").single();
   if (recErr?.code === "23505") {
     const first = await savedReturn(admin, company.id, user.id, unit?.id ?? null, startedIso);
@@ -268,25 +289,40 @@ export async function finishReturn(input: {
     parts.push(`${toYard} into ${yardNames.join(" and ")}${oneRack}`);
   }
   const stillOut = notReturned.filter((n) => n.outcome === "still_out").length;
-  const missing = notReturned.filter((n) => n.outcome === "missing").length;
+  // Can't be found: named with its serial, since a shop has a dozen valves with the same name.
+  const lost = notReturned.filter((n) => n.outcome === "missing").map((n) => byId.get(n.assetId)!);
+  const lostNames = (most: number) => `${lost.slice(0, most).map((a) => withSerial(a.name, a.identifier)).join("; ")}${lost.length > most ? `; and ${lost.length - most} more` : ""}`;
   if (stillOut) parts.push(`${stillOut} still out`);
-  if (missing) parts.push(`${missing} can't be found`);
+  if (lost.length) parts.push(`${lost.length} can't be found (${lostNames(3)})`);
   const taggedNow = scans.filter((x) => x.redTag).length;
   if (taggedNow) parts.push(`${taggedNow} red-tagged at check-in (${scans.filter((x) => x.redTag).map((x) => `${byId.get(x.assetId)!.name}: ${x.redTag}`).slice(0, 2).join("; ")})`);
   if (red.size - taggedNow > 0) parts.push(`${red.size - taggedNow} came back out of test or red-tagged`);
   if (redress.length) parts.push(`${redress.length} ${redress.length === 1 ? "needs" : "need"} redress`);
-  const summary = `${unit ? `${unit.name} checked in` : `Iron checked into ${yard.name}`} by ${actor}: ${parts.join(", ") || "nothing scanned"}`;
+  const summary = `${unit ? `${unit.name} checked in` : `Iron checked into ${yard.name}`} by ${actor}${yardCheck ? " (it didn't leave the yard)" : ""}: ${parts.join(", ") || "nothing scanned"}`;
   void logEvent({ companyId: company.id, kind: "returned", unitId: unit?.id ?? null, actor, message: summary });
+  // Iron that didn't come back and can't be found: the managers hear now, not
+  // a week later. The piece and serial, the trip it went out on and who loaded
+  // it, and who checked the truck in.
+  if (unit && lost.length) {
+    const outOn = (a: (typeof lost)[number]) => {
+      const w = wentOut(a);
+      if (!w) return "";
+      if ("with" in w) return ` (signed out to ${w.with}${w.at ? ` ${dayLabel(w.at)}` : ""})`;
+      return ` (went out on ${w.truck} ${dayLabel(w.at)}${w.by ? `, loaded by ${w.by}` : ""})`;
+    };
+    const named = `${lost.slice(0, 5).map((a) => `${withSerial(a.name, a.identifier)}${outOn(a)}`).join("; ")}${lost.length > 5 ? `; and ${lost.length - 5} more` : ""}`;
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: unit.yard_id ?? yard.id,
+      message: `Can't find after ${unit.name} came back: ${named}. Flagged missing. Checked in by ${actor}`,
+      href: lost.length === 1 ? `/app/assets/${lost[0].id}` : "/app/equipment?f=down" });
+  }
   // A truck that comes back without having been cleared to roll: nobody
   // scanned it out, or it left NOT READY with no override. That's the app not
-  // being used, and a manager needs to hear about it.
-  if (unit && scans.length) {
-    const unscanned = await tripNotScanned(admin, company.id, unit.id, now);
-    if (unscanned) {
-      void logEvent({ companyId: company.id, kind: "unscanned_trip", unitId: unit.id, actor,
-        message: unscanned === "never" ? `${unit.name} came back from a job it was never scanned out for. Checked in by ${actor}.`
-          : `${unit.name} came back, but its last load-out was NOT READY and nobody rolled it. It left without being cleared. Checked in by ${actor}.` });
-    }
+  // being used, and a manager needs to hear about it. (Not a yard check: the
+  // hand said it never left.)
+  if (unit && scans.length && unscanned && !yardCheck) {
+    void logEvent({ companyId: company.id, kind: "unscanned_trip", unitId: unit.id, actor,
+      message: unscanned === "never" ? `${unit.name} came back from a job it was never scanned out for. Checked in by ${actor}.`
+        : `${unit.name} came back, but its last load-out was NOT READY and nobody rolled it. It left without being cleared. Checked in by ${actor}.` });
   }
 
   if (unit) revalidatePath(`/app/units/${unit.id}`);

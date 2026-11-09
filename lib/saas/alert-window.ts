@@ -25,3 +25,36 @@ export function isAlertDue(
   if (expirationIso === null) return true;
   return expirationIso <= alertHorizon(todayIso, leadDays);
 }
+
+/**
+ * One more alert after it runs out. The heads-up goes out about leadDays
+ * ahead; without this a test that lapsed while the truck sat never showed up
+ * in anyone's mail again. Due once it has expired (its date is before today)
+ * when every alert so far went out while it was still good: lastAlertDay is
+ * the yard-time day of the newest one, null when it never alerted. An item
+ * whose first alert went out after it ran out already said EXPIRED.
+ */
+export function isExpiredAlertDue(
+  expirationIso: string | null,
+  todayIso: string,
+  lastAlertDay: string | null,
+): boolean {
+  if (expirationIso === null || lastAlertDay === null) return false;
+  return expirationIso < todayIso && lastAlertDay <= expirationIso;
+}
+
+/**
+ * The morning run (expiration alerts + the managers' morning email) lands at
+ * 4 AM yard time all year, ahead of the 4:30 load-out rush. Vercel's cron
+ * clock is UTC and doesn't move for daylight time, so vercel.json fires at
+ * both 09:00 and 10:00 UTC and only the one that is 4 AM in America/Chicago
+ * does the work: 09:00 UTC on daylight time, 10:00 UTC on standard time.
+ * Exactly one of the two is 4 AM on any day, the change-over Sundays too.
+ */
+export const MORNING_RUN_HOUR = 4;
+
+export function isMorningRunHour(now: Date = new Date()): boolean {
+  const hour = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" })
+    .formatToParts(now).find((p) => p.type === "hour")?.value;
+  return Number(hour) === MORNING_RUN_HOUR;
+}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, PackageCheck, ListTodo, Wrench } from "lucide-react";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import UnsentDrafts from "./unsent-drafts";
+import NeverSentDrafts from "./never-sent-drafts";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { LoadOutTruckRow, LoadOutCounts, LoadOutWeek, TruckStatus } from "@/lib/saas/loadout-board";
@@ -69,6 +70,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
       <div className="flex flex-col gap-5">
         <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
         <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
+        <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
         {trucks.length === 0 ? (
           <Card className="p-5 text-sm text-ink-dim">No trucks set up yet. A manager adds them.</Card>
         ) : mine && !picking ? (
@@ -111,6 +113,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
   return (
     <div className="flex flex-col gap-6">
       <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
+      <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
@@ -353,6 +356,13 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
               </Link>
             )}
           </div>
+          {/* Out on a job, the truck's load-out still opens from here with no
+              signal: it's saved on the phone, the truck page isn't. */}
+          {status === "out" ? (
+            <Link href={`/app/units/${t.id}/scan`} className="-mt-1 inline-flex min-h-12 items-center gap-1.5 self-start px-1 text-sm text-ink-dim underline underline-offset-2">
+              <ScanLine className="h-4 w-4" /> Start a new load-out
+            </Link>
+          ) : null}
         </Card>
   );
 }

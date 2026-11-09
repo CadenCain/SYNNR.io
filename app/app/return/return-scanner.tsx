@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTagReader, type ReaderNote } from "../_components/use-tag-reader";
 import { scanSound } from "../_components/scan-aids";
-import { checkable, maskSerial, lastFourMatch } from "../_components/serial-check";
+import { alnum, checkable, maskSerial, lastFourMatch } from "../_components/serial-check";
 import { finishReturn, type ReturnDest } from "./actions";
 
 /**
@@ -43,7 +43,7 @@ const readDraftRaw = (k: string): string | null => {
   } catch { return null; }
 };
 
-export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false, firstId = null }: {
+export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false, firstId = null, askLeft = null }: {
   truck: { id: string; name: string } | null;
   pieces: ScanPiece[];
   /** Days out, for pieces out on a job. */
@@ -56,6 +56,12 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   last4?: boolean;
   /** The piece they came here to check in (from Tools out): first on the list. */
   firstId?: string | null;
+  /**
+   * The truck was checked in and hasn't loaded out since: did it leave the
+   * yard? The app can't tell a yard check from a trip nobody scanned out, so
+   * the hand says. since: when it was last checked in, if ever.
+   */
+  askLeft?: { since: string | null } | null;
 }) {
   const key = truck?.id ?? "yard";
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
@@ -71,6 +77,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   const [saved, setSaved] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState("");
   const [waiting, setWaiting] = useState(false);
+  /** Did the truck leave the yard? null: not answered yet. */
+  const [left, setLeft] = useState<boolean | null>(null);
+  const yardCheck = Boolean(truck && askLeft) && left === false;
   const draftRaw = useSyncExternalStore(noSubscribe, () => readDraftRaw(key), () => null);
   const [draftHandled, setDraftHandled] = useState(false);
   const draft = useMemo<Draft | null>(() => { try { return draftRaw ? JSON.parse(draftRaw) as Draft : null; } catch { return null; } }, [draftRaw]);
@@ -106,11 +115,21 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   const { hasNfc, nfcOn, camOn, startNfc, stopNfc, startCamera, stopCamera, video, stopAll } = useTagReader(onRead, setBanner);
 
   function bySerial() {
-    const want = serialText.trim().toLowerCase();
+    const typed = serialText.trim();
+    // Letters and digits only: "PV3019", "pv 3019" and "PV-3019" are one serial.
+    const want = alnum(typed);
     if (!want) return;
-    const p = pieces.find((x) => (x.serial ?? "").toLowerCase() === want);
-    if (!p) { setBanner({ tone: "warn", text: `No piece with serial ${serialText.trim()}. Check the stamp and try again.` }); return; }
-    mark(p, "hand"); setSerialText("");
+    const withSerial = pieces.filter((x) => x.serial);
+    let hits = withSerial.filter((x) => alnum(x.serial!) === want);
+    // The band often has just the number: take the one piece whose serial ends
+    // with it (at least the last 4 when the yard asks for the last 4).
+    if (!hits.length && want.length >= (last4 ? 4 : 3)) hits = withSerial.filter((x) => alnum(x.serial!).endsWith(want));
+    if (hits.length > 1) {
+      setBanner({ tone: "warn", text: `More than one piece ends in ${typed}: ${hits.slice(0, 4).map((x) => x.serial).join(", ")}${hits.length > 4 ? ", and more" : ""}. Type the whole serial.` });
+      return;
+    }
+    if (!hits.length) { setBanner({ tone: "warn", text: `No piece with serial ${typed}. Check the stamp and try again.` }); return; }
+    mark(hits[0], "hand"); setSerialText("");
   }
   /** Came back damaged: red-tag it right here, with why. Empty reason takes it back off. */
   // Red-tagged iron goes into the yard, not back on the truck: it can't go out.
@@ -148,7 +167,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       const send = finishReturn({
         unitId: truck?.id ?? null, yardId: yardId || null, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof, redTag: s.redTag, yardId: s.yardId })),
-        notReturned: truck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
+        // A truck that never left: what wasn't scanned just stays on it.
+        notReturned: truck && !yardCheck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
+        yardCheck,
       });
       res = await Promise.race([send, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 25000))]);
     } catch (e) {
@@ -288,7 +309,26 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       {finishing ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>
-          {truck && notYet.length > 0 ? (
+          {truck && askLeft ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-base font-medium">Did {truck.name} leave the yard{askLeft.since ? ` since it was checked in ${askLeft.since}` : ""}?</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([true, false] as const).map((v) => (
+                  <button key={String(v)} type="button" onClick={() => setLeft(v)} aria-pressed={left === v}
+                    className={cn("min-h-14 rounded-xl border-2 px-3 text-base font-semibold",
+                      left === v ? "border-bone bg-bone/10 text-bone" : "border-line-2 text-ink-dim")}>
+                    {v ? "Yes, it went out" : "No, it stayed in the yard"}
+                  </button>
+                ))}
+              </div>
+              {yardCheck ? (
+                <p className="text-sm text-ink-dim">{Object.keys(scans).length
+                  ? `Anything you didn't scan stays on ${truck.name}.`
+                  : "Nothing is checked yet. Tap It's back on what you checked, then save."}</p>
+              ) : null}
+            </div>
+          ) : null}
+          {yardCheck ? null : truck && notYet.length > 0 ? (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-ink-dim">These went out on {truck.name} but didn&apos;t get scanned back. Where are they?</p>
               {notYet.map((p) => (
@@ -305,7 +345,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
           ) : <p className="text-sm text-ink-dim">{Object.keys(scans).length} {Object.keys(scans).length === 1 ? "piece" : "pieces"} checked in.</p>}
           {saveErr ? <p className={cn("text-sm", waiting ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saving} className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waiting ? "Try sending now" : "Save check-in"}</button>
+            <button type="button" onClick={save} disabled={saving || Boolean(truck && askLeft && (left === null || (yardCheck && !Object.keys(scans).length)))}
+              className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waiting ? "Try sending now" : "Save check-in"}</button>
             <button type="button" onClick={() => setFinishing(false)} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
           </div>
         </section>

@@ -1,7 +1,7 @@
 import { ShieldCheck, TriangleAlert, OctagonX, Lock } from "lucide-react";
-import { fmtWhen, YARD_TZ } from "@/lib/saas/format";
+import { fmtWhen, fmtTime } from "@/lib/saas/format";
 import { testText as sharedTestText } from "@/lib/saas/judge";
-import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride, type LoadoutOutcome } from "@/lib/saas/loadout-record";
 import { cn } from "@/lib/utils";
 import { lineSourceLabel } from "@/lib/saas/loadout-lines";
 
@@ -18,13 +18,11 @@ const OUTCOME: Record<string, string> = {
   missing: "Can't find it (flagged missing)",
   left: "Not scanned, still logged on the truck",
 };
-const time = (iso: string | undefined) =>
-  iso ? new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" }) : "";
 const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 /** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
 const testText = sharedTestText;
 
-export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false }: {
+export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false, tz, later = null }: {
   rec: LoadoutRecord;
   override: LoadoutOverride | null;
   /** Link to a piece's public tag page (tests and the cert), when known. */
@@ -35,7 +33,16 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
   photo?: { url: string; at: string } | null;
   /** The operator's proof link: the manager's note to the crew stays inside the shop. */
   forOperator?: boolean;
+  /**
+   * The yard's time zone. Passed (null reads Central), every time shows in
+   * it with the zone on it ("5:10 AM MT"). Left out, Central with no zone.
+   */
+  tz?: string | null;
+  /** The truck was loaded out again on this trip: where the newest record is. */
+  later?: { unit_name: string; finished_at: string; outcome: LoadoutOutcome; href: string; tz?: string | null } | null;
 }) {
+  const time = (iso: string | undefined) => fmtTime(iso, tz);
+  const when = (iso: string | undefined) => fmtWhen(iso, tz);
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
   const byHand = rec.pieces.filter((p) => p.how === "hand").length;
@@ -58,13 +65,13 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           {outcome === "ready" ? "READY" : outcome === "override" ? "Rolled NOT READY on a manager's override" : "NOT READY"}
         </div>
         <p className="mt-1 text-sm text-ink-dim">
-          {rec.unit_name} load-out, {fmtWhen(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
+          {rec.unit_name} load-out, {when(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
           {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} went on.
         </p>
         {rec.job ? <p className="mt-1 text-sm font-medium text-ink">For: {rec.job}</p> : null}
         {rec.plan ? (
           <p className="mt-1 text-sm text-ink-dim">
-            Planned by {rec.plan.by ?? "a manager"} {fmtWhen(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note && !forOperator ? ` "${rec.plan.note}"` : ""}
+            Planned by {rec.plan.by ?? "a manager"} {when(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note && !forOperator ? ` "${rec.plan.note}"` : ""}
           </p>
         ) : null}
         {byHand > 0 ? (
@@ -74,7 +81,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         ) : null}
         {override ? (
           <div className="mt-3 rounded-xl border border-amber-500/40 bg-surface p-3 text-sm">
-            <div className="font-semibold text-ink">Override by {override.by_name}, {fmtWhen(override.created_at)}</div>
+            <div className="font-semibold text-ink">Override by {override.by_name}, {when(override.created_at)}</div>
             <p className="mt-0.5 break-words text-ink-dim">&ldquo;{override.reason}&rdquo;</p>
           </div>
         ) : null}
@@ -84,6 +91,18 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
               <li key={r} className={cn("break-words text-[15px] font-medium", outcome === "override" ? "text-amber-300" : "text-red-300")}>{r}</li>
             ))}
           </ul>
+        ) : null}
+        {later ? (
+          <div className={cn("mt-3 rounded-xl border bg-surface p-3 text-sm",
+            later.outcome === "ready" ? "border-emerald-500/40" : later.outcome === "override" ? "border-amber-500/40" : "border-red-500/40")}>
+            <span className="font-semibold text-ink">
+              {later.unit_name} was loaded out again {fmtWhen(later.finished_at, later.tz === undefined ? tz : later.tz)}:{" "}
+              <span className={later.outcome === "ready" ? "text-emerald-400" : later.outcome === "override" ? "text-amber-400" : "text-red-400"}>
+                {later.outcome === "ready" ? "READY" : later.outcome === "override" ? "rolled NOT READY on a manager's override" : "NOT READY"}
+              </span>.
+            </span>{" "}
+            <a href={later.href} className="font-medium text-bone underline underline-offset-2">See the newest record</a>
+          </div>
         ) : null}
       </section>
 

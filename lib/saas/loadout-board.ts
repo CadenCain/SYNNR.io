@@ -38,13 +38,32 @@ export interface LoadOutTruckRow {
 export interface LoadOutWeek { loadouts: number; caught: number; overrides: number }
 export interface LoadOutCounts { ready: number; blocked: number; out: number; outTooLong: number }
 
-/** This week's numbers for the owner: load-outs scanned, bad pieces caught at load-out, trucks rolled on override. */
-export function weekNumbers(scans: { pieces?: { red?: boolean }[] | null }[], overrides: number): LoadOutWeek {
-  return {
-    loadouts: scans.length,
-    caught: scans.reduce((n, s) => n + (s.pieces ?? []).filter((p) => p.red).length, 0),
-    overrides,
-  };
+/**
+ * This week's numbers for the owner: load-outs scanned, bad pieces caught at
+ * load-out, trucks rolled on override. A bad piece on a load-out a manager
+ * rolled anyway went to location, so it wasn't caught; and the same bad piece
+ * on a second try the same day is one catch, not two.
+ */
+export function weekNumbers(
+  scans: { id?: string; finished_at?: string; pieces?: { red?: boolean; asset_id?: string }[] | null }[],
+  overrides: number,
+  overridden: Set<string> = new Set(),
+): LoadOutWeek {
+  const seen = new Set<string>();
+  let caught = 0;
+  for (const s of scans) {
+    if (s.id && overridden.has(s.id)) continue;
+    for (const p of s.pieces ?? []) {
+      if (!p.red) continue;
+      if (p.asset_id) {
+        const key = `${s.finished_at ? dayOf(s.finished_at) : ""}|${p.asset_id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      caught++;
+    }
+  }
+  return { loadouts: scans.length, caught, overrides };
 }
 
 const ORDER: Record<TruckStatus, number> = { blocked: 0, ready: 1, out: 2 };
@@ -56,12 +75,17 @@ const shortDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { ti
  * What each truck's kit is short of, going by what's logged on it now. A
  * heads-up on the board: the load-out will block unless it comes from the
  * yard. "Kit short: Lubricator, 2in 1502 pup joint (1 of 2 on it)".
+ * lastBack: each truck's newest check-in. Iron marked still out at it is
+ * still on the last job, not on the truck, so the load-out won't count it
+ * (scan/actions.ts) and neither does this.
  */
-export function kitShortByTruck(kits: Map<string, { label: string; qty: number }[]>, rows: EquipRow[]): Map<string, string> {
+export function kitShortByTruck(kits: Map<string, { label: string; qty: number }[]>, rows: EquipRow[], lastBack: Map<string, string> = new Map()): Map<string, string> {
   const out = new Map<string, string>();
   for (const [unitId, kit] of kits) {
     if (!kit.length) continue;
-    const onIt = rows.filter((r) => r.unitId === unitId && r.state !== "retired").map((r) => ({ id: r.id, name: r.name, serial: r.identifier }));
+    const back = lastBack.get(unitId);
+    const onIt = rows.filter((r) => r.unitId === unitId && r.state !== "retired" && !(back && r.outSince && r.outSince < back))
+      .map((r) => ({ id: r.id, name: r.name, serial: r.identifier }));
     const short = shortLines(fillLines(kit.map((l) => ({ ...l, source: "kit" as const })), onIt));
     if (short.length) out.set(unitId, `Kit short: ${short.map((l) => (l.filled.length ? `${l.label} (${l.filled.length} of ${l.qty} on it)` : l.label)).join(", ")}. The load-out will block without it.`);
   }
@@ -73,11 +97,13 @@ export function buildLoadOutTrucks(
   rows: EquipRow[],
   scans: LoadoutScanRow[],
   /** Load-outs a manager rolled anyway: a set of ids, or ids to when the override was made
-   *  (the trip starts then, not when the NOT READY load-out was saved). */
-  overridden: Set<string> | Map<string, string>,
+   *  (the trip starts then, not when the NOT READY load-out was saved) and who made it. */
+  overridden: Set<string> | Map<string, string | { at: string; by?: string | null }>,
   today: string,
   kitShort: Map<string, string> = new Map(),
-  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number } = {},
+  /** hand: the board is a hand's (crew on the job see it too), so out too long
+   *  says how long without telling them to check it in. */
+  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number; hand?: boolean } = {},
 ): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const now = opts.now ?? Date.now();
   const alertDays = opts.alertDays ?? DEFAULT_OUT_ALERT_DAYS;
@@ -86,7 +112,11 @@ export function buildLoadOutTrucks(
   for (const r of [...scans].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
     if (r.unit_id && !last.has(r.unit_id)) last.set(r.unit_id, r);
   }
-  const ovAt = (id: string) => (overridden instanceof Map ? overridden.get(id) : undefined);
+  const ovOf = (id: string) => {
+    const v = overridden instanceof Map ? overridden.get(id) : undefined;
+    return typeof v === "string" ? { at: v, by: null } : v;
+  };
+  const ovAt = (id: string) => ovOf(id)?.at;
   const out = truckOut(scans.map((r) => {
     const outcome = outcomeOf(r, ov(r.id));
     return { id: r.id, unit_id: r.unit_id, finished_at: r.finished_at, rolled: outcome !== "blocked", since: outcome === "override" ? ovAt(r.id) : undefined };
@@ -123,9 +153,16 @@ export function buildLoadOutTrucks(
       const tooLong = days >= alertDays;
       const overrode = outcomeOf(s, ov(s.id)) === "override";
       const when = dayOf(trip.since) === today ? `today ${timeOf(trip.since)}` : `${shortDay(trip.since)} (${days === 0 ? "less than a day" : `${days} ${days === 1 ? "day" : "days"}`})`;
+      // Out on a job doesn't hide what's on it: iron that went bad since it
+      // rolled, or went on after it rolled, reads red here like on its page.
+      const badNow = t.state === "not_ready";
+      const ovBy = overrode ? ovOf(s.id)?.by?.trim() : null;
       return { ...base, loadoutId: s.id, status: "out", overridden: overrode, outSince: trip.since, outTooLong: tooLong,
-        why: tooLong ? `Out ${days} days. Check it in, or find out where it is.` : null, whyTone: tooLong ? "red" : null,
-        loadoutLine: `${overrode ? "Out on a manager's override" : "Out on a job"} since ${when}${by}` };
+        why: tooLong ? (opts.hand ? `Out ${days} days.` : `Out ${days} days. Check it in, or find out where it is.`) : badNow ? `Out on a job and NOT READY now: ${t.why}` : null,
+        whyTone: tooLong || badNow ? "red" : null,
+        loadoutLine: ovBy
+          ? `Out on ${ovBy}'s override since ${when}${s.scanned_by ? `. Loaded by ${s.scanned_by}` : ""}`
+          : `${overrode ? "Out on a manager's override" : "Out on a job"} since ${when}${by}` };
     }
     // Checked back in since its last load-out: say so, and name anything that didn't come back.
     const back = lastBack.get(t.id);
@@ -137,8 +174,12 @@ export function buildLoadOutTrucks(
       if (outcome === "blocked") {
         const reasons = reasonsOf(s);
         const when = dayOf(s.finished_at) === today ? timeOf(s.finished_at) : `${shortDay(s.finished_at)} ${timeOf(s.finished_at)}`;
-        return { ...base, loadoutId: s.id, status: "blocked", overridden: false, whyTone: "red",
-          why: reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
+        // Blocked only on the truck's own paper, and that paper is good now:
+        // say so, not the old date. It still takes a new load-out to roll.
+        const paperFixed = reasons.length > 0 && reasons.every((x) => x.startsWith("Truck paper:")) && t.state !== "not_ready";
+        return { ...base, loadoutId: s.id, status: "blocked", overridden: false, whyTone: paperFixed ? "amber" : "red",
+          why: paperFixed ? `Blocked ${dayOf(s.finished_at) === today ? "today" : shortDay(s.finished_at)} on truck paper. That paper is good now. Scan it again to roll.`
+            : reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
           loadoutLine: `Blocked at load-out ${when}${by}` };
       }
     }

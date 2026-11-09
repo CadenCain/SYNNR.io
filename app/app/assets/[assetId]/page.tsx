@@ -22,7 +22,7 @@ import { AddDisclosure } from "@/components/ui/disclosure";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { updateAsset, deleteAsset } from "@/app/app/_actions";
 import { moveEquipment } from "@/app/app/equipment/actions";
-import { fmtWhen } from "@/lib/saas/format";
+import { fmtWhen, fmtDay } from "@/lib/saas/format";
 import { judgeItem, isNoPaper } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { qrSvg, tagUrl } from "@/lib/saas/qr";
@@ -70,8 +70,17 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
   const yardName = new Map(yards.map((y) => [y.id, y.name]));
   // Same order as the equipment list: with a person first, then the truck, then the yard.
   const outDays = a.out_since && !a.out_with_name ? Math.max(0, Math.floor((nowMs() - Date.parse(a.out_since)) / 86400e3)) : null;
+  // Out from before its truck's last check-in: it was marked still out there,
+  // so it's on location from that job, not on the truck (or its next job).
+  const { data: backRow } = outDays !== null && unit
+    ? await db.from("saas_returns").select("finished_at").eq("company_id", company.id).eq("unit_id", unit.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const backAt = (backRow as { finished_at: string } | null)?.finished_at ?? null;
+  const leftOnLocation = Boolean(backAt && a.out_since && a.out_since < backAt);
+  const daysText = outDays === null ? "" : outDays === 0 ? "since today" : `${outDays} ${outDays === 1 ? "day" : "days"}`;
   const where = a.out_with_name ? `With ${a.out_with_name}`
-    : unit ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}${outDays !== null ? `, out on a job ${outDays === 0 ? "since today" : `${outDays} ${outDays === 1 ? "day" : "days"}`}` : ""}`
+    : unit && leftOnLocation ? `Left on location from ${unit.name}'s ${fmtDay(a.out_since).replace(/, \d{4}$/, "")} job, out ${daysText}`
+    : unit ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}${outDays !== null ? `, out on a job ${daysText}` : ""}`
     : (a.yard_id && yardName.get(a.yard_id)) || "No location";
   const whereValue = unit ? `unit:${unit.id}` : a.yard_id ? `yard:${a.yard_id}` : "";
 
@@ -120,6 +129,12 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
     const r = ((rets ?? []) as Ret[])[0] ?? null;
     const piece = r?.pieces.find((x) => x.asset_id === a.id && x.red_tag);
     if (r && piece) redTagLine = `Red-tagged at check-in ${fmtWhen(r.finished_at)}. ${damagedLine(piece, r.returned_by)}`;
+    // Red-tagged from this page: the history keeps who, when and why. The
+    // newer of that and a check-in's tag is the one it's tagged for now.
+    const byHand = moves.find((m) => m.note && /^red-tagged: /.test(m.note));
+    if (byHand && (!r || !piece || byHand.created_at > r.finished_at)) {
+      redTagLine = `Red-tagged ${fmtWhen(byHand.created_at)}${byHand.actor ? ` by ${byHand.actor}` : ""}: ${byHand.note!.replace(/^red-tagged: /, "")}`;
+    }
   }
 
   // The one line that matters: worst first, then the soonest due.
@@ -183,8 +198,12 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
                   <label className="text-xs text-ink-faint">Serial number<input name="identifier" defaultValue={a.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
                 ) : null}
                 {a.status === "out_of_service" && isManager ? (
-                  <label className="text-xs text-ink-faint">Taking the red tag off? Say what was done (it goes on the record)
+                  <label className="text-xs text-ink-faint">Taking the red tag off? Say what was done, in a full sentence (it goes on the record)
                     <input name="clear_note" maxLength={200} placeholder="Like: rams replaced and function tested" className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
+                {a.status !== "out_of_service" ? (
+                  <label className="text-xs text-ink-faint">Red-tagging it? Say what&apos;s wrong with it (it goes on the record)
+                    <input name="tag_note" maxLength={200} placeholder="Like: cut near the eye" className={`${fld} mt-1 w-full`} /></label>
                 ) : null}
                 <Button type="submit" size="sm">Save</Button>
               </form>
@@ -230,7 +249,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
             <span className="break-words text-[13px] text-emerald-400">Scanned on at load-out, {fmtWhen(a.scanned_at)}{a.scanned_by ? ` by ${a.scanned_by}` : ""}</span>
           ) : moves[0] ? (
             <span className="break-words text-[13px] text-ink-dim">
-              {a.last_seen_where && !/^scanned at load-out/.test(a.last_seen_where) ? `${a.last_seen_where}. ` : ""}Logged by hand {fmtWhen(moves[0].created_at)}{moves[0].actor ? ` by ${moves[0].actor}` : ""}, not scanned
+              {a.last_seen_where && !/^(scanned at load-out|red-tagged|red tag off)/.test(a.last_seen_where) ?`${a.last_seen_where}. ` : ""}Logged by hand {fmtWhen(moves[0].created_at)}{moves[0].actor ? ` by ${moves[0].actor}` : ""}, not scanned
             </span>
           ) : null}
         </div>
@@ -250,6 +269,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
           <p className="text-red-300">
             {a.status === "missing" ? "Flagged missing." : "Red-tagged. It can't go out."} {unit ? `${unit.name} reads NOT READY until this is cleared.` : ""}
+            {a.status === "missing" ? " Found it? Save where it is under Move it and it's back in service." : ""}
             {a.status === "out_of_service" ? " Only a manager can put it back in service, with a note on what was done." : ""}
             {redTagLine ? <span className="mt-1 block font-medium">{redTagLine}</span> : null}
           </p>
@@ -387,6 +407,10 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
                 <Box className="h-5 w-5" /> No photo of the paperwork yet
               </div>
             )}
+            {/* This photo hangs on the piece, not on a test: it never clears No paper. */}
+            {items.some((i) => isNoPaper(judgeItem(i, today, today))) ? (
+              <p className="text-[13px] text-ink-dim">This photo is for the record only. To clear No paper, use Upload the cert on the test above.</p>
+            ) : null}
           </div>
         </div>
       </Card>

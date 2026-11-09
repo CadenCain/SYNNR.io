@@ -159,6 +159,30 @@ export function buildEquipment(
   return { rows, yards, units: units.map((u) => ({ id: u.id, name: u.name, yardId: u.yard_id })), counts };
 }
 
+/**
+ * Why a piece can't go out on a job right now, in plain words, or null when
+ * it can. The same rules a load-out and a sign-out use: red-tagged, missing,
+ * waiting on redress, pressure iron with no test, or a test out of date, with
+ * no paper, or with no date.
+ */
+export function pieceProblem(
+  a: { status: string; category: string; needs_redress_since?: string | null },
+  items: { title: string; expiration_date: string | null; last_upload_id: string | null; pending_until?: string | null; reminder_days?: number | null }[],
+  today: string,
+): string | null {
+  if (a.status === "out_of_service") return "red-tagged";
+  if (a.status === "missing") return "flagged missing";
+  if (a.needs_redress_since) return "needs redress";
+  if (!items.length && TESTED_CATEGORIES.has(a.category)) return "no test on file";
+  for (const it of items) {
+    const j = judgeItem({ id: "", ...it }, today, today);
+    if (j.result === "expired") return `out of test (${it.title} ${j.detail})`;
+    if (isNoPaper(j)) return `no paper (${it.title})`;
+    if (j.result === "missing") return `no test date (${it.title})`;
+  }
+  return null;
+}
+
 export const STATE_LABEL: Record<EquipState, string> = {
   down: "Red-tagged",
   overdue: "Overdue",

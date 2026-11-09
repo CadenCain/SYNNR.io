@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
 import { canLowerAllowance } from "@/lib/saas/entitlements";
 import { STATUS_LABEL, PER_YARD_DOLLARS, monthlyDollars, money, planLine } from "@/lib/saas/plan";
+import { caughtLately, NPT_WINDOW_DAYS } from "./npt";
 
 export const metadata = { title: "Billing" };
 
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
 async function saveNptRate(formData: FormData) {
   "use server";
   const { company } = await requireCompany();
+  // The database only lets a manager change it: say so instead of a save that does nothing.
+  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only a manager can change the NPT day-rate.");
   const n = Math.max(0, Math.min(1_000_000, parseInt(String(formData.get("npt") ?? ""), 10) || 0));
   const db = await saasDb();
   await db.from("saas_companies").update({ npt_day_estimate: n }).eq("id", company.id);
@@ -60,7 +63,10 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
   const nptDay = c?.npt_day_estimate ?? 10000;
   const subscribed = status === "active" || status === "past_due" || status === "trialing";
   const owner = company.role === "owner";
+  const manager = owner || company.role === "admin";
   const plan = company.yard_quantity;
+  // The day-rate's estimate: trucks stopped NOT READY at load-out lately that didn't roll anyway.
+  const caught = manager ? await caughtLately(db, company.id) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,22 +142,29 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
         </Card>
       )}
 
-      <Card className="flex flex-col gap-3 p-5">
-        <div>
-          <h2 className="text-sm font-medium text-ink">Your NPT day-rate</h2>
-          <p className="mt-0.5 text-sm text-ink-dim">
-            Used to estimate the downtime a caught miss saved you. This is <span className="text-ink">your estimate</span>, not a measured figure. Set it to what a day of non-productive time actually costs your shop.
+      {manager ? (
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <h2 className="text-sm font-medium text-ink">Your NPT day-rate</h2>
+            <p className="mt-0.5 text-sm text-ink-dim">
+              Set it to what a day of non-productive time actually costs your shop. It turns the trucks stopped at load-out into <span className="text-ink">your estimate</span> of downtime avoided, not a measured figure.
+            </p>
+          </div>
+          <p className="text-sm text-ink">
+            {caught === 0
+              ? `No truck was stopped NOT READY at load-out in the last ${NPT_WINDOW_DAYS} days.`
+              : `In the last ${NPT_WINDOW_DAYS} days a truck was stopped NOT READY at load-out and didn't roll on an override ${caught} ${caught === 1 ? "time" : "times"} (once per truck per day).${nptDay > 0 ? ` At ${money(nptDay)} a day, that's your estimate of up to ${money(caught * nptDay)} in downtime avoided, if each one would have cost a day.` : ""}`}
           </p>
-        </div>
-        <form action={saveNptRate} className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs text-ink-faint">
-            NPT cost per day ($)
-            <input name="npt" type="number" min={0} max={1000000} defaultValue={nptDay}
-              className="h-11 w-40 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
-          </label>
-          <Button type="submit" size="sm">Save</Button>
-        </form>
-      </Card>
+          <form action={saveNptRate} className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs text-ink-faint">
+              NPT cost per day ($)
+              <input name="npt" type="number" min={0} max={1000000} defaultValue={nptDay}
+                className="h-11 w-40 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
+            </label>
+            <Button type="submit" size="sm">Save</Button>
+          </form>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -3,10 +3,9 @@ import { isDemoUser } from "./plan";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
-  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_KIT_CHECKS, DEMO_TOOL_STOCKS, type DemoAsset,
+  DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_TOOL_STOCKS, type DemoAsset,
 } from "./demo-data";
-import { demoLoadoutRecord } from "./demo-loadouts";
-import { kitLinesFrom } from "./loadout-lines";
+import { demoLoadoutRecord, demoKitLines, demoKitChecks } from "./demo-loadouts";
 import { verifyUpload } from "./cert-verify";
 import { computeDispatchCheck } from "./dispatch-check";
 import { localToday, addDaysIso } from "./status";
@@ -194,13 +193,14 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
         ...DEMO_PACKAGES.map((p) => ({ company_id: companyId, name: p.name, created_by: "Kevin Odom", roll_checks: p.checks ?? [] })),
         ...DEMO_UNITS.filter((u) => (u.assets ?? []).length).map((u) => ({ company_id: companyId, unit_id: unitId(u.key), name: `${u.name} kit`, created_by: "Kevin Odom",
           // Trucks that carry a BOP ask for the rams closed before they roll.
-          roll_checks: (u.assets ?? []).some((a) => /\bBOP\b/i.test(a.name)) ? DEMO_KIT_CHECKS : [] })),
+          roll_checks: demoKitChecks(u) })),
       ]).select("id, name, unit_id");
       if (error) throw new Error(`packages: ${error.message}`);
       const rows = (pk ?? []) as { id: string; name: string; unit_id: string | null }[];
       const lines = rows.flatMap((r) => {
+        // Named for the kind of piece, the same as the demo's load-out records (demo-loadouts.ts).
         const src = r.unit_id
-          ? kitLinesFrom((DEMO_UNITS.find((u) => unitId(u.key) === r.unit_id)!.assets ?? []).filter((a) => a.status !== "retired").map((a) => a.name))
+          ? demoKitLines(DEMO_UNITS.find((u) => unitId(u.key) === r.unit_id)!)
           : DEMO_PACKAGES.find((p) => p.name === r.name)!.lines;
         return src.map((l, i) => ({ package_id: r.id, company_id: companyId, label: l.label, qty: l.qty, sort: i + 1 }));
       });
@@ -234,6 +234,8 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
           started_at: new Date(atMs - rec.pieces.length * 70e3).toISOString(), finished_at: at,
           expected: rec.pieces.length, scanned: rec.pieces.length,
           verdict: rec.verdict, reasons: rec.reasons, packages: rec.packages,
+          // The checks the kit and packages ask for, tapped by the loader after the last piece went on.
+          roll_checks: rec.checks.length ? rec.checks.map((label) => ({ label, ok: true, by: lo.by, at: new Date(atMs - 30e3).toISOString() })) : null,
           lines: rec.lines.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}),
             filled: l.filled.map((f) => ({ asset_id: assetIdByKey.get(f.id), name: f.name, serial: f.serial })) })),
           pieces: rec.pieces.map((x, i) => ({

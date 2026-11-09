@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { extractExpirationDate } from "@/lib/ocr-date";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 import { COMPLIANCE_KINDS } from "@/lib/saas/taxonomy";
+import { isAnnualInspection, oneYearAfter } from "@/lib/saas/cert-verify";
+import { localToday } from "@/lib/saas/status";
+import { fmtDate } from "@/lib/saas/format";
 import { addComplianceItem } from "@/app/app/units/[unitId]/actions";
 
 /**
@@ -26,6 +29,8 @@ interface Outcome {
   canApprove?: boolean;
   checks?: CheckRow[];
   uploadId?: string;
+  /** The date an approve writes. */
+  goodTo?: string | null;
 }
 
 const fld = "h-11 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
@@ -45,7 +50,8 @@ function useCertPhoto() {
 
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
-  async function pick(raw: File | undefined) {
+  /** annual: the field is the inspection day, which the read (it looks for a future date) can't fill in. */
+  async function pick(raw: File | undefined, annual = false) {
     setErr("");
     if (!raw) return;
     if (!raw.type.startsWith("image/")) { setErr("That isn't a photo. Take a picture of the cert."); return; }
@@ -54,6 +60,7 @@ function useCertPhoto() {
     setFile(small);
     setPreview((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(small); });
     setReadHint(null);
+    if (annual) return;
     setReading(true);
     const read = await extractExpirationDate(small);
     setReading(false);
@@ -69,10 +76,10 @@ function useCertPhoto() {
   return { file, preview, expiration, setExpiration, reading, readHint, setReadHint, err, setErr, pick, reset };
 }
 
-function PhotoButtons({ photo, label }: { photo: ReturnType<typeof useCertPhoto>; label: string }) {
+function PhotoButtons({ photo, label, annual = false }: { photo: ReturnType<typeof useCertPhoto>; label: string; annual?: boolean }) {
   const cam = useRef<HTMLInputElement>(null);
   const lib = useRef<HTMLInputElement>(null);
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => { void photo.pick(e.target.files?.[0]); e.target.value = ""; };
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => { void photo.pick(e.target.files?.[0], annual); e.target.value = ""; };
   return (
     <div className="flex flex-col gap-2">
       {photo.preview ? (
@@ -100,10 +107,27 @@ function PhotoButtons({ photo, label }: { photo: ReturnType<typeof useCertPhoto>
   );
 }
 
-function ExpirationInput({ photo }: { photo: ReturnType<typeof useCertPhoto> }) {
+/**
+ * What gets sent for a cert. A yearly inspection report prints the day it
+ * was done, not an expiration: the hand types that day and it counts for
+ * one year from it (the server checks that day against the photo).
+ */
+function certDates(typed: string, annual: boolean): { expiration: string; issued: string | null } | { err: string } {
+  if (!annual) return { expiration: typed, issued: null };
+  const today = localToday();
+  if (typed > today) return { err: "That day hasn't come yet. Enter the day the inspection was done, from the report." };
+  const expiration = oneYearAfter(typed);
+  if (expiration <= today) return { err: "That inspection is more than a year old. Upload the newest report." };
+  return { expiration, issued: typed };
+}
+
+const missingDate = (annual: boolean) => annual ? "Enter the inspection date printed on the report." : "Enter the expiration date printed on the cert.";
+
+function ExpirationInput({ photo, annual = false }: { photo: ReturnType<typeof useCertPhoto>; annual?: boolean }) {
+  const good = annual && photo.expiration ? certDates(photo.expiration, true) : null;
   return (
     <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
-      Expiration date printed on the cert
+      {annual ? "Inspection date printed on the report" : "Expiration date printed on the cert"}
       <input
         type="date"
         required
@@ -111,7 +135,11 @@ function ExpirationInput({ photo }: { photo: ReturnType<typeof useCertPhoto> }) 
         onChange={(e) => { photo.setExpiration(e.target.value); photo.setReadHint(null); }}
         className={cn(fld, photo.readHint === "read" && "border-amber-500/60")}
       />
-      {photo.reading ? <span className="text-xs text-ink-faint">Reading the date off the photo…</span>
+      {annual ? (
+        <span className="text-xs text-ink-faint">
+          {good && "expiration" in good ? `Good for one year from that day: to ${fmtDate(good.expiration)}.` : "It's good for one year from the day it was done."}
+        </span>
+      ) : photo.reading ? <span className="text-xs text-ink-faint">Reading the date off the photo…</span>
         : photo.readHint === "read" ? <span className="text-xs text-amber-400">Read off the photo. Make sure it matches the paper.</span>
         : photo.readHint === "none" ? <span className="text-xs text-ink-faint">Couldn&apos;t pick a date off the photo. Type it in from the paper.</span>
         : null}
@@ -145,7 +173,7 @@ function Result({ r, onRetake, onForce, onApprove, onDone, busy, canRetake = tru
       <div className="flex flex-wrap gap-2">
         {r.outcome === "waiting" && r.canApprove && (
           <button type="button" disabled={busy} onClick={onApprove} className={primary}>
-            <Check className="h-4 w-4" /> {busy ? "Saving…" : "I checked it. Approve"}
+            <Check className="h-4 w-4" /> {busy ? "Saving…" : r.goodTo ? `I checked it. Approve, good to ${fmtDate(r.goodTo)}` : "I checked it. Approve"}
           </button>
         )}
         {r.outcome === "rejected" && r.canForce && (
@@ -177,7 +205,9 @@ async function approve(uploadId: string): Promise<{ ok: boolean; message: string
   try {
     const res = await fetch("/api/saas/certs/review", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ upload_id: uploadId, action: "approve" }),
+      // Only offered on a manager's own upload, under the date they typed and
+      // what the software found: approving it says they see that date on the paper.
+      body: JSON.stringify({ upload_id: uploadId, action: "approve", typed_ok: true }),
     });
     return await res.json();
   } catch {
@@ -186,10 +216,12 @@ async function approve(uploadId: string): Promise<{ ok: boolean; message: string
 }
 
 /** On an existing item: "Upload new cert". */
-export function UploadCert({ itemId, isManager, allowOnTheWay, failing, noPaper = false }: {
+export function UploadCert({ itemId, isManager, allowOnTheWay, failing, noPaper = false, annual = false }: {
   itemId: string; isManager: boolean; allowOnTheWay: boolean; failing: boolean;
   /** The date's on file but its paper isn't: this attaches it. */
   noPaper?: boolean;
+  /** A yearly inspection (isAnnualInspection): asks for the day it was done. */
+  annual?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   if (!open) {
@@ -202,14 +234,16 @@ export function UploadCert({ itemId, isManager, allowOnTheWay, failing, noPaper 
   }
   return (
     <div className="order-last mt-1 w-full rounded-lg border border-line-2 bg-coal p-3">
-      <UploadCertPanel itemId={itemId} isManager={isManager} allowOnTheWay={allowOnTheWay} onClose={() => setOpen(false)} />
+      <UploadCertPanel itemId={itemId} isManager={isManager} allowOnTheWay={allowOnTheWay} annual={annual} onClose={() => setOpen(false)} />
     </div>
   );
 }
 
 /** The upload itself: photo, date, check, result. Also the quick screen's renew step. */
-export function UploadCertPanel({ itemId, isManager, allowOnTheWay, onClose, big = false }: {
+export function UploadCertPanel({ itemId, isManager, allowOnTheWay, onClose, big = false, annual = false }: {
   itemId: string; isManager: boolean; allowOnTheWay: boolean; onClose: () => void; big?: boolean;
+  /** A yearly inspection (isAnnualInspection): asks for the day it was done. */
+  annual?: boolean;
 }) {
   const router = useRouter();
   const photo = useCertPhoto();
@@ -221,12 +255,17 @@ export function UploadCertPanel({ itemId, isManager, allowOnTheWay, onClose, big
 
   async function send(force = false) {
     if (!photo.file) { photo.setErr("Take a photo of the paper first."); return; }
-    if (evidence === "cert" && !photo.expiration) { photo.setErr("Enter the expiration date printed on the cert."); return; }
+    if (evidence === "cert" && !photo.expiration) { photo.setErr(missingDate(annual)); return; }
+    const dates = evidence === "cert" ? certDates(photo.expiration, annual) : null;
+    if (dates && "err" in dates) { photo.setErr(dates.err); return; }
     const fd = new FormData();
     fd.set("item_id", itemId);
     fd.set("photo", photo.file);
     fd.set("evidence", evidence);
-    if (evidence === "cert") fd.set("expiration", photo.expiration);
+    if (dates) {
+      fd.set("expiration", dates.expiration);
+      if (dates.issued) fd.set("issued", dates.issued);
+    }
     if (force) fd.set("force", "1");
     setBusy(true);
     const r = await post(fd);
@@ -265,9 +304,9 @@ export function UploadCertPanel({ itemId, isManager, allowOnTheWay, onClose, big
           ))}
         </div>
       )}
-      <PhotoButtons photo={photo} label={evidence === "cert" ? "Take a photo of the cert" : "Take a photo of the tag or invoice"} />
+      <PhotoButtons photo={photo} annual={annual && evidence === "cert"} label={evidence === "cert" ? (annual ? "Take a photo of the report" : "Take a photo of the cert") : "Take a photo of the tag or invoice"} />
       {evidence === "cert" ? (
-        photo.file ? <ExpirationInput photo={photo} /> : null
+        photo.file ? <ExpirationInput photo={photo} annual={annual} /> : null
       ) : (
         <p className="text-sm text-ink-dim">
           Upload the retest invoice or a photo of the new tag. It shows yellow, &quot;cert on the way&quot;, for 7 days, then goes red again unless the real cert is uploaded.
@@ -300,17 +339,21 @@ export function AddCert({ parentType, parentId, redirectPath, isManager, default
   const [mode, setMode] = useState<"photo" | "typed">("photo");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Outcome | null>(null);
+  const annual = isAnnualInspection(kind, title);
 
   function clear() { setResult(null); setTitle(""); photo.reset(); }
 
   async function send(force = false) {
     if (!title.trim()) { photo.setErr("Name the test or cert first (for example, BOP pressure test)."); return; }
     if (!photo.file) { photo.setErr("Take a photo of the cert first."); return; }
-    if (!photo.expiration) { photo.setErr("Enter the expiration date printed on the cert."); return; }
+    if (!photo.expiration) { photo.setErr(missingDate(annual)); return; }
+    const dates = certDates(photo.expiration, annual);
+    if ("err" in dates) { photo.setErr(dates.err); return; }
     const fd = new FormData();
     fd.set("parent_type", parentType); fd.set("parent_id", parentId);
     fd.set("title", title.trim()); fd.set("kind", kind);
-    fd.set("photo", photo.file); fd.set("evidence", "cert"); fd.set("expiration", photo.expiration);
+    fd.set("photo", photo.file); fd.set("evidence", "cert"); fd.set("expiration", dates.expiration);
+    if (dates.issued) fd.set("issued", dates.issued);
     if (force) fd.set("force", "1");
     setBusy(true);
     const r = await post(fd);
@@ -345,8 +388,8 @@ export function AddCert({ parentType, parentId, redirectPath, isManager, default
               {COMPLIANCE_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>
           </div>
-          <PhotoButtons photo={photo} label="Take a photo of the cert" />
-          {photo.file ? <ExpirationInput photo={photo} /> : null}
+          <PhotoButtons photo={photo} annual={annual} label={annual ? "Take a photo of the report" : "Take a photo of the cert"} />
+          {photo.file ? <ExpirationInput photo={photo} annual={annual} /> : null}
           {photo.err ? <p className="text-sm text-red-400">{photo.err}</p> : null}
           <button type="button" disabled={busy || !photo.file} onClick={() => void send()} className={cn(primary, "w-full sm:w-fit")}>
             {busy ? "Checking the photo…" : "Check it and add"}

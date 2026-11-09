@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendSms, sendEmail, smsConfigured } from "./notify";
 import { escHtml } from "./html";
 import { localToday } from "./status";
-import { alertHorizon, isAlertDue } from "./alert-window";
+import { alertHorizon, isAlertDue, isExpiredAlertDue } from "./alert-window";
 import { isWritable } from "./entitlements";
 
 /**
@@ -11,8 +11,12 @@ import { isWritable } from "./entitlements";
  * alerted yet, then route to the recipient list:
  *   saas_alert_recipients — name + email + phone + yards covered + channels —
  *   so the foreman who rolls the truck gets the text, not just the owner.
- * Falls back to legacy notification_settings emails, then company owners.
- * Each item alerts once (any channel); failed sends retry next run.
+ * A yard-only person gets only their yard's items. Items nobody on the list
+ * covers (or every item, when the list is empty) go to the legacy
+ * notification_settings emails, then the company owners.
+ * Each item alerts once ahead of time (any channel), and once more the day
+ * after it runs out if that first alert went out while it was still good.
+ * Failed sends retry next run.
  */
 export interface AlertSweepResult {
   companies_scanned: number;
@@ -71,11 +75,20 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     // Already-alerted (any channel) → skip. If this read fails we fall back to
     // alerting everything due — a duplicate warning beats a missed one.
     const { data: sentData, error: sentErr } = await admin
-      .from("saas_alerts_sent").select("compliance_item_id")
+      .from("saas_alerts_sent").select("compliance_item_id, sent_at")
       .eq("company_id", company.id).not("compliance_item_id", "is", null);
     if (sentErr) res.errors.push(`sent-log query ${company.name}: ${sentErr.message} (alerting unfiltered)`);
-    const sentIds = new Set(((sentData ?? []) as { compliance_item_id: string }[]).map((r) => r.compliance_item_id));
-    due = due.filter((i) => isAlertDue(i.expiration_date, todayIso, leadDays, sentIds.has(i.id)));
+    const sentRows = (sentData ?? []) as { compliance_item_id: string; sent_at?: string | null }[];
+    const sentIds = new Set(sentRows.map((r) => r.compliance_item_id));
+    // The newest alert per item, so a heads-up sent while it was still good
+    // gets one more the day it runs out (alert-window.ts isExpiredAlertDue).
+    const lastSent = new Map<string, string>();
+    for (const r of sentRows) {
+      if (r.sent_at && (!lastSent.has(r.compliance_item_id) || r.sent_at > lastSent.get(r.compliance_item_id)!)) lastSent.set(r.compliance_item_id, r.sent_at);
+    }
+    const lastDay = (id: string) => { const t = lastSent.get(id); return t ? localToday(new Date(t)) : null; };
+    due = due.filter((i) => isAlertDue(i.expiration_date, todayIso, leadDays, sentIds.has(i.id))
+      || isExpiredAlertDue(i.expiration_date, todayIso, lastDay(i.id)));
     if (due.length === 0) continue;
 
     // Resolve each item's yard for recipient scoping (crew cards → all yards).
@@ -97,13 +110,19 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
         : null; // crew — company-wide
     }
 
-    // Recipients: new routed table → legacy emails → owners.
+    // Recipients: the routed table. A yard-only person gets only their
+    // yard's items; anything nobody on the list can be reached for goes to
+    // the legacy emails, then the owners.
     const { data: recipData } = await admin
       .from("saas_alert_recipients")
       .select("name, email, phone, channels, yard_ids")
       .eq("company_id", company.id);
-    let recips = (recipData ?? []) as Recip[];
-    if (recips.length === 0) {
+    const reachable = (r: Recip) => Boolean((r.channels.includes("email") && r.email) || (smsConfigured() && r.channels.includes("sms") && r.phone));
+    const covers = (r: Recip, i: DueItem) => r.yard_ids === null || (i.yard_id !== null && r.yard_ids.includes(i.yard_id));
+    const listed = ((recipData ?? []) as Recip[]).filter(reachable);
+    const plan = listed.map((r) => ({ r, items: due.filter((i) => covers(r, i)) }));
+    const uncovered = due.filter((i) => !listed.some((r) => covers(r, i)));
+    if (uncovered.length) {
       let legacy = (s?.recipients ?? []).filter(Boolean);
       if (legacy.length === 0) {
         const { data: owners } = await admin
@@ -114,14 +133,18 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
         }
       }
       legacy = Array.from(new Set(legacy));
-      recips = legacy.map((email) => ({ name: email, email, phone: null, channels: ["email"], yard_ids: null }));
-    }
-    if (recips.length === 0) {
-      // THE silent-failure hole: items due, nobody resolvable to tell. Without
-      // this line the sweep skipped the company without a trace and the
-      // operator email said "all clear."
-      res.errors.push(`NO RECIPIENTS for ${company.name} — ${due.length} due item(s) UNDELIVERABLE`);
-      continue;
+      if (legacy.length === 0) {
+        // THE silent-failure hole: items due, nobody resolvable to tell. Without
+        // this line the sweep skipped them without a trace and the operator
+        // email said "all clear."
+        res.errors.push(`NO RECIPIENTS for ${company.name} — ${uncovered.length} due item(s)${listed.length ? " in yards nobody on the alert list covers" : ""} UNDELIVERABLE`);
+      }
+      for (const email of legacy) {
+        // Already on the list for a yard: one email with both.
+        const same = plan.find((p) => p.r.channels.includes("email") && p.r.email?.toLowerCase() === email.toLowerCase());
+        if (same) same.items = [...same.items, ...uncovered.filter((i) => !same.items.includes(i))];
+        else plan.push({ r: { name: email, email, phone: null, channels: ["email"], yard_ids: null }, items: uncovered });
+      }
     }
 
     const line = (i: DueItem) =>
@@ -135,8 +158,7 @@ export async function sweepAlerts(admin: SupabaseClient): Promise<AlertSweepResu
     const noteRecip = (ids: Iterable<string>, who: string) => {
       for (const id of ids) recipientsByItem.set(id, new Set([...(recipientsByItem.get(id) ?? []), who]));
     };
-    for (const r of recips) {
-      const mine = due.filter((i) => i.yard_id === null || r.yard_ids === null || r.yard_ids.includes(i.yard_id));
+    for (const { r, items: mine } of plan) {
       if (mine.length === 0) continue;
       const sorted = [...mine].sort((a, b) => (a.expiration_date ?? "0000").localeCompare(b.expiration_date ?? "0000"));
 

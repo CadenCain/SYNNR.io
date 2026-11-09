@@ -13,6 +13,7 @@ export const maxDuration = 60;
  * Upload a photo of a cert. Three ways in:
  *   item_id + photo                  renew an existing item
  *   parent_type + parent_id + title  add a new item from its cert photo
+ *                                    (or renew the one by that name)
  *   item_id + doc_request_id         a manager uses the photo a hand sent
  *                                    through their update link
  * The server reads the photo and decides; see lib/saas/cert-upload.ts.
@@ -67,11 +68,22 @@ export async function POST(req: Request) {
     if (!["unit", "asset", "crew"].includes(parentType) || !(await ownsParent(admin, company.id, parentType, parentId))) {
       return NextResponse.json({ ok: false, outcome: "rejected", message: "That truck, gear, or hand isn't in your yard." }, { status: 404 });
     }
-    const { data: created, error } = await admin.from("saas_compliance_items")
-      .insert({ company_id: company.id, parent_type: parentType, parent_id: parentId, title, kind })
-      .select("id").single();
-    if (error || !created) return NextResponse.json({ ok: false, outcome: "rejected", message: "Couldn't add that. Try again." }, { status: 500 });
-    itemId = createdItemId = (created as { id: string }).id;
+    // The same name already on this truck, piece, or hand: the new paper
+    // renews that one. A second item would leave the old one red and
+    // blocking the truck with a good cert sitting right next to it.
+    const key = (t: string) => t.trim().replace(/\s+/g, " ").toLowerCase();
+    const { data: same } = await admin.from("saas_compliance_items").select("id, title")
+      .eq("company_id", company.id).eq("parent_type", parentType).eq("parent_id", parentId);
+    const existing = ((same ?? []) as { id: string; title: string }[]).find((i) => key(i.title) === key(title));
+    if (existing) {
+      itemId = existing.id;
+    } else {
+      const { data: created, error } = await admin.from("saas_compliance_items")
+        .insert({ company_id: company.id, parent_type: parentType, parent_id: parentId, title, kind })
+        .select("id").single();
+      if (error || !created) return NextResponse.json({ ok: false, outcome: "rejected", message: "Couldn't add that. Try again." }, { status: 500 });
+      itemId = createdItemId = (created as { id: string }).id;
+    }
   }
 
   const result = await processUpload({

@@ -36,15 +36,16 @@ export async function paperLinks(client: SupabaseClient, items: { id: string; la
 }
 
 /**
- * The paper behind every piece on a load-out record, for the operator: the
- * cert each test stood on when the truck loaded (kept on the record), or the
- * piece's current cert for records saved before that was kept.
+ * The papers a load-out record stands on, piece by piece: the cert each test
+ * stood on when the truck loaded (kept on the record), or the piece's current
+ * cert for records saved before that was kept. Also what the public paper
+ * link checks an upload against before it opens it.
  */
-export async function recordPaper(
+export async function recordPaperUploads(
   client: SupabaseClient,
   companyId: string,
   pieces: { asset_id: string; tests?: { title: string; paper?: string | null }[] }[],
-): Promise<Record<string, { title: string; url: string }[]>> {
+): Promise<{ asset: string; title: string; upload: string }[]> {
   const want: { asset: string; title: string; upload: string }[] = [];
   const noSnapshot: string[] = [];
   for (const p of pieces) {
@@ -61,7 +62,27 @@ export async function recordPaper(
       .eq("company_id", companyId).eq("parent_type", "asset").in("parent_id", noSnapshot.slice(0, 300)).not("last_upload_id", "is", null);
     for (const r of (data ?? []) as { title: string; parent_id: string; last_upload_id: string }[]) want.push({ asset: r.parent_id, title: r.title, upload: r.last_upload_id });
   }
-  const byUpload = await signPaper(client, await uploadsById(client, want.map((w) => w.upload)));
+  return want;
+}
+
+/**
+ * The paper behind every piece on a load-out record, for the operator. In the
+ * app each link is signed. A public page passes `hrefFor`, its own address
+ * for each upload, which checks the link is still on and signs a fresh link
+ * every time it's opened: a signed link dies after an hour, and a company man
+ * on one bar of signal doesn't reload the page.
+ */
+export async function recordPaper(
+  client: SupabaseClient,
+  companyId: string,
+  pieces: { asset_id: string; tests?: { title: string; paper?: string | null }[] }[],
+  hrefFor?: (uploadId: string) => string,
+): Promise<Record<string, { title: string; url: string }[]>> {
+  const want = await recordPaperUploads(client, companyId, pieces);
+  const ups = await uploadsById(client, want.map((w) => w.upload));
+  const byUpload = hrefFor
+    ? new Map(ups.map((u) => [u.id, u.storage_path.startsWith(DEMO_PAPER) ? `/demo-cert/${u.item_id}` : hrefFor(u.id)]))
+    : await signPaper(client, ups);
   const out: Record<string, { title: string; url: string }[]> = {};
   for (const w of want) {
     const url = byUpload.get(w.upload);

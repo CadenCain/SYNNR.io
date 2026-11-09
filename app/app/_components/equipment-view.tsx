@@ -149,7 +149,7 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
         </div>
       </div>
 
-      {adding && addAction && <AddForm action={addAction} list={list} />}
+      {adding && addAction && <AddForm action={addAction} list={list} yard={yard} />}
 
       {hasAny && (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -321,8 +321,12 @@ function PhoneRow({ r, place, outDays }: { r: EquipRow; place: Place; outDays: n
 
 const fld = "h-11 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
 
-function AddForm({ action, list }: { action: (fd: FormData) => Promise<void>; list: EquipmentList }) {
+function AddForm({ action, list, yard }: { action: (fd: FormData) => Promise<void>; list: EquipmentList; yard: string }) {
   const [busy, setBusy] = useState(false);
+  // New iron starts in the yard the list is showing. With more than one yard
+  // and none picked, the hand picks: the first by name is a guess, not where it is.
+  const pickYard = list.yards.length > 1 && !list.yards.some((y) => y.id === yard);
+  const startAt = list.yards.some((y) => y.id === yard) ? `yard:${yard}` : list.yards.length === 1 ? `yard:${list.yards[0].id}` : "";
   return (
     <Card className="p-5">
       <form action={async (fd) => { setBusy(true); try { await action(fd); } finally { setBusy(false); } }} className="flex flex-col gap-3">
@@ -340,8 +344,9 @@ function AddForm({ action, list }: { action: (fd: FormData) => Promise<void>; li
             <input name="identifier" placeholder="As stamped on the iron" className={`${fld} mt-1`} />
           </label>
           <label className="text-xs text-ink-faint">Where it is
-            <select name="where" defaultValue={list.yards[0] ? `yard:${list.yards[0].id}` : ""} className={`${fld} mt-1`}>
+            <select key={startAt} name="where" defaultValue={startAt} required={pickYard} className={`${fld} mt-1`}>
               {list.yards.length === 0 && <option value="">No yards yet</option>}
+              {pickYard && <option value="" disabled>Pick a yard</option>}
               {list.yards.map((y) => (
                 <optgroup key={y.id} label={y.name}>
                   <option value={`yard:${y.id}`}>{y.name} (in the yard)</option>

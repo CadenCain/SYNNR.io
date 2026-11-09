@@ -9,8 +9,9 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { COMPLIANCE_KINDS, kindLabel } from "@/lib/saas/taxonomy";
 import { fmtDate } from "@/lib/saas/format";
-import type { ComplianceStatus } from "@/lib/saas/db";
+import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { localToday } from "@/lib/saas/status";
+import { isAnnualInspection } from "@/lib/saas/cert-verify";
 import { UploadCert } from "./cert-upload";
 import { updateComplianceItem, deleteComplianceItem } from "../_actions";
 
@@ -34,10 +35,30 @@ export const ROW_COLUMNS = "id, title, kind, issued_date, expiration_date, statu
 
 const chip = "rounded-sm border px-1.5 py-0.5 text-[11px] font-medium";
 
+/** The time now, read outside render. */
+const clock = () => Date.now();
+
+/**
+ * A turned-down upload, so whoever sent it sees it and why: the item's newest
+ * upload, when a manager turned it down in the last 30 days and nothing new
+ * has come in since. (Row-level security keeps the read inside the company.)
+ */
+async function turnedDown(itemId: string): Promise<{ from: string | null; by: string | null; note: string | null } | null> {
+  const db = await saasDb();
+  const { data } = await db.from("saas_cert_uploads")
+    .select("status, uploaded_by_name, reviewed_by_name, reviewed_at, review_note")
+    .eq("item_id", itemId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const u = data as { status: string; uploaded_by_name: string | null; reviewed_by_name: string | null; reviewed_at: string | null; review_note: string | null } | null;
+  if (!u || u.status !== "rejected" || !u.reviewed_at) return null;
+  if (Date.parse(u.reviewed_at) < clock() - 30 * 86400e3) return null;
+  return { from: u.uploaded_by_name, by: u.reviewed_by_name, note: u.review_note };
+}
+
 /** One compliance item: status, dates, "Upload new cert", and an Edit/Delete disclosure. */
-export default function ComplianceRow({ item, redirectPath, isManager, allowOnTheWay = true, paperUrl }: {
+export default async function ComplianceRow({ item, redirectPath, isManager, allowOnTheWay = true, paperUrl }: {
   item: RowItem; redirectPath: string; isManager: boolean; allowOnTheWay?: boolean; paperUrl?: string;
 }) {
+  const down = await turnedDown(item.id);
   const failing = item.status === "expired" || item.status === "none";
   const onTheWay = failing && Boolean(item.pending_until && item.pending_until >= localToday());
   return (
@@ -84,6 +105,11 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
               <> · <a href={paperUrl} target="_blank" rel="noreferrer" className="text-bone underline underline-offset-2">See the cert</a></>
             ) : null}
           </div>
+          {down ? (
+            <p className="mt-1 text-sm text-red-400">
+              Upload{down.from ? ` from ${down.from}` : ""} turned down by {down.by ?? "a manager"}{down.note ? `: ${down.note.replace(/\.+$/, "")}` : ""}. Upload it again.
+            </p>
+          ) : null}
           {item.customers && item.customers.length > 0 ? (
             <div className="mt-1 flex flex-wrap gap-1">
               {item.customers.map((c) => (
@@ -95,7 +121,8 @@ export default function ComplianceRow({ item, redirectPath, isManager, allowOnTh
         {/* Upload + edit sit side by side; the upload panel renders
             order-last w-full, wrapping to its own full-width band under the
             row instead of wedging into this corner. */}
-        <UploadCert itemId={item.id} isManager={isManager} allowOnTheWay={allowOnTheWay} failing={failing && !onTheWay} noPaper={item.status === "no_paper"} />
+        <UploadCert itemId={item.id} isManager={isManager} allowOnTheWay={allowOnTheWay} failing={failing && !onTheWay} noPaper={item.status === "no_paper"}
+          annual={isAnnualInspection(item.kind, item.title)} />
         {isManager && (
         <div className="flex items-center gap-2">
           <Popover>

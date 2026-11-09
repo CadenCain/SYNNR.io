@@ -96,11 +96,71 @@ export async function getLoadout(db: SupabaseClient, where: { id: string; compan
   return { rec, override: (ov as LoadoutOverride | null) ?? null };
 }
 
-/** A signed link to the photo of the loaded truck, and when it was taken. */
-export async function recordPhoto(db: SupabaseClient, rec: Pick<LoadoutRecord, "photo_path" | "finished_at">): Promise<{ url: string; at: string } | null> {
+/**
+ * The photo of the loaded truck, and when it was taken. The app gets a
+ * signed link. A public page passes `href`, its own address for the photo,
+ * which checks the link is still on and signs a fresh one each time it's
+ * opened (a signed link dies after an hour, and a company man leaves the tab
+ * open longer than that).
+ */
+export async function recordPhoto(db: SupabaseClient, rec: Pick<LoadoutRecord, "photo_path" | "finished_at">, href?: string): Promise<{ url: string; at: string } | null> {
   if (!rec.photo_path) return null;
+  const taken = photoTakenMs(rec.photo_path);
+  const at = taken ? new Date(taken).toISOString() : rec.finished_at;
+  if (href) return { url: href, at };
   const { data } = await db.storage.from("proofs").createSignedUrl(rec.photo_path, 3600);
   if (!data?.signedUrl) return null;
-  const taken = photoTakenMs(rec.photo_path);
-  return { url: data.signedUrl, at: taken ? new Date(taken).toISOString() : rec.finished_at };
+  return { url: data.signedUrl, at };
+}
+
+/**
+ * Each yard's time zone, by yard id. A yard with none (or before migration
+ * 0035 is in) reads Central: yardZone() in format.ts fills the gap.
+ */
+export async function yardZones(db: SupabaseClient, yardIds: (string | null | undefined)[]): Promise<Map<string, string>> {
+  const ids = [...new Set(yardIds.filter((x): x is string => Boolean(x)))];
+  if (!ids.length) return new Map();
+  const { data, error } = await db.from("saas_yards").select("id, time_zone").in("id", ids);
+  if (error) return new Map();
+  return new Map(((data ?? []) as { id: string; time_zone: string | null }[]).filter((y) => y.time_zone).map((y) => [y.id, y.time_zone!]));
+}
+
+/** Was the truck checked back in between these two times? Then the trip before is over. */
+export async function checkedInBetween(db: SupabaseClient, companyId: string, unitId: string, after: string, before: string): Promise<boolean> {
+  if (!(after < before)) return false;
+  const { data } = await db.from("saas_returns").select("id")
+    .eq("company_id", companyId).eq("unit_id", unitId).gt("finished_at", after).lt("finished_at", before)
+    .limit(1).maybeSingle();
+  return Boolean(data);
+}
+
+export interface LaterLoadout { unit_name: string; finished_at: string; proof_token: string; yard_id: string | null; outcome: LoadoutOutcome }
+
+/**
+ * The truck's newest load-out after this one, on the same trip: before it
+ * was checked back in, for the same job, with its link still on. An old
+ * NOT READY link points the operator to it ("loaded out again at 6:05 AM:
+ * READY"). Another job's load-out, or one after a check-in, is not this
+ * operator's to see.
+ */
+export async function laterLoadout(db: SupabaseClient, rec: Pick<LoadoutRecord, "id" | "company_id" | "unit_id" | "finished_at" | "job">): Promise<LaterLoadout | null> {
+  if (!rec.unit_id) return null;
+  const { data: backRow } = await db.from("saas_returns").select("finished_at")
+    .eq("company_id", rec.company_id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at)
+    .order("finished_at", { ascending: true }).limit(1).maybeSingle();
+  const back = backRow as { finished_at: string } | null;
+  let q = db.from("saas_loadout_scans").select("id, unit_name, finished_at, proof_token, yard_id, verdict, pieces, not_scanned, job")
+    .eq("company_id", rec.company_id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at);
+  if (back) q = q.lt("finished_at", back.finished_at);
+  const { data: nRow } = await q.order("finished_at", { ascending: false }).limit(1).maybeSingle();
+  const n = nRow as (Pick<LoadoutRecord, "id" | "unit_name" | "finished_at" | "proof_token" | "yard_id" | "verdict" | "pieces" | "not_scanned" | "job">) | null;
+  if (!n || n.id === rec.id) return null;
+  const sameJob = (a?: string | null, b?: string | null) => !a?.trim() || !b?.trim() || a.trim().toLowerCase() === b.trim().toLowerCase();
+  if (!sameJob(rec.job, n.job)) return null;
+  const [{ data: off }, { data: ov }] = await Promise.all([
+    db.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", n.id).maybeSingle(),
+    db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", n.id).maybeSingle(),
+  ]);
+  if (off) return null;
+  return { unit_name: n.unit_name, finished_at: n.finished_at, proof_token: n.proof_token, yard_id: n.yard_id, outcome: outcomeOf(n, ov as LoadoutOverride | null) };
 }

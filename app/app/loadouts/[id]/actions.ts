@@ -6,6 +6,8 @@ import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent, notifyEvent } from "@/lib/saas/notify";
 import { getLoadout, verdictOf, reasonsOf } from "@/lib/saas/loadout-record";
+import { canStillRoll } from "@/lib/saas/dispatch-check";
+import { getOpenPlan } from "@/lib/saas/plans";
 
 /**
  * Roll a NOT READY load-out anyway. Managers only, with a reason in a full
@@ -24,6 +26,9 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   const got = await getLoadout(db, { id, companyId: company.id });
   if (!got) redirect("/app/loadouts");
   if (verdictOf(got.rec) !== "not_ready" || got.override) redirect(`/app/loadouts/${id}`);
+  // An override covers what's on the truck now: a load-out from this shift.
+  // An older one's pieces, photo and paper aren't what's loaded today.
+  if (!canStillRoll(got.rec.finished_at)) redirect(`/app/loadouts/${id}?stale=1`);
   // Only the truck's newest load-out can roll, and only before it's checked
   // back in: an older one isn't what's on the truck, and a trip that's over can't start.
   const staleNow = async (q: typeof db) => {
@@ -67,14 +72,14 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
       .eq("company_id", company.id).in("asset_id", rolledIds).is("back_at", null);
   }
 
-  // The truck rolled: its open plan is used up (the one this load-out was
-  // checked against, or a newer one made since), so nobody's told it never left.
-  if (got.rec.unit_id) {
+  // The truck rolled: its plan is used up (the one this load-out was checked
+  // against, or a newer one made since for this load-out), so nobody's told
+  // it never left. A plan for a later job stays open for that job.
+  const open = got.rec.unit_id ? await getOpenPlan(db, company.id, got.rec.unit_id) : null;
+  const planIds = [...new Set([got.rec.plan?.id, open?.id].filter((x): x is string => Boolean(x)))];
+  if (planIds.length) {
     await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
-      .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).is("used_at", null);
-  } else if (got.rec.plan?.id) {
-    await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
-      .eq("id", got.rec.plan.id).eq("company_id", company.id).is("used_at", null);
+      .eq("company_id", company.id).in("id", planIds).is("used_at", null);
   }
 
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");

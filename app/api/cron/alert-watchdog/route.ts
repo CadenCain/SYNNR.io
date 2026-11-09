@@ -34,11 +34,12 @@ export async function GET(req: Request) {
 
   const OWNER = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
 
-  // The sweep runs at 11:30 UTC. Look for any heartbeat since 10:00 UTC today —
-  // wide enough for retries and clock drift, tight enough that yesterday's
-  // run can never satisfy today's check.
+  // The sweep runs at 4 AM yard time: 09:00 UTC on daylight time, 10:00 UTC
+  // on standard time. Look for any heartbeat since 08:00 UTC today — wide
+  // enough for either, tight enough that yesterday's run can never satisfy
+  // today's check.
   const windowStart = new Date();
-  windowStart.setUTCHours(10, 0, 0, 0);
+  windowStart.setUTCHours(8, 0, 0, 0);
 
   const { data, error } = await admin
     .from("saas_cron_runs")
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
       : "[SYNNR ops] watchdog could not read the heartbeat table";
     const body =
       verdict === "no_run"
-        ? "No heartbeat since 10:00 UTC. No customer received an expiration warning today.\n\nCheck Vercel → Crons and /op/health. Every day this stays down is a day a cert can lapse unannounced."
+        ? "No heartbeat since 08:00 UTC. No customer received an expiration warning today.\n\nCheck Vercel → Crons and /op/health. Every day this stays down is a day a cert can lapse unannounced."
         : verdict === "failed_run"
         ? `The sweep ran at ${run!.ran_at} but reported ${run!.errors} error(s).\n\n${run!.detail ?? ""}\n\nFailed sends retry tomorrow — unless the cause doesn't fix itself. Check /op/health.`
         : `The watchdog's own read failed: ${error!.message}\n\nThe sweep may be fine — but nothing can currently prove it. Check Supabase.`;

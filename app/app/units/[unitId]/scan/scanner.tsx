@@ -1,6 +1,6 @@
 "use client";
 
-import { YARD_TZ } from "@/lib/saas/format";
+import { YARD_TZ, fmtWhen } from "@/lib/saas/format";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ListTodo } from "lucide-react";
@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
 import ProofLink from "../../../_components/proof-link";
 import { useWakeLock, useResumeWhenVisible, primeSound, scanSound } from "../../../_components/scan-aids";
+import { checkable, maskSerial, lastFourMatch, findBySerial, serialMiss } from "../../../_components/serial-check";
+import { loadoutDraftSendable, LOADOUT_MAX_AGE } from "../../../_components/unsent-drafts";
+import { notScannedFor, needsAnswer, grabRank, grabbable, planCatchUp, kitChecksFrom, type PhonePiece, type Outcome } from "./scan-phone";
 
 /**
  * The load-out scan. The list comes first: the truck's kit, any packages
@@ -50,7 +53,6 @@ const useHasNfc = () => useSyncExternalStore(noSubscribe, () => ndef() !== null,
 
 /** A piece checked onto the truck. A tag scan carries the code read off the tag, for the server to check. */
 export type Scan = { how: ScanHow; at: number; proof?: string };
-type Outcome = "yard" | "missing";
 const HOW: Record<ScanHow, string> = { nfc: "NFC tap", qr: "QR", hand: "checked by hand" };
 const TONE = {
   good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
@@ -62,15 +64,16 @@ const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { timeZone:
 
 // Scans live on the phone until the load-out is saved, so a dead zone, a
 // dropped call, or a closed tab never loses them.
-type Draft = { startedAt: string; keptSince?: string | null; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; job?: string; savedAt: number };
+// jobEdited: the hand typed the job (otherwise the plan's goes on the record).
+// backInYard: the hand said the truck is back. tappedAt: when Save was first tapped.
+type Draft = { startedAt: string; keptSince?: string | null; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; job?: string; jobEdited?: boolean; backInYard?: boolean; tappedAt?: number | null; savedAt: number };
 const draftKey = (truckId: string) => `rr-loadout-${truckId}`;
-/** The saved draft's raw text if it's from the last 18 hours and has scans, else null. */
+/** The saved draft's raw text if it has scans and can still send (worked on in the last 18 hours, started under 20 hours ago), else null. */
 const readDraftRaw = (truckId: string): string | null => {
   try {
     const raw = localStorage.getItem(draftKey(truckId));
     if (!raw) return null;
-    const d = JSON.parse(raw) as Draft;
-    return Date.now() - d.savedAt < 18 * 3600e3 && Object.keys(d.scans ?? {}).length ? raw : null;
+    return loadoutDraftSendable(JSON.parse(raw) as Draft, Date.now()) ? raw : null;
   } catch { return null; }
 };
 const writeDraft = (truckId: string, d: Draft) => { try { localStorage.setItem(draftKey(truckId), JSON.stringify(d)); } catch { /* storage off */ } };
@@ -92,11 +95,11 @@ async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | nu
   } catch { return null; }
 }
 
-export interface ScanPlan { by: string | null; at: string; note: string | null; job?: string | null; packageIds: string[]; lines: KitLine[] }
+export interface ScanPlan { id?: string; by: string | null; at: string; note: string | null; job?: string | null; packageIds: string[]; lines: KitLine[] }
 
-export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], stillOutIds = [], truckPaper = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit: kitProp, kitChecks: kitChecksProp = [], stillOutIds = [], truckPaper = [], packages, manager = false, lastPackageIds, plan: planProp = null, tagRule = false, companyId, photoRule = "off", last4 = false, truckOut = null, noTagsInUse = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
-  pieces: ScanPiece[];
+  pieces: PhonePiece[];
   /** The truck's default kit lines (empty if none set). */
   kit: KitLine[];
   /** What the truck's kit asks the hand to confirm before it rolls. */
@@ -120,6 +123,10 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   photoRule?: "required" | "optional" | "off";
   /** Checking a piece by hand means typing the last 4 of its serial. */
   last4?: boolean;
+  /** By the records the truck is out on a job (its last load-out rolled, no check-in since). */
+  truckOut?: { since: string; sinceText: string; by: string | null } | null;
+  /** No piece in the company has ever been read off a tag: an NFC phone checks pieces off like an iPhone. */
+  noTagsInUse?: boolean;
   /** Only for the marketing screenshot: packages already picked. */
   initialPackageIds?: string[];
   /** Only for the marketing screenshot: start partway through a load-out. */
@@ -165,6 +172,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string; badIds: string[] } | null>(null);
   const [saveErr, setSaveErr] = useState("");
+  // The plan, the kit and its checks as this screen knows them. A save's
+  // answer carries the server's, so what a manager changed while the screen
+  // was open shows without a reload.
+  const [plan, setPlan] = useState<ScanPlan | null>(planProp);
+  const [kit, setKit] = useState<KitLine[]>(kitProp);
+  const [kitChecks, setKitChecks] = useState<string[]>(kitChecksProp);
+  /** Said after a save: the plan or the kit changed since this screen opened. */
+  const [listNote, setListNote] = useState<string | null>(null);
   const lockedIds = useMemo(() => plan?.packageIds ?? [], [plan]);
   const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? (plan ? plan.packageIds : lastPackageIds) ?? []);
   // First, what's this job? Then scanning. (Straight to scanning when picking a load-out back up.)
@@ -172,8 +187,21 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const [quick, setQuick] = useState<KitLine[]>([]);
   const [quickLabel, setQuickLabel] = useState("");
   const [quickQty, setQuickQty] = useState("1");
-  // Which job or well: from the manager's plan, or typed at the start.
+  // Which job or well: from the manager's plan, or typed at the start. Only
+  // one the hand typed is sent: otherwise the server puts the plan's on, so a
+  // re-plan or an old draft never puts the wrong well on the proof link.
   const [job, setJob] = useState(plan?.job ?? "");
+  const [jobEdited, setJobEdited] = useState(false);
+  // Out on a job by the records: the hand says it's back in the yard before
+  // a load-out can save (one now would end that trip or start it over).
+  const [backInYard, setBackInYard] = useState(false);
+  const [outCard, setOutCard] = useState<string | null>(truckOut
+    ? `${truck.name} is out on a job since ${truckOut.sinceText}${truckOut.by ? `, loaded by ${truckOut.by}` : ""}. Only load it out once it's back in the yard.` : null);
+  // When the hand first tapped Save on this load-out: an offline save can
+  // land hours later, and the record and the out clock go by this.
+  const [tappedAt, setTappedAt] = useState<number | null>(null);
+  // The server said this load-out can never save (too old, or the truck moved on).
+  const [dead, setDead] = useState(false);
   const [photo, setPhoto] = useState<Photo | null>(null);
   // Roll checks tapped, by label, with when.
   const [checked, setChecked] = useState<Record<string, number>>({});
@@ -183,7 +211,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const askPhoto = photoRule !== "off" && Boolean(companyId);
   // iPhones can't read tags from a website, and most yards don't use QR codes:
   // on those phones the hand checks pieces off the list and the photo is the proof.
-  const tapToCheck = !hasNfc && !tagRule;
+  // So do Android phones in a yard where nothing has ever been read off a tag.
+  const tapToCheck = !tagRule && (!hasNfc || noTagsInUse);
 
   const nfcAbort = useRef<AbortController | null>(null);
   const video = useRef<HTMLVideoElement | null>(null);
@@ -197,6 +226,9 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   // On the truck: logged on it, minus what's still out on the last job (unless it got scanned).
   const expected = useMemo(() => list.filter((p) => p.unitId === truck.id && (!stillOut.has(p.id) || scans[p.id])), [list, truck.id, stillOut, scans]);
   const added = useMemo(() => list.filter((p) => p.unitId !== truck.id && scans[p.id]), [list, scans, truck.id]);
+  // Logged on this truck but marked still out at the last check-in: offered
+  // on its line first, in case it's on the truck after all.
+  const ownOut = useMemo(() => list.filter((p) => p.unitId === truck.id && stillOut.has(p.id) && !scans[p.id]), [list, truck.id, stillOut, scans]);
 
   // The list, filled in as pieces get scanned.
   const picked = useMemo(() => packages.filter((x) => packageIds.includes(x.id)), [packages, packageIds]);
@@ -204,7 +236,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const askChecks = useMemo(() => requiredChecks(kitChecks, ...picked.map((x) => x.checks)), [kitChecks, picked]);
   const lineLabels = useMemo(() => expectedLines({ kit, packages: picked, planned, quick }).map((l) => l.label), [kit, picked, planned, quick]);
   /** In a scan-only yard: this piece has to be scanned off its tag. */
-  const needsTag = (p: ScanPiece) => tagRule && needsTagScan(p, lineLabels, TESTED_CATEGORIES);
+  const needsTag = (p: PhonePiece) => tagRule && needsTagScan(p, lineLabels, TESTED_CATEGORIES);
   const lines = useMemo(() => fillLines(
     expectedLines({ kit, packages: picked, planned, quick }),
     list.filter((p) => scans[p.id]).sort((a, b) => scans[a.id].at - scans[b.id].at).map((p) => ({ id: p.id, name: p.name, serial: p.serial })),
@@ -218,10 +250,16 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   // While a save is still sending, the list stays as it was sent, so the
   // record that lands matches what the hand sees.
   const lockedNote = () => setBanner({ tone: "warn", text: "Still sending this load-out. Wait for it to land before changing anything." });
-  function markScanned(piece: ScanPiece, how: ScanHow, proof?: string) {
+  function markScanned(piece: PhonePiece, how: ScanHow, proof?: string) {
     if (waitingForSignal) { lockedNote(); return; }
     const already = Boolean(scans[piece.id]);
-    const msg = scanMessage({ kind: "match", piece, onTruck: piece.unitId === truck.id }, truck.name, already);
+    let msg = scanMessage({ kind: "match", piece, onTruck: piece.unitId === truck.id }, truck.name, already);
+    // The load changed after the checks were tapped ("BOP rams closed"): they
+    // were about the old load, so they're done again.
+    if (!already && Object.keys(checked).length) {
+      setChecked({});
+      msg = { ...msg, text: `${msg.text} The load changed: tap the checks again before it rolls.` };
+    }
     setBanner(msg);
     if (!already) setScans((s) => ({ ...s, [piece.id]: { how, at: Date.now(), ...(proof ? { proof } : {}) } }));
     try { navigator.vibrate?.(msg.tone === "good" ? 80 : msg.tone === "bad" ? [300, 120, 300] : [120, 80, 120]); } catch { /* no vibration */ }
@@ -229,18 +267,20 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }
 
   /** Tapped the wrong row: that one isn't on the truck after all. */
-  function undo(piece: ScanPiece) {
+  function undo(piece: PhonePiece) {
     if (waitingForSignal) { lockedNote(); return; }
     setScans((s) => { const n = { ...s }; delete n[piece.id]; return n; });
     setBanner({ tone: "warn", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is unchecked.` });
   }
 
   /** A bad piece came back off the truck: it's not part of this load-out. */
-  function takeOff(piece: ScanPiece) {
+  function takeOff(piece: PhonePiece) {
     if (waitingForSignal) { lockedNote(); return; }
     setScans((s) => { const n = { ...s }; delete n[piece.id]; return n; });
     if (piece.unitId === truck.id) setOutcomes((o) => ({ ...o, [piece.id]: "yard" }));
-    setBanner({ tone: "good", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is off the truck. Scan the one going in its place.` });
+    const reCheck = Object.keys(checked).length > 0;
+    if (reCheck) setChecked({});
+    setBanner({ tone: "good", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is off the truck. Scan the one going in its place.${reCheck ? " Tap the checks again before it rolls." : ""}` });
   }
 
   function addQuick() {
@@ -272,22 +312,31 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   // Keep the load-out on the phone as it happens. Unchecking the last piece
   // clears it (a draft from before this visit stays until picked up or dropped).
   const hadScans = useRef(false);
+  // Picking a draft back up isn't working on it: it keeps its last-worked time.
+  const keepSavedAt = useRef<number | null>(null);
   useEffect(() => {
-    if (saved) return;
+    // Saved, or the server said it can never save: nothing to keep.
+    if (saved || dead) return;
     if (Object.keys(scans).length === 0) {
       if (hadScans.current) { clearDraft(truck.id); hadScans.current = false; }
       return;
     }
     hadScans.current = true;
-    writeDraft(truck.id, { startedAt, keptSince, scans, outcomes, packageIds, quick, checks: checked, job, savedAt: Date.now() });
-  }, [scans, outcomes, packageIds, quick, checked, job, startedAt, keptSince, saved, truck.id]);
+    writeDraft(truck.id, { startedAt, keptSince, scans, outcomes, packageIds, quick, checks: checked, job, jobEdited, backInYard, tappedAt, savedAt: keepSavedAt.current ?? Date.now() });
+    keepSavedAt.current = null;
+  }, [scans, outcomes, packageIds, quick, checked, job, jobEdited, backInYard, tappedAt, startedAt, keptSince, saved, dead, truck.id]);
 
   function pickUpDraft() {
     if (!draft) return;
+    keepSavedAt.current = draft.savedAt;
     setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt); setKeptSince(draft.keptSince ?? null);
     setPackageIds([...new Set([...lockedIds, ...(draft.packageIds ?? [])])].filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
     setChecked(draft.checks ?? {});
-    if (draft.job) setJob(draft.job);
+    // Only a job the hand typed comes back. One from the plan comes from the
+    // plan as it is now. (A draft from before this was kept: typed if there's no plan.)
+    if (draft.job && (draft.jobEdited ?? !plan)) { setJob(draft.job); setJobEdited(true); }
+    if (draft.backInYard) { setBackInYard(true); setOutCard(null); }
+    setTappedAt(draft.tappedAt ?? null);
     setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
@@ -400,16 +449,18 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setPendingLink(null); setLinkFilter("");
   }
 
-  function matchesLink(p: ScanPiece) {
+  function matchesLink(p: PhonePiece) {
     const f = linkFilter.trim().toLowerCase();
     return !f || `${p.name} ${p.serial ?? ""}`.toLowerCase().includes(f);
   }
 
   function addBySerial() {
-    const want = serialText.trim().toLowerCase();
-    if (!want) return;
-    const piece = list.find((p) => (p.serial ?? "").toLowerCase() === want);
-    if (!piece) { setBanner({ tone: "warn", text: `No piece with serial ${serialText.trim()}. Check the stamp and try again.` }); return; }
+    if (!serialText.trim()) return;
+    // Dashes, spaces and case don't count, and the last 4 or more find the
+    // one piece that ends that way. Two that could be it: type more.
+    const hit = findBySerial(list, serialText);
+    if (!hit || "many" in hit) { setBanner({ tone: "warn", text: serialMiss(serialText, hit) }); return; }
+    const piece = hit.piece;
     if (needsTag(piece)) { setBanner({ tone: "bad", text: `This yard scans tags only. Find the tag on ${piece.name} ${piece.serial ?? ""} and scan it.`.replace(/\s+\./, ".") }); return; }
     markScanned(piece, "hand");
     setSerialText("");
@@ -466,12 +517,20 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }
 
   const savingNow = useRef(false);
-  async function save() {
+  async function save(opts: { backInYard?: boolean } = {}) {
     // The 30-second retry never starts a second save over one still going.
-    if (savingNow.current) return;
+    if (savingNow.current || dead) return;
     savingNow.current = true;
     setSaving(true); setSaveErr("");
-    const notScanned = expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "yard" as Outcome }));
+    const back = opts.backInYard ?? backInYard;
+    // A red piece nobody answered for isn't sent: the server blocks on it as not scanned.
+    const notScanned = notScannedFor(expected, scans, outcomes);
+    // What this save takes off the truck: what the phone answered for, and
+    // pieces already flagged missing (the server takes those off by itself).
+    const offIds = new Set([...notScanned.map((n) => n.assetId), ...expected.filter((p) => !scans[p.id] && p.missing).map((p) => p.id)]);
+    // When the hand tapped Save, kept for every retry and resend.
+    const tapAt = tappedAt ?? Date.now();
+    if (tappedAt === null) setTappedAt(tapAt);
     let res: Awaited<ReturnType<typeof finishLoadout>>;
     try {
       // One bar of signal: stop waiting and keep it on the phone (a resend
@@ -484,8 +543,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       res = await timeout(finishLoadout({
         unitId: truck.id, startedAt, keptSince: keptSince ?? undefined,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
-        notScanned, packageIds, quick, photoPath, job,
+        notScanned, packageIds, quick, photoPath,
+        // Only what the hand typed: otherwise the server puts the plan's job on.
+        job: jobEdited ? job : undefined,
         checks: askChecks.filter((c) => checked[c]).map((c) => ({ label: c, at: checked[c] })),
+        backInYard: back || undefined, savedAt: tapAt,
       }), 25000);
     } catch (e) {
       // No signal, weak signal, or the request died. Everything is still on the phone.
@@ -514,15 +576,30 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setSaving(false);
     setSlowTries(0);
     setFailsWithSignal(0);
-    // Stale (the truck already moved on): drop the phone's copy so it stops coming back.
-    if (res.stale) { clearDraft(truck.id); setWaitingForSignal(false); }
+    // Stale (too old, or the truck already moved on): it can never save. Drop
+    // the phone's copy and stop trying, so it stops coming back.
+    if (res.stale) {
+      clearDraft(truck.id); setWaitingForSignal(false); setDead(true);
+      setSaveErr(Date.now() - Date.parse(startedAt) >= LOADOUT_MAX_AGE
+        ? `This load-out of ${truck.name} from ${fmtWhen(startedAt)} is too old to save. Tell a manager what went on.`
+        : res.error ?? "This load-out can't be saved. Start a new one from the truck.");
+      return;
+    }
+    // Out on a job by the records: the draft stays, and one tap says it's back.
+    if (res.truckOut) {
+      setWaitingForSignal(false); setBackInYard(false);
+      setOutCard(res.error ?? `${truck.name} is out on a job. Only load it out once it's back in the yard.`);
+      return;
+    }
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
     setWaitingForSignal(false);
     clearDraft(truck.id);
     // The save moved the iron: everything scanned is logged on this truck now
-    // (bad pieces too, until someone takes them off), and anything marked not
-    // going is back in the yard. Scanning again starts from there.
+    // (bad pieces too, until someone takes them off), except a piece out on
+    // another truck's job, and anything the phone answered for is off it.
+    // Scanning again starts from there.
     const went = new Set(Object.keys(scans));
+    const notMoved = new Set(res.notMoved ?? []);
     // Still-out pieces this NOT READY save scanned are on this truck now (the
     // server says so too; worked out here as well, since a resend's answer doesn't carry it).
     if (res.verdict !== "ready") {
@@ -539,13 +616,39 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
         ...left.filter((x) => !l.some((p) => p.id === x.id)).map((x) => ({ id: x.id, name: x.name, serial: x.serial, unitId: truck.id, where: truck.name,
           category: x.category, tagKey: "", extKey: null, problem: null, statusText: "Logged on this truck since this page opened. Reload the page to scan its tag, or say below where it is" } satisfies ScanPiece)),
       ]);
-      const pk = (res.packageIds ?? []).filter((id) => packages.some((x) => x.id === id));
+      // A manager changed the plan, the kit or its checks while this screen
+      // was open: the next try goes by the list the server checked. A package
+      // only the old plan locked comes off; the new plan's are locked on.
+      const notes: string[] = [];
+      let dropped: string[] = [];
+      if (res.plan !== undefined) {
+        const c = planCatchUp({ shown: plan, locked: lockedIds, packageIds, known: packages.map((x) => x.id), server: res.plan });
+        dropped = c.dropped;
+        if (c.note) {
+          notes.push(c.note);
+          setPlan(c.plan ? { ...c.plan, note: plan && plan.id === c.plan.id ? plan.note : null } : null);
+          if (!jobEdited) setJob(c.plan?.job ?? "");
+        }
+        if (c.locked.length || dropped.length) setPackageIds((ids) => [...new Set([...ids.filter((id) => !dropped.includes(id)), ...c.locked])]);
+      }
+      const pk = (res.packageIds ?? []).filter((id) => packages.some((x) => x.id === id) && !dropped.includes(id));
       if (pk.length) setPackageIds((ids) => [...new Set([...ids, ...pk])]);
+      // (Compared without order: the same kit read twice can list ties either way.)
+      const key = (xs: string[]) => xs.map((x) => x.toLowerCase()).sort().join("\n");
+      let kitChanged = false;
+      if (res.kit !== undefined && key(res.kit.map((l) => `${l.label}\t${l.qty}`)) !== key(kit.map((l) => `${l.label}\t${l.qty}`))) { setKit(res.kit); kitChanged = true; }
+      if (res.checks !== undefined) {
+        const pkgChecks = packages.filter((x) => (res.packageIds ?? packageIds).includes(x.id)).map((x) => x.checks);
+        const kc = kitChecksFrom(res.checks, pkgChecks);
+        if (key(requiredChecks(kc, ...pkgChecks)) !== key(requiredChecks(kitChecks, ...pkgChecks))) { setKitChecks(kc); kitChanged = true; }
+      }
+      if (kitChanged) notes.push(`${truck.name}'s kit changed since this screen opened. This is the new list.`);
+      setListNote(notes.length ? notes.join(" ") : null);
     }
     // (Pieces the phone didn't send an answer for stay on the truck, like the server leaves them.)
     const leftIds = new Set((res.left ?? []).map((x) => x.id));
-    setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
-      : p.unitId === truck.id && !leftIds.has(p.id) && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
+    setList((l) => l.map((p) => went.has(p.id) && !notMoved.has(p.id) ? { ...p, unitId: truck.id }
+      : offIds.has(p.id) && !leftIds.has(p.id) ? { ...p, unitId: null, ...(outcomes[p.id] === "missing" ? { missing: true } : {}) } : p));
     stopNfc(); stopCamera();
     setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken, badIds: res.badIds ?? [] });
     try { navigator.vibrate?.(res.verdict === "ready" ? 120 : [200, 100, 200, 100, 200]); } catch { /* no vibration */ }
@@ -567,11 +670,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setOutcomes((o) => Object.fromEntries(Object.entries(o).filter(([id, v]) => v === "missing" && !keep[id])));
     setSaved(null); setScans(keep); setFinishing(false); setPhoto(null); uploadedPath.current = null; photoSend.current = null;
     setKeptSince((k) => k ?? startedAt);
-    // A piece came off and another goes on in its place: the checks before it
-    // rolls ("BOP rams closed") were about the old load, so they're done again.
-    if (dropped) setChecked({});
+    // Whatever gets fixed changes the load (a piece off, or one added), so the
+    // checks before it rolls ("BOP rams closed") are done again after it.
+    if (askChecks.length) setChecked({});
+    // A new load-out from here: its Save tap is still to come.
+    setTappedAt(null);
     setStartedAt(new Date().toISOString());
-    setBanner({ tone: "warn", text: `Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took off ${dropped} bad ${dropped === 1 ? "one" : "ones"}: put a good one on in its place${askChecks.length ? ", and tap the checks before it rolls again" : ""}` : ""}. Fix what's wrong, then save again.` });
+    setBanner({ tone: "warn", text: `${listNote ? `${listNote} ` : ""}Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took ${dropped} bad ${dropped === 1 ? "one" : "ones"} off the list: take ${dropped === 1 ? "it" : "them"} off the truck, tap Took it off, and put a good one on in its place` : ""}${askChecks.length ? ". Tap the checks again before it rolls" : ""}. Fix what's wrong, then save again.` });
+    setListNote(null);
   }
 
   // When signal comes back, send the load-out that's waiting.
@@ -587,6 +693,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
 
   if (saved) {
     const ready = saved.verdict === "ready";
+    // Only the truck's own paper is wrong: scanning again can't fix that.
+    const paperOnly = !ready && saved.reasons.length > 0 && saved.reasons.every((r) => r.startsWith("Truck paper:"));
     return (
       <div className="flex flex-col gap-4">
         <div className={cn("rounded-2xl border p-5", ready ? TONE.good : TONE.bad)}>
@@ -607,14 +715,27 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             <ProofLink url={`https://www.synnr.io/l/${saved.proofToken}`} title={`${truck.name} load-out`} />
           </div>
         ) : null}
+        {!ready && listNote ? <div role="status" className={cn("rounded-2xl border px-4 py-3 text-base font-semibold", TONE.warn)}>{listNote}</div> : null}
+        {paperOnly ? (
+          <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink">
+            Scanning again can&apos;t fix {truck.name}&apos;s paper. {manager ? "Fix it on the truck's page, or roll it anyway from the record." : "Tell a manager: only a manager can fix it or roll it anyway."}
+          </p>
+        ) : null}
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-          {!ready ? (
+          {!ready && !paperOnly ? (
             <button type="button" onClick={fixAndRescan}
               className={buttonClass("default", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Fix it and scan again</button>
           ) : null}
-          <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready ? "default" : "outline", "lg", "h-14 text-base")}>
+          {paperOnly && !manager ? (
+            <Link href={`/app/units/${truck.id}`} className={buttonClass("default", "lg", "h-14 text-base")}>See {truck.name}&apos;s paper</Link>
+          ) : null}
+          <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready || (paperOnly && manager) ? "default" : "outline", "lg", "h-14 text-base")}>
             {ready ? "See the record" : manager ? "Open the record to roll anyway" : "See the record"}
           </Link>
+          {paperOnly ? (
+            <button type="button" onClick={fixAndRescan}
+              className={buttonClass("outline", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Scan again once it&apos;s fixed</button>
+          ) : null}
           <Link href="/app" className={buttonClass("outline", "lg", "h-14 text-base")}>Back to Load out</Link>
         </div>
       </div>
@@ -622,7 +743,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }
 
   const redScanned = list.filter((p) => scans[p.id] && p.problem === "red");
-  const notYet = expected.filter((p) => !scans[p.id]);
+  // Logged on the truck, not scanned. One already flagged missing isn't asked
+  // about: the server takes it off the truck by itself.
+  const notYet = expected.filter((p) => !scans[p.id] && !p.missing);
+  const flaggedMissing = expected.filter((p) => !scans[p.id] && p.missing);
+  // Red and not scanned: the hand says what happened to it before saving.
+  const unanswered = notYet.filter((p) => needsAnswer(p, outcomes));
   const short = shortLines(lines);
   const missingNow = notYet.filter((p) => outcomes[p.id] === "missing");
   const nothingScanned = Object.keys(scans).length === 0;
@@ -648,9 +774,34 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     </div>
   );
 
+  /** It's back: the load-out can go ahead (and a save it refused goes again). */
+  function backNow() {
+    setBackInYard(true); setOutCard(null);
+    if (finishing && Object.keys(scans).length) void save({ backInYard: true });
+  }
+  const outCardEl = outCard && !backInYard ? (
+    <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
+      <div className="font-semibold">{truck.name} is out on a job</div>
+      <p className="break-words text-sm text-ink">{outCard}</p>
+      <p className="text-sm text-ink-dim">To log a piece sent out to it, use Move it on that piece.</p>
+      <button type="button" onClick={backNow} disabled={saving} className={buttonClass("default", "lg", "h-14 text-base")}>It&apos;s back in the yard</button>
+    </div>
+  ) : null;
+
   if (!started) {
     return (
       <div className="flex flex-col gap-5">
+        {outCardEl}
+        {truckPaper.length ? (
+          <div role="alert" className="flex flex-col gap-1.5 rounded-2xl border border-red-500/50 bg-red-500/10 p-4">
+            <ul className="flex flex-col gap-1">
+              {truckPaper.map((t) => <li key={t.title} className="break-words font-semibold text-red-400">{truck.name} can&apos;t roll: {t.title} {t.detail}.</li>)}
+            </ul>
+            <p className="text-sm text-ink">{manager
+              ? <>Fix it on <Link href={`/app/units/${truck.id}`} className="text-bone underline underline-offset-2">the truck&apos;s page</Link>, or load it and roll it anyway from the record.</>
+              : "Only a manager can clear this. You can still load it: it saves NOT READY until a manager fixes the paper or rolls it anyway."}</p>
+          </div>
+        ) : null}
         {draft && !draftHandled && draft.startedAt !== startedAt ? (
           <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
             <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
@@ -668,7 +819,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">Which job or well? <span className="font-normal text-ink-faint">(optional, goes on the operator&apos;s proof link)</span></span>
-            <input value={job} onChange={(e) => setJob(e.target.value.slice(0, 120))} placeholder="Like: University 7-12 #3H" aria-label="Which job or well"
+            <input value={job} onChange={(e) => { setJob(e.target.value.slice(0, 120)); setJobEdited(true); }} placeholder="Like: University 7-12 #3H" aria-label="Which job or well"
               className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
           </label>
           {plan ? (
@@ -735,11 +886,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
               </details>
             ) : extras;
           })()}
-          <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 -mx-1 rounded-2xl bg-surface/95 p-1 backdrop-blur md:bottom-4">
-            <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); setKeptSince(null); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
-              <ScanLine className="h-5 w-5" /> {tapToCheck ? "Start loading" : "Start scanning"}{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
-            </button>
-          </div>
+          {/* Out on a job by the records: the card up top comes first. */}
+          {outCardEl ? null : (
+            <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 -mx-1 rounded-2xl bg-surface/95 p-1 backdrop-blur md:bottom-4">
+              <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); setKeptSince(null); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
+                <ScanLine className="h-5 w-5" /> {tapToCheck ? "Start loading" : "Start scanning"}{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     );
@@ -747,6 +901,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
 
   return (
     <div className="flex flex-col gap-5">
+      {finishing ? null : outCardEl}
       {draft && !draftHandled && draft.startedAt !== startedAt && Object.keys(scans).length === 0 ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
           <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
@@ -769,14 +924,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
         {hasNfc ? (
           nfcOn
             ? <button type="button" onClick={stopNfc} className={buttonClass("outline", "lg", "h-14 text-base")}><Nfc className="h-5 w-5 animate-pulse text-bone" /> Listening for tags (stop)</button>
-            : <button type="button" onClick={startNfc} className={buttonClass("default", "lg", "h-14 text-base")}><Nfc className="h-5 w-5" /> Tap tags (NFC)</button>
+            : <button type="button" onClick={startNfc} className={buttonClass(tapToCheck ? "outline" : "default", "lg", tapToCheck ? "h-12 text-sm" : "h-14 text-base")}><Nfc className="h-5 w-5" /> Tap tags (NFC)</button>
         ) : null}
         {camOn
           ? <button type="button" onClick={stopCamera} className={buttonClass("outline", "lg", "h-14 text-base")}><X className="h-5 w-5" /> Stop camera</button>
           : <button type="button" onClick={startCamera} className={buttonClass(hasNfc || tapToCheck ? "outline" : "default", "lg", tapToCheck ? "h-12 text-sm" : "h-14 text-base")}><Camera className="h-5 w-5" /> {tapToCheck ? "Scan a QR code" : "Scan QR codes"}</button>}
       </div>
       {tapToCheck
-        ? <p className="-mt-2 text-sm text-ink-dim">Tap <span className="font-semibold text-ink">It&apos;s on the truck</span> on each piece as it goes on{askPhoto ? ", then take one photo of the loaded truck" : ""}. If a piece has a QR code, you can scan that instead.</p>
+        ? <p className="-mt-2 text-sm text-ink-dim">Tap <span className="font-semibold text-ink">It&apos;s on the truck</span> on each piece as it goes on{askPhoto ? ", then take one photo of the loaded truck" : ""}. If a piece has a {hasNfc ? "tag or " : ""}QR code, you can scan that instead.</p>
         : !hasNfc ? <p className="-mt-2 text-xs text-ink-faint">NFC tapping works in Chrome on Android. On this device, scan QR codes.</p> : null}
       {tagRule ? <p className="-mt-2 text-xs text-ink-faint">This yard scans tags only: pressure iron and anything on the list has to be scanned off its tag. A tag that won&apos;t scan means a manager signs off.</p> : null}
 
@@ -821,31 +976,39 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
         for (const l of lines) for (const f of l.filled) used.add(f.id);
         const view = lines.map((l) => {
           const need = Math.max(0, l.qty - l.filled.length);
-          // What could fill it from the truck: not a bad piece, and not one marked not going.
-          const onTruck = need ? expected.filter((p) => !scans[p.id] && !used.has(p.id) && p.problem !== "red" && outcomes[p.id] !== "yard" && lineMatches(l.label, p.name)).slice(0, need) : [];
+          // What could fill it from the truck: not a bad piece, not one flagged
+          // missing, and not one marked not going.
+          const onTruck = need ? expected.filter((p) => !scans[p.id] && !used.has(p.id) && p.problem !== "red" && !p.missing && outcomes[p.id] !== "yard" && lineMatches(l.label, p.name)).slice(0, need) : [];
           onTruck.forEach((p) => used.add(p.id));
           const stillNeed = need - onTruck.length;
+          // This truck's own iron, marked still out at the last check-in: it may be on the truck after all.
+          const backMaybe = stillNeed ? ownOut.filter((p) => !used.has(p.id) && p.problem !== "red" && !p.missing && lineMatches(l.label, p.name)).slice(0, stillNeed) : [];
+          backMaybe.forEach((p) => used.add(p.id));
+          // Spares a hand can go get: nearest first, never iron that's out on a job or missing.
           const inYard = stillNeed
-            ? list.filter((p) => p.unitId !== truck.id && !scans[p.id] && !used.has(p.id) && p.problem !== "red" && lineMatches(l.label, p.name))
-                .sort((x, y) => Number(y.unitId === null) - Number(x.unitId === null)).slice(0, stillNeed + 1)
+            ? list.filter((p) => grabbable(p, truck.id) && !scans[p.id] && !used.has(p.id) && lineMatches(l.label, p.name))
+                .sort((x, y) => grabRank(x) - grabRank(y)).slice(0, stillNeed + 1)
             : [];
           inYard.forEach((p) => used.add(p.id));
-          return { l, onTruck, inYard, stillNeed };
+          return { l, onTruck, backMaybe, inYard, stillNeed };
         });
         const leftover = expected.filter((p) => !used.has(p.id));
+        const ownLeft = ownOut.filter((p) => !used.has(p.id));
         const extras = added.filter((p) => !used.has(p.id));
-        const rowOf = (p: ScanPiece, place?: string) => (
+        const rowOf = (p: PhonePiece, place?: string) => (
           <Row key={p.id} p={p} scan={scans[p.id]} last4={last4} strong={tapToCheck} tagOnly={needsTag(p)} nested place={place}
+            offerTakeOff={p.unitId === truck.id && !stillOut.has(p.id)} off={outcomes[p.id] === "yard"}
             onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} onUndo={() => undo(p)} />
         );
-        const yardPlace = (p: ScanPiece) => `${p.unitId ? `On ${p.where}` : `In ${p.where}`}${p.spot ? `, ${p.spot}` : ""}`;
+        const stillOutNote = `Marked still out at the last check-in. On ${truck.name} after all?`;
+        const yardPlace = (p: PhonePiece) => `${p.unitId ? `On ${p.where}` : `In ${p.where}`}${p.spot ? `, ${p.spot}` : ""}`;
         return (
           <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-base font-semibold">{lines.length ? `What goes on ${truck.name}` : `On ${truck.name}`}</h2>
               {lines.length ? <span className="text-sm tabular-nums text-ink-dim">{linesDone} of {lines.length} done</span> : null}
             </div>
-            {view.map(({ l, onTruck, inYard, stillNeed }, i) => {
+            {view.map(({ l, onTruck, backMaybe, inYard, stillNeed }, i) => {
               const bad = lineBad(l);
               const done = l.filled.length >= l.qty && !bad;
               return (
@@ -868,13 +1031,19 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
                   </div>
                   {l.filled.map((f) => { const p = byId.get(f.id); return p ? rowOf(p) : null; })}
                   {onTruck.map((p) => rowOf(p))}
+                  {backMaybe.length ? (
+                    <>
+                      <div className="text-[13px] font-medium text-amber-400">{stillOutNote}</div>
+                      {backMaybe.map((p) => rowOf(p))}
+                    </>
+                  ) : null}
                   {stillNeed > 0 && inYard.length ? (
                     <>
-                      <div className="text-[13px] font-medium text-amber-400">Not on {truck.name}. Grab {stillNeed === 1 ? "one" : stillNeed} from here:</div>
+                      <div className="text-[13px] font-medium text-amber-400">{backMaybe.length ? `If it's not, grab ${stillNeed === 1 ? "one" : stillNeed} from here:` : `Not on ${truck.name}. Grab ${stillNeed === 1 ? "one" : stillNeed} from here:`}</div>
                       {inYard.map((p) => rowOf(p, yardPlace(p)))}
                     </>
                   ) : null}
-                  {stillNeed > 0 && !inYard.length && !onTruck.length ? (
+                  {stillNeed > 0 && !inYard.length && !onTruck.length && !backMaybe.length ? (
                     <div className="text-[13px] font-medium text-red-400">No good {l.label} anywhere in RollReady. Tell a manager.</div>
                   ) : null}
                 </div>
@@ -886,13 +1055,19 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
                 {leftover.map((p) => rowOf(p))}
               </div>
             ) : null}
+            {ownLeft.length ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="pt-1 text-sm font-semibold text-ink-dim">{stillOutNote}</h3>
+                {ownLeft.map((p) => rowOf(p))}
+              </div>
+            ) : null}
             {extras.length ? (
               <div className="flex flex-col gap-2">
                 <h3 className="pt-1 text-sm font-semibold text-ink-dim">Also going on {truck.name}</h3>
                 {extras.map((p) => rowOf(p))}
               </div>
             ) : null}
-            {expected.length === 0 && lines.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
+            {expected.length === 0 && lines.length === 0 && ownOut.length === 0 ? <p className="text-sm text-ink-faint">Nothing is logged on {truck.name} yet. Scan what goes on and it gets added.</p> : null}
             <details className="group rounded-xl border border-line-2">
               <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-medium text-ink-dim">
                 Add to this job&apos;s list <Plus className="h-4 w-4" />
@@ -950,19 +1125,32 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       ) : (
         <section ref={finishRef} className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>
+          {job.trim() ? <p className="break-words text-sm text-ink-dim">Job or well: <span className="font-semibold text-ink">{job.trim()}</span></p> : null}
           {notYet.length > 0 ? (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-ink-dim">These are logged on {truck.name} but didn&apos;t get scanned. Where are they?</p>
-              {notYet.map((p) => (
-                <label key={p.id} className="flex flex-col gap-1 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${last4 && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}</span>
-                  <select disabled={waitingForSignal} value={outcomes[p.id] ?? "yard"} onChange={(e) => setOutcomes((o) => ({ ...o, [p.id]: e.target.value as Outcome }))}
-                    className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
-                    <option value="yard">Not going this trip (stays in the yard)</option>
-                    <option value="missing">Can&apos;t find it (flag missing)</option>
-                  </select>
-                </label>
-              ))}
+              {notYet.map((p) => {
+                // A bad piece gets no default: "taken off" has to be said, not assumed.
+                const red = p.problem === "red";
+                return (
+                  <label key={p.id} className={cn("flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between", red && !outcomes[p.id] ? "border-red-500/50" : "border-line")}>
+                    <span className="min-w-0 break-words text-sm font-medium">{p.name}{p.serial ? ` ${last4 && checkable(p.serial) ? maskSerial(p.serial) : p.serial}` : ""}
+                      {red ? <span className="block text-[13px] font-normal text-red-400">Bad piece. Still on the truck? Tap It&apos;s on the truck on it above.</span> : null}</span>
+                    <select disabled={waitingForSignal} value={outcomes[p.id] ?? (red ? "" : "yard")} onChange={(e) => { const v = e.target.value; if (v === "yard" || v === "missing") setOutcomes((o) => ({ ...o, [p.id]: v })); }}
+                      className="h-12 rounded-lg border border-line-2 bg-surface px-2 text-base text-ink outline-none focus:border-bone">
+                      {red ? <option value="" disabled>Pick one</option> : null}
+                      <option value="yard">{red ? "Took it off (stays in the yard)" : "Not going this trip (stays in the yard)"}</option>
+                      <option value="missing">Can&apos;t find it (flag missing)</option>
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+          {flaggedMissing.length > 0 ? (
+            <div className="flex flex-col gap-1 rounded-lg border border-line p-3 text-sm">
+              {flaggedMissing.map((p) => <div key={p.id} className="break-words font-medium">{pieceText(p)}</div>)}
+              <p className="text-ink-dim">Flagged missing. Scan it if it&apos;s here.</p>
             </div>
           ) : null}
           {askChecks.length ? (
@@ -1028,29 +1216,27 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             )}
             {willBlock ? <p className="mt-2 text-sm text-ink-dim">You can still save it. The record will say NOT READY, and only a manager can roll it anyway.</p> : null}
           </div>
+          {outCardEl}
           {saveErr ? <p className={cn("text-sm", waitingForSignal ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
-          {waitingForSignal ? <p className="text-[13px] text-ink-faint">The list is locked until it sends, so the record matches what you saved. If something needs to change, do it after it lands with Fix it and scan again.</p> : null}
+          {waitingForSignal ? <p className="text-[13px] text-ink-faint">The list is locked until it sends, so the record matches what you saved. If it lands NOT READY, fix it then. If it lands READY and something&apos;s wrong, tell a manager.</p> : null}
+          {unanswered.length > 0 && !dead ? <p className="text-sm font-medium text-red-400">Say what happened to {unanswered.length === 1 ? "the bad piece" : `the ${unanswered.length} bad pieces`} above before you save.</p> : null}
           {failsWithSignal >= 2 ? (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("outline", "lg", "h-14 self-start text-base")}>Reload the page</button>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saving} className={buttonClass(noPhoto ? "outline" : "default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waitingForSignal ? "Try sending now" : noPhoto ? "Save without a photo" : "Save load-out"}</button>
-            <button type="button" onClick={() => setFinishing(false)} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
-          </div>
+          {dead ? (
+            // It can never save: start a fresh one from what the records say now.
+            <button type="button" onClick={() => window.location.reload()} className={buttonClass("default", "lg", "h-14 self-start text-base")}>Start a new load-out</button>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => void save()} disabled={saving || unanswered.length > 0 || Boolean(outCardEl)} className={buttonClass(noPhoto ? "outline" : "default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waitingForSignal ? "Try sending now" : noPhoto ? "Save without a photo" : "Save load-out"}</button>
+              {/* Back to scanning: the next Save is a new tap. */}
+              <button type="button" onClick={() => { setFinishing(false); if (!waitingForSignal) setTappedAt(null); }} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
+            </div>
+          )}
         </section>
       )}
     </div>
   );
-}
-
-/** Letters and digits of a serial, uppercased: "QB-4471" → "QB4471". */
-const alnum = (x: string) => x.toUpperCase().replace(/[^A-Z0-9]/g, "");
-/** A serial long enough that its last 4 prove someone read the stamp. */
-const checkable = (serial: string | null) => Boolean(serial && alnum(serial).length >= 5);
-/** "QB-4471" → "QB-••••": the last 4 letters or digits hidden until the piece is scanned. */
-function maskSerial(serial: string): string {
-  let left = 4;
-  return serial.split("").reverse().map((ch) => (/[a-z0-9]/i.test(ch) && left-- > 0 ? "•" : ch)).reverse().join("");
 }
 
 /**
@@ -1059,8 +1245,8 @@ function maskSerial(serial: string): string {
  * the screen hides them until the piece is checked, so the check proves
  * someone looked at the iron.
  */
-function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false, tagOnly = false, nested = false, place }: {
-  p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; last4?: boolean; tagOnly?: boolean;
+function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false, tagOnly = false, nested = false, place, offerTakeOff = false, off = false }: {
+  p: PhonePiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; last4?: boolean; tagOnly?: boolean;
   /** Tapped the wrong row: take just this one check back. */
   onUndo?: () => void;
   /** This phone checks pieces off by hand (no tags): make the button the obvious thing to tap. */
@@ -1069,6 +1255,10 @@ function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false
   nested?: boolean;
   /** Where it is, for a piece that isn't on this truck yet. */
   place?: string;
+  /** Logged on this truck: a bad one can be taken off without scanning it first. */
+  offerTakeOff?: boolean;
+  /** The hand said it came off this truck. */
+  off?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
   const [typed, setTyped] = useState("");
@@ -1077,7 +1267,7 @@ function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false
   function check() {
     if (!needsSerial) { onHand(); return; }
     if (!asking) { setAsking(true); return; }
-    if (alnum(typed) === alnum(p.serial!).slice(-4)) { setAsking(false); setTyped(""); setErr(""); onHand(); }
+    if (lastFourMatch(typed, p.serial!)) { setAsking(false); setTyped(""); setErr(""); onHand(); }
     else setErr("That's not it. Read the last 4 off the band or the stamp.");
   }
   const shownSerial = p.serial ? (!scan && needsSerial ? maskSerial(p.serial) : p.serial) : null;
@@ -1107,6 +1297,10 @@ function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false
       ) : onUndo ? (
         <button type="button" onClick={onUndo} className="min-h-12 shrink-0 rounded-lg px-3 text-[13px] text-ink-faint underline underline-offset-2 hover:text-ink">Not on it</button>
       ) : null}
+      {/* A bad piece still logged on the truck: say it came off, no scan needed. */}
+      {!scan && p.problem === "red" && offerTakeOff ? (off
+        ? <span className="w-full shrink-0 text-[13px] font-medium text-ink-dim sm:w-auto">Taken off</span>
+        : <button type="button" onClick={onTakeOff} className="min-h-12 w-full shrink-0 rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:w-auto">Took it off</button>) : null}
       {asking && !scan ? (
         <div className="flex w-full flex-col gap-1">
           <label className="text-[13px] text-ink-dim" htmlFor={`last4-${p.id}`}>Last 4 of the serial on the band or the stamp</label>

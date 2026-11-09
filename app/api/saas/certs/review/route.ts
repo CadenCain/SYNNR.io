@@ -13,14 +13,18 @@ export async function POST(req: Request) {
   const admin = saasAdmin();
   if (!admin) return NextResponse.json({ ok: false, message: "Something's down on our end. Try again in a minute." }, { status: 503 });
 
-  let body: { upload_id?: string; action?: string; note?: string };
+  let body: { upload_id?: string; action?: string; note?: string; expiration?: string; typed_ok?: boolean };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, message: "Bad request." }, { status: 400 }); }
   const uploadId = String(body.upload_id ?? "");
   const note = String(body.note ?? "").trim().slice(0, 300);
   if (!uploadId) return NextResponse.json({ ok: false, message: "Bad request." }, { status: 400 });
+  // A date the manager picked off the paper. applyUpload only takes one the
+  // software read off this upload's photo.
+  const expiration = body.expiration ? String(body.expiration) : null;
+  if (expiration && !/^\d{4}-\d{2}-\d{2}$/.test(expiration)) return NextResponse.json({ ok: false, message: "Bad request." }, { status: 400 });
 
   if (body.action === "approve") {
-    const r = await applyUpload(admin, company.id, uploadId, { userId: user.id, name, note: note || null });
+    const r = await applyUpload(admin, company.id, uploadId, { userId: user.id, name, note: note || null, expiration, typedOk: body.typed_ok === true });
     return NextResponse.json(r, { status: r.ok ? 200 : 409 });
   }
   if (body.action === "reject") {

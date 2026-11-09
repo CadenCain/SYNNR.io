@@ -4,8 +4,9 @@ import { Check, TriangleAlert, PencilRuler } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { plainDate } from "@/lib/saas/judge";
-import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
+import { computeDispatchCheck, type TruckLoadout } from "@/lib/saas/dispatch-check";
 import { localToday } from "@/lib/saas/status";
+import { fmtWhen } from "@/lib/saas/format";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { recordDispatchCheck, rollAnyway } from "./actions";
@@ -20,8 +21,10 @@ export const dynamic = "force-dynamic";
  * checklist. The verdict comes straight from the live records (cert/DOT
  * currency on the truck and its iron, flagged iron); the gear list only warns.
  * Nobody taps lines. One button records the result as an immutable check with
- * every line and reason. A NOT READY truck rolls only on a manager's override:
- * their name, a written reason, an alert, and it shows on the proof link.
+ * every line and reason. A NOT READY truck rolls only from its load-out, on a
+ * manager's override: their name, a written reason, an alert, and it shows on
+ * the load-out record and the proof links. From here, that means rolling the
+ * truck's NOT READY load-out from this shift; there's no second kind of override.
  */
 const RESULT_UI: Record<string, string> = {
   ok: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
@@ -37,23 +40,37 @@ export async function generateMetadata({ params }: { params: Promise<{ unitId: s
   return titled("saas_units", unitId, (n) => `Paper check: ${n}`, "Paper check");
 }
 
-export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
+/** Why there's no override form, and what to do instead. */
+function noRollNote(name: string, unitId: string, lo: TruckLoadout | null): { text: string; href: string; link: string } {
+  const scan = `/app/units/${unitId}/scan`;
+  if (lo?.state === "blocked") return { text: `${name}'s last load-out is from ${fmtWhen(lo.finishedAt)}, too long ago to roll: what's on the truck now may not be what was scanned then. Scan ${name} again. If it comes back NOT READY, a manager can roll that one.`, href: scan, link: `Scan ${name} again` };
+  if (lo?.state === "out") return { text: `${name} is already out on a job from its load-out ${fmtWhen(lo.finishedAt)}. There's nothing to roll. Check it in when it's back.`, href: `/app/loadouts/${lo.id}`, link: "See that load-out" };
+  return { text: `A NOT READY truck rolls only from its load-out. Scan ${name} as it's loaded. If the load-out comes back NOT READY, a manager can roll it from there, on the record.`, href: scan, link: `Scan ${name}` };
+}
+
+export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string; roll?: string }> }) {
   const { company } = await requireCompany();
   const { unitId } = await params;
-  const { job } = await searchParams;
+  const { job, roll } = await searchParams;
   const db = await saasDb();
   const today = localToday();
 
   const comp = await computeDispatchCheck(db, company.id, unitId, job);
   if (!comp) notFound();
 
-  const gear = comp.lines.filter((l) => l.source_type === "loadout_item" || l.source_type === "asset");
+  const lo = comp.loadout;
+  // The newest load-out, when it's what blocks the truck: its own group, not a piece of iron.
+  const loLine = lo?.state === "blocked" ? comp.lines.find((l) => l.source_id === lo.id) ?? null : null;
+  const gear = comp.lines.filter((l) => (l.source_type === "loadout_item" || l.source_type === "asset") && l !== loLine);
   const paper = comp.lines.filter((l) => l.source_type === "cert");
+  const manager = company.role === "owner" || company.role === "admin";
+  const note = noRollNote(comp.unitName, unitId, lo);
 
   // Verdict banner groups failures by kind — eight identical red bullets read
   // as noise; three labeled clusters read as a fix-list.
   const failing = (rows: typeof comp.lines) => rows.filter((l) => l.result !== "ok" && l.result !== "warn");
   const failureGroups = [
+    { label: "Load-out", rows: loLine ? [loLine] : [] },
     { label: "Iron", rows: failing(gear) },
     { label: "Paper", rows: failing(paper) },
   ].filter((g) => g.rows.length > 0);
@@ -110,6 +127,9 @@ export default async function DispatchPage({ params, searchParams }: { params: P
                   where each kind gets fixed, instead of leaving you to hunt. */}
               <div className="flex flex-wrap gap-2 border-t border-red-500/20 pt-3">
                 <Link href={`/app/units/${unitId}`} className="inline-flex h-10 items-center rounded-lg bg-bone px-4 text-sm font-semibold text-white">Fix the iron &amp; renew paper</Link>
+                {loLine && lo ? (
+                  <Link href={`/app/loadouts/${lo.id}`} className="inline-flex h-10 items-center rounded-lg border border-line-2 px-4 text-sm font-semibold text-ink">See the load-out</Link>
+                ) : null}
               </div>
             </div>
           )}
@@ -152,29 +172,42 @@ export default async function DispatchPage({ params, searchParams }: { params: P
         </form>
       )}
 
+      {roll === "none" ? (
+        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
+          Nothing was rolled. {comp.unitName}&apos;s load-out changed since you opened this page. This is where it stands now.
+        </p>
+      ) : null}
+
       {comp.verdict === "not_ready" && (
-        company.role === "owner" || company.role === "admin" ? (
+        manager && lo?.rollable ? (
           <details className="rounded-2xl border border-line bg-surface p-4">
             <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold text-ink">Roll anyway (manager override)</summary>
             <form action={rollAnyway} className="mt-3 flex flex-col gap-2">
               <input type="hidden" name="unit_id" value={unitId} />
-              <input type="hidden" name="job_date" value={comp.jobDate} />
+              <input type="hidden" name="loadout_id" value={lo.id} />
               <p className="text-sm text-ink-dim">
+                This rolls {comp.unitName}&apos;s NOT READY load-out from {fmtWhen(lo.finishedAt)}, the same as rolling it from{" "}
+                <Link href={`/app/loadouts/${lo.id}`} className="text-bone underline underline-offset-2">the load-out record</Link>.
                 Only when you have to: the new cert is in the truck and the upload failed, or the company man signed off on location.
-                Your name and reason go on a record nobody can edit, the people who get alerts get an email, and the proof link shows it.
+                Your name and reason go on that record and the proof link, the iron on it counts as out on the job, and the people who get alerts get an email.
               </p>
-              <label className="text-xs text-ink-faint">Why is it rolling NOT READY?
+              <label className="text-xs text-ink-faint">Why is it OK to roll?
                 <textarea name="reason" required minLength={10} maxLength={500} rows={3}
                   placeholder="e.g. New BOP test cert is in the truck, upload failed. Company man saw it on location."
                   className="mt-1 w-full rounded-lg border border-line-2 bg-coal px-3 py-2 text-base text-ink outline-none focus:border-bone" />
               </label>
               <button type="submit" className="inline-flex h-11 items-center justify-center rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:self-start">
-                Roll NOT READY on my override
+                Roll it on my override
               </button>
             </form>
           </details>
+        ) : manager ? (
+          <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
+            <p>{note.text}</p>
+            <Link href={note.href} className="font-medium text-bone underline underline-offset-2">{note.link}</Link>
+          </Card>
         ) : (
-          <p className="text-center text-xs text-ink-faint">Only a manager can roll a NOT READY truck, and it goes on the record with their name and reason.</p>
+          <p className="text-center text-xs text-ink-faint">Only a manager can roll a NOT READY truck, from its load-out, and it goes on the record with their name and reason.</p>
         )
       )}
     </div>

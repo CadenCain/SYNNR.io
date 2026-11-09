@@ -5,19 +5,23 @@ import { useRouter } from "next/navigation";
 import { Check, Plus, X } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { savePlan, clearPlan } from "./actions";
+import { savePlan, clearPlan, movePlan } from "./actions";
 
 type Line = { label: string; qty: number };
 const lineSummary = (ls: Line[]) => ls.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ");
 const count = (ls: Line[]) => ls.reduce((n, l) => n + l.qty, 0);
 
 /** A manager picks what the truck's next job needs. The hand sees it at the truck and can't take anything off. */
-export default function PlanForm({ truck, kit, packages, pieceNames, initial }: {
+export default function PlanForm({ truck, kit, packages, pieceNames, initial, seenAt, otherTrucks = [] }: {
   truck: { id: string; name: string };
   kit: Line[];
   packages: { id: string; name: string; lines: Line[] }[];
   pieceNames: string[];
   initial: { packageIds: string[]; lines: Line[]; note: string; job: string; leavesAt: string | null } | null;
+  /** When the page was opened (server time): if the truck rolls before Save, the save says so once. */
+  seenAt: string;
+  /** The company's other trucks, for moving the plan when the job goes on one of them. */
+  otherTrucks?: { id: string; name: string; hasPlan: boolean }[];
 }) {
   const router = useRouter();
   const [packageIds, setPackageIds] = useState<string[]>(initial?.packageIds ?? []);
@@ -31,6 +35,8 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [seen, setSeen] = useState(seenAt);
+  const [moveTo, setMoveTo] = useState("");
 
   const picked = packages.filter((x) => packageIds.includes(x.id));
   const total = count(kit) + picked.reduce((n, x) => n + count(x.lines), 0) + count(lines);
@@ -41,10 +47,12 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
     setLines((ls) => [...ls, { label: l, qty: Math.min(99, Math.max(1, Math.floor(Number(qty)) || 1)) }]);
     setLabel(""); setQty("1");
   }
-  async function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
+  async function run(fn: () => Promise<{ ok: boolean; error?: string; seenAt?: string }>) {
     setBusy(true); setErr("");
     try {
       const res = await fn();
+      // The truck rolled since the page opened: told once, the next tap saves.
+      if (res.seenAt) setSeen(res.seenAt);
       if (!res.ok) { setErr(res.error ?? "Couldn't save. Try again."); setBusy(false); return; }
       router.push("/app");
       router.refresh();
@@ -122,7 +130,7 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
         <label htmlFor="plan-leaves" className="font-semibold">When does it leave? <span className="font-normal text-ink-faint">(optional)</span></label>
         <input id="plan-leaves" type="datetime-local" value={leaves} onChange={(e) => setLeaves(e.target.value)}
           className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
-        <p className="text-sm text-ink-dim">If that time passes and nobody has scanned it out, the truck shows red on Load out and it&apos;s in your morning email.</p>
+        <p className="text-sm text-ink-dim">If that time passes and nobody has scanned it out, the truck shows red on Load out and it&apos;s in your morning email. If it leaves more than 18 hours from now, a load-out on {truck.name} before then doesn&apos;t use this plan.</p>
       </section>
 
       <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
@@ -131,11 +139,27 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
           className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
       </section>
 
+      {initial && otherTrucks.length ? (
+        <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
+          <label htmlFor="plan-move" className="font-semibold">Job going on another truck?</label>
+          <p className="text-sm text-ink-dim">The saved plan moves as it is, and {truck.name} goes back to its kit.</p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select id="plan-move" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}
+              className="h-12 w-full min-w-0 grow rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone">
+              <option value="">Pick the truck</option>
+              {otherTrucks.map((t) => <option key={t.id} value={t.id} disabled={t.hasPlan}>{t.name}{t.hasPlan ? " (has its own plan)" : ""}</option>)}
+            </select>
+            <button type="button" disabled={busy || !moveTo} onClick={() => run(() => movePlan({ unitId: truck.id, toUnitId: moveTo }))}
+              className={buttonClass("outline", "lg", "h-12 shrink-0")}>Move the plan</button>
+          </div>
+        </section>
+      ) : null}
+
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 flex flex-col gap-2 rounded-2xl border border-line bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
         <p className="text-sm"><span className="text-lg font-bold tabular-nums">{total}</span> {total === 1 ? "piece" : "pieces"} {truck.name} has to leave with</p>
         {err ? <p className="text-sm text-red-400">{err}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note, job, leavesAt: leaves ? new Date(leaves).toISOString() : null }))}
+          <button type="button" disabled={busy} onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note, job, leavesAt: leaves ? new Date(leaves).toISOString() : null, seenAt: seen }))}
             className={buttonClass("default", "lg", "h-14 grow text-base")}>{busy ? "Saving…" : "Save the plan"}</button>
           {initial ? (
             <button type="button" disabled={busy} onClick={() => run(() => clearPlan(truck.id))} className={buttonClass("outline", "lg", "h-14 text-base")}>Clear the plan</button>

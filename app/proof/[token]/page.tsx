@@ -8,6 +8,8 @@ import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { judgeItem, isNoPaper, FAILING_GEAR, type LineResult } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
+import { yardZones, checkedInBetween, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { loadProof } from "./load-proof";
 
 /**
  * PUBLIC readiness proof — the link a shop hands the company man instead of
@@ -50,14 +52,8 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   const admin = saasAdmin();
   if (!admin) return <Invalid reason="unavailable" />;
 
-  const { data: proofData } = await admin
-    .from("saas_readiness_proofs")
-    .select("id, company_id, yard_id, unit_id, scope, expires_at, revoked_at, created_at")
-    .eq("token", token).maybeSingle();
-  if (!proofData) return <Invalid reason="not valid" />;
-  const proof = proofData as { id: string; company_id: string; yard_id: string | null; unit_id: string | null; scope: string; expires_at: string | null; revoked_at: string | null; created_at: string };
-  if (proof.revoked_at) return <Invalid reason="revoked" />;
-  if (proof.expires_at && new Date(proof.expires_at) < new Date()) return <Invalid reason="expired" />;
+  const proof = await loadProof(admin, token);
+  if (typeof proof === "string") return <Invalid reason={proof} />;
 
   // ── Assemble the scoped snapshot ──
   const { data: companyData } = await admin.from("saas_companies").select("name, is_demo").eq("id", proof.company_id).maybeSingle();
@@ -67,15 +63,23 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // Units in scope
   let unitFilter: string[] | null = null; // null = all company units
   let scopeName = companyName;
+  // Which yard's clock the times read in: the truck's yard, the yard, or for
+  // the whole company, the one zone all its yards share (else Central).
+  let zoneYards: string[] = [];
   if (proof.scope === "unit" && proof.unit_id) {
     unitFilter = [proof.unit_id];
-    const { data: u } = await admin.from("saas_units").select("name").eq("id", proof.unit_id).eq("company_id", proof.company_id).maybeSingle();
-    scopeName = `${companyName}: ${(u as { name: string } | null)?.name ?? "unit"}`;
+    const { data: u } = await admin.from("saas_units").select("name, yard_id").eq("id", proof.unit_id).eq("company_id", proof.company_id).maybeSingle();
+    scopeName = `${companyName}: ${(u as { name: string } | null)?.name ?? "truck"}`;
+    zoneYards = [(u as { yard_id: string | null } | null)?.yard_id ?? ""].filter(Boolean);
   } else if (proof.scope === "yard" && proof.yard_id) {
+    zoneYards = [proof.yard_id];
     const { data: us } = await admin.from("saas_units").select("id").eq("yard_id", proof.yard_id).eq("company_id", proof.company_id);
     unitFilter = ((us ?? []) as { id: string }[]).map((x) => x.id);
     const { data: y } = await admin.from("saas_yards").select("name").eq("id", proof.yard_id).eq("company_id", proof.company_id).maybeSingle();
     scopeName = `${companyName}: ${(y as { name: string } | null)?.name ?? "yard"}`;
+  } else {
+    const { data: ys } = await admin.from("saas_yards").select("id").eq("company_id", proof.company_id);
+    zoneYards = ((ys ?? []) as { id: string }[]).map((x) => x.id);
   }
 
   // Assets in scope
@@ -111,18 +115,16 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   const rank: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, due_soon: 3, ok: 4 };
   items.sort((a, b) => rank[judged.get(a.id)!.result] - rank[judged.get(b.id)!.result] || (a.expiration_date ?? "").localeCompare(b.expiration_date ?? ""));
 
-  // The actual paper: the photo behind each item's current date, if there is one.
+  // The actual paper: the photo behind each item's current date, if there is
+  // one. Each link goes through this proof's token, which signs a fresh link
+  // every tap (a signed link dies after an hour, and a tab stays open longer)
+  // and stops the moment the shop shuts the proof off.
   const paperUrl = new Map<string, string>();
   {
     const uploadIds = items.map((i) => i.last_upload_id).filter((x): x is string => Boolean(x));
-    const { data: upData } = uploadIds.length
-      ? await admin.from("saas_cert_uploads").select("id, item_id, storage_path").in("id", uploadIds)
-      : { data: [] };
-    const ups = (upData ?? []) as { id: string; item_id: string; storage_path: string }[];
-    if (ups.length) {
-      const { data: signed } = await admin.storage.from("proofs").createSignedUrls(ups.map((u) => u.storage_path), 3600);
-      ups.forEach((u, idx) => { const url = signed?.[idx]?.signedUrl; if (url) paperUrl.set(u.item_id, url); });
-    }
+    const ups = uploadIds.length ? await readAll<{ id: string; item_id: string }>((a, b) => admin
+      .from("saas_cert_uploads").select("id, item_id", { count: "exact" }).eq("company_id", proof.company_id).in("id", uploadIds).order("id").range(a, b)) : [];
+    for (const u of ups) paperUrl.set(u.item_id, `/proof/${token}/paper/${u.item_id}`);
   }
 
   // Names for context columns
@@ -156,7 +158,10 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // Nothing tracked = nothing proven. An empty scope must never read "Ready".
   const configured = items.length > 0 || assets.length > 0;
   let ready = configured && failingCount === 0 && gearDown.length === 0 && held.length === 0 && blockedUnits === 0;
-  const generatedAt = fmtWhen(new Date().toISOString());
+  const zones = await yardZones(admin, zoneYards);
+  const zoneSet = new Set(zoneYards.map((id) => zones.get(id) ?? null));
+  const tz = zoneSet.size === 1 ? [...zoneSet][0] : null;
+  const generatedAt = fmtWhen(new Date().toISOString(), tz);
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
   // who checked it, the verdict, and photo proof.
@@ -164,11 +169,11 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // the truck and who scanned it.
   type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean; red?: boolean };
   type LoadoutMiss = { name: string; serial: string | null; outcome: string };
-  type Loadout = { id: string; finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string };
+  type Loadout = { id: string; finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string; yard_id: string | null };
   let loadout = null as Loadout | null;
   if (proof.scope === "unit" && proof.unit_id) {
     const { data: lo } = await admin.from("saas_loadout_scans")
-      .select("id, finished_at, scanned_by, scanned, expected, pieces, not_scanned, verdict, reasons, proof_token")
+      .select("id, finished_at, scanned_by, scanned, expected, pieces, not_scanned, verdict, reasons, proof_token, yard_id")
       .eq("company_id", proof.company_id).eq("unit_id", proof.unit_id)
       .order("finished_at", { ascending: false }).limit(1).maybeSingle();
     loadout = (lo as Loadout | null) ?? null;
@@ -178,16 +183,30 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // load-out link the shop shut off isn't linked from here.
   let blockedAtLoadout = false;
   let loadoutLinkOff = false;
+  // A manager rolled it NOT READY anyway: the page says so, by name and why,
+  // the same as the load-out record and the board.
+  let override = null as LoadoutOverride | null;
+  let outOnOverride = false;
+  // A truck link is live, but a load-out made for the next job after the
+  // truck was checked in isn't the business of whoever got this link.
+  let loadoutHidden = false;
   if (loadout) {
-    const [{ data: ovRow }, { data: backRow }, { data: offRow }] = await Promise.all([
-      admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", loadout.id).maybeSingle(),
+    const [{ data: ovRow }, { data: backRow }, { data: offRow }, laterTrip] = await Promise.all([
+      admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", loadout.id).maybeSingle(),
       admin.from("saas_returns").select("id").eq("company_id", proof.company_id).eq("unit_id", proof.unit_id!).gt("finished_at", loadout.finished_at).limit(1).maybeSingle(),
       admin.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", loadout.id).maybeSingle(),
+      checkedInBetween(admin, proof.company_id, proof.unit_id!, proof.created_at, loadout.finished_at),
     ]);
+    override = loadout.verdict === "not_ready" ? ((ovRow as LoadoutOverride | null) ?? null) : null;
     blockedAtLoadout = loadout.verdict === "not_ready" && !ovRow && !backRow;
+    outOnOverride = Boolean(override) && !backRow;
     loadoutLinkOff = Boolean(offRow);
+    loadoutHidden = laterTrip;
     if (blockedAtLoadout) ready = false;
   }
+  // The load-out reads in the zone of the yard it loaded in (the truck may have moved since).
+  const loadoutTz = !loadout?.yard_id ? tz
+    : zones.get(loadout.yard_id) ?? (await yardZones(admin, [loadout.yard_id])).get(loadout.yard_id) ?? tz;
 
   let record: {
     type: string; status: string; performed_by_name: string | null; cosigner_name: string | null;
@@ -257,6 +276,9 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               ].filter(Boolean).join(" · ")}
             </p>
           ) : null}
+          {outOnOverride && override ? (
+            <p className="mt-2 text-sm font-medium text-amber-400">Its last load-out rolled NOT READY on a manager&apos;s override by {override.by_name}.</p>
+          ) : null}
           {notChecked.length > 0 ? (
             <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
               <p className="text-sm font-semibold text-amber-400">Not covered by this proof</p>
@@ -268,19 +290,27 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         </div>
 
         {/* Last load-out: what was actually scanned onto the truck */}
-        {loadout ? (
+        {loadout && loadoutHidden ? (
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <h2 className="text-sm font-semibold text-ink-dim">Last load-out scan</h2>
+            <p className="mt-2 text-sm text-ink-dim">This truck has been checked back in and loaded out again since this link was made. Ask the shop for the record of the newest load-out.</p>
+          </div>
+        ) : loadout ? (
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold text-ink-dim">Last load-out scan</h2>
-              <span className="text-xs text-ink-faint">{fmtWhen(loadout.finished_at)}</span>
+              <span className="text-xs text-ink-faint">{fmtWhen(loadout.finished_at, loadoutTz)}</span>
             </div>
             {loadout.verdict ? (
-              <p className={`mt-2 text-base font-bold ${loadout.verdict === "ready" ? "text-emerald-400" : "text-red-400"}`}>
-                {loadout.verdict === "ready" ? "READY at load-out" : "NOT READY at load-out"}
+              <p className={`mt-2 text-base font-bold ${loadout.verdict === "ready" ? "text-emerald-400" : override ? "text-amber-400" : "text-red-400"}`}>
+                {loadout.verdict === "ready" ? "READY at load-out" : override ? `Rolled NOT READY on a manager's override by ${override.by_name}` : "NOT READY at load-out"}
               </p>
             ) : null}
+            {override ? (
+              <p className="mt-0.5 break-words text-sm text-ink-dim">&ldquo;{override.reason}&rdquo; ({fmtWhen(override.created_at, loadoutTz)})</p>
+            ) : null}
             {loadout.verdict === "not_ready" && (loadout.reasons ?? []).length ? (
-              <ul className="mt-1 flex flex-col gap-0.5 text-sm text-red-300">
+              <ul className={`mt-1 flex flex-col gap-0.5 text-sm ${override ? "text-amber-300" : "text-red-300"}`}>
                 {(loadout.reasons ?? []).map((r) => <li key={r} className="break-words">{r}</li>)}
               </ul>
             ) : null}
@@ -309,7 +339,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                   <li key={i} className="flex flex-wrap items-baseline gap-x-2">
                     <span className="inline-flex rounded-full border border-line-2 bg-elevated px-2 py-0.5 text-xs font-medium text-ink-dim">Not scanned</span>
                     <span className="break-words">{p.name}{p.serial ? ` ${p.serial}` : ""}</span>
-                    <span className="text-xs text-ink-faint">{p.outcome === "yard" ? "left in the yard" : p.outcome === "missing" ? "flagged missing" : "said to be on the truck"}</span>
+                    <span className="text-xs text-ink-faint">{p.outcome === "yard" ? "left in the yard" : p.outcome === "missing" ? "flagged missing" : "still logged on the truck, nobody scanned it"}</span>
                   </li>
                 ))}
               </ul>
@@ -322,7 +352,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold text-ink-dim">Last readiness check</h2>
-              <span className="text-xs text-ink-faint">{fmtWhen(record.started_at)}</span>
+              <span className="text-xs text-ink-faint">{fmtWhen(record.started_at, tz)}</span>
             </div>
             <p className="mt-2 text-sm">
               <span className={record.status === "ready" ? "font-semibold text-emerald-400" : "font-semibold text-red-400"}>

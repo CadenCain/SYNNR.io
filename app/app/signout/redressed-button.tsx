@@ -10,7 +10,9 @@ import { markRedressed } from "./actions";
  * and if the signal drops it says so and stays on the page instead of
  * showing the crash screen.
  */
-export default function RedressedButton({ assetId }: { assetId: string }) {
+export default function RedressedButton({ assetId, since }: { assetId: string;
+  /** When it came back needing redress, as this page saw it. */
+  since?: string | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [err, setErr] = useState("");
@@ -21,8 +23,10 @@ export default function RedressedButton({ assetId }: { assetId: string }) {
           setErr("");
           const fd = new FormData();
           fd.set("asset_id", assetId);
+          if (since) fd.set("since", since);
           try {
-            await markRedressed(fd);
+            const r = await markRedressed(fd);
+            if (!r.ok) { setErr(r.error ?? "Couldn't save that."); return; }
             router.refresh();
           } catch {
             setErr("No signal. Try again when you have signal.");

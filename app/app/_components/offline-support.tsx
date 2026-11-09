@@ -6,7 +6,8 @@ import { WifiOff } from "lucide-react";
 /**
  * Keeps the load-out working with no signal (public/sw.js), and says so when
  * the phone is offline. Pages shown offline are the copy this phone saved
- * last; scans still save on the phone and send when signal comes back.
+ * last. Scans stay on the phone, and they only send while their screen is
+ * open, so the banner says to open RollReady once back in range.
  */
 const subscribe = (cb: () => void) => {
   window.addEventListener("online", cb);
@@ -36,7 +37,7 @@ export default function OfflineSupport({ companyId }: { companyId: string }) {
   return (
     <div role="status" className="flex items-start gap-2 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
       <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
-      <span><span className="font-semibold">No signal.</span> You&apos;re seeing what this phone saved last. Load-out scans still save on the phone and send when you&apos;re back in range.</span>
+      <span><span className="font-semibold">No signal.</span> You&apos;re seeing what this phone saved last. Load-out and check-in scans are saved on this phone. Open RollReady when you&apos;re back in range to send them.</span>
     </div>
   );
 }

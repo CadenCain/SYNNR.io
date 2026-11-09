@@ -5,6 +5,8 @@ import { saasDb } from "@/lib/saas/db";
 import { isManagerRole } from "@/lib/saas/yard-rules";
 import { usDate } from "@/lib/saas/cert-dates";
 import { fmtWhen, fmtDate } from "@/lib/saas/format";
+import { localToday, addDaysIso } from "@/lib/saas/status";
+import { isAnnualInspection, yearBefore } from "@/lib/saas/cert-verify";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import ReviewButtons from "./review-buttons";
@@ -29,8 +31,9 @@ interface Upload {
   storage_path: string; evidence: "cert" | "temporary"; claimed_expiration: string | null; pending_until: string | null;
   checks: { key: string; label: string; ok: boolean; detail: string }[]; flags: string[]; verdict: string; status: string;
   reviewed_by_name: string | null; reviewed_at: string | null; review_note: string | null; applied_at: string | null;
+  read_dates: string[] | null;
 }
-const COLS = "id, item_id, uploaded_by_name, uploaded_by_role, created_at, storage_path, evidence, claimed_expiration, pending_until, checks, flags, verdict, status, reviewed_by_name, reviewed_at, review_note, applied_at";
+const COLS = "id, item_id, uploaded_by_name, uploaded_by_role, created_at, storage_path, evidence, claimed_expiration, pending_until, checks, flags, verdict, status, reviewed_by_name, reviewed_at, review_note, applied_at, read_dates";
 
 export default async function ReviewPage() {
   const { company } = await requireCompany();
@@ -49,7 +52,7 @@ export default async function ReviewPage() {
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).eq("status", "waiting").order("created_at", { ascending: true }),
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).neq("status", "waiting").gte("created_at", since).order("created_at", { ascending: false }).limit(80),
     db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, typed_expiration, updated_at").eq("company_id", company.id).neq("parent_type", "crew").or("renewed_without_proof.eq.true,typed_expiration.not.is.null").order("updated_at", { ascending: false }).limit(40),
-    db.from("saas_compliance_items").select("id, title, parent_type, parent_id").eq("company_id", company.id),
+    db.from("saas_compliance_items").select("id, title, kind, parent_type, parent_id").eq("company_id", company.id),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_assets").select("id, name, unit_id").eq("company_id", company.id),
     db.from("saas_dispatch_checks").select("id, unit_id, started_at").eq("company_id", company.id).gte("started_at", since),
@@ -59,7 +62,7 @@ export default async function ReviewPage() {
   const recent = (recentData ?? []) as Upload[];
   const typed = (typedData ?? []) as { id: string; title: string; parent_type: string; parent_id: string; expiration_date: string | null; typed_expiration: string | null; updated_at: string }[];
 
-  const items = new Map(((itemData ?? []) as { id: string; title: string; parent_type: string; parent_id: string }[]).map((i) => [i.id, i]));
+  const items = new Map(((itemData ?? []) as { id: string; title: string; kind: string | null; parent_type: string; parent_id: string }[]).map((i) => [i.id, i]));
   const units = new Map(((unitData ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
   const assets = new Map(((assetData ?? []) as { id: string; name: string; unit_id: string | null }[]).map((a) => [a.id, a]));
 
@@ -108,6 +111,27 @@ export default async function ReviewPage() {
     .filter((x) => x.notes.length > 0);
   const decided = recent.filter((u) => u.status === "applied" || u.status === "rejected" || (u.status === "superseded" && u.applied_at)).slice(0, 25);
 
+  // Approving writes a date. When the one typed in isn't on the photo, the
+  // choices are the future dates read off the paper (or the manager saying
+  // they see the typed one on it).
+  const today = localToday();
+  const ceiling = addDaysIso(today, 365 * 10);
+  // A yearly inspection report prints the day it was done, a year before the
+  // date that gets written.
+  const inspectedOn = (u: Upload): string | null => {
+    const i = items.get(u.item_id);
+    return i && u.claimed_expiration && isAnnualInspection(i.kind, i.title) ? yearBefore(u.claimed_expiration)[0] : null;
+  };
+  const approveWith = (u: Upload) => {
+    if (u.evidence !== "cert" || !u.claimed_expiration) return { goodTo: null, dateOnPaper: true, paperDates: [] };
+    const dateOnPaper = u.checks.find((c) => c.key === "date")?.ok === true;
+    const paperDates = dateOnPaper ? [] : [...new Set(u.read_dates ?? [])]
+      .filter((d) => d > today && d <= ceiling && d !== u.claimed_expiration).sort()
+      .map((d) => ({ iso: d, label: fmtDate(d) }));
+    const inspected = inspectedOn(u);
+    return { goodTo: fmtDate(u.claimed_expiration), dateOnPaper, paperDates, inspected: inspected ? fmtDate(inspected) : null };
+  };
+
   const label = (itemId: string) => {
     const i = items.get(itemId);
     if (!i) return { title: "Deleted item", parent: null as null | { name: string; href: string } };
@@ -145,7 +169,9 @@ export default async function ReviewPage() {
                 <div className="flex flex-col gap-3">
                   <div className="text-sm">
                     {u.evidence === "cert"
-                      ? <>Expiration they entered: <span className="font-semibold">{u.claimed_expiration ? usDate(u.claimed_expiration) : "none"}</span></>
+                      ? inspectedOn(u)
+                        ? <>Good to <span className="font-semibold">{usDate(u.claimed_expiration as string)}</span>, one year after an inspection on <span className="font-semibold">{usDate(inspectedOn(u) as string)}</span></>
+                        : <>Expiration they entered: <span className="font-semibold">{u.claimed_expiration ? usDate(u.claimed_expiration) : "none"}</span></>
                       : <>If you approve, it shows &quot;cert on the way&quot; through <span className="font-semibold">{u.pending_until ? fmtDate(u.pending_until) : "7 days"}</span>, then goes red again unless the real cert is uploaded.</>}
                   </div>
                   {u.checks.length > 0 && (
@@ -166,7 +192,7 @@ export default async function ReviewPage() {
                       {u.flags.map((f) => <li key={f}>{f}</li>)}
                     </ul>
                   )}
-                  <ReviewButtons uploadId={u.id} />
+                  <ReviewButtons uploadId={u.id} {...approveWith(u)} />
                 </div>
               </div>
             </Card>

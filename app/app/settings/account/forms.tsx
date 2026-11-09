@@ -12,7 +12,7 @@ function Note({ r }: { r: { ok: boolean; message: string } | null }) {
   return <p role="status" className={r.ok ? "text-sm text-emerald-400" : "text-sm text-red-400"}>{r.message}</p>;
 }
 
-export default function AccountForms({ name, email, companyName, canRename }: { name: string; email: string; companyName: string; canRename: boolean }) {
+export default function AccountForms({ name, email, companyName, canRename, emailBy }: { name: string; email: string; companyName: string; canRename: boolean; emailBy?: "manager" | "owner" | null }) {
   const [nameR, nameAction, namePending] = useActionState(saveName, null);
   const [passR, passAction, passPending] = useActionState(savePassword, null);
   const [coR, coAction, coPending] = useActionState(saveCompanyName, null);
@@ -29,7 +29,7 @@ export default function AccountForms({ name, email, companyName, canRename }: { 
           <button type="submit" disabled={namePending} className={buttonClass("default", "lg", "h-12 shrink-0")}>{namePending ? "Saving…" : "Save"}</button>
         </form>
         <Note r={nameR} />
-        <p className="text-[13px] text-ink-faint">You log in with {email}. To change that email, ask Caden at cadencain@synnr.io.</p>
+        <p className="text-[13px] text-ink-faint">You log in with {email}. To change that email, {emailBy === "manager" ? "ask a manager. They can fix it under Settings, Team." : emailBy === "owner" ? "ask the account owner. They can fix it under Settings, Team." : "ask Caden at cadencain@synnr.io."}</p>
       </Card>
 
       <Card className="flex flex-col gap-3 p-5">

@@ -1,13 +1,19 @@
 import { fmtDay, fmtWhen } from "@/lib/saas/format";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, type ActiveCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
 import { sendPasswordReset } from "@/lib/saas/password-reset";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import InviteLink from "./invite-link";
+import { turnOverCrewLink, dropAlertRecipient, liveProofLinksBy, changeLoginEmail, offCrewNotice } from "./crew-changes";
 
 export const metadata = { title: "Team" };
 
@@ -23,7 +29,8 @@ export const dynamic = "force-dynamic";
  * and check-in has a name on it. A manager gets people on with one crew link
  * (texted to the whole crew, good for 30 days, anyone who taps it joins as a
  * hand) or a one-person invite (for a manager), and can make someone a
- * manager or a hand, send them a password reset, or take them off the crew.
+ * manager or a hand, send them a password reset, fix their login email, or
+ * take them off the crew.
  */
 
 async function makeCrewLink() {
@@ -100,12 +107,22 @@ async function removeMember(formData: FormData) {
   const t = await target(formData);
   if (!t) return;
   // Off the crew: no access from their next tap. Their name stays on every
-  // record they made. They can't come back with the crew link, only with a
-  // personal invite.
-  await t.admin.from("saas_memberships").update({ status: "removed" }).eq("company_id", t.company.id).eq("user_id", t.m.user_id);
+  // record they made. Their own login can't rejoin with the crew link, and
+  // the link turns over so they can't make a new login with it either. They
+  // come off the alert emails, and the manager hears about any proof links
+  // they made that still work.
+  const { error } = await t.admin.from("saas_memberships").update({ status: "removed" }).eq("company_id", t.company.id).eq("user_id", t.m.user_id);
+  if (error) throw new Error("Couldn't take them off the crew. Try again.");
+  const db = await saasDb();
+  const [link, alerts, links] = await Promise.all([
+    turnOverCrewLink(db, t.company),
+    dropAlertRecipient(t.admin, t.company.id, t.email),
+    liveProofLinksBy(t.admin, t.company.id, t.m.user_id),
+  ]);
   void logEvent({ companyId: t.company.id, kind: "crew_changed", actor: actorOf(t.user),
     message: `${actorOf(t.user)} took ${t.name} off the crew` });
   revalidatePath("/app/settings/team");
+  redirect(`/app/settings/team?off=1&link=${link ?? ""}&alerts=${alerts}&links=${links}`);
 }
 
 async function sendReset(formData: FormData) {
@@ -114,6 +131,23 @@ async function sendReset(formData: FormData) {
   if (!t?.email) return;
   await sendPasswordReset(t.admin, t.email);
   revalidatePath("/app/settings/team");
+}
+
+/** A typo in a hand's login email: a manager fixes it here (the owner can for a manager too). */
+async function changeEmail(formData: FormData) {
+  "use server";
+  const t = await target(formData);
+  if (!t) return;
+  if (t.company.is_demo) throw new Error("Logins can't be changed in the demo yard.");
+  if (t.m.role !== "member" && t.company.role !== "owner") throw new Error("Only the owner can change a manager's login email.");
+  const raw = String(formData.get("email") ?? "");
+  if (raw.trim().toLowerCase() === (t.email ?? "").toLowerCase()) return;
+  const r = await changeLoginEmail(t.admin, t.company.id, t.m.user_id, raw);
+  if (!r.ok) redirect(`/app/settings/team?err=${encodeURIComponent(r.error)}`);
+  void logEvent({ companyId: t.company.id, kind: "crew_changed", actor: actorOf(t.user),
+    message: `${actorOf(t.user)} changed ${t.name}'s login email` });
+  revalidatePath("/app/settings/team");
+  redirect("/app/settings/team?email=1");
 }
 
 async function transferOwnership(formData: FormData) {
@@ -134,6 +168,11 @@ async function transferOwnership(formData: FormData) {
   // fixable) rather than zero (locked out).
   await admin.from("saas_memberships").update({ role: "owner" }).eq("company_id", company.id).eq("user_id", targetUserId);
   await admin.from("saas_memberships").update({ role: "admin" }).eq("company_id", company.id).eq("user_id", user.id);
+  // Handing over the company goes in the feed: who gave it to whom.
+  const { data: who } = await admin.auth.admin.getUserById(targetUserId);
+  const name = (who?.user?.user_metadata?.full_name as string | undefined)?.trim() || who?.user?.email || "someone";
+  void logEvent({ companyId: company.id, kind: "crew_changed", actor: actorOf(user),
+    message: `${actorOf(user)} made ${name} the owner and is now a manager` });
   revalidatePath("/app/settings/team");
 }
 
@@ -142,8 +181,14 @@ const clock = () => Date.now();
 
 const small = "inline-flex min-h-10 items-center rounded-lg border border-line-2 px-3 text-sm text-ink hover:bg-elevated";
 
-export default async function TeamSettings() {
+export default async function TeamSettings({ searchParams }: { searchParams: Promise<{ off?: string; link?: string; alerts?: string; links?: string; email?: string; err?: string }> }) {
   const { company, user } = await requireCompany();
+  const sp = await searchParams;
+  const notice = sp.off ? offCrewNotice({
+    link: sp.link === "new" || sp.link === "off" ? sp.link : null,
+    alerts: Math.max(0, parseInt(sp.alerts ?? "", 10) || 0),
+    links: Math.max(0, parseInt(sp.links ?? "", 10) || 0),
+  }) : sp.email ? "Login email changed. If they need a new password too, tap Email them a password reset." : null;
   const db = await saasDb();
   const admin = saasAdmin();
   const manager = isManager(company);
@@ -191,6 +236,8 @@ export default async function TeamSettings() {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Team</h1>
         <p className="mt-1 text-sm text-ink-dim">Everybody on {company.name} has their own login, so every scan has a name on it.</p>
       </div>
+      {notice ? <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{notice}</p> : null}
+      {sp.err ? <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{sp.err.slice(0, 200)}</p> : null}
 
       {manager ? (
         <Card className="flex flex-col gap-3 p-5">
@@ -210,7 +257,7 @@ export default async function TeamSettings() {
                   <form action={revokeInvite}><input type="hidden" name="id" value={crewLink.id} /><button type="submit" className={`${small} hover:text-red-400`}>Turn it off</button></form>
                 </span>
               </div>
-              <p className="text-xs text-ink-faint">A new link turns this one off. Anyone who already joined stays on.</p>
+              <p className="text-xs text-ink-faint">A new link turns this one off. Anyone who already joined stays on. Taking someone off the crew makes a new link by itself.</p>
             </>
           ) : (
             <form action={makeCrewLink}><Button type="submit" className="h-12 w-full text-base sm:w-auto">Make the crew link</Button></form>
@@ -224,6 +271,8 @@ export default async function TeamSettings() {
           const i = info.get(m.user_id) ?? {};
           const me = m.user_id === user.id;
           const canManage = manager && !me && m.role !== "owner";
+          const canChangeEmail = canManage && !company.is_demo && (m.role === "member" || company.role === "owner");
+          const first = i.name?.split(/\s+/)[0] ?? "them";
           return (
             <Card key={m.user_id} className="flex flex-col gap-2 p-4">
               <div className="flex items-start justify-between gap-3">
@@ -236,7 +285,7 @@ export default async function TeamSettings() {
               </div>
               {canManage || (company.role === "owner" && m.role === "admin" && !me) ? (
                 <details className="group">
-                  <summary className="cursor-pointer list-none text-sm font-medium text-bone">Manage {i.name?.split(/\s+/)[0] ?? "them"}</summary>
+                  <summary className="cursor-pointer list-none text-sm font-medium text-bone">Manage {first}</summary>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {canManage ? (
                       <form action={setRole}>
@@ -252,19 +301,52 @@ export default async function TeamSettings() {
                       </form>
                     ) : null}
                     {company.role === "owner" && m.role === "admin" && !me ? (
-                      <form action={transferOwnership}>
-                        <input type="hidden" name="user_id" value={m.user_id} />
-                        <button type="submit" className={small} title="Make this manager the owner. You become a manager.">Make owner</button>
-                      </form>
+                      // Handing over the company asks first: only the new owner can give it back.
+                      <AlertDialog>
+                        <AlertDialogTrigger className={`${small} cursor-pointer`}>Make owner</AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Make {i.name ?? "them"} the owner?</AlertDialogTitle>
+                            <AlertDialogDescription>You become a manager. {first} runs billing and the crew from then on, can take you off the crew, and is the only one who can give it back.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep it</AlertDialogCancel>
+                            <form action={transferOwnership}>
+                              <input type="hidden" name="user_id" value={m.user_id} />
+                              <button type="submit" className={buttonClass("default", "default", "w-full")}>Make {first} the owner</button>
+                            </form>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     ) : null}
                     {canManage ? (
-                      <form action={removeMember}>
-                        <input type="hidden" name="user_id" value={m.user_id} />
-                        <button type="submit" className={`${small} border-red-500/40 text-red-400 hover:bg-red-500/10`}>Take off the crew</button>
-                      </form>
+                      <AlertDialog>
+                        <AlertDialogTrigger className={`${small} cursor-pointer border-red-500/40 text-red-400 hover:bg-red-500/10`}>Take off the crew</AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Take {i.name ?? "them"} off the crew?</AlertDialogTitle>
+                            <AlertDialogDescription>They lose access right away and come off the alert emails. The crew link turns over, so the one they have stops working. Their name stays on everything they did.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep them on</AlertDialogCancel>
+                            <form action={removeMember}>
+                              <input type="hidden" name="user_id" value={m.user_id} />
+                              <button type="submit" className={buttonClass("default", "default", "w-full bg-red-500 text-white hover:bg-red-400")}>Take {first} off</button>
+                            </form>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     ) : null}
                   </div>
-                  {canManage ? <p className="mt-2 text-xs text-ink-faint">Taking someone off ends their access right away. Their name stays on everything they did.</p> : null}
+                  {canChangeEmail ? (
+                    <form action={changeEmail} className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input type="hidden" name="user_id" value={m.user_id} />
+                      <input name="email" type="email" required defaultValue={i.email ?? ""} aria-label={`${first}'s login email`} autoCapitalize="none"
+                        className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
+                      <button type="submit" className={small}>Fix their login email</button>
+                    </form>
+                  ) : null}
+                  {canManage ? <p className="mt-2 text-xs text-ink-faint">Taking someone off ends their access right away and turns the crew link over, so the link they have stops working. Their name stays on everything they did.</p> : null}
                 </details>
               ) : null}
             </Card>
@@ -276,13 +358,13 @@ export default async function TeamSettings() {
         <Card className="flex flex-col gap-3 p-5">
           <div>
             <h2 className="font-semibold">Invite one person</h2>
-            <p className="mt-0.5 text-sm text-ink-dim">A link for one person, good for 7 days. Use it for a manager, or to bring back someone who was taken off the crew. Managers also roll a NOT READY truck on an override, approve uploads, and set the rules.</p>
+            <p className="mt-0.5 text-sm text-ink-dim">A link for one person, good for 7 days. Use it to bring back someone who was taken off the crew, or pick Manager for a manager. Managers also roll a NOT READY truck on an override, approve uploads, and set the rules.</p>
           </div>
           <form action={createInvite} className="flex flex-col gap-3 sm:flex-row">
-            <select name="role" defaultValue="admin" aria-label="Joins as"
+            <select name="role" defaultValue="member" aria-label="Joins as"
               className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone sm:w-40">
-              <option value="admin">Manager</option>
               <option value="member">Hand</option>
+              <option value="admin">Manager</option>
             </select>
             <input name="email" type="email" placeholder="Their email (optional, for your list)" aria-label="Their email"
               className="h-12 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />

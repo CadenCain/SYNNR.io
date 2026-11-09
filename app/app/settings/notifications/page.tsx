@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { Plus, Trash2, MessageSquareText, Mail } from "lucide-react";
 import { requireCompany, assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { smsConfigured } from "@/lib/saas/notify";
+import { defaultRecipients, smsConfigured } from "@/lib/saas/notify";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -41,6 +41,22 @@ async function addRecipient(formData: FormData) {
   if (formData.get("ch_sms") === "on" && phone && smsConfigured()) channels.push("sms");
   if (!name || (!email && !phone) || channels.length === 0) return;
   const db = await saasDb();
+  // Only one of this company's own yards.
+  if (yard_id) {
+    const { data: y } = await db.from("saas_yards").select("id").eq("id", yard_id).eq("company_id", company.id).maybeSingle();
+    if (!y) return;
+  }
+  // The first person on the list: whoever gets the alerts now (the owner, by
+  // default) goes on it too, so adding the foreman never takes them off.
+  const { count, error: countErr } = await db.from("saas_alert_recipients").select("id", { count: "exact", head: true }).eq("company_id", company.id);
+  if (!countErr && count === 0) {
+    const now = (await defaultRecipients(company.id)).filter((r) => r.email && r.email.toLowerCase() !== email?.toLowerCase());
+    if (now.length) {
+      await db.from("saas_alert_recipients").insert(now.map((r) => ({
+        company_id: company.id, name: r.name, email: r.email, phone: null, channels: ["email"], yard_ids: null,
+      })));
+    }
+  }
   await db.from("saas_alert_recipients").insert({
     company_id: company.id, name, email, phone, channels,
     yard_ids: yard_id ? [yard_id] : null,
@@ -72,6 +88,16 @@ export default async function NotificationsSettings() {
   const yardName = new Map(yards.map((y) => [y.id, y.name]));
   const smsReady = smsConfigured();
   const manager = company.role === "owner" || company.role === "admin";
+  // Nobody on All yards: the company-wide mail (and anything outside the
+  // listed yards) goes to the default people. Say who, so nobody drops off quietly.
+  const reach = (r: { email: string | null; phone: string | null; channels: string[] }) => (r.channels.includes("email") && r.email) || (smsReady && r.channels.includes("sms") && r.phone);
+  const fallback = manager && !recips.some((r) => r.yard_ids === null && reach(r)) ? await defaultRecipients(company.id) : [];
+  const fallbackNames = fallback.map((r) => (r.email && r.name !== r.email ? `${r.name} (${r.email})` : r.email ?? r.name)).join(", ");
+  const notice = !manager ? null
+    : fallbackNames ? (recips.length
+      ? `Nobody is on All yards, so the morning email, the out-too-long email, and alerts for yards nobody here covers go to ${fallbackNames}.`
+      : `Nobody is on the list yet, so every alert and the morning email go to ${fallbackNames}.`)
+    : !recips.some((r) => r.yard_ids === null && reach(r)) ? "Nobody is set to get the alerts. Add someone below." : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,6 +137,8 @@ export default async function NotificationsSettings() {
           </p>
         </div>
 
+        {notice && <Card className="p-4 text-sm text-ink-dim">{notice}</Card>}
+
         {recips.length > 0 && (
           <div className="flex flex-col gap-2">
             {recips.map((r) => (
@@ -140,7 +168,7 @@ export default async function NotificationsSettings() {
         )}
 
         {manager && <Card className="p-5">
-          <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add the first person to alert, like the foreman who rolls the trucks"}</h3>
+          <h3 className="mb-3 text-sm font-medium text-ink">{recips.length ? "Add another person" : "Add someone, like the foreman who rolls the trucks"}</h3>
           <form action={addRecipient} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row">
               <input name="name" required placeholder="Name" className={`${fld} w-full min-w-0 grow`} />
@@ -161,8 +189,11 @@ export default async function NotificationsSettings() {
               )}
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
+            {!recips.length && fallbackNames ? (
+              <p className="text-[13px] text-ink-faint">{fallbackNames} {fallback.length === 1 ? "goes" : "go"} on the list too, so nobody stops getting them. Take anyone off with the trash can.</p>
+            ) : null}
             {yards.length > 1 ? (
-              <p className="text-[13px] text-ink-faint">&quot;Only&quot; a yard covers that yard&apos;s load-out and test alerts. The morning email and the out-too-long email cover every yard.</p>
+              <p className="text-[13px] text-ink-faint">&quot;Only&quot; a yard gets that yard&apos;s load-out and test alerts and that yard&apos;s part of the morning email. All yards gets every yard, the out-too-long email, and uploads waiting on a manager.</p>
             ) : null}
           </form>
         </Card>}

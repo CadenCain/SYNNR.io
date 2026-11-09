@@ -18,10 +18,12 @@ export default async function ProofsSettings() {
   const { company } = await requireCompany();
   const db = await saasDb();
   const manager = isManagerRole(company.role);
-  // The operator link every load-out made, newest first, and which are shut off.
+  // The operator link the newest load-outs made, newest first, and which are
+  // shut off. Older ones are shut off from the record itself (Load-out records).
+  const RECENT = 60;
   const [{ data: loRows }, { data: offRows }] = await Promise.all([
     db.from("saas_loadout_scans").select("id, unit_name, finished_at, verdict, proof_token, scanned_by")
-      .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(60),
+      .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(RECENT),
     db.from("saas_loadout_link_offs").select("loadout_id").eq("company_id", company.id),
   ]);
   const offIds = new Set(((offRows ?? []) as { loadout_id: string }[]).map((r) => r.loadout_id));
@@ -48,11 +50,15 @@ export default async function ProofsSettings() {
       <PageHeader
         back={{ href: "/app/settings", label: "Settings" }}
         title="Proof links"
-        description="Every link you've sent an operator. Shut one off and it stops working right away."
+        description="The links you send operators. Shut one off and it stops working right away, and so do the certs and the truck photo on it."
       />
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold">Load-out links</h2>
-        <p className="-mt-1 text-[13px] text-ink-faint">Each load-out makes one for the operator: the iron, its certs, who loaded it, and the photo of the truck.</p>
+        <p className="-mt-1 text-[13px] text-ink-faint">
+          Each load-out makes one for the operator: the iron, its certs, who loaded it, and the photo of the truck.
+          {" "}These are the newest {RECENT}. For an older one, open it from <Link href="/app/loadouts" className="text-bone hover:underline">Load-out records</Link> and shut it off there.
+        </p>
+        <p className="-mt-1 text-[13px] text-ink-faint">Shutting off a link doesn&apos;t shut off the piece pages it opens. Those are the same page as the QR tag on the iron.</p>
         {loadouts.length === 0 ? <Card className="p-4 text-sm text-ink-dim">No load-outs yet.</Card> : loadouts.map((l) => {
           const off = offIds.has(l.id);
           return (

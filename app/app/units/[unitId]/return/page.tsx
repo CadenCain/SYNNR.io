@@ -22,10 +22,11 @@ export default async function TruckReturnPage({ params }: { params: Promise<{ un
   const { company } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
-  const [{ data: unitRow }, { data: yardRows }, { data: lastOut }, rules] = await Promise.all([
+  const [{ data: unitRow }, { data: yardRows }, { data: lastOut }, { data: lastBackRow }, rules] = await Promise.all([
     db.from("saas_units").select("id, name, yard_id").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
     db.from("saas_yards").select("id, name").eq("company_id", company.id).order("name"),
     db.from("saas_loadout_scans").select("finished_at, scanned_by").eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+    db.from("saas_returns").select("finished_at").eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
     getYardRules(db, company.id),
   ]);
   const unit = unitRow as { id: string; name: string; yard_id: string } | null;
@@ -40,12 +41,26 @@ export default async function TruckReturnPage({ params }: { params: Promise<{ un
   }
   const { pieces, outDays } = await getScanPieces(db, company.id);
   const last = lastOut as { finished_at: string; scanned_by: string | null } | null;
+  const askLeft = askIfItLeft(last?.finished_at ?? null, (lastBackRow as { finished_at: string } | null)?.finished_at ?? null);
   return (
     <div className="flex flex-col gap-5">
       <PageHeader back={{ href: `/app/units/${unit.id}`, label: unit.name }} title={`Check in ${unit.name}`}
         description={last ? `Last loaded out ${fmtWhen(last.finished_at)}${last.scanned_by ? ` by ${last.scanned_by}` : ""}. Scan what came back.` : "Scan what came back."} />
       <ReturnScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces} outDays={outDays}
-        yards={(yardRows ?? []) as { id: string; name: string }[]} defaultYardId={unit.yard_id} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} />
+        yards={(yardRows ?? []) as { id: string; name: string }[]} defaultYardId={unit.yard_id} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo}
+        askLeft={askLeft} />
     </div>
   );
+}
+
+/**
+ * No load-out since this truck was last checked in (and that wasn't earlier
+ * the same trip): either it never left the yard or it left without a scan,
+ * and only the hand knows which. The same test the check-in's "never scanned
+ * out" flag uses (return/actions.ts tripNotScanned).
+ */
+function askIfItLeft(lastOutAt: string | null, lastBackAt: string | null): { since: string | null } | null {
+  if (lastOutAt && !(lastBackAt && lastBackAt > lastOutAt)) return null;
+  if (lastBackAt && Date.now() - Date.parse(lastBackAt) < 12 * 3600e3) return null;
+  return { since: lastBackAt ? fmtWhen(lastBackAt) : null };
 }

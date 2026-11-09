@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
 import { canPerform } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { logEvent, logEventNow } from "@/lib/saas/notify";
+import { logEvent, logEventNow, notifyEvent } from "@/lib/saas/notify";
+import { judgeItem } from "@/lib/saas/judge";
+import { localToday } from "@/lib/saas/status";
 
 // Every record change is logged under the hand who made it — "who renewed
 // this" is half the point of a compliance trail.
@@ -137,7 +139,7 @@ export async function deleteUnit(fd: FormData) {
 
 // ── ASSET ──
 export async function updateAsset(fd: FormData) {
-  const { company } = await requireBillableCompany();
+  const { company, user } = await requireBillableCompany();
   const id = str(fd, "id");
   const status = str(fd, "status") || "in_service";
   if (!id) return;
@@ -153,24 +155,45 @@ export async function updateAsset(fd: FormData) {
   // this keeps a hand's save from tripping it.
   const identifier = fd.has("identifier") && manager ? { identifier: str(fd, "identifier") || null } : {};
   const db = await saasDb();
-  const { data: before } = await db.from("saas_assets").select("status, name, identifier, unit_id").eq("id", id).eq("company_id", company.id).maybeSingle();
-  const b = before as { status: string; name: string; identifier: string | null; unit_id: string | null } | null;
-  const wasRedTagged = b?.status === "out_of_service";
+  const { data: before } = await db.from("saas_assets").select("status, name, identifier, unit_id, yard_id").eq("id", id).eq("company_id", company.id).maybeSingle();
+  const b = before as { status: string; name: string; identifier: string | null; unit_id: string | null; yard_id: string | null } | null;
+  if (!b) return;
+  const wasRedTagged = b.status === "out_of_service";
   if (wasRedTagged && status !== "out_of_service" && !manager) {
     redirect(`/app/assets/${id}?err=${encodeURIComponent("Only a manager can put red-tagged iron back in service.")}`);
   }
-  // A red tag comes off with a note: what was fixed, so the record says why it's good again.
+  // A red tag comes off with a note: what was fixed, so the record says why
+  // it's good again. A full sentence, the same as a manager's override.
   const clearNote = str(fd, "clear_note").slice(0, 200);
-  if (wasRedTagged && status !== "out_of_service" && clearNote.length < 5) {
-    redirect(`/app/assets/${id}?err=${encodeURIComponent("Say what was done to it before putting it back in service.")}`);
+  if (wasRedTagged && status !== "out_of_service" && clearNote.length < 10) {
+    redirect(`/app/assets/${id}?err=${encodeURIComponent("Say what was done to it before putting it back in service, in a full sentence. It goes on the record.")}`);
   }
-  const { error } = await db.from("saas_assets").update({ ...named, status, ...identifier }).eq("id", id).eq("company_id", company.id);
+  // A red tag goes on with why, the same as one put on at a check-in: the
+  // piece's page keeps who, when and why, and the managers hear now.
+  const tagging = !wasRedTagged && status === "out_of_service";
+  const tagNote = str(fd, "tag_note").replace(/\s+/g, " ").slice(0, 200);
+  if (tagging && tagNote.length < 5) {
+    redirect(`/app/assets/${id}?err=${encodeURIComponent("Say what's wrong with it before red-tagging it. It goes on the record.")}`);
+  }
+  const actor = actorName(user) || (manager ? "A manager" : "Someone");
+  // Both go on the piece's history (the database writes a row for the note),
+  // and a tag taken off replaces the old "red-tagged: ..." note on the list.
+  const clearing = wasRedTagged && status !== "out_of_service";
+  const why = tagging ? { last_seen_where: `red-tagged: ${tagNote}`, last_seen_by: actor, last_seen_at: new Date().toISOString() }
+    : clearing ? { last_seen_where: `red tag off: ${clearNote}`, last_seen_by: actor, last_seen_at: new Date().toISOString() } : {};
+  const { error } = await db.from("saas_assets").update({ ...named, status, ...identifier, ...why }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
-  if (wasRedTagged && status !== "out_of_service" && b) {
-    const { data: u } = await db.auth.getUser();
-    const actor = (u.user?.user_metadata?.full_name as string | undefined)?.trim() || u.user?.email?.split("@")[0] || "A manager";
+  const label = `${b.name}${b.identifier ? ` ${b.identifier}` : ""}`;
+  if (clearing) {
     await logEventNow({ companyId: company.id, kind: "asset_status", unitId: b.unit_id, actor,
-      message: `${actor} took the red tag off ${b.name}${b.identifier ? ` ${b.identifier}` : ""}: "${clearNote}"` });
+      message: `${actor} took the red tag off ${label}: "${clearNote}"` });
+  }
+  if (tagging) {
+    const { data: unitRow } = b.unit_id ? await db.from("saas_units").select("name").eq("id", b.unit_id).eq("company_id", company.id).maybeSingle() : { data: null };
+    const truck = (unitRow as { name: string } | null)?.name;
+    const message = `${label}${truck ? ` on ${truck}` : ""} red-tagged by ${actor}: ${tagNote}`;
+    await logEventNow({ companyId: company.id, kind: "red_tagged", unitId: b.unit_id, actor, message });
+    void notifyEvent({ companyId: company.id, companyName: company.name, yardId: b.yard_id, message, href: `/app/assets/${id}` });
   }
   revalidatePath(`/app/assets/${id}`);
   // Back to the plain page: an error from an earlier try doesn't stay up.
@@ -504,12 +527,36 @@ export async function deleteComplianceItem(fd: FormData) {
   const id = str(fd, "id");
   const redirectPath = str(fd, "redirect_path");
   const db = await saasDb();
-  const { data: t } = await db.from("saas_compliance_items").select("title").eq("id", id).eq("company_id", company.id).maybeSingle();
+  const { data: t } = await db.from("saas_compliance_items").select("title, parent_type, parent_id, expiration_date, last_upload_id, pending_until, reminder_days")
+    .eq("id", id).eq("company_id", company.id).maybeSingle();
+  const item = t as { title: string; parent_type: string; parent_id: string; expiration_date: string | null; last_upload_id: string | null; pending_until: string | null; reminder_days: number | null } | null;
+  // Which truck (or which piece, on which truck) lost it: every truck has an
+  // "Annual DOT inspection", so the title alone doesn't say.
+  let unitId: string | null = null;
+  let whose = "";
+  if (item?.parent_type === "unit") {
+    const { data: u } = await db.from("saas_units").select("id, name").eq("id", item.parent_id).eq("company_id", company.id).maybeSingle();
+    const unit = u as { id: string; name: string } | null;
+    if (unit) { unitId = unit.id; whose = ` on ${unit.name}`; }
+  } else if (item?.parent_type === "asset") {
+    const { data: a } = await db.from("saas_assets").select("name, identifier, unit_id").eq("id", item.parent_id).eq("company_id", company.id).maybeSingle();
+    const piece = a as { name: string; identifier: string | null; unit_id: string | null } | null;
+    if (piece) {
+      unitId = piece.unit_id;
+      const { data: u } = piece.unit_id ? await db.from("saas_units").select("name").eq("id", piece.unit_id).eq("company_id", company.id).maybeSingle() : { data: null };
+      const truck = (u as { name: string } | null)?.name;
+      whose = ` on ${piece.name}${piece.identifier ? ` ${piece.identifier}` : ""}${truck ? ` (${truck})` : ""}`;
+    }
+  }
+  // Deleting paper that was failing turns its truck green without fixing
+  // anything, so the feed line says what it was.
+  const j = item ? judgeItem({ id, ...item }, localToday(), localToday()) : null;
+  const failing = j && (j.result === "expired" || j.result === "missing") ? j.detail : null;
   await db.from("saas_compliance_items").delete().eq("id", id).eq("company_id", company.id);
   {
     const actor = actorName(user);
-    void logEvent({ companyId: company.id, kind: "deleted", actor,
-      message: `${(t as { title: string } | null)?.title ?? "Item"} deleted${actor ? ` by ${actor}` : ""}` });
+    void logEvent({ companyId: company.id, kind: failing ? "deleted_failing" : "deleted", unitId, actor,
+      message: `${item?.title ?? "Item"}${whose} deleted${actor ? ` by ${actor}` : ""}${failing ? `. It was failing: ${failing}` : ""}` });
   }
   if (redirectPath) revalidatePath(redirectPath);
 }

@@ -13,6 +13,7 @@ import ProofLink from "../../_components/proof-link";
 import { rollLoadoutAnyway } from "./actions";
 import { recordPaper } from "@/lib/saas/paper";
 import { setLoadoutLink } from "../../_proof-actions";
+import { canStillRoll } from "@/lib/saas/dispatch-check";
 
 export const metadata = { title: "Load-out record" };
 
@@ -79,6 +80,17 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
           <p>{rec.unit_name} was checked back in {fmtWhen(backSince.finished_at)}{backSince.returned_by ? ` by ${backSince.returned_by}` : ""}, so this load-out can&apos;t be rolled anymore. The record stays NOT READY.</p>
           {rec.unit_id ? <Link href={`/app/units/${rec.unit_id}/scan`} className="font-medium text-bone underline underline-offset-2">Start a new load-out of {rec.unit_name}</Link> : null}
+        </Card>
+      ) : outcome === "blocked" && !canStillRoll(rec.finished_at) ? (
+        <Card className="flex flex-col gap-3 p-4">
+          <h2 className="font-semibold">Scan it again</h2>
+          <p className="text-sm text-ink-dim">
+            This load-out is from {fmtWhen(rec.finished_at)}, so it can&apos;t be rolled anymore: what&apos;s on {rec.unit_name} now may not be what was scanned then.
+            Scan {rec.unit_name} again. If it comes back NOT READY, a manager can roll that one.
+          </p>
+          {rec.unit_id ? (
+            <Link href={`/app/units/${rec.unit_id}/scan`} className={buttonClass("default", "lg", "h-14 self-start text-base")}><ScanLine className="h-5 w-5" /> Scan {rec.unit_name} again</Link>
+          ) : null}
         </Card>
       ) : outcome === "blocked" ? (
         <Card className="flex flex-col gap-3 p-4">

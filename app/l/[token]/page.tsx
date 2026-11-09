@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { saasAdmin } from "@/lib/saas/db";
-import { getLoadout, recordPhoto, RECORD_COLS, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
-import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
+import { recordPhoto, laterLoadout, yardZones } from "@/lib/saas/loadout-record";
 import LoadoutRecordView from "@/app/app/_components/loadout-record-view";
 import { recordPaper } from "@/lib/saas/paper";
+import { loadPublicRecord } from "./load-record";
 
 /**
  * PUBLIC proof of one load-out: the link a shop sends the operator instead of
@@ -31,15 +31,10 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
   const { token } = await params;
   const admin = saasAdmin();
   if (!admin) return <Gone />;
-  const got = token === "showcase" ? await showcaseLoadout(admin)
-    : /^[a-f0-9]{32}$/i.test(token) ? await getLoadout(admin, { token: token.toLowerCase() })
-    : null;
+  const got = await loadPublicRecord(admin, token);
+  if (got === "off") return <Gone shutOff />;
   if (!got) return <Gone />;
   const { rec, override } = got;
-  if (token !== "showcase") {
-    const { data: off } = await admin.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", rec.id).maybeSingle();
-    if (off) return <Gone shutOff />;
-  }
 
   const ids = rec.pieces.map((p) => p.asset_id);
   const [{ data: co }, { data: yard }, { data: tags }, { data: rule }] = await Promise.all([
@@ -57,9 +52,18 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
   const demo = Boolean((co as { is_demo?: boolean } | null)?.is_demo);
   const company = `${(co as { name: string } | null)?.name ?? ""}${demo ? " (demo)" : ""}`;
   // The paper behind every piece: the operator sees the cert, not just a date.
-  const paper = await recordPaper(admin, rec.company_id, rec.pieces);
-  const photo = await recordPhoto(admin, rec);
+  // Each link goes through this page's token, so it opens however long the
+  // tab has been open, and stops the moment the shop shuts the link off.
+  const paper = await recordPaper(admin, rec.company_id, rec.pieces, (uploadId) => `/l/${token}/paper/${uploadId}`);
+  const photo = await recordPhoto(admin, rec, `/l/${token}/photo`);
   const yardName = (yard as { name: string } | null)?.name ?? "";
+  // The truck was loaded out again on this trip (fixed and READY, most
+  // often): an old NOT READY link says so instead of holding the truck.
+  const later = await laterLoadout(admin, rec);
+  // Times read in the yard's own zone, with the zone on them: the company
+  // man holds them up against his gate log.
+  const zones = await yardZones(admin, [rec.yard_id, later?.yard_id]);
+  const tz = (rec.yard_id && zones.get(rec.yard_id)) || null;
 
   return (
     <div className="saas min-h-dvh bg-coal px-4 py-8 text-ink antialiased print:bg-white print:text-black">
@@ -75,27 +79,10 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
           <span className="text-sm text-ink-dim">{[company, yardName].filter(Boolean).join(" · ")}</span>
         </div>
         {demo ? <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300">Demo yard on synnr.io. The company and its records are made up.</p> : null}
-        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} photo={photo} forOperator />
+        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} photo={photo} forOperator tz={tz}
+          later={later ? { ...later, href: `/l/${later.proof_token}`, tz: (later.yard_id && zones.get(later.yard_id)) || tz } : null} />
         <p className="text-[13px] text-ink-faint">Tap a piece to see its tests and cert. Sent from RollReady by SYNNR.</p>
       </div>
     </div>
   );
-}
-
-/**
- * /l/showcase: the homepage's "See a load-out". The showcase demo yard (the
- * one behind the /demo proof link, re-seeded daily) and its latest CT-03
- * load-out, the one that caught the BOP stack out of test. Made-up yard,
- * real record, same page an operator gets.
- */
-async function showcaseLoadout(admin: NonNullable<ReturnType<typeof saasAdmin>>): Promise<{ rec: LoadoutRecord; override: LoadoutOverride | null } | null> {
-  const { data: proof } = await admin.from("saas_readiness_proofs").select("company_id").eq("token", SHOWCASE_PROOF_TOKEN).maybeSingle();
-  const companyId = (proof as { company_id: string } | null)?.company_id;
-  if (!companyId) return null;
-  const { data } = await admin.from("saas_loadout_scans").select(RECORD_COLS)
-    .eq("company_id", companyId).eq("unit_name", "CT-03").order("finished_at", { ascending: false }).limit(1).maybeSingle();
-  if (!data) return null;
-  const rec = data as LoadoutRecord;
-  const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", rec.id).maybeSingle();
-  return { rec: { ...rec, reasons: rec.reasons ?? [], lines: rec.lines ?? [], packages: rec.packages ?? [] }, override: (ov as LoadoutOverride | null) ?? null };
 }

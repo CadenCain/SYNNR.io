@@ -77,8 +77,11 @@ export async function sendEmail(to: string[], subject: string, html: string): Pr
   }
 }
 
-/** Recipients for a company, optionally scoped to a yard. Falls back to the
- *  legacy notification_settings emails, then company owners. */
+/** Recipients for a company, optionally scoped to a yard. A yard-only person
+ *  gets that yard's alerts and nothing company-wide (no yard: the morning
+ *  email, out too long, uploads waiting), so adding one never takes the
+ *  owner off the rest. When nobody on the list covers it, it falls back to
+ *  the legacy notification_settings emails, then the company owners. */
 export async function resolveRecipients(companyId: string, yardId?: string | null): Promise<Recipient[]> {
   const admin = saasAdmin();
   if (!admin) return [];
@@ -86,12 +89,19 @@ export async function resolveRecipients(companyId: string, yardId?: string | nul
     .from("saas_alert_recipients")
     .select("name, email, phone, channels, yard_ids")
     .eq("company_id", companyId);
-  let recips = ((data ?? []) as Recipient[]).filter(
-    (r) => !yardId || r.yard_ids === null || r.yard_ids.includes(yardId),
+  const recips = ((data ?? []) as Recipient[]).filter(
+    (r) => (r.yard_ids === null || (yardId ? r.yard_ids.includes(yardId) : false))
+      && Boolean((r.channels.includes("email") && r.email) || (smsConfigured() && r.channels.includes("sms") && r.phone)),
   );
   if (recips.length > 0) return recips;
+  return defaultRecipients(companyId);
+}
 
-  // Legacy fallback: notification_settings.recipients (emails), then owners.
+/** Who gets the alerts when nobody on the list covers them: the legacy
+ *  notification_settings emails, then the company owners. */
+export async function defaultRecipients(companyId: string): Promise<Recipient[]> {
+  const admin = saasAdmin();
+  if (!admin) return [];
   const { data: s } = await admin
     .from("saas_notification_settings").select("recipients").eq("company_id", companyId).maybeSingle();
   const legacy = ((s as { recipients: string[] } | null)?.recipients ?? []).filter(Boolean);
@@ -100,10 +110,11 @@ export async function resolveRecipients(companyId: string, yardId?: string | nul
   }
   const { data: owners } = await admin
     .from("saas_memberships").select("user_id").eq("company_id", companyId).eq("role", "owner").eq("status", "active");
-  recips = [];
+  const recips: Recipient[] = [];
   for (const o of (owners ?? []) as { user_id: string }[]) {
     const { data: u } = await admin.auth.admin.getUserById(o.user_id);
-    if (u?.user?.email) recips.push({ name: u.user.email, email: u.user.email, phone: null, channels: ["email"], yard_ids: null });
+    const name = (u?.user?.user_metadata?.full_name as string | undefined)?.trim() || u?.user?.email;
+    if (u?.user?.email) recips.push({ name: name || u.user.email, email: u.user.email, phone: null, channels: ["email"], yard_ids: null });
   }
   return recips;
 }

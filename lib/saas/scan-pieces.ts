@@ -7,10 +7,18 @@ import { TESTED_CATEGORIES } from "./taxonomy";
 import { tagKey } from "./tag-key";
 
 /**
+ * A piece as a scan screen gets it, plus two things a load-out needs to know
+ * before it points a hand at a piece on another truck: it's out (on a job
+ * that hasn't been checked back in, or signed out to someone), or it's
+ * flagged missing. Neither is in the yard to grab.
+ */
+export type YardScanPiece = ScanPiece & { out?: boolean; missing?: boolean };
+
+/**
  * Every piece a scan screen can recognize (load-out or check-in): its tags,
  * where it's logged, whether it's bad, and how long it's been out on a job.
  */
-export async function getScanPieces(db: SupabaseClient, companyId: string): Promise<{ pieces: ScanPiece[]; outDays: Record<string, number> }> {
+export async function getScanPieces(db: SupabaseClient, companyId: string): Promise<{ pieces: YardScanPiece[]; outDays: Record<string, number> }> {
   const [list, tagRows, outRows] = await Promise.all([
     getEquipment(db, companyId),
     readAll<{ id: string; tag_token: string | null; nfc_uid: string | null }>((a, b) => db.from("saas_assets").select("id, tag_token, nfc_uid", { count: "exact" }).eq("company_id", companyId).neq("status", "retired").order("id").range(a, b)),
@@ -22,7 +30,7 @@ export async function getScanPieces(db: SupabaseClient, companyId: string): Prom
   const now = Date.now();
   const outDays: Record<string, number> = {};
   for (const r of (outRows ?? []) as { id: string; out_since: string }[]) outDays[r.id] = daysOut(r.out_since, now);
-  const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => {
+  const pieces: YardScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => {
     // Marked missing, now in someone's hand: scanning it marks it found, and
     // the server judges it on its tests like any other piece. So does the phone.
     const found = r.status === "missing" && !r.needsRedress;
@@ -36,6 +44,8 @@ export async function getScanPieces(db: SupabaseClient, companyId: string): Prom
       // Pressure iron with no test on file can't go out, so it reads red on the phone too.
       problem: st === "overdue" || st === "down" || (st === "no_paper" && TESTED_CATEGORIES.has(r.category)) ? "red" : st === "due" ? "yellow" : null,
       statusText: found ? `Marked missing. Scanning it marks it found. ${tests}` : st === "down" ? stateLabel(r) : tests,
+      out: outDays[r.id] !== undefined,
+      missing: r.status === "missing",
     };
   });
   return { pieces, outDays };

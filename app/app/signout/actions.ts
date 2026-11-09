@@ -89,14 +89,23 @@ export async function signOutTools(input: { assetIds: string[]; note?: string; t
     return { ok: true, summary: `Already signed out to ${toName}: ${already.map(label).join(", ")}` };
   }
   const now = new Date().toISOString();
-  // Only what's still free right now: two hands tapping the same tool at
-  // the same moment can't both walk off with it on paper.
-  const { data: took, error } = await admin.from("saas_assets").update({
-    out_since: now, out_with_user: toId, out_with_name: toName, out_loadout_id: null, out_alerted_at: null,
-    unit_id: null, last_seen_where: `signed out to ${toName} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
-  }).eq("company_id", company.id).in("id", ids.filter((id) => !already.some((a) => a.id === id))).is("out_since", null).is("needs_redress_since", null).select("id");
-  if (error) return { ok: false, error: `Couldn't sign it out: ${error.message}` };
-  const gotIds = new Set(((took ?? []) as { id: string }[]).map((r) => r.id));
+  // Only what's still free right now, and still where this read found it:
+  // two hands tapping the same tool at the same moment can't both walk off
+  // with it on paper, and a load-out putting it on a truck this second wins.
+  const free = assets.filter((a) => !already.includes(a));
+  const byPlace = new Map<string, string[]>();
+  for (const a of free) byPlace.set(a.unit_id ?? "", [...(byPlace.get(a.unit_id ?? "") ?? []), a.id]);
+  const gotIds = new Set<string>();
+  for (const [place, placeIds] of byPlace) {
+    let q = admin.from("saas_assets").update({
+      out_since: now, out_with_user: toId, out_with_name: toName, out_loadout_id: null, out_alerted_at: null,
+      unit_id: null, last_seen_where: `signed out to ${toName} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
+    }).eq("company_id", company.id).in("id", placeIds).is("out_since", null).is("needs_redress_since", null);
+    q = place ? q.eq("unit_id", place) : q.is("unit_id", null);
+    const { data: took, error } = await q.select("id");
+    if (error) return { ok: false, error: `Couldn't sign it out: ${error.message}` };
+    for (const r of (took ?? []) as { id: string }[]) gotIds.add(r.id);
+  }
   const missed = assets.filter((a) => !gotIds.has(a.id) && !already.includes(a));
   const got = assets.filter((a) => gotIds.has(a.id));
   if (!got.length) return { ok: false, error: "Someone else just signed that out. Reload to see who has it." };
@@ -164,23 +173,32 @@ export async function handOffTool(input: { assetId: string; to: string; ran?: bo
   return { ok: true, summary };
 }
 
-/** Redressed and ready to run again. Anyone on the crew can, with their name on it. */
-export async function markRedressed(fd: FormData) {
+/**
+ * Redressed and ready to run again. Anyone on the crew can, with their name
+ * on it. The screen sends which run it was redressed after: a tap from a
+ * page left open since an earlier run can't clear a newer run's flag.
+ */
+export async function markRedressed(fd: FormData): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireBillableCompany();
   const admin = saasAdmin();
   const id = String(fd.get("asset_id") ?? "");
-  if (!admin || !id) return;
+  const since = String(fd.get("since") ?? "");
+  if (!admin || !id) return { ok: false, error: "Saving is down right now. Try again in a minute." };
   const { data } = await admin.from("saas_assets").select("id, name, identifier, unit_id, needs_redress_since")
     .eq("company_id", company.id).eq("id", id).maybeSingle();
   const a = data as { id: string; name: string; identifier: string | null; unit_id: string | null; needs_redress_since: string | null } | null;
-  if (!a?.needs_redress_since) return;
+  if (!a?.needs_redress_since) return { ok: true };
+  const same = (x: string, y: string) => Date.parse(x) === Date.parse(y);
+  if (since && !same(since, a.needs_redress_since)) return { ok: false, error: "It came back from another run since this page loaded. Redress it again, then reload and tap." };
   const actor = actorOf(user);
   const now = new Date().toISOString();
-  await admin.from("saas_assets").update({ needs_redress_since: null, last_seen_by: actor, last_seen_at: now })
-    .eq("company_id", company.id).eq("id", a.id);
+  const { data: done } = await admin.from("saas_assets").update({ needs_redress_since: null, last_seen_by: actor, last_seen_at: now })
+    .eq("company_id", company.id).eq("id", a.id).eq("needs_redress_since", a.needs_redress_since).select("id");
+  if (!(done ?? []).length) return { ok: false, error: "It changed a moment ago. Reload to see where it stands." };
   void logEvent({ companyId: company.id, kind: "redressed", unitId: a.unit_id, actor, message: `${actor} redressed ${label(a)}` });
   refresh();
   revalidatePath(`/app/assets/${a.id}`);
+  return { ok: true };
 }
 
 /** A manager marks a tool as one that gets redressed after every run (or not). */

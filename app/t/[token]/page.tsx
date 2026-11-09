@@ -4,7 +4,7 @@ import { ShieldCheck, TriangleAlert, FileImage, ArrowRight } from "lucide-react"
 import { saasAdmin } from "@/lib/saas/db";
 import { getSaasUser } from "@/lib/saas/auth";
 import { judgeItem, isNoPaper, type LineResult } from "@/lib/saas/judge";
-import { paperLinks } from "@/lib/saas/paper";
+import { paperLinks, DEMO_PAPER } from "@/lib/saas/paper";
 import { localToday } from "@/lib/saas/status";
 import { categoryLabel, TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { fmtDate, fmtWhen } from "@/lib/saas/format";
@@ -96,12 +96,33 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   // The photo behind each current date.
   const paper = await paperLinks(admin, items.map((x) => x.i));
 
+  // Retested, cert on the way: the paper a manager approved for it (the
+  // retest invoice or tag). The cert on file is the old one that ran out.
+  const pendingItems = items.filter((x) => x.j.result === "pending");
+  const retestPaper = new Map<string, string>();
+  if (pendingItems.length) {
+    const { data: retestData } = await admin.from("saas_cert_uploads")
+      .select("item_id, storage_path, applied_at")
+      .eq("company_id", a.company_id).eq("evidence", "temporary").eq("status", "applied")
+      .in("item_id", pendingItems.map((x) => x.i.id))
+      .order("applied_at", { ascending: false });
+    const latest = new Map<string, string>();
+    for (const r of (retestData ?? []) as { item_id: string; storage_path: string }[]) {
+      if (!latest.has(r.item_id) && !r.storage_path.startsWith(DEMO_PAPER)) latest.set(r.item_id, r.storage_path);
+    }
+    if (latest.size) {
+      const paths = [...latest.entries()];
+      const { data: signed } = await admin.storage.from("proofs").createSignedUrls(paths.map(([, p]) => p), 3600);
+      paths.forEach(([itemId], idx) => { const url = signed?.[idx]?.signedUrl; if (url) retestPaper.set(itemId, url); });
+    }
+  }
+
   const down = a.status === "out_of_service" || a.status === "missing";
   const retired = a.status === "retired";
   const failing = items.filter((x) => x.j.result === "expired" || x.j.result === "missing");
   // A tool redressed after every run, with no tests to keep: ready is "redressed".
   const redressOnly = Boolean(a.redress_each_run) && items.length === 0 && !TESTED_CATEGORIES.has(a.category);
-  const good = !down && !retired && !a.needs_redress_since && (items.length > 0 || redressOnly) && failing.length === 0;
+  const good = !down && !retired && !a.needs_redress_since && (items.length > 0 || redressOnly) && failing.length === 0 && pendingItems.length === 0;
   const verdict = retired ? { title: "Retired", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop has taken this out of service for good. Don't use it." }
     : a.status === "out_of_service" ? { title: "Red-tagged. Do not use.", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has pulled this from service." }
     : a.status === "missing" ? { title: "Flagged missing", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has this marked missing. Let them know where it is." }
@@ -110,6 +131,8 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
         note: a.out_with_name ? `Signed out to ${a.out_with_name}.` : a.out_since ? "Out on a job right now." : "Redressed since its last run." }
     : items.length === 0 ? { title: "No test on file", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop hasn't put this piece's paper in RollReady yet." }
     : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due, missing a date, or missing their paper.` }
+    : pendingItems.length ? { title: "Retested, cert on the way", tone: "border-amber-500/40 bg-amber-500/10 text-amber-400",
+        note: `${pendingItems[0].i.title} counts through ${fmtDate(pendingItems[0].i.pending_until)}. The new cert isn't in yet.` }
     : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today, with the paper behind it." };
 
   return (
@@ -152,9 +175,14 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
                 <div><dt className="text-xs text-ink-faint">Last done</dt><dd className="whitespace-nowrap">{i.issued_date ? fmtDate(i.issued_date) : "Not on file"}</dd></div>
                 <div><dt className="text-xs text-ink-faint">Good until</dt><dd className="whitespace-nowrap">{i.expiration_date ? fmtDate(i.expiration_date) : "No date"}</dd></div>
               </dl>
+              {j.result === "pending" && retestPaper.get(i.id) ? (
+                <a href={retestPaper.get(i.id)} target="_blank" rel="noreferrer" className="mt-3 mr-4 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
+                  <FileImage className="h-4 w-4" /> See the retest paper
+                </a>
+              ) : null}
               {paper.get(i.id) ? (
                 <a href={paper.get(i.id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
-                  <FileImage className="h-4 w-4" /> See the cert
+                  <FileImage className="h-4 w-4" /> {j.result === "pending" ? "See the old cert (ran out)" : "See the cert"}
                 </a>
               ) : null}
             </div>

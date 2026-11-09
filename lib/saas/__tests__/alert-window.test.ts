@@ -72,7 +72,7 @@ describe("horizon math across calendar traps", () => {
 
 describe("timezone: server-UTC evening vs the customer's Central morning", () => {
   it("at 2am UTC (9pm CT the previous day) the sweep still uses the CT day", () => {
-    // The cron fires at 11:30 UTC, but if it ever ran at a UTC hour where the
+    // The cron fires at 4 AM Central (09:00 or 10:00 UTC), but if it ever ran at a UTC hour where the
     // dates disagree, the customer's local day must win — a cert 'expiring
     // today' in Texas is not 'expired yesterday' because the server is in UTC.
     const ctDay = localToday(new Date("2026-08-12T02:00:00Z"));

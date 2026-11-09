@@ -12,6 +12,20 @@ import { useSyncExternalStore } from "react";
 type Unsent = { href: string; label: string; count: number };
 const noSubscribe = () => () => {};
 const FRESH = 18 * 3600e3;
+/** The server won't take a load-out started longer ago than this (scan/actions.ts finishLoadout). */
+export const LOADOUT_MAX_AGE = 20 * 3600e3;
+
+/**
+ * Can this load-out draft still send? It has scans, was worked on in the last
+ * 18 hours, and started less than 20 hours ago. Picking a draft up and
+ * putting it down again doesn't buy it more time: the server goes by when
+ * the load-out started.
+ */
+export function loadoutDraftSendable(d: { scans?: Record<string, unknown>; savedAt?: number; startedAt?: string } | null, now: number): boolean {
+  if (!d || !Object.keys(d.scans ?? {}).length || now - (d.savedAt ?? 0) > FRESH) return false;
+  const started = Date.parse(String(d.startedAt ?? ""));
+  return !Number.isFinite(started) || now - started < LOADOUT_MAX_AGE;
+}
 
 function read(trucks: { id: string; name: string }[]): string {
   const out: Unsent[] = [];
@@ -20,9 +34,11 @@ function read(trucks: { id: string; name: string }[]): string {
       const k = localStorage.key(i) ?? "";
       const m = /^rr-(loadout|return)-(.+)$/.exec(k);
       if (!m || k.startsWith("rr-loadout-photo-")) continue;
-      const d = JSON.parse(localStorage.getItem(k) ?? "null") as { scans?: Record<string, unknown>; savedAt?: number } | null;
+      const d = JSON.parse(localStorage.getItem(k) ?? "null") as { scans?: Record<string, unknown>; savedAt?: number; startedAt?: string } | null;
       const count = Object.keys(d?.scans ?? {}).length;
       if (!d || !count || Date.now() - (d.savedAt ?? 0) > FRESH) continue;
+      // A load-out too old for the server to take isn't "open and send".
+      if (m[1] === "loadout" && !loadoutDraftSendable(d, Date.now())) continue;
       const truck = trucks.find((t) => t.id === m[2]);
       if (m[1] === "loadout" && truck) out.push({ href: `/app/units/${truck.id}/scan`, label: `A load-out of ${truck.name}`, count });
       else if (m[1] === "return") out.push({ href: truck ? `/app/units/${truck.id}/return` : "/app/return", label: truck ? `A check-in of ${truck.name}` : "A check-in", count });

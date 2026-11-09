@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { localToday } from "@/lib/saas/status";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
-import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
+import { computeDispatchCheck, truckLoadout } from "@/lib/saas/dispatch-check";
 import { plainDate } from "@/lib/saas/judge";
 import { notifyEvent, logEvent } from "@/lib/saas/notify";
+import { rollLoadoutAnyway } from "../../../loadouts/[id]/actions";
 
 /**
  * Record a readiness check. The verdict and every line are RECOMPUTED
@@ -103,15 +104,16 @@ export async function recordDispatchCheck(fd: FormData): Promise<void> {
 }
 
 /**
- * A manager's override: roll a NOT READY truck anyway, on the record. Shops
- * sometimes have to roll (the new cert is in the truck and the upload failed,
- * the company man signed off on location). A system with no way through gets
- * worked around or dropped; this way has a name, a reason, and an alert on it.
- * Managers only. The verdict is recomputed here and must still be NOT READY.
- * The record can't be edited, and the proof link shows it.
+ * A manager's override from the Paper check. A truck rolls only from a
+ * load-out, so this rolls the truck's NOT READY load-out from this shift:
+ * the same override the load-out record makes, with all the same checks
+ * (one row next to that load-out, the iron on it out on the job, the plan
+ * used up, one alert). The board, check-in, the morning email and both proof
+ * links then tell one story. With no such load-out there's nothing to roll,
+ * and nothing is recorded: the page says to scan the truck first.
  */
 export async function rollAnyway(fd: FormData): Promise<void> {
-  const { company, user } = await requireBillableCompany();
+  const { company } = await requireBillableCompany();
   if (company.role !== "owner" && company.role !== "admin") {
     throw new Error("Only a manager can roll a NOT READY truck.");
   }
@@ -119,37 +121,20 @@ export async function rollAnyway(fd: FormData): Promise<void> {
   const reason = String(fd.get("reason") ?? "").trim().slice(0, 500);
   if (!unitId) return;
   if (reason.length < 10) throw new Error("Write the reason in a full sentence. It goes on the record.");
-  const jobDate = String(fd.get("job_date") ?? "") || null;
   const db = await saasDb();
 
-  const comp = await computeDispatchCheck(db, company.id, unitId, jobDate);
-  if (!comp || comp.verdict !== "not_ready") redirect(`/app/units/${unitId}/dispatch`);
+  // Read under the caller's company: another company's truck has no load-out here.
+  const lo = await truckLoadout(db, company.id, unitId);
+  // The page named one load-out, and only that one rolls. If the truck moved
+  // on since (a newer load-out, a check-in, someone else rolled it), or the
+  // form named none (a tab opened before this change), nothing rolls.
+  const shown = String(fd.get("loadout_id") ?? "");
+  if (!lo || !lo.rollable || shown !== lo.id) redirect(`/app/units/${encodeURIComponent(unitId)}/dispatch?roll=none`);
 
-  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "A manager";
-  const writer = saasAdmin();
-  if (!writer) throw new Error("Something's down on our end. Try again in a minute.");
-  const { data: check, error } = await writer.from("saas_dispatch_checks").insert({
-    company_id: company.id, unit_id: unitId, type: "checkout",
-    performed_by: user.id, performed_by_name: actor,
-    status: "not_ready_override", override_reason: reason,
-    job_date: comp.jobDate, completed_at: new Date().toISOString(),
-  }).select("id").single();
-  if (error) throw new Error(error.message);
-  const checkId = (check as { id: string }).id;
-  if (comp.lines.length) {
-    await writer.from("saas_dispatch_check_items").insert(comp.lines.map((l) => ({
-      check_id: checkId, company_id: company.id, source_type: l.source_type, source_id: l.source_id,
-      label: l.label, result: l.result, note: l.detail ?? null,
-    })));
-  }
-
-  const failLine = comp.failures.slice(0, 3).join("; ");
-  const message = `${comp.unitName} rolled NOT READY on a manager override by ${actor}. Reason: "${reason}". Not ready because: ${failLine}`;
-  void logEvent({ companyId: company.id, kind: "rolled_override", unitId, actor, message });
-  void notifyEvent({ companyId: company.id, companyName: company.name, yardId: comp.yardId, message });
-
+  const roll = new FormData();
+  roll.set("loadout_id", lo.id);
+  roll.set("reason", reason);
   revalidatePath(`/app/units/${unitId}`);
   revalidatePath(`/app/units/${unitId}/dispatch`);
-  revalidatePath("/app");
-  redirect(`/app/records/${checkId}`);
+  await rollLoadoutAnyway(roll); // lands on the load-out record
 }

@@ -41,16 +41,61 @@ export function fmtDate(d: string | null | undefined): string {
  *  at 5am showed as 10am. */
 export const YARD_TZ = "America/Chicago";
 
-export function fmtWhen(iso: string | null | undefined): string {
-  if (!iso) return "No date";
-  const dt = new Date(iso);
-  if (isNaN(dt.getTime())) return iso;
-  return dt.toLocaleString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+/**
+ * The US time zones a yard can run on (saas_yards.time_zone, migration 0035
+ * holds the same list). Central is the default. A yard in Hobbs, NM is on
+ * Mountain time: shown in Central, its 5:10 AM load-out read 6:10 AM.
+ */
+export const YARD_ZONES = [
+  { tz: "America/Chicago", name: "Central", short: "CT" },
+  { tz: "America/Denver", name: "Mountain", short: "MT" },
+  { tz: "America/Phoenix", name: "Arizona", short: "MT" },
+  { tz: "America/Los_Angeles", name: "Pacific", short: "PT" },
+  { tz: "America/New_York", name: "Eastern", short: "ET" },
+  { tz: "America/Anchorage", name: "Alaska", short: "AKT" },
+] as const;
+
+export function isYardZone(tz: unknown): tz is string {
+  return typeof tz === "string" && YARD_ZONES.some((z) => z.tz === tz);
+}
+/** The yard's zone, or Central when it has none (or one we don't know). */
+export function yardZone(tz?: string | null): string {
+  return isYardZone(tz) ? tz : YARD_TZ;
+}
+/** "CT", "MT": said next to a time an outsider will hold up against his own clock. */
+export function zoneShort(tz?: string | null): string {
+  return YARD_ZONES.find((z) => z.tz === yardZone(tz))!.short;
+}
+/** "Central", "Mountain". */
+export function zoneName(tz?: string | null): string {
+  return YARD_ZONES.find((z) => z.tz === yardZone(tz))!.name;
 }
 
-export function fmtDay(iso: string | null | undefined): string {
+/**
+ * "Nov 12, 5:10 AM". Pass the yard's zone (even null, for Central) and it
+ * reads in that zone with the zone on it: "Nov 12, 5:10 AM MT". Without it,
+ * Central with no zone, as every screen has always shown.
+ */
+export function fmtWhen(iso: string | null | undefined, tz?: string | null): string {
   if (!iso) return "No date";
   const dt = new Date(iso);
   if (isNaN(dt.getTime())) return iso;
-  return dt.toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric", year: "numeric" });
+  const s = dt.toLocaleString("en-US", { timeZone: tz === undefined ? YARD_TZ : yardZone(tz), month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return tz === undefined ? s : `${s} ${zoneShort(tz)}`;
+}
+
+/** "5:10 AM", or with the yard's zone passed, "5:10 AM MT". */
+export function fmtTime(iso: string | null | undefined, tz?: string | null): string {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return "";
+  const s = dt.toLocaleTimeString("en-US", { timeZone: tz === undefined ? YARD_TZ : yardZone(tz), hour: "numeric", minute: "2-digit" });
+  return tz === undefined ? s : `${s} ${zoneShort(tz)}`;
+}
+
+export function fmtDay(iso: string | null | undefined, tz?: string | null): string {
+  if (!iso) return "No date";
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { timeZone: tz === undefined ? YARD_TZ : yardZone(tz), month: "short", day: "numeric", year: "numeric" });
 }

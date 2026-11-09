@@ -29,6 +29,12 @@ export interface VerifyInput {
   itemWasFailing: boolean;          // expired or no date when the upload came in
   claimedIssued: string | null;
   sameHashOn: string[];             // other items this exact photo already went on
+  /** A yearly inspection: the report prints the day it was done, good for one year. */
+  annual?: boolean;
+  /** A hand clearing a piece of iron: the paper has to be told apart by the piece's serial. */
+  serialRequired?: boolean;
+  /** Other pieces in the yard carrying this piece's serial. */
+  serialSharedWith?: string[];
 }
 
 export interface Check { key: string; label: string; ok: boolean; detail: string }
@@ -94,6 +100,35 @@ export function identifierOnPaper(identifier: string, text: string): boolean {
 
 const ROUND_DAYS = [90, 180, 182, 183, 184, 365, 366, 730, 731, 1095, 1096];
 
+/**
+ * A yearly inspection (the DOT annual and the like). The report prints the
+ * day it was done, not an expiration: it's good for one year from that day.
+ * Only items named yearly, or a DOT sticker: a quarterly sling inspection is
+ * also an "inspection", and it is not good for a year. An inspection named
+ * yearly counts whatever kind was picked (the quick screen starts on "Cert").
+ */
+export function isAnnualInspection(kind: string | null | undefined, title: string): boolean {
+  if (kind === "dot_sticker") return true;
+  const yearly = /\b(annual|yearly|dot)\b/i.test(title);
+  return yearly && (kind === "inspection" || /\binspection\b/i.test(title));
+}
+
+const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+/** One year after a day: 2026-11-10 → 2027-11-10 (Feb 29 → Feb 28). */
+export function oneYearAfter(iso: string): string {
+  const y = Number(iso.slice(0, 4)) + 1;
+  return iso.slice(5) === "02-29" ? `${y}-02-28` : `${y}${iso.slice(4)}`;
+}
+
+/** The inspection days a good-until date stands on: the same day a year back (and Feb 29 behind a Feb 28). */
+export function yearBefore(iso: string): string[] {
+  const y = Number(iso.slice(0, 4)) - 1;
+  const out = [`${y}${iso.slice(4)}`];
+  if (iso.slice(5) === "02-28" && isLeap(y)) out.push(`${y}-02-29`);
+  return out;
+}
+
 /** The checks that need no photo: run them first so a bad date is refused in a blink, not after a read. */
 export function precheck(evidence: Evidence, claimedExpiration: string | null, today: string): string | null {
   if (evidence !== "cert") return null;
@@ -133,21 +168,31 @@ export function verifyUpload(v: VerifyInput): Verification {
   // The expiration typed in must be printed on the paper.
   let issued = v.claimedIssued;
   if (v.evidence === "cert" && v.claimedExpiration) {
-    const onPaper = paperHasDate(found, v.claimedExpiration);
-    const others = readDates.filter((d) => d !== v.claimedExpiration).slice(0, 4).map(usDate);
+    const claimed = v.claimedExpiration;
+    const onPaper = paperHasDate(found, claimed);
+    // A yearly inspection report prints the day it was done. That day, a year
+    // before the date typed, counts, unless the paper prints a sooner due date.
+    const inspected = !onPaper && v.annual ? yearBefore(claimed).find((d) => paperHasDate(found, d)) ?? null : null;
+    const sooner = readDates.filter((d) => d > v.today && d < claimed).sort()[0] ?? null;
+    const yearOk = Boolean(inspected) && !sooner;
+    const others = readDates.filter((d) => d !== claimed).slice(0, 4).map(usDate);
+    const listed = others.length ? `. Dates on it: ${others.join(", ")}` : "";
     checks.push({
-      key: "date", label: "Expiration is on the paper", ok: onPaper,
-      detail: onPaper
-        ? `Found ${usDate(v.claimedExpiration)} on the photo`
-        : `Couldn't find ${usDate(v.claimedExpiration)} on the photo${others.length ? `. Dates on it: ${others.join(", ")}` : ""}`,
+      key: "date", label: yearOk || (v.annual && !onPaper) ? "Inspection date is on the paper" : "Expiration is on the paper", ok: onPaper || yearOk,
+      detail: onPaper ? `Found ${usDate(claimed)} on the photo`
+        : yearOk ? `Found the inspection date ${usDate(inspected as string)} on the photo. Good for one year, to ${usDate(claimed)}`
+        : inspected && sooner ? `The paper shows ${usDate(sooner)}, sooner than a year after the inspection${listed}`
+        : v.annual ? `Couldn't find the inspection date ${usDate(yearBefore(claimed)[0])} on the photo${listed}`
+        : `Couldn't find ${usDate(claimed)} on the photo${listed}`,
     });
-    // The test/issue date: what was typed, else the latest date on the paper
-    // that's on or before today and before the expiration.
+    // The test/issue date: what was typed, else the inspection day, else the
+    // latest date on the paper that's on or before today and before the expiration.
+    if (!issued && yearOk) issued = inspected;
     if (!issued) {
-      const cands = readDates.filter((d) => d <= v.today && d < (v.claimedExpiration as string)).sort();
+      const cands = readDates.filter((d) => d <= v.today && d < claimed).sort();
       issued = cands.length ? cands[cands.length - 1] : null;
     }
-    if (!onPaper) {
+    if (!onPaper && !yearOk) {
       const span = Math.round((Date.parse(`${v.claimedExpiration}T12:00:00Z`) - Date.parse(`${v.today}T12:00:00Z`)) / 86400e3);
       if (ROUND_DAYS.includes(span)) {
         flags.push(`The date typed in is exactly ${span >= 700 ? `${Math.round(span / 365)} years` : span >= 360 ? "1 year" : span >= 170 ? "6 months" : "90 days"} from the upload day, and it isn't on the photo.`);
@@ -172,6 +217,21 @@ export function verifyUpload(v: VerifyInput): Verification {
       detail: ok ? `Found ${v.identifier} on it` : `Couldn't find ${v.identifier} on it. Make sure it's the cert for this piece.`,
     });
   }
+  // A hand clearing a piece of iron: the paper has to name this piece and no
+  // other. A piece with no serial (or one too short to check), or a serial
+  // another piece carries too, can't be told apart by its paper. Without
+  // this, a fresh photo of one piece's cert could clear a piece added from a
+  // phone with no serial, and that piece could fill the line on a load-out.
+  if (v.serialRequired) {
+    if (!v.identifier || alnum(v.identifier).length < 3) {
+      checks.push({ key: "serial_none", label: "Piece has a serial", ok: false, detail: "This piece has no serial to check the paper against" });
+    } else if (v.serialSharedWith && v.serialSharedWith.length > 0) {
+      checks.push({
+        key: "serial_shared", label: "Serial is this piece's alone", ok: false,
+        detail: `Another piece's serial matches this one: ${v.serialSharedWith.slice(0, 2).join(", ")}`,
+      });
+    }
+  }
 
   // Right kind of paper: the item's distinctive words should show up.
   const kws = titleKeywords(v.itemTitle);
@@ -195,7 +255,9 @@ export function verifyUpload(v: VerifyInput): Verification {
   }
 
   // Backdated: it lapsed, then showed up with a test dated before the old one ran out.
-  if (v.evidence === "cert" && v.itemWasFailing && issued && v.prevExpiration && issued < v.prevExpiration) {
+  // (Only once the old date has passed: a date typed in from the binder that
+  // hasn't come yet didn't lapse.)
+  if (v.evidence === "cert" && v.itemWasFailing && issued && v.prevExpiration && v.prevExpiration < v.today && issued < v.prevExpiration) {
     flags.push(`It lapsed ${usDate(v.prevExpiration)}, but the new paper is dated ${usDate(issued)}, before that. Worth a look.`);
   }
 

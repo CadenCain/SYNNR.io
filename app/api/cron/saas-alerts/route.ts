@@ -6,8 +6,12 @@ import { escHtml } from "@/lib/saas/html";
 import { snapshotAllCompanies } from "@/lib/saas/readiness";
 import { logCronRun } from "@/lib/saas/cron-log";
 import { sendMorningSummaries } from "@/lib/saas/morning-summary";
+import { isMorningRunHour } from "@/lib/saas/alert-window";
 
 // Daily SaaS expiration-alert sweep. Vercel Cron sends Bearer CRON_SECRET.
+// vercel.json fires it at 09:00 and 10:00 UTC; only the one that is 4 AM in
+// the yard runs (alert-window.ts isMorningRunHour), once a day. ?force=1 (with
+// the secret in production) runs it now, for a re-run after a crash.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -20,6 +24,17 @@ export async function GET(req: Request) {
   }
   const admin = saasAdmin();
   if (!admin) return NextResponse.json({ ok: false, error: "db not configured" }, { status: 500 });
+  const force = new URL(req.url).searchParams.get("force") === "1";
+  if (!force) {
+    // The other UTC hour: not 4 AM in the yard. No heartbeat, so it can't
+    // cover for the real run.
+    if (!isMorningRunHour()) return NextResponse.json({ ok: true, skipped: "not the morning run hour in the yard" });
+    // Already ran today (a repeat delivery of the same cron): never send the
+    // morning email twice.
+    const { data: ran } = await admin.from("saas_cron_runs").select("ran_at").eq("job", "saas-alerts")
+      .gte("ran_at", new Date(Date.now() - 20 * 3600e3).toISOString()).limit(1);
+    if ((ran ?? []).length) return NextResponse.json({ ok: true, skipped: "already ran today" });
+  }
   // Operator alarm: at 1 company Caden reads the cron logs; at 30 nobody
   // does. Any sweep errors — or a total crash — get emailed to the operator
   // so a batch failure is loud, not a silent morning where no shop got its

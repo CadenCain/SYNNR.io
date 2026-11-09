@@ -422,18 +422,21 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
             ))}
           </div>
         )}
+        {/* This makes a NEW piece. Iron already on the books goes on a truck from its own page (Move it) or at a load-out scan. */}
         {!isShop && (
-        <AddDisclosure label="Add iron to this truck" defaultOpen={assets.length === 0}>
+        <AddDisclosure label="Add a new piece (not on the books yet)" defaultOpen={assets.length === 0}>
           <PhotoForm action={addAsset} className="flex flex-col gap-3">
             <input type="hidden" name="unit_id" value={u.id} />
             <input type="hidden" name="yard_id" value={u.yard_id} />
             <input type="hidden" name="redirect_path" value={here} />
             <div className="flex flex-col gap-3 sm:flex-row">
               <input name="name" required placeholder="Name (e.g. BOP #3)" className={`${fld} w-full min-w-0 grow`} />
+              <input name="identifier" placeholder="Serial, as stamped on the iron" className={`${fld} w-full min-w-0 sm:w-56`} />
               <select name="category" defaultValue="pressure_control" className={`${fld} sm:w-48`}>
                 {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
+            <p className="text-xs text-ink-faint">Already on the books somewhere else? Don&apos;t add it again. Open that piece and use Move it, or scan it at the load-out.</p>
             {/* Both shots at intake — the iron and its paper. Skippable in a
                 hurry; the asset wears an amber flag until they exist. */}
             <div className="flex flex-col gap-3 sm:flex-row">

@@ -36,7 +36,7 @@ export default async function ToolsOutPage() {
     getEquipment(db, company.id),
     getYardRules(db, company.id),
     db.from("saas_assets").select("id, out_with_user").eq("company_id", company.id).not("out_with_user", "is", null),
-    db.from("saas_assets").select("id").eq("company_id", company.id).eq("redress_each_run", true),
+    db.from("saas_assets").select("id, needs_redress_since").eq("company_id", company.id).eq("redress_each_run", true),
     db.from("saas_signouts").select("id, asset_id, asset_name, serial, out_name, job_note, out_at, back_at, back_by, back_note")
       .eq("company_id", company.id).order("out_at", { ascending: false }).limit(60),
     getToolStocks(db, company.id),
@@ -60,6 +60,7 @@ export default async function ToolsOutPage() {
   }
   const mine = new Set(holders.filter((r) => r.out_with_user === user.id).map((r) => r.id));
   const redressKind = new Set(((redressRows ?? []) as { id: string }[]).map((r) => r.id));
+  const redressSince = new Map(((redressRows ?? []) as { id: string; needs_redress_since: string | null }[]).map((r) => [r.id, r.needs_redress_since]));
   const live = list.rows.filter((r) => r.state !== "retired");
   const withPeople = live.filter((r) => r.outWith).sort((a, b) => (a.outSince ?? "").localeCompare(b.outSince ?? ""));
   const withMe = withPeople.filter((r) => mine.has(r.id));
@@ -137,7 +138,7 @@ export default async function ToolsOutPage() {
           {needsRedress.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-amber-500/40 bg-amber-500/[0.06] p-3">
               <Link href={`/app/assets/${r.id}`} className="min-w-0 break-words text-sm font-semibold hover:text-bone">{r.name}{r.identifier ? <span className="font-normal text-ink-dim"> · {r.identifier}</span> : null}</Link>
-              <RedressedButton assetId={r.id} />
+              <RedressedButton assetId={r.id} since={redressSince.get(r.id)} />
             </div>
           ))}
         </section>

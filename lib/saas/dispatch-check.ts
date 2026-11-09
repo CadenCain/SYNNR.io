@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { localToday } from "./status";
 import { judgeUnit, FAILING_GEAR, plainDate, withSerial, type JItem } from "./judge";
+import { fmtWhen } from "./format";
+import { verdictOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
+import { expectedLines, fillLines, shortLines, lineMatches, lineSourceLabel, pieceLabel, type ExpectedLine, type LinePiece } from "./loadout-lines";
+import { cleanPlanLines } from "./plans";
+import { readAll } from "./read-all";
 
 /**
  * The readiness check: a RECORD-CURRENCY check, not a dispatch checklist.
@@ -11,6 +16,8 @@ import { judgeUnit, FAILING_GEAR, plainDate, withSerial, type JItem } from "./ju
  *     "still active" is not "current for this job")
  *   · every assigned hand's cards are current through the job date
  *   · any asset the shop has FLAGGED missing / out of service fails
+ *   · the truck's newest load-out came back NOT READY and nobody rolled it
+ *     (the same "blocked" the board and the truck proof show)
  * The gear list is a REFERENCE, not a gate: a line that isn't in the asset
  * book yet warns, it never fails a truck. And nobody is asked to confirm
  * they're physically holding an item — possession tracking was cut from
@@ -40,6 +47,77 @@ export interface DispatchComputation {
   failures: string[];   // named failing lines for banners/alerts
   warnings: string[];   // heads-up (expires shortly after the job) + skipped-scope caveats
   notChecked: string[]; // what this check did NOT verify — shown on the public proof too
+  /** The truck's newest load-out and where it left the truck. Null if it was never loaded out. */
+  loadout: TruckLoadout | null;
+  /** Lines of the manager's plan the yard can't fill with good iron (also in warnings). */
+  planShort: string[];
+}
+
+/** A manager can roll a NOT READY load-out only this long after it was saved:
+ *  an override covers what's on the truck now, and a load-out is one shift's
+ *  work (the scan refuses to save one started more than 20 hours ago too). */
+export const ROLL_WINDOW_MS = 20 * 3600e3;
+export const canStillRoll = (finishedAt: string, now: number = Date.now()) => now - Date.parse(finishedAt) <= ROLL_WINDOW_MS;
+
+/**
+ * The truck's newest load-out, read the way the board and the operator's
+ * truck proof read it:
+ *   blocked  came back NOT READY, nobody rolled it, not checked in since
+ *   out      rolled (READY, or on a manager's override), not checked in since
+ *   back     checked back in since
+ */
+export interface TruckLoadout {
+  id: string;
+  finishedAt: string;
+  scannedBy: string | null;
+  reasons: string[];
+  state: "blocked" | "out" | "back";
+  /** Blocked, and from this shift: a manager can still roll it from its record. */
+  rollable: boolean;
+}
+
+export async function truckLoadout(db: SupabaseClient, companyId: string, unitId: string, now: number = Date.now()): Promise<TruckLoadout | null> {
+  const { data } = await db.from("saas_loadout_scans").select("id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
+    .eq("company_id", companyId).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle();
+  const lo = data as Pick<LoadoutRecord, "id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned"> | null;
+  if (!lo) return null;
+  const [{ data: ov }, { data: back }] = await Promise.all([
+    db.from("saas_loadout_overrides").select("loadout_id").eq("company_id", companyId).eq("loadout_id", lo.id).maybeSingle(),
+    db.from("saas_returns").select("finished_at").eq("company_id", companyId).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const backAt = (back as { finished_at: string } | null)?.finished_at ?? null;
+  const isBack = Boolean(backAt && Date.parse(backAt) > Date.parse(lo.finished_at));
+  const blocked = !isBack && !ov && verdictOf(lo) === "not_ready";
+  return {
+    id: lo.id, finishedAt: lo.finished_at, scannedBy: lo.scanned_by, reasons: reasonsOf(lo),
+    state: isBack ? "back" : blocked ? "blocked" : "out",
+    rollable: blocked && canStillRoll(lo.finished_at, now),
+  };
+}
+
+/**
+ * What the manager's plan takes from the yard that the yard can't give. The
+ * truck's own iron fills the kit and the plan first (same matching as the
+ * load-out, so a package's swivel is a second swivel, not the kit's); any
+ * planned line still short needs good iron sitting free in the truck's yard.
+ * One heads-up per line nobody can fill, naming a bad piece that would have
+ * fit. Kit lines are left out: the kit already warns on its own. Pure.
+ */
+export function planShortInYard(input: {
+  lines: ExpectedLine[];
+  truck: LinePiece[];
+  /** Free iron in the yard. bad: why it can't go, or null if it can. */
+  yard: (LinePiece & { bad: string | null })[];
+}): string[] {
+  const good = input.yard.filter((p) => !p.bad);
+  return shortLines(fillLines(input.lines, [...input.truck, ...good]))
+    .filter((l) => l.source !== "kit")
+    .map((l) => {
+      const need = l.qty - l.filled.length;
+      const badOne = input.yard.find((p) => p.bad && lineMatches(l.label, p.name));
+      return `${lineSourceLabel(l)} needs ${l.label}${need > 1 ? ` (${need} more)` : ""}. No good one on the truck or free in the yard`
+        + `${badOne ? `. The yard's ${pieceLabel(badOne)}: ${badOne.bad}` : ""}. The load-out will block without it.`;
+    });
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -119,13 +197,13 @@ export async function computeDispatchCheck(
   // (scrapped or sold) isn't on the truck in any way that counts.
   const [{ data: tplItems }, { data: assetData }] = await Promise.all([
     kitId
-      ? db.from("saas_package_lines").select("id, label, sort").eq("package_id", kitId).order("sort")
+      ? db.from("saas_package_lines").select("id, label, qty, sort").eq("package_id", kitId).order("sort")
       : Promise.resolve({ data: [] }),
     db.from("saas_assets").select("id, name, identifier, status, category, needs_redress_since").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
   ]);
-  const loadout = ((tplItems ?? []) as { id: string; label: string; sort: number }[]).map((l) => ({ ...l, required: true }));
-  const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; status: string; category: string; needs_redress_since: string | null }[])
-    .map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
+  const loadout = ((tplItems ?? []) as { id: string; label: string; qty?: number | null; sort: number }[]).map((l) => ({ ...l, required: true }));
+  const rawAssets = (assetData ?? []) as { id: string; name: string; identifier: string | null; status: string; category: string; needs_redress_since: string | null }[];
+  const assets = rawAssets.map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
 
   // Certs: the unit + its iron
   const assetIds = assets.map((a) => a.id);
@@ -201,8 +279,32 @@ export async function computeDispatchCheck(
   // (certs on the truck or its iron), not merely that a seed template exists. A bare
   // unit used to read NOT ready and log miss_caught, inflating the counters
   // with value SYNNR never delivered.
-  const verdict: DispatchComputation["verdict"] =
+  let verdict: DispatchComputation["verdict"] =
     j.verdict === "not_ready" ? "not_ready" : j.verdict === "not_setup" ? "not_setup" : "ready";
+
+  // The newest load-out came back NOT READY, nobody rolled it, and it hasn't
+  // been checked back in: the truck is blocked, whatever its paper says. The
+  // board and the operator's truck proof already say so; green here would
+  // have the office telling the yard "the app says it's ready".
+  const lo = await truckLoadout(db, companyId, unitId);
+  if (lo?.state === "blocked") {
+    verdict = "not_ready";
+    const why = lo.reasons.length ? `${lo.reasons[0]}${lo.reasons.length > 1 ? ` (and ${lo.reasons.length - 1} more)` : ""}` : "NOT READY";
+    lines.unshift({ source_type: "loadout_item", source_id: lo.id, label: `Load-out ${fmtWhen(lo.finishedAt)}${lo.scannedBy ? ` by ${lo.scannedBy}` : ""}`, result: "missing", detail: `NOT READY: ${why}` });
+    failures.unshift(`Blocked at load-out ${fmtWhen(lo.finishedAt)}: ${why}. ${lo.rollable ? "Fix it and scan again, or a manager rolls it from the load-out record." : "Scan it again."}`);
+  }
+
+  // The manager's plan for the next job: what it takes from the yard on top
+  // of the truck's own iron, and whether the yard has good iron free to give.
+  const planShort: string[] = [];
+  if (verdict !== "not_setup") {
+    const bad = new Set<string>();
+    const certParent = new Map(((assetCerts ?? []) as JItem[]).map((c) => [c.id, c.parent_id ?? ""]));
+    for (const f of j.failures) bad.add(f.kind === "asset" ? f.id : certParent.get(f.id) ?? "");
+    const truck = rawAssets.filter((a) => !bad.has(a.id)).map((a) => ({ id: a.id, name: a.name, serial: a.identifier }));
+    planShort.push(...await planWarnings(db, companyId, unit, jobDate, today, loadout.map((l) => ({ label: l.label, qty: l.qty ?? 1 })), truck));
+    warnings.push(...planShort);
+  }
 
   // A "Ready" must never quietly mean "nothing was actually checked."
   // Anything this check skipped gets said out loud, on the app page AND on
@@ -212,14 +314,68 @@ export async function computeDispatchCheck(
 
   // The load-out scan is the proof of what's actually on the truck. Say so
   // when nobody has scanned this truck today; it's a heads-up, not a fail
-  // (the records can still be current without a scan).
-  if (verdict !== "not_setup") {
-    const { data: lastScan } = await db.from("saas_loadout_scans").select("finished_at")
-      .eq("company_id", companyId).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle();
-    const at = (lastScan as { finished_at: string } | null)?.finished_at ?? null;
+  // (the records can still be current without a scan). A blocked one
+  // already says "scan it again".
+  if (verdict !== "not_setup" && lo?.state !== "blocked") {
+    const at = lo?.finishedAt ?? null;
     const scannedToday = at && new Date(at).toLocaleDateString("en-CA", { timeZone: "America/Chicago" }) === today;
     if (!scannedToday) warnings.push("Nobody has scanned this truck's load-out today. Scan it as it's loaded so you know what's actually on it.");
   }
 
-  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked };
+  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked, loadout: lo, planShort };
+}
+
+/**
+ * The truck's open plan, if a manager set one, checked against the yard (see
+ * planShortInYard). Free iron is the yard's iron on no truck, not out on a
+ * job or signed out to someone, judged as of the job date (or the day the
+ * plan leaves, if that's later). Nothing to read when there's no plan.
+ */
+async function planWarnings(
+  db: SupabaseClient,
+  companyId: string,
+  unit: { id: string; yard_id: string },
+  jobDate: string,
+  today: string,
+  kit: { label: string; qty: number }[],
+  truck: LinePiece[],
+): Promise<string[]> {
+  // One open plan per truck (a unique index), and saving it again re-dates it,
+  // so it's the newest one.
+  const { data: planRows } = await db.from("saas_loadout_plans").select("package_ids, lines, leaves_at, used_at")
+    .eq("company_id", companyId).eq("unit_id", unit.id).order("created_at", { ascending: false }).limit(5);
+  const plan = ((planRows ?? []) as { package_ids: string[] | null; lines: unknown[] | null; leaves_at: string | null; used_at: string | null }[])
+    .find((p) => !p.used_at);
+  const pkgIds = plan?.package_ids ?? [];
+  const planned = cleanPlanLines(plan?.lines ?? []);
+  if (!plan || (!pkgIds.length && !planned.length)) return [];
+
+  const { data: pkgRows } = pkgIds.length
+    ? await db.from("saas_packages").select("id, name, saas_package_lines(label, qty, sort)").eq("company_id", companyId).in("id", pkgIds)
+    : { data: [] };
+  const packages = ((pkgRows ?? []) as { name: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[])
+    .map((p) => ({ name: p.name, lines: [...(p.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty })) }));
+  const lines = expectedLines({ kit, packages, planned, quick: [] });
+  // The truck alone fills it: nothing to take from the yard.
+  const short = shortLines(fillLines(lines, truck)).filter((l) => l.source !== "kit");
+  if (!short.length) return [];
+
+  const yardRows = await readAll<{ id: string; name: string; identifier: string | null; status: string; category: string; needs_redress_since: string | null; out_since: string | null; out_with_user: string | null }>((a, b) =>
+    db.from("saas_assets").select("id, name, identifier, status, category, needs_redress_since, out_since, out_with_user", { count: "exact" })
+      .eq("company_id", companyId).eq("yard_id", unit.yard_id).is("unit_id", null).neq("status", "retired").order("id").range(a, b));
+  const fits = yardRows.filter((a) => !a.out_since && !a.out_with_user && short.some((l) => lineMatches(l.label, a.name))).slice(0, 200);
+  const { data: certRows } = fits.length
+    ? await db.from("saas_compliance_items_with_status").select("id, title, expiration_date, pending_until, reminder_days, parent_id, last_upload_id")
+        .eq("company_id", companyId).eq("parent_type", "asset").in("parent_id", fits.map((a) => a.id))
+    : { data: [] };
+  const certs = (certRows ?? []) as JItem[];
+  const planDay = plan.leaves_at ? localToday(new Date(plan.leaves_at)) : jobDate;
+  const asOf = planDay > jobDate ? planDay : jobDate;
+  const yard = fits.map((a) => {
+    const mine = certs.filter((c) => c.parent_id === a.id);
+    const f = judgeUnit({ unitItems: [], assets: [a], assetItems: mine, crew: [], crewItems: [] }, asOf, today).failures[0];
+    const bad = !f ? null : f.kind === "asset" ? f.detail : `${mine.find((c) => c.id === f.id)?.title ?? "test"} ${f.detail}`;
+    return { id: a.id, name: a.name, serial: a.identifier, bad };
+  });
+  return planShortInYard({ lines, truck, yard });
 }

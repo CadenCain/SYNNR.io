@@ -9,7 +9,7 @@ import { requireCompany } from "@/lib/saas/auth";
 import { smsConfigured } from "@/lib/saas/notify";
 import { getItemCustomers } from "@/lib/saas/customers";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
-import { kindLabel } from "@/lib/saas/taxonomy";
+import { kindLabel, TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
@@ -43,7 +43,7 @@ export default async function CompliancePage() {
       .select("id, title, kind, expiration_date, status, parent_type, parent_id, pending_until", { count: "exact" })
       .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
-    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, status, identifier, unit_id", { count: "exact" }).eq("company_id", company.id).order("id").range(a, b)),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, status, identifier, unit_id, category", { count: "exact" }).eq("company_id", company.id).order("id").range(a, b)),
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_alerts_sent")
       .select("sent_at, channel, recipient, label, saas_compliance_items(title)")
@@ -86,6 +86,25 @@ export default async function CompliancePage() {
     customers: itemCustomers.get(i.id) ?? [],
   }));
 
+  // Pressure iron with no test on file at all: the load-out blocks it, so it
+  // reads failing here too, not "nothing failing" because it has no row.
+  const withTests = new Set(items.filter((i) => i.parent_type === "asset").map((i) => i.parent_id));
+  for (const a of (assetData ?? []) as { id: string; status: string; category: string }[]) {
+    if (a.status === "retired" || !TESTED_CATEGORIES.has(a.category) || withTests.has(a.id)) continue;
+    rows.push({
+      id: `no-test-${a.id}`,
+      title: "No test on file",
+      kind: "test",
+      kindLabel: kindLabel("test"),
+      expiration_date: null,
+      status: "none",
+      parent_type: "asset",
+      parentLabel: pieceLabel(a.id),
+      href: `/app/assets/${a.id}`,
+      customers: [],
+    });
+  }
+
   const ironCount = items.filter((i) => i.parent_type === "asset").length;
   const truckCount = items.filter((i) => i.parent_type === "unit").length;
   const failing = rows.filter((i) => isFailing(i.status)).length;
@@ -116,7 +135,7 @@ export default async function CompliancePage() {
         actions={<Link href="/app/settings/notifications" className={buttonClass("outline", "sm")}><Settings2 className="h-4 w-4" /> Alert settings</Link>}
       />
 
-      {items.length > 0 && (
+      {rows.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{ironCount} on iron</span>
           <span className="rounded-sm border border-line-2 px-2.5 py-1 text-ink-dim">{truckCount} truck paper</span>
@@ -126,7 +145,7 @@ export default async function CompliancePage() {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
           Nothing with a date yet. Open a piece of{" "}
           <Link href="/app/equipment" className="text-ink underline underline-offset-2 hover:text-bone">equipment</Link> or a{" "}

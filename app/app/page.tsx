@@ -37,7 +37,8 @@ const clock = () => Date.now();
 
 const TONE: Record<string, ActivityLine["tone"]> = {
   loadout_blocked: "red", check_not_ready: "red", alert_failed: "red", asset_status: "red", unscanned_trip: "red",
-  rolled_override: "amber",
+  red_tagged: "red", bad_iron_out: "red",
+  rolled_override: "amber", deleted_failing: "amber",
   loadout_ready: "green", check_ready: "green", renewed: "green",
 };
 
@@ -52,12 +53,12 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
       .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(300),
-    db.from("saas_loadout_scans").select("pieces, unit_id, scanned_by").eq("company_id", company.id).gte("finished_at", weekAgo),
+    db.from("saas_loadout_scans").select("id, finished_at, pieces, unit_id, scanned_by").eq("company_id", company.id).gte("finished_at", weekAgo),
     db.from("saas_dispatch_checks").select("id", { count: "exact", head: true })
       .eq("company_id", company.id).eq("status", "not_ready_override").gte("started_at", weekAgo),
     // Every override, not just this week's: a truck that rolled on one 10 days
     // ago is still out on it, not blocked. Overrides are rare; 2,000 is years.
-    db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).order("created_at", { ascending: false }).limit(2000),
+    db.from("saas_loadout_overrides").select("loadout_id, created_at, by_name").eq("company_id", company.id).order("created_at", { ascending: false }).limit(2000),
     // Today's feed: what people did. A load-out's piece-by-piece moves would
     // crowd that out on a busy day, so moves come in a short list of their own.
     Promise.all([
@@ -99,7 +100,10 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const planNow = clock();
   const plans: Record<string, { text: string; by: string | null; note: string | null; late: string | null }> = {};
   for (const [unitId, p] of openPlans) {
-    plans[unitId] = { text: planSummary(p, pkgNames), by: p.by, note: p.note, late: lateLine(p, latestScan.get(unitId) ?? null, planNow, timeText) };
+    // The job or well and when it leaves come first: "University 7-12 #3H, leaves 6:00 AM: just the truck's kit".
+    const head = [p.job?.trim() || null, p.leavesAt ? `leaves ${timeText(p.leavesAt)}` : null].filter(Boolean).join(", ");
+    const summary = planSummary(p, pkgNames);
+    plans[unitId] = { text: head ? `${head}: ${summary}` : summary, by: p.by, note: p.note, late: lateLine(p, latestScan.get(unitId) ?? null, planNow, timeText) };
   }
 
   const yards = list.yards.map((y) => ({ id: y.id, name: y.name }));
@@ -107,15 +111,18 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const units = yardId ? rd.units.filter((u) => u.yardId === yardId) : rd.units;
   const unitIds = new Set(units.map((u) => u.id));
 
-  const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string }[];
+  const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string; by_name: string | null }[];
   // Which truck each recent load-out was, so a yard's week counts only its own overrides.
   const unitOfScan = new Map(allScans.map((r) => [r.id, r.unit_id ?? ""]));
   const kits = new Map(((kitRows ?? []) as { unit_id: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[])
     .map((k) => [k.unit_id, [...(k.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }))]));
   const inYard = <T extends { unit_id: string | null }>(r: T) => !yardId || (r.unit_id !== null && unitIds.has(r.unit_id));
   const nowMs = clock();
-  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, o.created_at])), today, kitShortByTruck(kits, list.rows),
-    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays });
+  // Each truck's newest check-in: iron marked still out at it isn't on the truck for its kit.
+  const lastBack = new Map<string, string>();
+  for (const r of allReturns) if (r.unit_id && (lastBack.get(r.unit_id) ?? "") < r.finished_at) lastBack.set(r.unit_id, r.finished_at);
+  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, kitShortByTruck(kits, list.rows, lastBack),
+    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member" });
 
   // The iron, for the manager: what's out, what's out too long, what's out of test.
   const inYardScope = (r: { yardId?: string | null; unitId?: string | null }) => !yardId || r.yardId === yardId || (r.unitId !== null && r.unitId !== undefined && unitIds.has(r.unitId));
@@ -185,7 +192,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     ? await db.from("saas_loadout_scans").select("unit_id").eq("company_id", company.id).eq("scanned_by_user", user.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const myTruckId = (picked && units.some((u) => u.id === picked) ? picked : null) ?? (mine as { unit_id: string | null } | null)?.unit_id ?? null;
-  const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo) && (!yardId || unitIds.has(unitOfScan.get(o.loadout_id) ?? ""))).length + (yardId ? 0 : oldOverrides ?? 0));
+  const week = weekNumbers(((weekScans ?? []) as { id: string; finished_at: string; pieces: { red?: boolean; asset_id?: string }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo) && (!yardId || unitIds.has(unitOfScan.get(o.loadout_id) ?? ""))).length + (yardId ? 0 : oldOverrides ?? 0), overriddenIds);
 
   const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
   const activity: ActivityLine[] = ((eventRows ?? []) as { id: string; kind: string; actor: string | null; message: string; unit_id: string | null; created_at: string }[])

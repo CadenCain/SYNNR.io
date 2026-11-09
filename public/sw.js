@@ -7,8 +7,10 @@
  * again when they arrive, so an old copy of a page can't make a truck READY.
  *
  *   Pages (/app, /app/return, /app/units/<id>/scan and /return): network
- *   first, the saved copy when there's no signal. The Load out board asks
- *   for every truck's pages to be saved ahead of time ("warm").
+ *   first, the saved copy when there's no signal, or when one bar hasn't
+ *   answered in 5 seconds (the network answer still saves for next time).
+ *   The Load out board asks for every truck's pages to be saved ahead of
+ *   time ("warm").
  *   Built files (/_next/static): saved the first time, they never change.
  *   Signing in or out throws the saved pages away.
  * Nothing outside /app is touched.
@@ -37,7 +39,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (authPath(url.pathname)) { event.waitUntil(caches.delete(PAGES)); return; }
   if (url.pathname.startsWith("/_next/static/")) { event.respondWith(cacheFirst(req)); return; }
-  if (req.mode === "navigate" && url.pathname.startsWith("/app")) event.respondWith(page(req, url));
+  if (req.mode === "navigate" && url.pathname.startsWith("/app")) event.respondWith(page(event, req, url));
 });
 
 async function cacheFirst(req) {
@@ -49,15 +51,32 @@ async function cacheFirst(req) {
   return res;
 }
 
-async function page(req, url) {
+/** One bar that shows signal but moves no data: this long, then the saved copy. */
+const SLOW_MS = 5000;
+
+/** A fresh page replaces the saved copy; signed out, every saved page goes. */
+async function keep(url, res) {
+  // A saved page only ever redirects to signing in or signing up. That can
+  // come back after the saved copy already showed, so it's caught here too.
+  const signedOut = res.redirected ? authPath(new URL(res.url).pathname) : res.type === "opaqueredirect" && savable(url);
+  if (signedOut) await caches.delete(PAGES);
+  else if (res.ok && !res.redirected && savable(url)) await (await caches.open(PAGES)).put(keyOf(url), res);
+}
+
+async function page(event, req, url) {
+  const net = fetch(req);
+  // Whenever the network answers, even after the saved copy showed, keep it.
+  event.waitUntil(net.then((res) => keep(url, res.clone())).catch(() => {}));
+  const saved = caches.open(PAGES).then((c) => c.match(keyOf(url))).catch(() => undefined);
+  let timer;
+  const slow = new Promise((resolve) => { timer = setTimeout(resolve, SLOW_MS); });
   try {
-    const res = await fetch(req);
-    if (res.redirected && authPath(new URL(res.url).pathname)) await caches.delete(PAGES);
-    else if (res.ok && !res.redirected && savable(url)) await (await caches.open(PAGES)).put(keyOf(url), res.clone());
-    return res;
+    // Nothing saved for this page: wait on the network as long as it takes.
+    return await Promise.race([net, slow.then(() => saved).then((hit) => hit || net)]);
   } catch {
-    const hit = await (await caches.open(PAGES)).match(keyOf(url));
-    return hit || offline();
+    return (await saved) || offline();
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -65,7 +84,7 @@ function offline() {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>No signal · RollReady</title><style>body{margin:0;font:16px/1.5 -apple-system,system-ui,sans-serif;background:#f6f7f9;color:#0f172a;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
 main{max-width:420px;background:#fff;border:1px solid #e3e8ef;border-radius:16px;padding:24px}h1{font-size:20px;margin:0 0 8px}a{display:inline-flex;margin-top:16px;height:48px;align-items:center;padding:0 20px;border-radius:8px;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:600}</style></head>
-<body><main><h1>No signal</h1><p>This page isn't saved on this phone yet. Open the Load out screen once while you have signal, and every truck's load-out works without signal after that.</p><a href="/app">Go to Load out</a></main></body></html>`;
+<body><main><h1>No signal</h1><p>This page isn't saved on this phone. With no signal you can still open Load out, each truck's load-out and check-in, and Check in tools or loose iron.</p><p>They're saved each time this phone opens Load out with signal.</p><a href="/app">Go to Load out</a></main></body></html>`;
   return new Response(html, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 

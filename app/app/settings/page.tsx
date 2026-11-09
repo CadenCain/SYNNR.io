@@ -48,9 +48,12 @@ export default async function SettingsHub() {
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-ink-dim">Download your data</h2>
         {[
-          { href: "/api/saas/export", title: "Tests and certs", desc: "Every test, cert, and truck paper item, with serials and dates" },
+          { href: "/api/saas/export", title: "Tests and certs", desc: "The test or cert on file now for every piece and truck, with serials and dates" },
           { href: "/app/equipment/export", title: "Equipment list", desc: "Every piece: where it is, what truck, its next test" },
-          { href: "/app/loadouts/export", title: "Load-out records", desc: "Every load-out: truck, job or well, who, READY or NOT, overrides" },
+          { href: "/app/loadouts/export", title: "Load-out records", desc: "Every load-out: truck, job or well, who, READY or NOT, overrides, roll checks" },
+          { href: "/api/saas/export/checkins", title: "Check-ins", desc: "Every check-in: who brought what back, when, where it went, red tags and why" },
+          { href: "/api/saas/export/tools-out", title: "Tools out", desc: "Every sign-out and hand-off, setting tools taken and how many ran, vendor visits, redress" },
+          { href: "/api/saas/export/tests", title: "Test history", desc: "Every cert sent in, old tests too, with who checked it and a link to the photo" },
         ].map((d) => (
           <a key={d.href} href={d.href} download>
             <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">

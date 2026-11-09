@@ -13,7 +13,9 @@ export default async function AccountSettings() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Your account" description="The name on every scan you make, your password, and your company's name." />
-      <AccountForms name={name} email={user.email ?? ""} companyName={company.name} canRename={canPerform(company.role, "rename_company") && !company.is_demo} />
+      {/* Who can fix a typo in this login's email from the Team page. */}
+      <AccountForms name={name} email={user.email ?? ""} companyName={company.name} canRename={canPerform(company.role, "rename_company") && !company.is_demo}
+        emailBy={company.is_demo ? null : company.role === "member" ? "manager" : company.role === "admin" ? "owner" : null} />
     </div>
   );
 }

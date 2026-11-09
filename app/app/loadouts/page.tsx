@@ -7,27 +7,33 @@ import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOutcome } from "@
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { loadoutFilters, isFiltering, filterQuery, rangeOf, jobPattern } from "./export/filters";
 
 export const metadata = { title: "Load-out records" };
 
 export const dynamic = "force-dynamic";
 
-type Row = Pick<LoadoutRecord, "id" | "unit_id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned">;
+type Row = Pick<LoadoutRecord, "id" | "unit_id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned" | "job">;
 const LABEL: Record<LoadoutOutcome, string> = { ready: "READY", override: "Rolled on override", blocked: "NOT READY" };
 const TONE: Record<LoadoutOutcome, string> = { ready: "text-emerald-400", override: "text-amber-400", blocked: "text-red-400" };
 
-/** Every load-out record, newest first. Filter by yard, answer, or who scanned it. */
-export default async function LoadoutsPage({ searchParams }: { searchParams: Promise<{ yard?: string; show?: string; by?: string }> }) {
+/** Every load-out record, newest first. Filter by yard, answer, who scanned it, dates, or job or well. */
+export default async function LoadoutsPage({ searchParams }: { searchParams: Promise<{ yard?: string; show?: string; by?: string; from?: string; to?: string; job?: string }> }) {
   const { company } = await requireCompany();
   const sp = await searchParams;
+  const f = loadoutFilters(sp);
   const db = await saasDb();
   // The filters run in the database, so a pick finds every match, not just
   // the matches among the newest few hundred.
-  const want = ["ready", "blocked", "override"].includes(sp.show ?? "") ? sp.show! : "";
-  let q = db.from("saas_loadout_scans").select("id, unit_id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
+  const want = f.show;
+  let q = db.from("saas_loadout_scans").select("id, unit_id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, job")
     .eq("company_id", company.id);
   if (sp.yard) q = q.eq("yard_id", sp.yard);
   if (sp.by) q = q.eq("scanned_by", sp.by);
+  const range = rangeOf(f);
+  if (range.gte) q = q.gte("finished_at", range.gte);
+  if (range.lt) q = q.lt("finished_at", range.lt);
+  if (f.job) q = q.ilike("job", jobPattern(f.job));
   // Old records saved before the answer was stored (verdict null) are worked out below.
   if (want === "ready") q = q.or("verdict.eq.ready,verdict.is.null");
   else if (want) q = q.or("verdict.neq.ready,verdict.is.null");
@@ -40,7 +46,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
   const yards = (yardRows ?? []) as { id: string; name: string }[];
   const all = (rows ?? []) as Row[];
   const capped = all.length >= SHOWN;
-  const filtering = Boolean(sp.yard || sp.by || want);
+  const filtering = Boolean(sp.yard || sp.by || want || isFiltering(f));
   const any = all.length > 0 || filtering || ((whoRows ?? []) as unknown[]).length > 0;
   const { data: ov } = all.length
     ? await db.from("saas_loadout_overrides").select("loadout_id, by_name").eq("company_id", company.id).limit(20000)
@@ -61,10 +67,14 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
         description="Every load-out, locked when it was saved: who scanned what, when, and whether the truck could roll." />
       {any ? (
         // A file download, not a page: a plain link, so the browser saves it.
-        <a href="/app/loadouts/export" download className="-mt-2 self-start text-sm text-bone underline underline-offset-2">Download every load-out as a spreadsheet</a>
+        // Picked a job or dates? It downloads just those, every one of them.
+        <a href={`/app/loadouts/export${filterQuery(f)}`} download className="-mt-2 self-start text-sm text-bone underline underline-offset-2">
+          {isFiltering(f) ? "Download these load-outs as a spreadsheet" : "Download every load-out as a spreadsheet"}
+        </a>
       ) : null}
+      {any ? <p className="-mt-3 text-[13px] text-ink-faint">Each row has the record&apos;s proof link. Anyone with the file can open those records.</p> : null}
 
-      <form className="grid grid-cols-1 gap-2 sm:grid-cols-4" action="/app/loadouts">
+      <form className="grid grid-cols-1 gap-2 sm:grid-cols-3" action="/app/loadouts">
         {yards.length > 1 ? (
           <select name="yard" defaultValue={yard} aria-label="Yard" className={sel}>
             <option value="">All yards</option>
@@ -81,10 +91,19 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
           <option value="">Anyone</option>
           {people.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <button type="submit" className="h-12 rounded-lg bg-bone px-5 text-base font-medium text-white hover:bg-bone-soft">Show</button>
+        <label className="flex flex-col gap-1 text-xs text-ink-faint">From
+          <input type="date" name="from" defaultValue={f.from} className={sel} />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-faint">To
+          <input type="date" name="to" defaultValue={f.to} className={sel} />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-faint">Job or well
+          <input type="text" name="job" defaultValue={f.job} maxLength={80} placeholder="Any job" className={sel} />
+        </label>
+        <button type="submit" className="h-12 rounded-lg bg-bone px-5 text-base font-medium text-white hover:bg-bone-soft sm:col-span-3">Show</button>
       </form>
 
-      {capped ? <p className="-mt-2 text-sm text-ink-faint">Showing the newest {SHOWN}. The spreadsheet has every one.</p> : null}
+      {capped ? <p className="-mt-2 text-sm text-ink-faint">Showing the newest {SHOWN}. The spreadsheet has every one{filtering ? " that matches" : ""}.</p> : null}
       {list.length === 0 ? (
         <Card className="p-6 text-center text-sm text-ink-dim">{filtering ? "Nothing matches." : <>No load-outs yet. Start one from the <Link href="/app" className="font-medium text-bone hover:underline">Load out screen</Link>.</>}</Card>
       ) : (
@@ -101,6 +120,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
                       <span className={cn("text-sm font-semibold", TONE[o])}>{LABEL[o]}</span>
                     </div>
                     <div className="text-sm text-ink-dim">{fmtWhen(r.finished_at)}{r.scanned_by ? ` by ${r.scanned_by}` : ""}{o === "override" ? `, override by ${overrides.get(r.id)}` : ""}</div>
+                    {r.job ? <div className="truncate text-sm text-ink-dim">For {r.job}</div> : null}
                     {why ? <div className="truncate text-sm text-ink-faint">{why}</div> : null}
                     {byHand ? <div className="text-sm text-amber-400">{byHand} of {r.pieces.length} checked by hand</div> : null}
                   </div>
