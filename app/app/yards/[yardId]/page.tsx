@@ -63,7 +63,7 @@ export default async function YardDetail({ params }: { params: Promise<{ yardId:
   const rd = await getCompanyReadiness(db, company.id);
   const stateByUnit = new Map(rd.units.map((u) => [u.id, u.state]));
   const UNIT_CHIP: Record<string, { cls: string; label: string }> = {
-    ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Ready" },
+    ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Paper current" },
     due_soon: { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Due soon" },
     not_ready: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Not ready" },
     not_setup: { cls: "border-line-2 bg-elevated text-ink-faint", label: "Not set up" },

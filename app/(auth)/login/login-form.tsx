@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNext } from "@/lib/saas/safe-next";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -9,7 +10,7 @@ export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   // Forgot password keeps where they were headed (an invite, a truck) through the reset.
-  const headed = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+  const headed = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return safeNext(n); })();
   const forgotHref = headed ? `/forgot?next=${encodeURIComponent(headed)}` : "/forgot";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -33,7 +34,7 @@ export default function LoginForm() {
       return;
     }
     // The /app gate routes to /onboarding if they have no company yet.
-    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return safeNext(n); })();
     router.replace(nextPath || "/app");
     router.refresh();
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeNext } from "@/lib/saas/safe-next";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const nextParam = url.searchParams.get("next") || "/app";
-  const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/app";
+  const next = safeNext(nextParam, "/app");
 
   if (code) {
     const supabase = await getServerSupabase();

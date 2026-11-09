@@ -15,7 +15,7 @@ const INCLUDED = [
   "Your whole crew, each with their own login. Never per-seat.",
 ];
 
-export default function SubscribeCard({ initialYards, canPay }: { initialYards: number; canPay: boolean }) {
+export default function SubscribeCard({ initialYards, canPay, minYards = 1 }: { initialYards: number; canPay: boolean; minYards?: number }) {
   const [yards, setYards] = useState(clampYards(initialYards));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -54,10 +54,10 @@ export default function SubscribeCard({ initialYards, canPay }: { initialYards: 
         <div className="flex items-center justify-between gap-3 rounded-xl border border-line-2 bg-coal p-4">
           <div>
             <div className="text-sm font-medium text-ink">Yards</div>
-            <div className="text-xs text-ink-faint">{money(PER_YARD_DOLLARS)} each. Add or remove yards later from Settings.</div>
+            <div className="text-xs text-ink-faint">{money(PER_YARD_DOLLARS)} each. Add or remove yards later from Settings.{minYards > 1 ? ` You have ${minYards} set up already.` : ""}</div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => step(-1)} disabled={yards <= 1} aria-label="Fewer yards"
+            <button type="button" onClick={() => step(-1)} disabled={yards <= Math.max(1, minYards)} aria-label="Fewer yards"
               className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
             <span className="w-8 text-center text-xl font-semibold tabular-nums">{yards}</span>
             <button type="button" onClick={() => step(1)} disabled={yards >= MAX_YARDS} aria-label="More yards"

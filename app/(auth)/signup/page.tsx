@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeNext } from "@/lib/saas/safe-next";
 import { redirect } from "next/navigation";
 import { getSaasUser } from "@/lib/saas/auth";
 import { isDemoUser } from "@/lib/saas/plan";
@@ -10,7 +11,7 @@ export const metadata = { title: "Get started · RollReady" };
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string; invite?: string }> }) {
   const { next, invite } = await searchParams;
   const raw = next || (invite ? `/invite/${invite}` : "");
-  const nextPath = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/app";
+  const nextPath = safeNext(raw, "/app");
   const user = await getSaasUser();
   // Still signed into the live demo? Leave it and come back here to sign up.
   if (user && isDemoUser(user)) redirect("/demo/exit?to=signup");

@@ -54,14 +54,14 @@ type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
 
 /** This hand's load-out of this truck that started at this moment, if it already saved. */
 async function savedLoadout(admin: Admin, companyId: string, userId: string, unitId: string, startedIso: string) {
-  const { data } = await admin.from("saas_loadout_scans").select("id, proof_token, verdict, reasons, unit_name, scanned_by, pieces")
+  const { data } = await admin.from("saas_loadout_scans").select("id, proof_token, verdict, reasons, unit_name, scanned_by, pieces, finished_at")
     .eq("company_id", companyId).eq("scanned_by_user", userId).eq("unit_id", unitId).eq("started_at", startedIso).maybeSingle();
-  const r = data as { id: string; proof_token: string; verdict: "ready" | "not_ready"; reasons: string[] | null; unit_name: string; scanned_by: string; pieces: { asset_id?: string; red?: boolean }[] | null } | null;
+  const r = data as { id: string; proof_token: string; verdict: "ready" | "not_ready"; reasons: string[] | null; unit_name: string; scanned_by: string; pieces: { asset_id?: string; red?: boolean }[] | null; finished_at: string } | null;
   if (!r) return null;
   const n = (r.pieces ?? []).length;
   const reasons = r.reasons ?? [];
   return {
-    ok: true, id: r.id, verdict: r.verdict, reasons, proofToken: r.proof_token,
+    ok: true, id: r.id, verdict: r.verdict, reasons, proofToken: r.proof_token, finishedAt: r.finished_at,
     badIds: (r.pieces ?? []).filter((p) => p.red && p.asset_id).map((p) => p.asset_id as string),
     summary: r.verdict === "ready"
       ? `${r.unit_name} loaded out READY by ${r.scanned_by}: ${n} ${n === 1 ? "piece" : "pieces"} scanned`
@@ -108,7 +108,8 @@ export async function finishLoadout(input: {
   checks?: { label: string; at?: number }[];
   /** Which job or well (typed, or from the plan). */
   job?: string;
-}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[]; badIds?: string[] }> {
+}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[]; badIds?: string[]; stale?: boolean;
+  left?: { id: string; name: string; serial: string | null; category: string }[]; packageIds?: string[] }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
@@ -136,9 +137,22 @@ export async function finishLoadout(input: {
   // NOT READY try it picks up from (only if that really is this hand's, on
   // this truck, earlier the same shift).
   const keptMs = Date.parse(String(input.keptSince ?? ""));
-  const floorMs = Number.isFinite(keptMs) && keptMs < startedMs && startedMs - keptMs < 12 * 3600e3
-    && await savedLoadout(admin, company.id, user.id, unit.id, new Date(keptMs).toISOString())
-    ? keptMs : startedMs;
+  const firstTry = Number.isFinite(keptMs) && keptMs < startedMs && startedMs - keptMs < 12 * 3600e3
+    ? await savedLoadout(admin, company.id, user.id, unit.id, new Date(keptMs).toISOString()) : null;
+  const floorMs = firstTry ? keptMs : startedMs;
+  // A "fix it and scan again" picked up after the truck already moved on (a
+  // manager rolled the first try, it was checked in, or someone loaded it out
+  // since) is stale: saving it would rewrite a truck that's already gone.
+  if (firstTry?.id) {
+    const [{ data: ov }, { data: back }, { data: newer }] = await Promise.all([
+      admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", firstTry.id).maybeSingle(),
+      admin.from("saas_returns").select("id").eq("company_id", company.id).eq("unit_id", unit.id).gt("finished_at", firstTry.finishedAt).limit(1).maybeSingle(),
+      admin.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", unit.id).gt("finished_at", firstTry.finishedAt).limit(1).maybeSingle(),
+    ]);
+    if (ov || back || newer) {
+      return { ok: false, stale: true, error: `${unit.name} already ${ov ? "rolled on a manager's override" : back ? "came back and was checked in" : "has a newer load-out"}. This one can't be saved. Start a new load-out from the truck.` };
+    }
+  }
 
   // The list. Kit, packages, and the manager's plan come from the database,
   // not the phone, so a phone can only add lines (quick ones), never drop one.
@@ -423,5 +437,9 @@ export async function finishLoadout(input: {
   revalidatePath("/app");
   // The pieces the records blocked, so "Fix it and scan again" takes them off
   // even when the phone didn't know (a look-alike with no test, say).
-  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn, badIds: [...redIds] };
+  // Pieces on the truck the phone didn't know about (its list was older than
+  // the yard's), and the packages the plan added: so "Fix it and scan again"
+  // can show them, and the hand can say where they are.
+  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn, badIds: [...redIds],
+    left: unaccounted.map((a) => ({ id: a.id, name: a.name, serial: a.identifier, category: a.category })), packageIds };
 }

@@ -4,7 +4,7 @@ import { Plus, Box, Settings2, Trash2, ChevronRight, Truck, ScanLine, PackageChe
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { seenAge, fmtWhen, fmtDate } from "@/lib/saas/format";
-import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, UNIT_TYPES } from "@/lib/saas/taxonomy";
+import { unitTypeLabel, categoryLabel, ASSET_CATEGORIES, UNIT_TYPES, TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
@@ -53,6 +53,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   if (!unit) notFound();
   const u = unit as { id: string; name: string; type: string; identifier: string | null; yard_id: string; saas_yards: { name: string } | { name: string }[] | null };
   const yardName = Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name;
+  const { data: yardRows } = await db.from("saas_yards").select("id, name").eq("company_id", company.id).order("name");
+  const allYards = (yardRows ?? []) as { id: string; name: string }[];
   // A shop is a BUILDING: it doesn't roll out, no crew is assigned to it, no
   // gear rides on it. Its whole reason to be on the books is its paper (fire
   // extinguishers, overhead crane, compressor), so its page is the cert book
@@ -73,8 +75,8 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const isManager = isManagerRole(company.role);
 
   const { data: assetData } = await db
-    .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at, primary_photo_path").eq("unit_id", unitId).order("name");
-  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null; primary_photo_path: string | null }[];
+    .from("saas_assets").select("id, name, category, status, last_seen_where, last_seen_at, primary_photo_path, needs_redress_since").eq("unit_id", unitId).neq("status", "retired").order("name");
+  const assets = (assetData ?? []) as { id: string; name: string; category: string; status: string; last_seen_where: string | null; last_seen_at: string | null; primary_photo_path: string | null; needs_redress_since: string | null }[];
 
   // Worst-cert chip per asset — the child card carries its own verdict, same
   // treatment the crew cards already get.
@@ -192,6 +194,12 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                   </select></label>
                 {isManager ? (
                   <label className="text-xs text-ink-faint">Unit number / VIN<input name="identifier" defaultValue={u.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
+                {isManager && allYards.length > 1 ? (
+                  <label className="text-xs text-ink-faint">Yard (it moves with its iron)
+                    <select name="yard_id" defaultValue={u.yard_id} className={`${fld} mt-1 w-full`}>
+                      {allYards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+                    </select></label>
                 ) : null}
                 <Button type="submit" size="sm">Save</Button>
               </form>
@@ -391,9 +399,14 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
                       </span>
                     ) : null}
                   </span>
-                  {worstByAsset.has(a.id)
-                    ? <StatusBadge status={worstByAsset.get(a.id)!} />
-                    : <span className="shrink-0 text-xs text-ink-faint">no certs</span>}
+                  {/* The piece first (red tag, missing, redress), then its paper: the same answer the load-out gives. */}
+                  {a.status === "out_of_service" || a.status === "missing" || a.needs_redress_since
+                    ? <StatusBadge status="expired" label={a.status === "out_of_service" ? "Red-tagged" : a.status === "missing" ? "Missing" : "Needs redress"} />
+                    : worstByAsset.has(a.id)
+                      ? <StatusBadge status={worstByAsset.get(a.id)!} />
+                      : TESTED_CATEGORIES.has(a.category)
+                        ? <StatusBadge status="expired" label="No test on file" />
+                        : <span className="shrink-0 text-xs text-ink-faint">no certs</span>}
                   <span className="hidden shrink-0 text-sm text-ink-dim sm:inline">{categoryLabel(a.category)}</span>
                   <ChevronRight className="h-4 w-4 text-ink-faint" />
                 </Card>

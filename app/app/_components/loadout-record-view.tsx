@@ -23,7 +23,8 @@ const time = (iso: string | undefined) =>
 const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 /** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
 const testText = (t: { title: string; good_until: string | null; result: string }) =>
-  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached" : `good to ${plainDate(t.good_until)}`}`;
+  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached"
+    : t.result === "pending" ? `retested, cert on the way (the old one ran out ${plainDate(t.good_until)})` : `good to ${plainDate(t.good_until)}`}`;
 
 export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false }: {
   rec: LoadoutRecord;

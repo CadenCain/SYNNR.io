@@ -41,6 +41,8 @@ export async function savePassword(_prev: Result | null, fd: FormData): Promise<
 export async function saveCompanyName(_prev: Result | null, fd: FormData): Promise<Result> {
   const { company, user } = await requireCompany();
   assertCan(company, "rename_company");
+  // The demo yard keeps its made-up name: its proof links are public.
+  if (company.is_demo) return { ok: false, message: "The demo yard's name can't be changed." };
   const name = String(fd.get("company_name") ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
   if (name.length < 2) return { ok: false, message: "Type the company name." };
   const db = await saasDb();

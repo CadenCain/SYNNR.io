@@ -4,7 +4,7 @@ import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
 import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
-import { judgeItem, FAILING_GEAR, type LineResult } from "@/lib/saas/judge";
+import { judgeItem, isNoPaper, FAILING_GEAR, type LineResult } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 
 /**
@@ -29,7 +29,7 @@ const RESULT_CHIP: Record<LineResult, string> = {
   ok: CHIP.valid, due_soon: CHIP.expiring, pending: CHIP.expiring, expired: CHIP.expired, missing: CHIP.expired,
 };
 const RESULT_LABEL: Record<LineResult, string> = {
-  ok: "Valid", due_soon: "Due soon", pending: "Cert on the way", expired: "Expired", missing: "No date",
+  ok: "Current", due_soon: "Due soon", pending: "Cert on the way", expired: "Expired", missing: "No date",
 };
 
 function Invalid({ reason }: { reason: string }) {
@@ -58,8 +58,9 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   if (proof.expires_at && new Date(proof.expires_at) < new Date()) return <Invalid reason="expired" />;
 
   // ── Assemble the scoped snapshot ──
-  const { data: companyData } = await admin.from("saas_companies").select("name").eq("id", proof.company_id).maybeSingle();
-  const companyName = (companyData as { name: string } | null)?.name ?? "";
+  const { data: companyData } = await admin.from("saas_companies").select("name, is_demo").eq("id", proof.company_id).maybeSingle();
+  const demo = Boolean((companyData as { is_demo?: boolean } | null)?.is_demo);
+  const companyName = `${(companyData as { name: string } | null)?.name ?? ""}${demo ? " (demo)" : ""}`;
 
   // Units in scope
   let unitFilter: string[] | null = null; // null = all company units
@@ -142,7 +143,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   }
   // Nothing tracked = nothing proven. An empty scope must never read "Ready".
   const configured = items.length > 0 || assets.length > 0;
-  const ready = configured && failingCount === 0 && gearDown.length === 0 && blockedUnits === 0;
+  let ready = configured && failingCount === 0 && gearDown.length === 0 && blockedUnits === 0;
   const generatedAt = fmtWhen(new Date().toISOString());
 
   // Unit scope: include the latest immutable dispatch record (spec #1d) —
@@ -151,14 +152,29 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // the truck and who scanned it.
   type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean };
   type LoadoutMiss = { name: string; serial: string | null; outcome: string };
-  type Loadout = { finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string };
+  type Loadout = { id: string; finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string };
   let loadout = null as Loadout | null;
   if (proof.scope === "unit" && proof.unit_id) {
     const { data: lo } = await admin.from("saas_loadout_scans")
-      .select("finished_at, scanned_by, scanned, expected, pieces, not_scanned, verdict, reasons, proof_token")
+      .select("id, finished_at, scanned_by, scanned, expected, pieces, not_scanned, verdict, reasons, proof_token")
       .eq("company_id", proof.company_id).eq("unit_id", proof.unit_id)
       .order("finished_at", { ascending: false }).limit(1).maybeSingle();
     loadout = (lo as Loadout | null) ?? null;
+  }
+  // Its newest load-out came back NOT READY, nobody rolled it, and it hasn't
+  // been checked back in: the truck is blocked, whatever its paper says. And a
+  // load-out link the shop shut off isn't linked from here.
+  let blockedAtLoadout = false;
+  let loadoutLinkOff = false;
+  if (loadout) {
+    const [{ data: ovRow }, { data: backRow }, { data: offRow }] = await Promise.all([
+      admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", loadout.id).maybeSingle(),
+      admin.from("saas_returns").select("id").eq("company_id", proof.company_id).eq("unit_id", proof.unit_id!).gt("finished_at", loadout.finished_at).limit(1).maybeSingle(),
+      admin.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", loadout.id).maybeSingle(),
+    ]);
+    blockedAtLoadout = loadout.verdict === "not_ready" && !ovRow && !backRow;
+    loadoutLinkOff = Boolean(offRow);
+    if (blockedAtLoadout) ready = false;
   }
 
   let record: {
@@ -207,6 +223,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           <span className="text-xs text-ink-faint">Generated {generatedAt}</span>
         </div>
 
+        {demo ? <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300">Demo yard on synnr.io. The company and its records are made up.</p> : null}
         {/* Verdict */}
         <div className={`rounded-2xl border p-6 ${ready ? "border-emerald-500/40 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
           <div className={`flex items-center gap-3 text-2xl font-semibold ${ready ? "text-emerald-400" : configured ? "text-red-400" : "text-ink-dim"}`}>
@@ -220,8 +237,9 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
           {!ready && configured ? (
             <p className="mt-2 text-sm text-red-300">
               {[
-                failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired or missing a date` : "",
+                failingCount > 0 ? `${failingCount} item${failingCount === 1 ? "" : "s"} expired, missing a date, or missing the cert` : "",
                 gearDown.length > 0 ? `${gearDown.length} piece${gearDown.length === 1 ? "" : "s"} of iron missing or red-tagged` : "",
+                blockedAtLoadout ? "NOT READY at its last load-out" : "",
               ].filter(Boolean).join(" · ")}
             </p>
           ) : null}
@@ -255,7 +273,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
             <p className="mt-2 text-sm">
               <span className="font-semibold">{loadout.pieces.length} {loadout.pieces.length === 1 ? "piece" : "pieces"} scanned on</span>
               <span className="text-ink-dim">{loadout.scanned_by ? ` by ${loadout.scanned_by}` : ""}</span>
-              {" · "}<a href={`/l/${loadout.proof_token}`} className="text-bone underline underline-offset-2">See the full load-out record</a>
+              {loadoutLinkOff ? null : <>{" · "}<a href={`/l/${loadout.proof_token}`} className="text-bone underline underline-offset-2">See the full load-out record</a></>}
             </p>
             {loadout.pieces.length > 0 && (
               <ul className="mt-3 flex flex-col gap-1 text-sm">
@@ -346,7 +364,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
                     <td className="hidden border-b border-line/60 px-4 py-3 capitalize text-ink-dim sm:table-cell">{i.kind.replace(/_/g, " ")}</td>
                     <td className="whitespace-nowrap border-b border-line/60 px-2 py-3 tabular-nums text-ink-dim sm:px-4">{i.expiration_date ? fmtDate(i.expiration_date) : "No date"}</td>
                     <td className="border-b border-line/60 px-2 py-3 sm:px-4">
-                      <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${RESULT_CHIP[judged.get(i.id)!.result]}`}>{RESULT_LABEL[judged.get(i.id)!.result]}</span>
+                      <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${RESULT_CHIP[judged.get(i.id)!.result]}`}>{isNoPaper(judged.get(i.id)!) ? "No paper" : RESULT_LABEL[judged.get(i.id)!.result]}</span>
                     </td>
                   </tr>
                 ))}

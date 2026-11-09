@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeNext } from "@/lib/saas/safe-next";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -15,14 +16,13 @@ import { getServerSupabase } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const TYPES: EmailOtpType[] = ["recovery", "magiclink", "email", "signup", "invite", "email_change"];
-const safeNext = (n: string | null) => (n && n.startsWith("/") && !n.startsWith("//") ? n : "/app");
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const tokenHash = url.searchParams.get("token_hash") ?? "";
   const type = url.searchParams.get("type") ?? "";
-  const next = safeNext(url.searchParams.get("next"));
+  const next = safeNext(url.searchParams.get("next"), "/app");
   if (!tokenHash || !TYPES.includes(type as EmailOtpType)) return NextResponse.redirect(new URL("/forgot?expired=1", url.origin));
   const label = type === "recovery" ? "Set a new password" : "Continue";
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   const fd = await req.formData().catch(() => null);
   const tokenHash = String(fd?.get("token_hash") ?? "");
   const type = String(fd?.get("type") ?? "") as EmailOtpType;
-  const next = safeNext(String(fd?.get("next") ?? ""));
+  const next = safeNext(fd?.get("next"), "/app");
   if (tokenHash && TYPES.includes(type)) {
     const supabase = await getServerSupabase();
     if (supabase) {

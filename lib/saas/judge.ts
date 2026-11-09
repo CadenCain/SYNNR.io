@@ -1,3 +1,4 @@
+import { TESTED_CATEGORIES } from "./taxonomy";
 import { addDaysIso } from "./status";
 
 /**
@@ -33,7 +34,7 @@ export interface JItem {
   reminder_days?: number | null;
   parent_id?: string;
 }
-export interface JAsset { id: string; name: string; status: string }
+export interface JAsset { id: string; name: string; status: string; category?: string; needs_redress_since?: string | null }
 export interface JCrew { id: string; name: string }
 
 export interface UnitScope {
@@ -123,7 +124,7 @@ export const isNoPaper = (j: { result: LineResult; detail: string }) => j.result
 /** Short wording for a tile: "BOP test: expired 6d ago". */
 function shortWhy(l: JLine, today: string): string {
   if (l.kind === "crew") return l.label;
-  if (l.kind === "asset") return `${l.label}: ${l.detail === "flagged missing" ? "missing" : "red-tagged"}`;
+  if (l.kind === "asset") return `${l.label}: ${l.detail === "flagged missing" ? "missing" : l.detail === "needs redress" || l.detail === "no test on file" ? l.detail : "red-tagged"}`;
   if (l.result === "pending") return `${l.label}: cert on the way`;
   if (l.result === "missing") return `${l.label}: ${l.detail}`;
   const exp = l.expiration_date as string;
@@ -144,6 +145,12 @@ export function judgeUnit(scope: UnitScope, asOf: string, today: string, opts: {
   for (const a of scope.assets) {
     if (a.status === "missing") lines.push({ kind: "asset", id: a.id, label: a.name, result: "missing", detail: "flagged missing", expiration_date: null });
     else if (a.status === "out_of_service") lines.push({ kind: "asset", id: a.id, label: a.name, result: "missing", detail: "red-tagged (out of service)", expiration_date: null });
+    // The load-out blocks these too, so the truck's paper can't call it ready:
+    // a tool back from a run and not redressed, and pressure iron with no test.
+    else if (a.needs_redress_since) lines.push({ kind: "asset", id: a.id, label: a.name, result: "missing", detail: "needs redress", expiration_date: null });
+    else if (a.category && TESTED_CATEGORIES.has(a.category) && !scope.assetItems.some((i) => i.parent_id === a.id)) {
+      lines.push({ kind: "asset", id: a.id, label: a.name, result: "missing", detail: "no test on file", expiration_date: null });
+    }
   }
 
   const push = (i: JItem, label: string, kind: JLine["kind"]) => {

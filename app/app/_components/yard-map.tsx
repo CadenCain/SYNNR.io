@@ -31,7 +31,7 @@ const DOT: Record<EquipState, string> = {
 const TRUCK_CHIP: Record<UnitTile["state"], { cls: string; label: string }> = {
   not_ready: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "Not ready" },
   due_soon: { cls: "border-amber-500/30 bg-amber-500/10 text-amber-400", label: "Due soon" },
-  ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Ready" },
+  ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Paper current" },
   not_setup: { cls: "border-line-2 bg-elevated text-ink-faint", label: "Not set up" },
 };
 const TRUCK_ORDER: Record<UnitTile["state"], number> = { not_ready: 0, due_soon: 1, not_setup: 2, ready: 3 };

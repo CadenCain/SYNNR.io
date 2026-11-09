@@ -96,9 +96,17 @@ export async function updateUnit(fd: FormData) {
   // The unit number is what DOT paper gets matched against: a manager's field.
   const identifier = fd.has("identifier") && canPerform(company.role, "edit_records") ? { identifier: str(fd, "identifier") || null } : {};
   const db = await saasDb();
-  const { error } = await db.from("saas_units").update({ name, type, ...identifier }).eq("id", id).eq("company_id", company.id);
+  // Moving a truck to another yard is a manager's call, and only to one of this company's yards.
+  let yard: { yard_id?: string } = {};
+  const wantYard = str(fd, "yard_id");
+  if (wantYard && canPerform(company.role, "edit_records")) {
+    const { data: y } = await db.from("saas_yards").select("id").eq("id", wantYard).eq("company_id", company.id).maybeSingle();
+    if (y) yard = { yard_id: wantYard };
+  }
+  const { error } = await db.from("saas_units").update({ name, type, ...identifier, ...yard }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
   revalidatePath(`/app/units/${id}`);
+  if (yard.yard_id) { revalidatePath("/app"); revalidatePath("/app/yards"); }
 }
 export async function deleteUnit(fd: FormData) {
   const { company } = await requireBillableCompany();

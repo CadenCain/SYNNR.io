@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAll } from "./read-all";
 import { resolveRecipients, sendEmail } from "./notify";
 import { escHtml } from "./html";
 import { isWritable } from "./entitlements";
@@ -91,8 +92,11 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         admin.from("saas_units").select("id, name").eq("company_id", c.id),
         admin.from("saas_assets").select("unit_id, out_since, out_with_name, name, identifier").eq("company_id", c.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
         admin.from("saas_enforcement_settings").select("out_alert_days").eq("company_id", c.id).maybeSingle(),
-        admin.from("saas_memberships").select("user_id").eq("company_id", c.id).eq("status", "active"),
-        admin.from("saas_events").select("actor").eq("company_id", c.id).gte("created_at", weekAgo).not("actor", "is", null).limit(3000),
+        admin.from("saas_memberships").select("user_id, role").eq("company_id", c.id).eq("status", "active"),
+        // The week's activity, every row: a piece-by-piece move from a load-out
+        // is already counted by the load-out, so those are left out.
+        readAll<{ actor: string }>((a, b) => admin.from("saas_events").select("actor", { count: "exact" }).eq("company_id", c.id).gte("created_at", weekAgo)
+          .not("actor", "is", null).neq("kind", "asset_moved").order("id").range(a, b)).then((data) => ({ data })),
         admin.from("saas_compliance_items_with_status").select("id", { count: "exact", head: true }).eq("company_id", c.id).neq("parent_type", "crew").eq("status", "no_paper"),
       ]);
       const unitName = new Map(((units ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
@@ -139,10 +143,19 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const damaged = ((rets ?? []) as { returned_by: string; pieces: ReturnedPiece[] | null }[])
         .flatMap((r) => (r.pieces ?? []).filter((p) => p.red_tag).map((p) => damagedLine(p, r.returned_by)));
 
-      // Who's on the crew but hasn't done anything in a week.
-      const active = new Set(((weekEv ?? []) as { actor: string }[]).map((e) => e.actor));
+      // Hands on the crew who haven't done anything in a week. (An owner or
+      // office manager who only reads the board isn't idle.) Load-outs and
+      // check-ins count even if the feed line didn't land.
+      const [{ data: weekLoads }, { data: weekBacks }] = await Promise.all([
+        admin.from("saas_loadout_scans").select("scanned_by").eq("company_id", c.id).gte("finished_at", weekAgo).not("scanned_by", "is", null).limit(1000),
+        admin.from("saas_returns").select("returned_by").eq("company_id", c.id).gte("finished_at", weekAgo).not("returned_by", "is", null).limit(1000),
+      ]);
+      const active = new Set([...((weekEv ?? []) as { actor: string }[]).map((e) => e.actor),
+        ...((weekLoads ?? []) as { scanned_by: string }[]).map((r) => r.scanned_by),
+        ...((weekBacks ?? []) as { returned_by: string }[]).map((r) => r.returned_by)]);
+      const hands = ((members ?? []) as { user_id: string; role: string }[]).filter((m) => m.role === "member");
       const idle: string[] = [];
-      for (const m of ((members ?? []) as { user_id: string }[]).slice(0, 60)) {
+      for (const m of hands.slice(0, 60)) {
         const { data } = await admin.auth.admin.getUserById(m.user_id);
         const n = (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0];
         if (n && !active.has(n)) idle.push(n);
@@ -156,7 +169,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         overrides: ovs.map((o) => `${ovTruck.get(o.loadout_id) ?? "A truck"} by ${o.by_name}: "${o.reason}"`),
         checkins: checkins ?? 0,
         unscanned: ((ev ?? []) as { message: string }[]).map((e) => e.message),
-        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0, crew: (members ?? []).length,
+        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0, crew: hands.length,
         weekly: new Date().toLocaleDateString("en-US", { timeZone: YARD_TZ, weekday: "short" }) === "Mon",
         noPaper: noPaper ?? 0,
       };

@@ -25,7 +25,7 @@ export type Filter = "all" | "overdue" | "due" | "down" | "no_paper" | "retired"
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "overdue", label: "Overdue" },
+  { key: "overdue", label: "Out of test or no paper" },
   { key: "due", label: "Due soon" },
   { key: "down", label: "Pulled from service" },
   { key: "no_paper", label: "Nothing tracked yet" },

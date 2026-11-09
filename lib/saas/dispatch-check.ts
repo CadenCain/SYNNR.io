@@ -121,10 +121,10 @@ export async function computeDispatchCheck(
     kitId
       ? db.from("saas_package_lines").select("id, label, sort").eq("package_id", kitId).order("sort")
       : Promise.resolve({ data: [] }),
-    db.from("saas_assets").select("id, name, identifier, status").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
+    db.from("saas_assets").select("id, name, identifier, status, category, needs_redress_since").eq("unit_id", unitId).eq("company_id", companyId).neq("status", "retired"),
   ]);
   const loadout = ((tplItems ?? []) as { id: string; label: string; sort: number }[]).map((l) => ({ ...l, required: true }));
-  const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; status: string }[])
+  const assets = ((assetData ?? []) as { id: string; name: string; identifier: string | null; status: string; category: string; needs_redress_since: string | null }[])
     .map((a) => ({ ...a, name: withSerial(a.name, a.identifier) }));
 
   // Certs: the unit + its iron
@@ -155,6 +155,8 @@ export async function computeDispatchCheck(
       if (li.required) warnings.push(`${li.label} is on ${unit.name}'s kit but isn't logged on the truck. The load-out scan will block it if it isn't scanned on.`);
     } else if (FAILING_GEAR.has(match.status)) {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "missing", detail: `${match.name} is flagged ${match.status === "out_of_service" ? "red-tagged" : "missing"}` });
+    } else if (match.needs_redress_since) {
+      lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "missing", detail: `${match.name} needs redress` });
     } else {
       lines.push({ source_type: "loadout_item", source_id: li.id, label: li.label, result: "ok", detail: `on the list (${match.name})` });
     }

@@ -98,7 +98,7 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
       {sp.canceled ? (
         <p className="rounded-lg border border-line-2 bg-elevated px-4 py-3 text-sm text-ink-dim">No charge was made. Pick up where you left off whenever you&apos;re ready.</p>
       ) : null}
-      <SubscribeCard initialYards={startYards} canPay={canPerform(company.role, "billing")} />
+      <SubscribeCard initialYards={startYards} minYards={inUse} canPay={canPerform(company.role, "billing")} />
       {company.subscription_status === "none" ? (
         <p className="text-center text-sm"><Link href="/onboarding" className="text-ink-dim underline underline-offset-2">Change the company name, phone, or yards</Link></p>
       ) : null}

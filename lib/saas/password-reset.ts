@@ -19,10 +19,8 @@ const PER_HOUR = 3;
 export const emailHash = (email: string) => createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 
 /** A path inside the app to go on to, or "" (never another site). */
-export const safeNext = (n: unknown) => {
-  const s = String(n ?? "");
-  return s.startsWith("/") && !s.startsWith("//") && !s.startsWith("/\\") && s.length < 300 ? s : "";
-};
+export { safeNext } from "./safe-next";
+import { safeNext } from "./safe-next";
 
 /** The link in the email: /auth/confirm checks the token and signs them in to
  *  set a new password, then on to where they were headed (an invite, a truck). */

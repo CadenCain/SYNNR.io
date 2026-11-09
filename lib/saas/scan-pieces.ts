@@ -22,12 +22,21 @@ export async function getScanPieces(db: SupabaseClient, companyId: string): Prom
   const now = Date.now();
   const outDays: Record<string, number> = {};
   for (const r of (outRows ?? []) as { id: string; out_since: string }[]) outDays[r.id] = daysOut(r.out_since, now);
-  const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => ({
-    id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, spot: r.note, category: r.category,
-    tagKey: keys.get(r.id)?.tag ?? "", extKey: keys.get(r.id)?.ext ?? null,
-    // Pressure iron with no test on file can't go out, so it reads red on the phone too.
-    problem: r.state === "overdue" || r.state === "down" || (r.state === "no_paper" && TESTED_CATEGORIES.has(r.category)) ? "red" : r.state === "due" ? "yellow" : null,
-    statusText: r.state === "down" ? stateLabel(r) : r.next ? `${r.next.title}: ${r.next.detail}` : "No test on file",
-  }));
+  const pieces: ScanPiece[] = list.rows.filter((r) => r.state !== "retired").map((r) => {
+    // Marked missing, now in someone's hand: scanning it marks it found, and
+    // the server judges it on its tests like any other piece. So does the phone.
+    const found = r.status === "missing" && !r.needsRedress;
+    const st = !found ? r.state : !r.next ? "no_paper"
+      : r.next.result === "expired" || r.next.result === "missing" ? "overdue"
+      : r.next.result === "due_soon" || r.next.result === "pending" ? "due" : "ok";
+    const tests = r.next ? `${r.next.title}: ${r.next.detail}` : "No test on file";
+    return {
+      id: r.id, name: r.name, serial: r.identifier, unitId: r.unitId, where: r.where, spot: r.note, category: r.category,
+      tagKey: keys.get(r.id)?.tag ?? "", extKey: keys.get(r.id)?.ext ?? null,
+      // Pressure iron with no test on file can't go out, so it reads red on the phone too.
+      problem: st === "overdue" || st === "down" || (st === "no_paper" && TESTED_CATEGORIES.has(r.category)) ? "red" : st === "due" ? "yellow" : null,
+      statusText: found ? `Marked missing. Scanning it marks it found. ${tests}` : st === "down" ? stateLabel(r) : tests,
+    };
+  });
   return { pieces, outDays };
 }

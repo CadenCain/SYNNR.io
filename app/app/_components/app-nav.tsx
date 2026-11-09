@@ -239,6 +239,15 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
                 </Link>
               );
             })}
+            {companies.length > 1 && switchAction ? (
+              <form action={switchAction} className="mx-1 mt-2">
+                <select name="company_id" defaultValue={activeCompanyId} aria-label="Switch company"
+                  onChange={(e) => { e.currentTarget.form?.requestSubmit(); setMore(false); }}
+                  className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone">
+                  {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </form>
+            ) : null}
             <ThemePicker className="mx-1 mt-2" />
             <button type="button" onClick={signOut}
               className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-base text-ink-dim hover:bg-elevated">

@@ -48,7 +48,7 @@ export interface QuickUnit {
 
 const FIELD = "h-14 rounded-xl border border-line-2 bg-coal px-4 text-base text-ink outline-none focus:border-bone";
 
-export default function QuickClient({ items, units, assets, companyId, isManager, allowOnTheWay }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string; isManager: boolean; allowOnTheWay: boolean }) {
+export default function QuickClient({ items, units, assets, companyId, isManager, allowOnTheWay, yards = [] }: { items: QuickItem[]; units: QuickUnit[]; assets: QuickAsset[]; companyId: string; isManager: boolean; allowOnTheWay: boolean; yards?: { id: string; name: string }[] }) {
   const router = useRouter();
   const [mode, setMode] = useState<"home" | "renew" | "add" | "seen" | "unit" | "gear" | "done">("home");
   /** Kept locally so a truck added a second ago is selectable immediately,
@@ -94,7 +94,7 @@ export default function QuickClient({ items, units, assets, companyId, isManager
     setErr("");
     setBusy(true);
     const fd = new FormData(e.currentTarget);
-    const res = await quickAddUnit({ name: String(fd.get("name") ?? ""), type: String(fd.get("type") ?? "truck") });
+    const res = await quickAddUnit({ name: String(fd.get("name") ?? ""), type: String(fd.get("type") ?? "truck"), yardId: String(fd.get("yard_id") ?? "") || undefined });
     setBusy(false);
     if (!res.ok || !res.unit) { setErr(res.error ?? "Couldn't save."); return; }
     setUnitList((prev) => [...prev, res.unit!].sort((a, b) => a.name.localeCompare(b.name)));
@@ -265,6 +265,14 @@ export default function QuickClient({ items, units, assets, companyId, isManager
             {UNIT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </label>
+        {yards.length > 1 ? (
+          <label className="flex flex-col gap-1.5 text-sm text-ink-dim">
+            Which yard?
+            <select name="yard_id" defaultValue={yards[0].id} className={FIELD}>
+              {yards.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+            </select>
+          </label>
+        ) : null}
         {err ? <p className="text-sm text-amber-400">{err}</p> : null}
         <button type="submit" disabled={busy} className="h-14 rounded-xl bg-bone text-base font-semibold text-coal disabled:opacity-50">
           {busy ? "Saving…" : "Put it on the books"}
@@ -272,7 +280,7 @@ export default function QuickClient({ items, units, assets, companyId, isManager
         <p className="text-center text-xs text-ink-faint">
           {unitList.length === 0
             ? "This is your first one, so we'll start a yard called Main yard. You can rename it in Yards."
-            : "Goes in your first yard. Move it any time in Yards."}
+            : yards.length > 1 ? "A manager can move it to another yard later, from the truck's Manage box." : `Goes in ${yards[0]?.name ?? "your yard"}.`}
         </p>
       </form>
     );

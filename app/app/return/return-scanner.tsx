@@ -113,6 +113,16 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined,
     // Tag off: back to where this check-in is sending things.
     ...(why ? { to: "yard" as ReturnDest } : { to: dest, rack: dest === "yard" ? rack.trim() : "" }) } } : x));
+  /** Tapped It's back by mistake: it's not back after all (its red tag goes too). */
+  const unmark = (id: string) => setScans((x) => {
+    if (!x[id]) return x;
+    const next = { ...x };
+    delete next[id];
+    // Nothing left checked: the saved copy on the phone goes too (the save
+    // effect only writes when something's checked).
+    if (!Object.keys(next).length) { try { localStorage.removeItem(draftKey(key)); } catch { /* storage off */ } }
+    return next;
+  });
   const flip = (id: string) => setScans((x) => {
     const s = x[id]; if (!s || !truck) return x;
     return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim() } : { ...s, to: "truck", rack: "" } };
@@ -246,13 +256,13 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         {expected.length === 0 ? <p className="text-sm text-ink-faint">{truck ? `Nothing is logged on ${truck.name}.` : "Nothing is out on a job right now."} Scan anything that came back and it gets checked in.</p> : null}
         {expected.map((p) => (
           <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={scans[p.id] ? destText(scans[p.id]) : ""}
-            onHand={() => mark(p, "hand")} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />
+            onHand={() => mark(p, "hand")} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} onUndo={() => unmark(p.id)} />
         ))}
       </section>
       {extra.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Also came back</h2>
-          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
+          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} onUndo={() => unmark(p.id)} />)}
         </section>
       ) : null}
 
@@ -302,8 +312,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   );
 }
 
-function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip, onRedTag }: {
-  p: ScanPiece; scan?: Scan; days?: number; alertDays: number; last4: boolean; strong: boolean; destText: string; onHand: () => void; onFlip?: () => void;
+function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip, onRedTag, onUndo }: {
+  p: ScanPiece; scan?: Scan; days?: number; alertDays: number; last4: boolean; strong: boolean; destText: string; onHand: () => void; onFlip?: () => void; onUndo?: () => void;
   onRedTag?: (why: string) => void;
 }) {
   const [asking, setAsking] = useState(false);
@@ -338,11 +348,18 @@ function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip
           strong ? "border-bone/60 font-semibold text-ink" : "border-line-2 text-ink-dim")}>
           {asking ? "Confirm last 4" : "It\u2019s back"}
         </button>
-      ) : onFlip ? (
-        <button type="button" onClick={onFlip} className="min-h-12 w-full shrink-0 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:w-auto">
-          {destText.startsWith("back on") ? "Into the yard instead" : "Back on the truck instead"}
-        </button>
-      ) : null}
+      ) : (
+        <span className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
+          {onFlip ? (
+            <button type="button" onClick={onFlip} className="min-h-12 flex-1 rounded-lg border border-line-2 px-4 text-sm text-ink-dim hover:bg-elevated sm:flex-none">
+              {destText.startsWith("back on") ? "Into the yard instead" : "Back on the truck instead"}
+            </button>
+          ) : null}
+          {onUndo ? (
+            <button type="button" onClick={onUndo} className="min-h-12 shrink-0 rounded-lg px-3 text-[13px] text-ink-faint underline underline-offset-2 hover:text-ink">Not back</button>
+          ) : null}
+        </span>
+      )}
       {scan && onRedTag ? (
         scan.redTag ? (
           <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400">

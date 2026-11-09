@@ -46,7 +46,7 @@ export async function getCompanyReadiness(db: SupabaseClient, companyId: string)
       .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id, last_upload_id", { count: "exact" })
       .eq("company_id", companyId).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
-    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, identifier, unit_id, status", { count: "exact" }).eq("company_id", companyId).neq("status", "retired").order("id").range(a, b)),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, identifier, unit_id, status, category, needs_redress_since", { count: "exact" }).eq("company_id", companyId).neq("status", "retired").order("id").range(a, b)),
   ]);
 
   type Item = JItem & { status: ComplianceStatus; parent_type: string; parent_id: string };

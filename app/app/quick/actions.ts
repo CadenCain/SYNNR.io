@@ -14,7 +14,7 @@ import { ownsParent, ownsStoragePath } from "@/lib/saas/own";
  * sitting down at a desktop. If there's no yard yet we make one, so a guy
  * standing in the yard can get his first truck in without any setup.
  */
-export async function quickAddUnit(args: { name: string; type?: string }):
+export async function quickAddUnit(args: { name: string; type?: string; yardId?: string }):
   Promise<{ ok: boolean; error?: string; unit?: { id: string; name: string; yardName: string; type: string } }> {
   const { company } = await requireCompany();
   if (!isWritable(company.subscription_status, company.comped)) return { ok: false, error: "Your subscription is paused. Records are read-only until billing is updated." };
@@ -22,7 +22,11 @@ export async function quickAddUnit(args: { name: string; type?: string }):
   if (!name) return { ok: false, error: "Give it a name, like Truck 12 or Main shop." };
 
   const db = await saasDb();
-  const { data: yardRow } = await db.from("saas_yards")
+  // The yard they picked (if it's this company's), else the first one.
+  const picked = args.yardId
+    ? (await db.from("saas_yards").select("id, name").eq("company_id", company.id).eq("id", args.yardId).maybeSingle()).data
+    : null;
+  const { data: yardRow } = picked ? { data: picked } : await db.from("saas_yards")
     .select("id, name").eq("company_id", company.id).order("created_at").limit(1).maybeSingle();
   let yard = yardRow as { id: string; name: string } | null;
 

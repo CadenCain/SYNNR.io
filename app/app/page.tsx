@@ -1,4 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
+import { readAll } from "@/lib/saas/read-all";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { getEquipment } from "@/lib/saas/equipment";
@@ -57,12 +58,19 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     // Every override, not just this week's: a truck that rolled on one 10 days
     // ago is still out on it, not blocked. Overrides are rare; 2,000 is years.
     db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).order("created_at", { ascending: false }).limit(2000),
-    db.from("saas_events").select("id, kind, actor, message, unit_id, created_at")
-      .eq("company_id", company.id).gte("created_at", sinceIso()).order("created_at", { ascending: false }).limit(60),
+    // Today's feed: what people did. A load-out's piece-by-piece moves would
+    // crowd that out on a busy day, so moves come in a short list of their own.
+    Promise.all([
+      db.from("saas_events").select("id, kind, actor, message, unit_id, created_at")
+        .eq("company_id", company.id).gte("created_at", sinceIso()).neq("kind", "asset_moved").order("created_at", { ascending: false }).limit(200),
+      db.from("saas_events").select("id, kind, actor, message, unit_id, created_at")
+        .eq("company_id", company.id).gte("created_at", sinceIso()).eq("kind", "asset_moved").order("created_at", { ascending: false }).limit(15),
+    ]).then(([a, b]) => ({ data: [...(a.data ?? []), ...(b.data ?? [])].sort((x, y) => String(y.created_at).localeCompare(String(x.created_at))) })),
     db.from("saas_packages").select("unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).not("unit_id", "is", null),
     db.from("saas_returns").select("unit_id, finished_at, returned_by").eq("company_id", company.id).order("finished_at", { ascending: false }).limit(400),
     db.from("saas_assets").select("id, unit_id, yard_id, out_since").eq("company_id", company.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
-    db.from("saas_events").select("kind, actor, unit_id").eq("company_id", company.id).gte("created_at", weekAgo).not("actor", "is", null).limit(2000),
+    readAll<{ kind: string; actor: string; unit_id: string | null }>((a, b) => db.from("saas_events").select("id, kind, actor, unit_id", { count: "exact" }).eq("company_id", company.id)
+      .gte("created_at", weekAgo).not("actor", "is", null).neq("kind", "asset_moved").order("id").range(a, b)).then((data) => ({ data })),
     getYardRules(db, company.id),
     getOpenPlans(db, company.id),
     db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null),
@@ -153,7 +161,8 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   if (managerView) {
     const admin = saasAdmin();
     const { data: memberRows } = await db.from("saas_memberships").select("user_id, role").eq("company_id", company.id).eq("status", "active");
-    const names = admin ? await Promise.all(((memberRows ?? []) as { user_id: string; role: string }[]).slice(0, 60).map(async (m) => {
+    // Idle means a hand who hasn't used it. A manager who only reads the board isn't idle.
+    const names = admin ? await Promise.all(((memberRows ?? []) as { user_id: string; role: string }[]).filter((m) => m.role === "member").slice(0, 60).map(async (m) => {
       const { data } = await admin.auth.admin.getUserById(m.user_id);
       return (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || null;
     })) : [];

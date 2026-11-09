@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ShieldCheck, TriangleAlert, FileImage, ArrowRight } from "lucide-react";
 import { saasAdmin } from "@/lib/saas/db";
 import { getSaasUser } from "@/lib/saas/auth";
-import { judgeItem, type LineResult } from "@/lib/saas/judge";
+import { judgeItem, isNoPaper, type LineResult } from "@/lib/saas/judge";
 import { paperLinks } from "@/lib/saas/paper";
 import { localToday } from "@/lib/saas/status";
 import { categoryLabel } from "@/lib/saas/taxonomy";
@@ -60,9 +60,9 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   }
 
   const { data: assetData } = await admin.from("saas_assets")
-    .select("id, company_id, name, category, identifier, status")
+    .select("id, company_id, name, category, identifier, status, needs_redress_since")
     .eq("tag_token", token).maybeSingle();
-  const a = assetData as { id: string; company_id: string; name: string; category: string; identifier: string | null; status: string } | null;
+  const a = assetData as { id: string; company_id: string; name: string; category: string; identifier: string | null; status: string; needs_redress_since: string | null } | null;
   if (!a) {
     return <Shell><div className="rounded-2xl border border-line bg-surface p-6 text-center"><p className="font-semibold">This tag isn&apos;t in RollReady.</p><p className="mt-1 text-sm text-ink-dim">The iron may have been removed from the shop&apos;s records. Ask the shop.</p></div></Shell>;
   }
@@ -78,13 +78,14 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   })();
 
   const [{ data: co }, { data: itemData }, isMember] = await Promise.all([
-    admin.from("saas_companies").select("name").eq("id", a.company_id).maybeSingle(),
+    admin.from("saas_companies").select("name, is_demo").eq("id", a.company_id).maybeSingle(),
     admin.from("saas_compliance_items")
       .select("id, title, issued_date, expiration_date, reminder_days, pending_until, last_upload_id")
       .eq("company_id", a.company_id).eq("parent_type", "asset").eq("parent_id", a.id),
     memberCheck,
   ]);
-  const companyName = (co as { name: string } | null)?.name ?? "";
+  const demo = Boolean((co as { is_demo?: boolean } | null)?.is_demo);
+  const companyName = `${(co as { name: string } | null)?.name ?? ""}${demo ? " (demo)" : ""}`;
   type I = { id: string; title: string; issued_date: string | null; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null };
   const today = localToday();
   const rank: Record<LineResult, number> = { expired: 0, missing: 1, pending: 2, due_soon: 3, ok: 4 };
@@ -98,10 +99,11 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
   const down = a.status === "out_of_service" || a.status === "missing";
   const retired = a.status === "retired";
   const failing = items.filter((x) => x.j.result === "expired" || x.j.result === "missing");
-  const good = !down && !retired && items.length > 0 && failing.length === 0;
+  const good = !down && !retired && !a.needs_redress_since && items.length > 0 && failing.length === 0;
   const verdict = retired ? { title: "Retired", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop has taken this out of service for good. Don't use it." }
     : a.status === "out_of_service" ? { title: "Red-tagged. Do not use.", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has pulled this from service." }
     : a.status === "missing" ? { title: "Flagged missing", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "The shop has this marked missing. Let them know where it is." }
+    : a.needs_redress_since ? { title: "Needs redress", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: "It came back from a run and hasn't been redressed. Don't run it until it is." }
     : items.length === 0 ? { title: "No test on file", tone: "border-line-2 bg-elevated text-ink-dim", note: "The shop hasn't put this piece's paper in RollReady yet." }
     : failing.length ? { title: "Out of test", tone: "border-red-500/40 bg-red-500/10 text-red-400", note: failing.length === 1 ? `${failing[0].i.title}: ${failing[0].j.detail}.` : `${failing.length} tests are past due, missing a date, or missing their paper.` }
     : { title: "Current", tone: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400", note: "Every test and cert on file is current today, with the paper behind it." };
@@ -115,6 +117,7 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
           <ArrowRight className="h-5 w-5 shrink-0" />
         </Link>
       ) : null}
+      {demo ? <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300">Demo yard on synnr.io. The company and its records are made up.</p> : null}
       <div className="rounded-2xl border border-line bg-surface p-5">
         <div className="text-sm text-ink-faint">{companyName}</div>
         <h1 className="mt-0.5 break-words text-2xl font-semibold tracking-tight">{a.name}</h1>
@@ -139,7 +142,7 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
             <div key={i.id} className="rounded-2xl border border-line bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 break-words font-semibold">{i.title}</div>
-                <span className={`inline-flex shrink-0 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold ${CHIP[j.result]}`}>{LABEL[j.result]}</span>
+                <span className={`inline-flex shrink-0 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold ${CHIP[j.result]}`}>{isNoPaper(j) ? "No paper" : LABEL[j.result]}</span>
               </div>
               <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
                 <div><dt className="text-xs text-ink-faint">Last done</dt><dd className="whitespace-nowrap">{i.issued_date ? fmtDate(i.issued_date) : "Not on file"}</dd></div>

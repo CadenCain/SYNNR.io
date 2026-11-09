@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -26,6 +27,9 @@ async function noteJoin(sb: SupabaseClient, companyId: unknown) {
   if (!u || typeof companyId !== "string") return;
   const name = (u.user_metadata?.full_name as string | undefined)?.trim() || u.email?.split("@")[0] || "Someone";
   await logEventNow({ companyId, kind: "crew_joined", actor: name, message: `${name} joined the crew` });
+  // Open the company just joined (someone already on another crew would
+  // otherwise land in their first one).
+  (await cookies()).set("synnr_co", companyId, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 }
 
 /** Signed in already: accept and go to the trucks. */

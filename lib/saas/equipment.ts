@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readAll } from "./read-all";
 import { judgeItem, type LineResult, isNoPaper } from "./judge";
 import { localToday } from "./status";
+import { TESTED_CATEGORIES } from "./taxonomy";
 
 /**
  * The equipment list: every piece of iron the company tracks, where it is,
@@ -123,7 +124,9 @@ export function buildEquipment(
     let state: EquipState;
     if (a.status === "retired") state = "retired";
     else if (a.status === "out_of_service" || a.status === "missing" || a.needs_redress_since) state = "down";
-    else if (!next) state = "no_paper";
+    // Pressure iron with no test on file can't go out (the load-out blocks it):
+    // it reads like out of test everywhere, not a neutral "nothing tracked".
+    else if (!next) state = TESTED_CATEGORIES.has(a.category) ? "overdue" : "no_paper";
     else if (next.result === "expired" || next.result === "missing") state = "overdue";
     else if (next.result === "due_soon" || next.result === "pending") state = "due";
     else state = "ok";
@@ -170,5 +173,6 @@ export function stateLabel(r: Pick<EquipRow, "state" | "status"> & { needsRedres
   if (r.state === "down") return r.status === "missing" ? "Missing" : r.status === "out_of_service" ? "Red-tagged" : r.needsRedress ? "Needs redress" : "Red-tagged";
   // In date but no cert attached: it needs its paper, not a retest.
   if (r.state === "overdue" && r.next && isNoPaper(r.next)) return "No paper";
+  if (r.state === "overdue" && r.next === null) return "No test on file";
   return STATE_LABEL[r.state];
 }

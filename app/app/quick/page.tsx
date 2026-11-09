@@ -1,4 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
+import { readAll } from "@/lib/saas/read-all";
 import { saasDb, type ComplianceStatus } from "@/lib/saas/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { getYardRules, isManagerRole } from "@/lib/saas/yard-rules";
@@ -14,12 +15,13 @@ export default async function QuickPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
 
-  const [{ data: itemData }, { data: unitData }, { data: assetData }] = await Promise.all([
-    db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, parent_type, parent_id")
-      .eq("company_id", company.id).neq("parent_type", "crew"),
+  const [itemData, { data: unitData }, assetData, { data: yardData }] = await Promise.all([
+    readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
+      .select("id, title, status, expiration_date, parent_type, parent_id", { count: "exact" })
+      .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name, type, saas_yards(name)").eq("company_id", company.id).order("name"),
-    db.from("saas_assets").select("id, name, last_seen_where, unit_id").eq("company_id", company.id).order("name"),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, last_seen_where, unit_id", { count: "exact" }).eq("company_id", company.id).order("name").order("id").range(a, b)),
+    db.from("saas_yards").select("id, name").eq("company_id", company.id).order("created_at"),
   ]);
 
   const rules = await getYardRules(db, company.id);
@@ -60,7 +62,7 @@ export default async function QuickPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Add or renew" description="Upload a new cert, add what's new, or say where something is." />
       <QuickClient items={items} units={units} assets={assets} companyId={company.id}
-        isManager={isManagerRole(company.role)} allowOnTheWay={rules.allowCertOnTheWay} />
+        isManager={isManagerRole(company.role)} allowOnTheWay={rules.allowCertOnTheWay} yards={(yardData ?? []) as { id: string; name: string }[]} />
     </div>
   );
 }

@@ -500,6 +500,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     }
     setSaving(false);
     setSlowTries(0);
+    // Stale (the truck already moved on): drop the phone's copy so it stops coming back.
+    if (res.stale) { clearDraft(truck.id); setWaitingForSignal(false); }
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
     setWaitingForSignal(false);
     clearDraft(truck.id);
@@ -512,9 +514,22 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     if (res.verdict !== "ready") {
       const back = [...(res.backOn ?? []), ...stillOutIds.filter((id) => went.has(id))];
       if (back.length) setBackOn((b) => [...new Set([...b, ...back])]);
+      // The yard's list moved on since this page opened: pieces logged on the
+      // truck that this phone didn't show, and packages the plan added. Show
+      // them now, so the next try can account for them.
+      const left = res.left ?? [];
+      if (left.length) setList((l) => [
+        ...l.map((p) => left.some((x) => x.id === p.id) ? { ...p, unitId: truck.id } : p),
+        ...left.filter((x) => !l.some((p) => p.id === x.id)).map((x) => ({ id: x.id, name: x.name, serial: x.serial, unitId: truck.id, where: truck.name,
+          category: x.category, tagKey: "", extKey: null, problem: null, statusText: "Logged on this truck since this page opened" } satisfies ScanPiece)),
+      ]);
+      const pk = (res.packageIds ?? []).filter((id) => packages.some((x) => x.id === id));
+      if (pk.length) setPackageIds((ids) => [...new Set([...ids, ...pk])]);
     }
+    // (Pieces the phone didn't send an answer for stay on the truck, like the server leaves them.)
+    const leftIds = new Set((res.left ?? []).map((x) => x.id));
     setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
-      : p.unitId === truck.id && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
+      : p.unitId === truck.id && !leftIds.has(p.id) && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
     stopNfc(); stopCamera();
     setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken, badIds: res.badIds ?? [] });
     try { navigator.vibrate?.(res.verdict === "ready" ? 120 : [200, 100, 200, 100, 200]); } catch { /* no vibration */ }

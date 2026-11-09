@@ -75,8 +75,15 @@ export async function moveEquipment(fd: FormData) {
   if (error) throw new Error(error.message);
   // Somebody has it in hand, so it isn't out on a job anymore. Only the
   // server writes that (the database turns a phone away).
-  await saasAdmin()?.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null })
-    .eq("id", id).eq("company_id", company.id).not("out_since", "is", null);
+  // A tool signed out to someone that's moved is back from them too: the
+  // sign-out closes, or it would read "With Dale" forever.
+  const admin = saasAdmin();
+  const now = new Date().toISOString();
+  await admin?.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null })
+    .eq("id", id).eq("company_id", company.id).or("out_since.not.is.null,out_with_user.not.is.null,out_with_name.not.is.null");
+  await admin?.from("saas_signouts").update({ back_at: now, back_by: by, back_note: `moved${note ? `: ${note}` : ""}` })
+    .eq("company_id", company.id).eq("asset_id", id).is("back_at", null);
+  revalidatePath("/app/signout");
   revalidatePath(`/app/assets/${id}`);
   revalidatePath("/app"); revalidatePath("/app/equipment");
   refresh(); // redraw the page the Move box is on, with the new history row

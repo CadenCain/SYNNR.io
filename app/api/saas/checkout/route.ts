@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { billableYardCount } from "@/lib/saas/billing";
 import { getStripe } from "@/lib/stripe";
 import { requireCompany } from "@/lib/saas/auth";
 import { canPerform } from "@/lib/saas/entitlements";
@@ -28,6 +29,11 @@ export async function POST(req: Request) {
   try { requested = (await req.json())?.quantity; } catch { /* no body */ }
   const { data: row } = await admin.from("saas_companies").select("requested_yards").eq("id", company.id).maybeSingle();
   const quantity = clampYards(requested ?? (row as { requested_yards: number | null } | null)?.requested_yards ?? 1);
+  // Restarting after a cancel: the plan covers every yard already set up.
+  const inUse = await billableYardCount(company.id);
+  if (quantity < inUse) {
+    return no(`You have ${inUse} yards set up. Restart with ${inUse}, or delete a yard under Yards first.`, 409);
+  }
 
   try {
     const s = await createYardCheckout(stripe, admin, {

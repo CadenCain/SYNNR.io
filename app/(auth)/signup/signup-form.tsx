@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNext } from "@/lib/saas/safe-next";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -55,7 +56,7 @@ export default function SignupForm() {
     // An INVITED user carries ?next=/invite/<token> — sending them to
     // onboarding would have them create their own separate company instead
     // of joining the one that invited them. That exact bug shipped once.
-    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+    const nextPath = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return safeNext(n); })();
     router.replace(nextPath || (ref ? `/onboarding?ref=${encodeURIComponent(ref)}` : "/onboarding"));
     router.refresh();
   }
