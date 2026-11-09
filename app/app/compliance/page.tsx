@@ -1,4 +1,5 @@
 import { isFailing } from "@/lib/saas/status";
+import { readAll } from "@/lib/saas/read-all";
 import { fmtWhen, fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { Bell, Settings2 } from "lucide-react";
@@ -35,12 +36,12 @@ interface Item {
 export default async function CompliancePage() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data }, { data: unitData }, { data: assetData }, { data: settingsData }, { data: sentData }, { data: recipData }, { data: failedData }] = await Promise.all([
-    db.from("saas_compliance_items_with_status")
-      .select("id, title, kind, expiration_date, status, parent_type, parent_id")
-      .eq("company_id", company.id).neq("parent_type", "crew"),
+  const [data, { data: unitData }, assetData, { data: settingsData }, { data: sentData }, { data: recipData }, { data: failedData }] = await Promise.all([
+    readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
+      .select("id, title, kind, expiration_date, status, parent_type, parent_id", { count: "exact" })
+      .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
-    db.from("saas_assets").select("id, name, status, identifier, unit_id").eq("company_id", company.id),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, status, identifier, unit_id", { count: "exact" }).eq("company_id", company.id).order("id").range(a, b)),
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_alerts_sent")
       .select("sent_at, channel, recipient, label, saas_compliance_items(title)")

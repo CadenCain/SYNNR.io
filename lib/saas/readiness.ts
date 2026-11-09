@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAll } from "./read-all";
 import type { ComplianceStatus } from "./db";
 import { computeReadiness, localToday, type UnitState } from "./status";
 import { judgeUnit, pendingCovers, FAILING_GEAR, withSerial, type JItem } from "./judge";
@@ -40,12 +41,12 @@ export interface CompanyReadiness {
 export async function getCompanyReadiness(db: SupabaseClient, companyId: string): Promise<CompanyReadiness> {
   // Equipment only: crew cards aren't part of the call, and retired iron
   // (scrapped or sold) is kept for the record but out of every count.
-  const [{ data: itemData }, { data: unitData }, { data: assetData }] = await Promise.all([
-    db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id, last_upload_id")
-      .eq("company_id", companyId).neq("parent_type", "crew"),
+  const [itemData, { data: unitData }, assetData] = await Promise.all([
+    readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
+      .select("id, title, status, expiration_date, reminder_days, pending_until, parent_type, parent_id, last_upload_id", { count: "exact" })
+      .eq("company_id", companyId).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name, type, yard_id, saas_yards(name)").eq("company_id", companyId).order("name"),
-    db.from("saas_assets").select("id, name, identifier, unit_id, status").eq("company_id", companyId).neq("status", "retired"),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, identifier, unit_id, status", { count: "exact" }).eq("company_id", companyId).neq("status", "retired").order("id").range(a, b)),
   ]);
 
   type Item = JItem & { status: ComplianceStatus; parent_type: string; parent_id: string };

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PendingButton from "@/components/ui/pending-button";
 import { revalidatePath } from "next/cache";
 import { requireCompany , assertCan } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
@@ -33,6 +34,9 @@ async function changeAllowance(formData: FormData) {
     redirect(`/app/settings/billing?err=${encodeURIComponent("Restart the subscription first, then change yards.")}`);
   }
   const dir = String(formData.get("dir"));
+  // The plan the page showed when the owner tapped. A second tap that lands
+  // after the first one already changed it is an echo, not a new yard.
+  if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/settings/billing?changed=1");
   const inUse = await billableYardCount(company.id);
   const target = company.yard_quantity + (dir === "up" ? 1 : -1);
   if (dir === "down") {
@@ -108,12 +112,14 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
                   <div className="flex flex-wrap gap-2">
                     <form action={changeAllowance}>
                       <input type="hidden" name="dir" value="up" />
-                      <button className={buttonClass("outline", "lg")}>Add a yard: {money(monthlyDollars(plan + 1))}/month</button>
+                      <input type="hidden" name="from" value={plan} />
+                      <PendingButton pendingText="Adding a yard…">Add a yard: {money(monthlyDollars(plan + 1))}/month</PendingButton>
                     </form>
                     {plan > 1 ? (
                       <form action={changeAllowance}>
                         <input type="hidden" name="dir" value="down" />
-                        <button className={buttonClass("outline", "lg")} disabled={plan - 1 < inUse}>Remove a yard: {money(monthlyDollars(plan - 1))}/month</button>
+                        <input type="hidden" name="from" value={plan} />
+                        <PendingButton pendingText="Removing a yard…" disabled={plan - 1 < inUse}>Remove a yard: {money(monthlyDollars(plan - 1))}/month</PendingButton>
                       </form>
                     ) : null}
                   </div>

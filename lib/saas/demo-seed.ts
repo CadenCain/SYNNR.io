@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isDemoUser } from "./plan";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
@@ -431,7 +432,13 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       for (const t of tables) await admin.from(t).delete().eq("company_id", cid);
       await admin.from("saas_companies").delete().eq("id", cid);
       await removeStorageFolder(admin, cid); // visitors' uploaded photos
+      // Only the throwaway demo logins go, and only if they're on no other
+      // company. A real login is never deleted because it ended up on a demo.
       for (const m of (members ?? []) as { user_id: string }[]) {
+        const { data: u } = await admin.auth.admin.getUserById(m.user_id);
+        if (!isDemoUser(u?.user)) continue;
+        const { count } = await admin.from("saas_memberships").select("user_id", { count: "exact", head: true }).eq("user_id", m.user_id);
+        if (count) continue;
         await admin.auth.admin.deleteUser(m.user_id).catch(() => {});
       }
       deleted++;

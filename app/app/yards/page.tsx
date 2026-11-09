@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PendingButton from "@/components/ui/pending-button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { MapPin, Plus, ChevronRight, Upload } from "lucide-react";
@@ -55,12 +56,17 @@ async function addYardWithUpgrade(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim() || null;
   if (!name) return;
+  // A second tap after the first already raised the plan: an echo, not a new yard.
+  if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/yards");
+  // A name that's taken is refused before the bill moves, not after.
+  const db = await saasDb();
+  const { data: taken } = await db.from("saas_yards").select("id").eq("company_id", company.id).ilike("name", name.replace(/[%_\\]/g, (c) => `\\${c}`)).limit(1);
+  if ((taken ?? []).length) redirect(`/app/yards?err=${encodeURIComponent(`You already have a yard named ${name}. Nothing was added to your bill.`)}`);
   const inUse = await billableYardCount(company.id);
   // One tap: quantity up (prorated), then the yard, same flow. If Stripe
   // refuses, NO yard is created and the real error is shown.
   const res = await setYardAllowance(company.id, Math.max(company.yard_quantity, inUse) + 1);
   if (!res.ok) redirect(`/app/yards?err=${encodeURIComponent(res.error)}`);
-  const db = await saasDb();
   const { error } = await db.from("saas_yards").insert({ company_id: company.id, name, location });
   if (error) redirect(`/app/yards?err=${encodeURIComponent(error.code === "23505" ? `You already have a yard named ${name}. Your plan now has room for one more; add it with a different name.` : error.message)}`);
   revalidatePath("/app/yards");
@@ -68,10 +74,11 @@ async function addYardWithUpgrade(formData: FormData) {
 }
 
 /** Paying for more yards than are set up: drop the plan by one, prorated. */
-async function lowerPlanByOne() {
+async function lowerPlanByOne(formData: FormData) {
   "use server";
   const { company } = await requireBillableCompany();
   assertCan(company, "billing");
+  if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/yards");
   const inUse = await billableYardCount(company.id);
   if (company.yard_quantity - 1 < Math.max(1, inUse)) redirect("/app/yards");
   const res = await setYardAllowance(company.id, company.yard_quantity - 1);
@@ -157,7 +164,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           <p className="min-w-0 flex-1 text-sm text-ink-dim">
             You pay for {company.yard_quantity} yards and have {inUse} set up. Not going to use the rest? Drop one from your plan: {money(monthlyDollars(company.yard_quantity))} → {money(monthlyDollars(company.yard_quantity - 1))} a month.
           </p>
-          <form action={lowerPlanByOne}><button type="submit" className={buttonClass("outline", "lg")}>Remove a yard from my plan</button></form>
+          <form action={lowerPlanByOne}><input type="hidden" name="from" value={company.yard_quantity} /><PendingButton pendingText="Removing…">Remove a yard from my plan</PendingButton></form>
         </Card>
       ) : null}
 
@@ -189,11 +196,12 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
               </p>
               {atcap ? <p className="mt-1 text-xs text-amber-400">That last one didn&apos;t go through because you were at your limit.</p> : null}
               <form action={addYardWithUpgrade} className="mt-3 flex flex-col gap-3 lg:flex-row">
+                <input type="hidden" name="from" value={company.yard_quantity} />
                 <input name="name" required placeholder="Yard name (e.g. Midland Yard)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
                 <input name="location" placeholder="Location (optional)"
                   className="h-11 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
-                <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add a yard (+$500/mo)</Button>
+                <PendingButton pendingText="Adding a yard…" className={buttonClass("default")}><Plus className="h-[18px] w-[18px]" /> Add a yard (+$500/mo)</PendingButton>
               </form>
             </>
           ) : (

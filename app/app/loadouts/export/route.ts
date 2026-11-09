@@ -1,4 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
+import { readAll } from "@/lib/saas/read-all";
 import { saasDb } from "@/lib/saas/db";
 import { YARD_TZ } from "@/lib/saas/format";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
@@ -24,15 +25,16 @@ const HOW: Record<string, string> = { nfc: "NFC tap", qr: "QR scan", hand: "Chec
 export async function GET() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data: rows }, { data: yards }] = await Promise.all([
-    db.from("saas_loadout_scans").select("id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, proof_token, job")
-      .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(5000),
+  // Every load-out, however many: "Download every load-out" means every one.
+  const [rows, { data: yards }] = await Promise.all([
+    readAll<unknown>((a, b) => db.from("saas_loadout_scans").select("id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, proof_token, job", { count: "exact" })
+      .eq("company_id", company.id).order("finished_at", { ascending: false }).order("id").range(a, b)),
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
   ]);
   const recs = (rows ?? []) as (Pick<LoadoutRecord, "id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned" | "proof_token" | "job">)[];
   // Every override the company has (a few per month), not a 5,000-id list in a URL.
   const { data: ov, error: ovErr } = recs.length
-    ? await db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("company_id", company.id).limit(20000)
+    ? { data: await readAll<unknown>((a, b) => db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at", { count: "exact" }).eq("company_id", company.id).order("loadout_id").range(a, b)), error: null }
     : { data: [], error: null };
   if (ovErr) return new Response("Couldn't read the overrides. Try the export again.", { status: 500 });
   const overrides = new Map(((ov ?? []) as { loadout_id: string; by_name: string; reason: string; created_at: string }[]).map((o) => [o.loadout_id, o]));

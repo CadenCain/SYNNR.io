@@ -30,6 +30,7 @@ async function makeCrewLink() {
   "use server";
   const { company } = await requireBillableCompany();
   if (!isManager(company)) throw new Error("Only a manager can make the crew link.");
+  if (company.is_demo) throw new Error("Crew links are off in the demo yard.");
   const db = await saasDb();
   // One crew link at a time: a new one turns the old one off.
   await db.from("saas_invitations").update({ status: "revoked" }).eq("company_id", company.id).eq("multi_use", true).eq("status", "pending");
@@ -44,6 +45,7 @@ async function createInvite(formData: FormData) {
   const { company } = await requireBillableCompany();
   // Nobody mints an owner through this form (and the database won't take one).
   if (!isManager(company)) throw new Error("Only a manager can invite people.");
+  if (company.is_demo) throw new Error("Invites are off in the demo yard.");
   const role = String(formData.get("role") ?? "member") === "admin" ? "admin" : "member";
   const email = String(formData.get("email") ?? "").trim().slice(0, 254) || null;
   const db = await saasDb();
@@ -196,7 +198,9 @@ export default async function TeamSettings() {
             <h2 className="font-semibold">Crew link</h2>
             <p className="mt-0.5 text-sm text-ink-dim">Text one link to the whole crew. Each hand taps it, types their name, email, and a password, and lands on the trucks. Anyone with the link joins as a hand, so send it to your crew only.</p>
           </div>
-          {crewLink ? (
+          {company.is_demo ? (
+            <p className="text-sm text-ink-dim">Off in the demo yard: it&apos;s made up and deletes itself after a day, so real people can&apos;t join it. In your own account, this is where you make the link.</p>
+          ) : crewLink ? (
             <>
               <InviteLink url={`${origin}/invite/${crewLink.token}`} company={company.name} />
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-dim">
@@ -268,7 +272,7 @@ export default async function TeamSettings() {
         })}
       </section>
 
-      {manager ? (
+      {manager && !company.is_demo ? (
         <Card className="flex flex-col gap-3 p-5">
           <div>
             <h2 className="font-semibold">Invite one person</h2>

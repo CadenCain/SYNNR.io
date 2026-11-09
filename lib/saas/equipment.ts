@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAll } from "./read-all";
 import { judgeItem, type LineResult, isNoPaper } from "./judge";
 import { localToday } from "./status";
 
@@ -70,19 +71,20 @@ export interface RawAsset { id: string; name: string; category: string; identifi
 export interface RawItem { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; parent_id: string; last_upload_id: string | null }
 
 export async function getEquipment(db: SupabaseClient, companyId: string): Promise<EquipmentList> {
-  const [{ data: assetData }, { data: unitData }, { data: yardData }, { data: itemData }] = await Promise.all([
-    db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, last_seen_where, scanned_at, scanned_unit_id, out_since, out_with_name, needs_redress_since")
-      .eq("company_id", companyId).order("name"),
+  // Every piece and every test, however big the shop (see read-all).
+  const [assetData, { data: unitData }, { data: yardData }, itemData] = await Promise.all([
+    readAll<RawAsset>((a, b) => db.from("saas_assets").select("id, name, category, identifier, status, yard_id, unit_id, last_seen_where, scanned_at, scanned_unit_id, out_since, out_with_name, needs_redress_since", { count: "exact" })
+      .eq("company_id", companyId).order("name").order("id").range(a, b)),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", companyId).order("name"),
     db.from("saas_yards").select("id, name").eq("company_id", companyId).order("name"),
-    db.from("saas_compliance_items").select("id, title, expiration_date, reminder_days, pending_until, parent_id, last_upload_id")
-      .eq("company_id", companyId).eq("parent_type", "asset"),
+    readAll<RawItem>((a, b) => db.from("saas_compliance_items").select("id, title, expiration_date, reminder_days, pending_until, parent_id, last_upload_id", { count: "exact" })
+      .eq("company_id", companyId).eq("parent_type", "asset").order("id").range(a, b)),
   ]);
   return buildEquipment({
-    assets: (assetData ?? []) as RawAsset[],
+    assets: assetData,
     units: (unitData ?? []) as { id: string; name: string; yard_id: string }[],
     yards: (yardData ?? []) as { id: string; name: string }[],
-    items: (itemData ?? []) as RawItem[],
+    items: itemData,
   }, localToday());
 }
 

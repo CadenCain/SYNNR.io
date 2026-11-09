@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAll } from "./read-all";
 import { getEquipment, stateLabel } from "./equipment";
 import type { ScanPiece } from "./loadout";
 import { daysOut } from "./whereabouts";
@@ -10,10 +11,10 @@ import { tagKey } from "./tag-key";
  * where it's logged, whether it's bad, and how long it's been out on a job.
  */
 export async function getScanPieces(db: SupabaseClient, companyId: string): Promise<{ pieces: ScanPiece[]; outDays: Record<string, number> }> {
-  const [list, { data: tagRows }, { data: outRows }] = await Promise.all([
+  const [list, tagRows, outRows] = await Promise.all([
     getEquipment(db, companyId),
-    db.from("saas_assets").select("id, tag_token, nfc_uid").eq("company_id", companyId).neq("status", "retired"),
-    db.from("saas_assets").select("id, out_since").eq("company_id", companyId).not("out_since", "is", null),
+    readAll<{ id: string; tag_token: string | null; nfc_uid: string | null }>((a, b) => db.from("saas_assets").select("id, tag_token, nfc_uid", { count: "exact" }).eq("company_id", companyId).neq("status", "retired").order("id").range(a, b)),
+    readAll<{ id: string; out_since: string }>((a, b) => db.from("saas_assets").select("id, out_since", { count: "exact" }).eq("company_id", companyId).not("out_since", "is", null).order("id").range(a, b)),
   ]);
   // Fingerprints only: the tag codes themselves never go to the phone.
   const keys = new Map(await Promise.all(((tagRows ?? []) as { id: string; tag_token: string | null; nfc_uid: string | null }[])

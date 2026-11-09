@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readAll } from "@/lib/saas/read-all";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 
@@ -21,12 +22,12 @@ const esc = (v: unknown) => {
 export async function GET() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data: items }, { data: units }, { data: assets }, { data: yards }] = await Promise.all([
-    db.from("saas_compliance_items_with_status")
-      .select("title, kind, status, issued_date, expiration_date, reminder_days, parent_type, parent_id")
-      .eq("company_id", company.id).neq("parent_type", "crew"),
+  const [items, { data: units }, assets, { data: yards }] = await Promise.all([
+    readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
+      .select("id, title, kind, status, issued_date, expiration_date, reminder_days, parent_type, parent_id", { count: "exact" })
+      .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name, yard_id").eq("company_id", company.id),
-    db.from("saas_assets").select("id, name, identifier, status, unit_id, yard_id").eq("company_id", company.id),
+    readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, identifier, status, unit_id, yard_id", { count: "exact" }).eq("company_id", company.id).order("id").range(a, b)),
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
   ]);
 
