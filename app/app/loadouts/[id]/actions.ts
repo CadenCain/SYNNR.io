@@ -67,8 +67,12 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
       .eq("company_id", company.id).in("asset_id", rolledIds).is("back_at", null);
   }
 
-  // The truck rolled: the plan this load-out was checked against is used up.
-  if (got.rec.plan?.id) {
+  // The truck rolled: its open plan is used up (the one this load-out was
+  // checked against, or a newer one made since), so nobody's told it never left.
+  if (got.rec.unit_id) {
+    await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
+      .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).is("used_at", null);
+  } else if (got.rec.plan?.id) {
     await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
       .eq("id", got.rec.plan.id).eq("company_id", company.id).is("used_at", null);
   }

@@ -1,4 +1,6 @@
 import { isFailing } from "@/lib/saas/status";
+import { localToday } from "@/lib/saas/status";
+import { pendingCovers } from "@/lib/saas/judge";
 import { readAll } from "@/lib/saas/read-all";
 import { fmtWhen, fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
@@ -30,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 interface Item {
   id: string; title: string; kind: string; expiration_date: string | null;
-  status: ComplianceStatus; parent_type: string; parent_id: string;
+  status: ComplianceStatus; parent_type: string; parent_id: string; pending_until?: string | null;
 }
 
 export default async function CompliancePage() {
@@ -38,7 +40,7 @@ export default async function CompliancePage() {
   const db = await saasDb();
   const [data, { data: unitData }, assetData, { data: settingsData }, { data: sentData }, { data: recipData }, { data: failedData }] = await Promise.all([
     readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
-      .select("id, title, kind, expiration_date, status, parent_type, parent_id", { count: "exact" })
+      .select("id, title, kind, expiration_date, status, parent_type, parent_id, pending_until", { count: "exact" })
       .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, status, identifier, unit_id", { count: "exact" }).eq("company_id", company.id).order("id").range(a, b)),
@@ -75,7 +77,9 @@ export default async function CompliancePage() {
     kind: i.kind,
     kindLabel: kindLabel(i.kind),
     expiration_date: i.expiration_date,
-    status: i.status,
+    // Retested with the cert on the way (a manager approved it): it counts
+    // like due soon until then, the same as on every other screen.
+    status: (i.status === "expired" || i.status === "none") && pendingCovers(i, localToday()) ? "expiring" : i.status,
     parent_type: i.parent_type,
     parentLabel: i.parent_type === "unit" ? name(unitData, i.parent_id) : pieceLabel(i.parent_id),
     href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : `/app/assets/${i.parent_id}`,
@@ -84,7 +88,7 @@ export default async function CompliancePage() {
 
   const ironCount = items.filter((i) => i.parent_type === "asset").length;
   const truckCount = items.filter((i) => i.parent_type === "unit").length;
-  const failing = items.filter((i) => isFailing(i.status)).length;
+  const failing = rows.filter((i) => isFailing(i.status)).length;
 
   // Alert plumbing state + the sent ledger (moved here from /app/alerts).
   const s = settingsData as { email_enabled: boolean; lead_days: number; recipients: string[] } | null;

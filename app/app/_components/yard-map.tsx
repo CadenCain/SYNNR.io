@@ -62,7 +62,9 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
 
   // Iron sitting in the yard, grouped by the spot noted on its last move.
   // Missing iron isn't in any spot, so it gets its own block.
-  const yardIron = live.filter((r) => !r.unitId && inYard(r));
+  // Signed out to a person isn't in the yard: it gets its own block, by name.
+  const withPeople = live.filter((r) => r.outWith && inYard(r)).sort(sortTiles);
+  const yardIron = live.filter((r) => !r.unitId && !r.outWith && inYard(r));
   const missing = yardIron.filter((r) => r.status === "missing").sort(sortTiles);
   const spots = new Map<string, EquipRow[]>();
   for (const r of yardIron) {
@@ -134,6 +136,12 @@ export default function YardMap({ rows, trucks, yards, lastLoadout = {}, fmt = {
               sub={`${missing.length} ${missing.length === 1 ? "piece" : "pieces"} flagged missing, last seen in the yard`}
               why={missing.map((r) => r.note).filter(Boolean).join(" · ") || null} whyTone="text-red-400"
               iron={missing} onlyProblems={onlyProblems} empty="" />
+          )}
+          {withPeople.length > 0 && (
+            <Block key="signed-out" title="Signed out" chip={null}
+              sub={`${withPeople.length} ${withPeople.length === 1 ? "tool" : "tools"} with someone on the crew`}
+              why={[...new Set(withPeople.map((r) => r.outWith))].join(", ")} whyTone="text-ink-dim"
+              iron={withPeople} onlyProblems={onlyProblems} empty="" />
           )}
           {spotBlocks.map(({ note, iron }) => (
             <Block key={`yard-${note}`}

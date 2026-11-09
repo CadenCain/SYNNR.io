@@ -33,6 +33,10 @@ async function createUnit(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? "").trim() || null;
   if (!yard_id || !name) return;
   const db = await saasDb();
+  // Only into one of the open company's yards (a user on two crews could
+  // otherwise post the other company's yard id).
+  const { data: own } = await db.from("saas_yards").select("id").eq("id", yard_id).eq("company_id", company.id).maybeSingle();
+  if (!own) return;
   if (await isRecentDuplicate(db, "saas_units", { company_id: company.id, yard_id, name })) {
     revalidatePath(`/app/yards/${yard_id}`);
     return; // double-tap echo

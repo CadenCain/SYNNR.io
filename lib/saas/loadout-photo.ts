@@ -11,7 +11,8 @@ export function photoPathOk(path: unknown, companyId: string, unitId: string, st
   const m = /^(\d{10,14})-(\d{10,14})\.jpg$/.exec(path.slice(folder.length));
   if (!m || Number(m[1]) !== startedMs) return false;
   const taken = Number(m[2]);
-  return taken >= startedMs - 60e3 && taken <= nowMs + 60e3;
+  // A phone clock a few minutes fast is common; the start time already allows 10.
+  return taken >= startedMs - 60e3 && taken <= nowMs + 10 * 60e3;
 }
 
 /** When the photo was taken, from its name. */

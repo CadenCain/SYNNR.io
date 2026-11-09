@@ -252,7 +252,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
               <ul className="mt-3 flex flex-col gap-1.5">
                 {failingCerts.slice(0, 4).map((i) => (
                   <li key={i.id} className="text-base font-medium text-red-50 sm:text-sm sm:text-red-300">
-                    • {i.title}: {i.status === "expired" ? `expired ${fmtDate(i.expiration_date)}` : "no expiration on file"}
+                    • {i.title}: {i.status === "expired" ? `expired ${fmtDate(i.expiration_date)}` : (i.status as string) === "no_paper" ? "no cert attached (needs the cert photo)" : "no expiration on file"}
                   </li>
                 ))}
                 {failingCerts.length > 4 && <li className="text-sm text-red-100 sm:text-red-300/80">+ {failingCerts.length - 4} more below</li>}

@@ -81,6 +81,17 @@ export async function createYardCheckout(stripe: Stripe, admin: SupabaseClient, 
   if (c?.stripe_customer_id && customerId === c.stripe_customer_id) {
     const subs = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 20 });
     const live = subs.data.find((s) => PAYING.has(s.status));
+    // Unpaid: the subscription is still there, it's the bill that's owed. Send
+    // them to Stripe's page for that invoice; paying it turns it back on.
+    if (live && live.status === "unpaid") {
+      const inv = typeof live.latest_invoice === "string"
+        ? await stripe.invoices.retrieve(live.latest_invoice).catch(() => null)
+        : live.latest_invoice ?? null;
+      if (inv && inv.status === "open" && inv.hosted_invoice_url) {
+        await admin.from("saas_companies").update(subscriptionFields(live)).eq("id", args.companyId);
+        return { url: inv.hosted_invoice_url, quantity: live.items?.data?.[0]?.quantity ?? quantity, amountTotal: inv.amount_due ?? null, already: true };
+      }
+    }
     if (live) {
       await admin.from("saas_companies").update(subscriptionFields(live)).eq("id", args.companyId);
       await provisionPaidYards(admin, args.companyId, live.items?.data?.[0]?.quantity ?? quantity);

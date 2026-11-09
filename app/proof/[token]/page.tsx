@@ -150,7 +150,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // who checked it, the verdict, and photo proof.
   // Unit scope: the last load-out scan, the record of what actually went on
   // the truck and who scanned it.
-  type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean };
+  type LoadoutPiece = { name: string; serial: string | null; how: string; added?: boolean; red?: boolean };
   type LoadoutMiss = { name: string; serial: string | null; outcome: string };
   type Loadout = { id: string; finished_at: string; scanned_by: string | null; scanned: number; expected: number; pieces: LoadoutPiece[]; not_scanned: LoadoutMiss[]; verdict: "ready" | "not_ready" | null; reasons: string[] | null; proof_token: string };
   let loadout = null as Loadout | null;
@@ -271,7 +271,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               </ul>
             ) : null}
             <p className="mt-2 text-sm">
-              <span className="font-semibold">{loadout.pieces.length} {loadout.pieces.length === 1 ? "piece" : "pieces"} scanned on</span>
+              <span className="font-semibold">{loadout.pieces.length} {loadout.pieces.length === 1 ? "piece" : "pieces"} went on</span>
               <span className="text-ink-dim">{loadout.scanned_by ? ` by ${loadout.scanned_by}` : ""}</span>
               {loadoutLinkOff ? null : <>{" · "}<a href={`/l/${loadout.proof_token}`} className="text-bone underline underline-offset-2">See the full load-out record</a></>}
             </p>
@@ -279,7 +279,10 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
               <ul className="mt-3 flex flex-col gap-1 text-sm">
                 {loadout.pieces.map((p, i) => (
                   <li key={i} className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Scanned</span>
+                    {/* What the chip says is what happened: scanned off a tag, checked by hand, or bad when it went on. */}
+                    {p.red ? <span className="inline-flex rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">Bad when it went on</span>
+                      : p.how === "hand" ? <span className="inline-flex rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-400">Checked by hand</span>
+                      : <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Scanned</span>}
                     <span className="break-words">{p.name}{p.serial ? ` ${p.serial}` : ""}</span>
                     <span className="text-xs text-ink-faint">{p.how === "nfc" ? "NFC tag" : p.how === "qr" ? "QR code" : "checked by hand"}{p.added ? ", added at load-out" : ""}</span>
                   </li>

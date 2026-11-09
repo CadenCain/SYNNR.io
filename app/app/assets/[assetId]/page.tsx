@@ -29,9 +29,12 @@ import { qrSvg, tagUrl } from "@/lib/saas/qr";
 import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
 import PhotoUpload from "./photo-upload";
 import { damagedLine } from "@/lib/saas/morning-summary";
-import { markRedressed, setRedressEachRun } from "@/app/app/signout/actions";
+import { setRedressEachRun } from "@/app/app/signout/actions";
+import RedressedButton from "@/app/app/signout/redressed-button";
 import { titled } from "@/lib/saas/page-title";
 
+/** Now, read outside render (for the days-out count). */
+const nowMs = () => Date.now();
 export const dynamic = "force-dynamic";
 
 const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
@@ -65,8 +68,10 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
   const moves = (moveData ?? []) as { id: string; from_where: string | null; to_where: string; note: string | null; actor: string | null; created_at: string }[];
   const unit = units.find((u) => u.id === a.unit_id) ?? null;
   const yardName = new Map(yards.map((y) => [y.id, y.name]));
-  const where = unit
-    ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}`
+  // Same order as the equipment list: with a person first, then the truck, then the yard.
+  const outDays = a.out_since && !a.out_with_name ? Math.max(0, Math.floor((nowMs() - Date.parse(a.out_since)) / 86400e3)) : null;
+  const where = a.out_with_name ? `With ${a.out_with_name}`
+    : unit ? `${unit.name}${yardName.get(unit.yard_id) ? ` · ${yardName.get(unit.yard_id)}` : ""}${outDays !== null ? `, out on a job ${outDays === 0 ? "since today" : `${outDays} ${outDays === 1 ? "day" : "days"}`}` : ""}`
     : (a.yard_id && yardName.get(a.yard_id)) || "No location";
   const whereValue = unit ? `unit:${unit.id}` : a.yard_id ? `yard:${a.yard_id}` : "";
 
@@ -256,10 +261,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
       {a.needs_redress_since && a.status !== "retired" ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 border-amber-500/40 bg-amber-500/[0.06] p-4 text-sm">
           <p className="min-w-0 text-amber-300">Needs redress. Came back from a run {fmtWhen(a.needs_redress_since)}, and it can&apos;t go out again until it&apos;s redressed.</p>
-          <form action={markRedressed}>
-            <input type="hidden" name="asset_id" value={a.id} />
-            <Button type="submit">Mark it redressed</Button>
-          </form>
+          <RedressedButton assetId={a.id} />
         </Card>
       ) : null}
       {a.out_with_name ? (

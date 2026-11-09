@@ -1,5 +1,6 @@
 "use server";
 
+import { isReservedYardName } from "@/lib/saas/billing-rules";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
@@ -52,6 +53,7 @@ export async function updateYard(fd: FormData) {
   const name = str(fd, "name");
   const location = str(fd, "location") || null;
   if (!id || !name) return;
+  if (isReservedYardName(name)) throw new Error("That name is RollReady's own. Pick another name for the yard.");
   const db = await saasDb();
   const { error } = await db.from("saas_yards").update({ name, location }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);

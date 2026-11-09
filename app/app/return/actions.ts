@@ -73,7 +73,7 @@ export async function finishReturn(input: {
   unitId: string | null;
   yardId: string | null;
   startedAt: string;
-  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string; redTag?: string }[];
+  scans: { assetId: string; how: ScanHow; at?: number; to: ReturnDest; rack?: string; proof?: string; redTag?: string; yardId?: string }[];
   notReturned: { assetId: string; outcome: Outcome }[];
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string }> {
   const { company, user } = await requireBillableCompany();
@@ -144,6 +144,8 @@ export async function finishReturn(input: {
     to: (s.to === "truck" && unit && !String(s.redTag ?? "").trim() ? "truck" : "yard") as ReturnDest,
     redTag: String(s.redTag ?? "").trim().slice(0, 140) || null,
     rack: String(s.rack ?? "").trim().slice(0, 80),
+    // The yard picked when this piece was checked (only this company's yards count).
+    yardId: yards.find((y) => y.id === s.yardId)?.id ?? yard.id,
     at: typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now,
   }));
 
@@ -172,12 +174,17 @@ export async function finishReturn(input: {
     }).eq("company_id", company.id).in("id", onTruck.map((s) => s.assetId));
     if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };
   }
-  // Into the yard, grouped by rack so each piece's note says where it sits.
-  const byRack = new Map<string, string[]>();
-  for (const s of scans.filter((x) => x.to === "yard")) byRack.set(s.rack, [...(byRack.get(s.rack) ?? []), s.assetId]);
-  for (const [rack, rackIds] of byRack) {
+  // Into the yard, grouped by yard and rack so each piece's note says where it sits.
+  const byRack = new Map<string, { yardId: string; rack: string; ids: string[] }>();
+  for (const s of scans.filter((x) => x.to === "yard")) {
+    const k = `${s.yardId}|${s.rack}`;
+    const g = byRack.get(k) ?? { yardId: s.yardId, rack: s.rack, ids: [] };
+    g.ids.push(s.assetId);
+    byRack.set(k, g);
+  }
+  for (const { yardId: toYard, rack, ids: rackIds } of byRack.values()) {
     const { error } = await db.from("saas_assets").update({
-      ...back, unit_id: null, yard_id: yard.id, scanned_unit_id: null,
+      ...back, unit_id: null, yard_id: toYard, scanned_unit_id: null,
       last_seen_where: rack || `checked in ${day}`,
     }).eq("company_id", company.id).in("id", rackIds);
     if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };

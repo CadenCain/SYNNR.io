@@ -16,8 +16,9 @@ CT-04,coil tubing unit,,,,Annual DOT inspection,inspection,2026-02-01,2027-02-01
 
 export default function ImportClient({ yards }: { yards: { id: string; name: string }[] }) {
   const router = useRouter();
-  const [csv, setCsv] = useState(SAMPLE);
-  const [yardId, setYardId] = useState("");
+  // Empty, with the example as a hint: made-up iron in the box would import as real.
+  const [csv, setCsv] = useState("");
+  const [yardId, setYardId] = useState(yards[0]?.id ?? "");
   const [newYard, setNewYard] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -106,7 +107,7 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
             </span>
           </div>
           {err ? <p className="text-sm text-amber-400">{err}</p> : null}
-          <textarea value={csv} onChange={(e) => { setCsv(e.target.value); setFileName(""); }} rows={10}
+          <textarea value={csv} placeholder={SAMPLE} onChange={(e) => { setCsv(e.target.value); setFileName(""); }} rows={10}
             className="rounded-lg border border-line-2 bg-coal px-3 py-2 font-mono text-xs text-ink outline-none focus:border-bone" />
           <span className="text-xs text-ink-faint">
             Columns (any order): <span className="font-mono">unit, unit_type, asset, serial, category, item, kind, issued, expires</span>.
@@ -116,10 +117,10 @@ export default function ImportClient({ yards }: { yards: { id: string; name: str
         </label>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => run(false)} disabled={busy} variant="outline">
+          <Button onClick={() => run(false)} disabled={busy || !csv.trim()} variant="outline">
             <Eye className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Check the list first"}
           </Button>
-          <Button onClick={() => run(true)} disabled={busy || !result || !result.ok || (!result.committed && result.errors === result.rows.length)}>
+          <Button onClick={() => run(true)} disabled={busy || !csv.trim() || !result || !result.ok || (!result.committed && result.errors === result.rows.length)}>
             <Upload className="h-[18px] w-[18px]" /> {busy ? "Working…" : "Add it all"}
           </Button>
         </div>

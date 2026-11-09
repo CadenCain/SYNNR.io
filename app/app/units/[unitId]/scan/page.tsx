@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { localToday } from "@/lib/saas/status";
+import { judgeItem, isNoPaper } from "@/lib/saas/judge";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { getScanPieces } from "@/lib/saas/scan-pieces";
@@ -23,7 +25,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   const { company } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
-  const [{ data: unitRow }, { pieces }, plan, rules, { data: lastRow }, { data: pkgRows }, { data: outRows }, { data: backRow }] = await Promise.all([
+  const [{ data: unitRow }, { pieces }, plan, rules, { data: lastRow }, { data: pkgRows }, { data: outRows }, { data: backRow }, { data: paperRows }] = await Promise.all([
     db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
     getScanPieces(db, company.id),
     getOpenPlan(db, company.id, unitId),
@@ -34,7 +36,15 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       .eq("company_id", company.id).or(`unit_id.is.null,unit_id.eq.${unitId}`).order("name"),
     db.from("saas_assets").select("id, out_since").eq("company_id", company.id).eq("unit_id", unitId).not("out_since", "is", null),
     db.from("saas_returns").select("finished_at").eq("company_id", company.id).eq("unit_id", unitId).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+    // The truck's own paper (DOT and the like): the save blocks on it, so the phone says so up front.
+    db.from("saas_compliance_items").select("id, title, expiration_date, reminder_days, pending_until, last_upload_id")
+      .eq("company_id", company.id).eq("parent_type", "unit").eq("parent_id", unitId),
   ]);
+  const today = localToday();
+  const truckPaper = ((paperRows ?? []) as { id: string; title: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null }[])
+    .map((it) => ({ it, r: judgeItem(it, today, today) }))
+    .filter((x) => x.r.result === "expired" || x.r.result === "missing")
+    .map((x) => ({ title: x.it.title, detail: isNoPaper(x.r) ? "has no cert attached" : x.r.detail }));
   // Marked "still out" at the last check-in: on the last job, not on this truck.
   const lastBack = (backRow as { finished_at: string } | null)?.finished_at ?? null;
   const stillOutIds = ((outRows ?? []) as { id: string; out_since: string }[]).filter((r) => lastBack && r.out_since < lastBack).map((r) => r.id);
@@ -66,7 +76,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
           : "No load-out scanned on this truck yet."}
       />
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
-        kit={kitRow ? linesOf(kitRow) : []} kitChecks={kitRow?.roll_checks ?? []} packages={packages} stillOutIds={stillOutIds}
+        kit={kitRow ? linesOf(kitRow) : []} kitChecks={kitRow?.roll_checks ?? []} packages={packages} stillOutIds={stillOutIds} truckPaper={truckPaper}
         lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
         plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, job: plan.job, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
         tagRule={rules.requireTagScan}

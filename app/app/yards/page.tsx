@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isReservedYardName } from "@/lib/saas/billing-rules";
 import PendingButton from "@/components/ui/pending-button";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,6 +33,7 @@ async function createYard(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim() || null;
   if (!name) return;
+  if (isReservedYardName(name)) redirect(`/app/yards?err=${encodeURIComponent("That name is RollReady's own. Pick another name for the yard.")}`);
   const db = await saasDb();
   // Server-side cap check — the wall in the UI is presentation, this is law.
   const inUse = await billableYardCount(company.id);
@@ -56,6 +58,7 @@ async function addYardWithUpgrade(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim() || null;
   if (!name) return;
+  if (isReservedYardName(name)) redirect(`/app/yards?err=${encodeURIComponent("That name is RollReady's own. Pick another name for the yard.")}`);
   // A second tap after the first already raised the plan: an echo, not a new yard.
   if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/yards");
   // A name that's taken is refused before the bill moves, not after.
@@ -120,7 +123,7 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Yards</h1>
           <p className="mt-1 text-sm text-ink-dim">
-            Each yard holds your trucks, shops, assets, and certs.
+            Each yard holds your trucks, shops, iron, and certs.
             {company.role === "member" ? ""
               : company.comped
               ? " Comped account, unlimited yards."
@@ -146,7 +149,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
                   <div className="break-words font-semibold text-ink">{y.name}</div>
                   <div className="text-sm text-ink-dim">
                     {y.location ? y.location + " · " : ""}
-                    {y.saas_units?.[0]?.count ?? 0} units · {y.saas_assets?.[0]?.count ?? 0} assets
+                    {(() => { const t = y.saas_units?.[0]?.count ?? 0; const p = y.saas_assets?.[0]?.count ?? 0;
+                      return `${t} ${t === 1 ? "truck" : "trucks"} · ${p} ${p === 1 ? "piece" : "pieces"} of iron`; })()}
                     {(() => { const t = yardTrouble.get(y.id);
                       if (!t || (t.notReady === 0 && t.dueSoon === 0)) return null;
                       return <> · {t.notReady > 0 ? <span className="font-medium text-red-400">{t.notReady} not ready</span> : null}{t.notReady > 0 && t.dueSoon > 0 ? " · " : ""}{t.dueSoon > 0 ? <span className="text-amber-400">{t.dueSoon} due soon</span> : null}</>; })()}
@@ -220,8 +224,8 @@ export default async function YardsPage({ searchParams }: { searchParams: Promis
           </form>
           <p className="mt-2 text-xs text-ink-faint">
             {company.comped
-              ? "Comped account. Add what you need. The sample yard is always free."
-              : `You're on ${company.yard_quantity} yard${company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime for $500/mo, prorated. The sample yard is free and doesn't count.`}
+              ? "Comped account. Add what you need."
+              : `You're on ${company.yard_quantity} yard${company.yard_quantity === 1 ? "" : "s"}. Need another? Add it to your plan anytime for $500/mo, prorated.`}
           </p>
         </Card>
       )}

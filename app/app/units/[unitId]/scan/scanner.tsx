@@ -1,5 +1,6 @@
 "use client";
 
+import { YARD_TZ } from "@/lib/saas/format";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Plus, ShieldCheck, OctagonX, Lock, ListTodo } from "lucide-react";
@@ -56,7 +57,8 @@ const TONE = {
   warn: "border-amber-500/40 bg-amber-500/10 text-amber-400",
   bad: "border-red-500/50 bg-red-500/10 text-red-400",
 };
-const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+// Yard time (Central), the same as the record and the proof link, whatever the phone's set to.
+const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
 
 // Scans live on the phone until the load-out is saved, so a dead zone, a
 // dropped call, or a closed tab never loses them.
@@ -92,7 +94,7 @@ async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | nu
 
 export interface ScanPlan { by: string | null; at: string; note: string | null; job?: string | null; packageIds: string[]; lines: KitLine[] }
 
-export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], stillOutIds = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], stillOutIds = [], truckPaper = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
@@ -101,6 +103,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   kitChecks?: string[];
   /** Pieces logged on this truck but still out on the last job (marked so at check-in). */
   stillOutIds?: string[];
+  /** The truck's own paper that's out of date or has no cert: the save blocks on it. */
+  truckPaper?: { title: string; detail: string }[];
   /** Packages a hand can add for the job. */
   packages: PackageOption[];
   manager?: boolean;
@@ -425,7 +429,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     const key = photo ? `${startedAt}-${photo.at}` : "none";
     // A dead connection can hang an upload for many minutes: after 90 seconds
     // start a fresh one (a second copy landing is fine, it says "already there").
-    if (photoSend.current?.key === key && nowMs() - photoSend.current.at < 90e3) return photoSend.current.p;
+    if (photoSend.current?.key === key && nowMs() - photoSend.current.at < 4 * 60e3) return photoSend.current.p;
     const p = sendPhoto();
     photoSend.current = { key, p, at: nowMs() };
     // A failed upload is tried again next time; a finished one is reused.
@@ -466,8 +470,9 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       // One bar of signal: stop waiting and keep it on the phone (a resend
       // can't make a second record). The photo keeps uploading meanwhile, and
       // the next try picks it up where it is.
-      const timeout = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
-      const photoPath = await timeout(sendPhotoOnce(), 45000);
+      const timeout = <T,>(p: Promise<T>, ms: number, what = "timeout") => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error(what)), ms))]);
+      // A slow photo is just a slow photo: it keeps going and never counts as stuck.
+      const photoPath = await timeout(sendPhotoOnce(), 45000, "photo-timeout");
       if (photoPath === false) { setSaving(false); return; }
       res = await timeout(finishLoadout({
         unitId: truck.id, startedAt, keptSince: keptSince ?? undefined,
@@ -479,10 +484,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       // No signal, weak signal, or the request died. Everything is still on the phone.
       setSaving(false);
       setWaitingForSignal(true);
-      const slow = e instanceof Error && e.message === "timeout";
+      const slow = e instanceof Error && (e.message === "timeout" || e.message === "photo-timeout");
+      const stuck = e instanceof Error && e.message === "timeout";
       // Slow isn't broken: a real failure with signal counts toward "reload",
       // and so do three slow tries in a row (one stuck request blocks the rest).
-      const slowNow = slow && navigator.onLine ? slowTries + 1 : 0;
+      const slowNow = stuck && navigator.onLine ? slowTries + 1 : slow ? slowTries : 0;
       setSlowTries(slowNow);
       const withSignal = navigator.onLine && (!slow || slowNow >= 3);
       const fails = withSignal ? Math.max(failsWithSignal + 1, slowNow >= 3 ? 2 : 0) : failsWithSignal;
@@ -500,6 +506,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     }
     setSaving(false);
     setSlowTries(0);
+    setFailsWithSignal(0);
     // Stale (the truck already moved on): drop the phone's copy so it stops coming back.
     if (res.stale) { clearDraft(truck.id); setWaitingForSignal(false); }
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
@@ -613,7 +620,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const byHandNotAllowed = list.filter((p) => scans[p.id]?.how === "hand" && needsTag(p));
   const noPhoto = photoRule === "required" && askPhoto && !photo;
   const notTapped = askChecks.filter((c) => !checked[c]);
-  const willBlock = nothingScanned || noPhoto || notTapped.length > 0 || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
+  const willBlock = nothingScanned || noPhoto || notTapped.length > 0 || truckPaper.length > 0 || short.length + redScanned.length + missingNow.length + byHandNotAllowed.length > 0;
   const pieceText = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
   const required = lines.reduce((n, l) => n + l.qty, 0);
@@ -998,6 +1005,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             {willBlock ? (
               <ul className="mt-1 flex flex-col gap-1 text-sm font-medium">
                 {nothingScanned ? <li>Nothing was scanned onto the truck</li> : null}
+                {truckPaper.map((t) => <li key={`t${t.title}`}>Truck paper: {t.title} {t.detail}. A manager fixes this or rolls it anyway.</li>)}
                 {notTapped.map((c) => <li key={`c${c}`}>Not confirmed: {c}</li>)}
                 {noPhoto ? <li>No photo of the loaded truck</li> : null}
                 {short.map((l, i) => <li key={`s${i}`}>Short: {l.label}, {l.filled.length} of {l.qty} scanned</li>)}
@@ -1011,6 +1019,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             {willBlock ? <p className="mt-2 text-sm text-ink-dim">You can still save it. The record will say NOT READY, and only a manager can roll it anyway.</p> : null}
           </div>
           {saveErr ? <p className={cn("text-sm", waitingForSignal ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
+          {waitingForSignal ? <p className="text-[13px] text-ink-faint">It sends the list as it was when you tapped Save. Anything you change now goes in a new load-out after this one lands.</p> : null}
           {failsWithSignal >= 2 ? (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("outline", "lg", "h-14 self-start text-base")}>Reload the page</button>
           ) : null}

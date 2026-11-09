@@ -18,7 +18,7 @@ describe("the managers' morning email", () => {
     expect(m.body).toContain("2 load-outs (1 READY, 1 blocked), 1 check-in.");
     expect(m.body.indexOf("Not scanned out")).toBeLessThan(m.body.indexOf("Blocked at load-out"));
     expect(m.body).toContain("On the crew, nothing in RollReady this week:\n  Lupe Cardenas");
-    expect(m.body).toContain("2 tests have a date but no cert attached");
+    expect(m.body).toContain("2 tests or truck papers have a date but no cert attached");
   });
   it("a normal day reads as a normal day", () => {
     expect(summaryText({ ...base, loadouts: 3, ready: 3, checkins: 2 })!.subject).toBe("RollReady: yesterday at Caprock");

@@ -1,5 +1,6 @@
 "use client";
 
+import { YARD_TZ } from "@/lib/saas/format";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Nfc, Camera, Check, X, ScanLine, Truck, Warehouse } from "lucide-react";
@@ -20,9 +21,9 @@ import { finishReturn, type ReturnDest } from "./actions";
  */
 
 /** A piece checked back in. redTag: it came back damaged or failed, and why. */
-type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string; proof?: string; redTag?: string };
+type Scan = { how: ScanHow; at: number; to: ReturnDest; rack: string; proof?: string; redTag?: string; yardId?: string };
 type Outcome = "still_out" | "missing";
-type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; savedAt: number };
+type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; savedAt: number; yardId?: string };
 
 const TONE = {
   good: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
@@ -30,7 +31,7 @@ const TONE = {
   bad: "border-red-500/50 bg-red-500/10 text-red-400",
 };
 const HOW: Record<ScanHow, string> = { nfc: "NFC tap", qr: "QR", hand: "checked by hand" };
-const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
 const noSubscribe = () => () => {};
 const draftKey = (k: string) => `rr-return-${k}`;
 const readDraftRaw = (k: string): string | null => {
@@ -79,11 +80,14 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     .sort((a, b) => Number(b.id === firstId) - Number(a.id === firstId) || (outDays[b.id] ?? 0) - (outDays[a.id] ?? 0)), [pieces, truck, outDays, firstId]);
   const extra = pieces.filter((p) => scans[p.id] && !expected.some((e) => e.id === p.id));
   const yardName = yards.find((y) => y.id === yardId)?.name ?? "the yard";
-  const destText = (s: Scan) => s.to === "truck" && truck ? `back on ${truck.name}` : `into ${yardName}${s.rack ? `, ${s.rack}` : ""}`;
+  // Each piece goes into the yard picked when it was checked, so changing the
+  // picker later only moves what's checked after that.
+  const yardNameOf = (s: Scan) => yards.find((y) => y.id === (s.yardId ?? yardId))?.name ?? yardName;
+  const destText = (s: Scan) => s.to === "truck" && truck ? `back on ${truck.name}` : `into ${yardNameOf(s)}${s.rack ? `, ${s.rack}` : ""}`;
 
   function mark(p: ScanPiece, how: ScanHow, proof?: string) {
     const already = Boolean(scans[p.id]);
-    const s: Scan = { how, at: Date.now(), to: dest, rack: dest === "yard" ? rack.trim() : "", ...(proof ? { proof } : {}) };
+    const s: Scan = { how, at: Date.now(), to: dest, rack: dest === "yard" ? rack.trim() : "", yardId, ...(proof ? { proof } : {}) };
     if (!already) setScans((x) => ({ ...x, [p.id]: s }));
     const label = `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
     setBanner(already ? { tone: "warn", text: `${label} is already checked in.` }
@@ -125,27 +129,36 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   });
   const flip = (id: string) => setScans((x) => {
     const s = x[id]; if (!s || !truck) return x;
-    return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim() } : { ...s, to: "truck", rack: "" } };
+    return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim(), yardId: s.yardId ?? yardId } : { ...s, to: "truck", rack: "" } };
   });
 
   useEffect(() => {
     if (saved || Object.keys(scans).length === 0) return;
-    try { localStorage.setItem(draftKey(key), JSON.stringify({ startedAt, scans, outcomes, savedAt: Date.now() } satisfies Draft)); } catch { /* storage off */ }
-  }, [scans, outcomes, startedAt, saved, key]);
+    try { localStorage.setItem(draftKey(key), JSON.stringify({ startedAt, scans, outcomes, savedAt: Date.now(), yardId } satisfies Draft)); } catch { /* storage off */ }
+  }, [scans, outcomes, startedAt, saved, key, yardId]);
 
+  const savingNow = useRef(false);
   async function save() {
+    // The 30-second retry never starts a second save over one still going.
+    if (savingNow.current) return;
+    savingNow.current = true;
     setSaving(true); setSaveErr("");
     let res: Awaited<ReturnType<typeof finishReturn>>;
     try {
-      res = await finishReturn({
+      const send = finishReturn({
         unitId: truck?.id ?? null, yardId: yardId || null, startedAt,
-        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof, redTag: s.redTag })),
+        scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof, redTag: s.redTag, yardId: s.yardId })),
         notReturned: truck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
       });
-    } catch {
+      res = await Promise.race([send, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 25000))]);
+    } catch (e) {
       setSaving(false); setWaiting(true);
-      setSaveErr("No signal. Your check-in is saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
+      setSaveErr(e instanceof Error && e.message === "timeout" && navigator.onLine
+        ? "Weak signal, still sending. Your check-in is saved on this phone. Leave this screen open and it keeps trying."
+        : "No signal. Your check-in is saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
       return;
+    } finally {
+      savingNow.current = false;
     }
     setSaving(false);
     if (!res.ok) { setSaveErr(res.error ?? "Couldn't save the check-in."); return; }
@@ -192,7 +205,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
           <div className="font-semibold">There&apos;s an unsaved check-in on this phone</div>
           <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}.</p>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt); setDraftHandled(true); }} className={buttonClass("default", "lg")}>Pick it back up</button>
+            <button type="button" onClick={() => { setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt); if (draft.yardId && yards.some((y) => y.id === draft.yardId)) setYardId(draft.yardId); setDraftHandled(true); }} className={buttonClass("default", "lg")}>Pick it back up</button>
             <button type="button" onClick={() => { try { localStorage.removeItem(draftKey(key)); } catch { /* */ } setDraftHandled(true); }} className={buttonClass("ghost", "lg")}>Start over</button>
           </div>
         </div>

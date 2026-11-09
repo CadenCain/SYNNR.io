@@ -45,7 +45,7 @@ export default async function ReviewPage() {
   const db = await saasDb();
   const since = new Date(clock() - 30 * 86400e3).toISOString();
 
-  const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: checkData }] = await Promise.all([
+  const [{ data: waitingData }, { data: recentData }, { data: typedData }, { data: itemData }, { data: unitData }, { data: assetData }, { data: checkData }, { data: loadData }] = await Promise.all([
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).eq("status", "waiting").order("created_at", { ascending: true }),
     db.from("saas_cert_uploads").select(COLS).eq("company_id", company.id).neq("status", "waiting").gte("created_at", since).order("created_at", { ascending: false }).limit(80),
     db.from("saas_compliance_items").select("id, title, parent_type, parent_id, expiration_date, typed_expiration, updated_at").eq("company_id", company.id).neq("parent_type", "crew").or("renewed_without_proof.eq.true,typed_expiration.not.is.null").order("updated_at", { ascending: false }).limit(40),
@@ -53,6 +53,7 @@ export default async function ReviewPage() {
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_assets").select("id, name, unit_id").eq("company_id", company.id),
     db.from("saas_dispatch_checks").select("id, unit_id, started_at").eq("company_id", company.id).gte("started_at", since),
+    db.from("saas_loadout_scans").select("id, unit_id, finished_at").eq("company_id", company.id).gte("finished_at", since).not("unit_id", "is", null),
   ]);
   const waiting = (waitingData ?? []) as Upload[];
   const recent = (recentData ?? []) as Upload[];
@@ -80,7 +81,11 @@ export default async function ReviewPage() {
 
   // Cleared right before a truck rolled: a readiness check on that truck
   // within 24 hours after the cert went green.
-  const checks = (checkData ?? []) as { id: string; unit_id: string; started_at: string }[];
+  // Paper checks and load-outs both count as the truck being checked to roll.
+  const checks = [
+    ...((checkData ?? []) as { id: string; unit_id: string; started_at: string }[]).map((c) => ({ ...c, what: "a paper check" })),
+    ...((loadData ?? []) as { id: string; unit_id: string; finished_at: string }[]).map((l) => ({ id: l.id, unit_id: l.unit_id, started_at: l.finished_at, what: "a load-out" })),
+  ];
   const rightBeforeCheck = (u: Upload): string | null => {
     if (!u.applied_at || u.status === "rejected") return null;
     const t0 = Date.parse(u.applied_at);
@@ -88,7 +93,7 @@ export default async function ReviewPage() {
     const hit = checks.find((c) => trucks.has(c.unit_id) && Date.parse(c.started_at) >= t0 && Date.parse(c.started_at) - t0 <= 24 * 3600e3);
     if (!hit) return null;
     const hrs = Math.max(1, Math.round((Date.parse(hit.started_at) - t0) / 3600e3));
-    return `Cleared ${hrs} hour${hrs === 1 ? "" : "s"} before a readiness check on ${units.get(hit.unit_id) ?? "the truck"}.`;
+    return `Cleared ${hrs} hour${hrs === 1 ? "" : "s"} before ${hit.what} of ${units.get(hit.unit_id) ?? "the truck"}.`;
   };
 
   const shots = [...waiting, ...recent].map((u) => ({ id: u.id, path: u.storage_path }));

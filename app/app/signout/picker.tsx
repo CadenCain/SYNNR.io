@@ -52,7 +52,8 @@ export default function SignOutPicker({ pieces, crew = [], me }: { pieces: Picka
         setMsg({ tone: "bad", text: r.error ?? "Couldn't sign that out.", list: r.refused });
       }
     } catch {
-      setMsg({ tone: "bad", text: "No signal. Nothing was signed out. Try again when you have signal." });
+      setMsg({ tone: "bad", text: "No signal. It may have gone through: check With you below, or tap Sign out again when you have signal (it won't sign anything out twice)." });
+      router.refresh();
     }
     setBusy(false);
   }

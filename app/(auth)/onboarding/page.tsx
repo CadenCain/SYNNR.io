@@ -87,7 +87,34 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   // In the demo? Leave it cleanly and start a real account.
   if (isDemoUser(user)) redirect("/demo/exit?to=signup");
   const company = await getFirstActiveCompany(user.id);
-  if (company && !mustSubscribe(company)) redirect("/app");
+  // On a paid crew already: that's where they belong. Their own company would
+  // need its own login (one email, one company to start from here).
+  if (company && !mustSubscribe(company)) {
+    if (company.role === "owner") redirect("/app");
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold tracking-tight">You&apos;re on {company.name}</h1>
+        <p className="text-sm text-ink-dim">This login is on {company.name}&apos;s crew. To start your own company in RollReady, sign up with a different email, or call or text 432-250-0715 and we&apos;ll set it up.</p>
+        <a href="/app" className="inline-flex h-12 items-center justify-center rounded-lg bg-bone px-4 text-base font-semibold text-on-bone">Go to {company.name}&apos;s trucks</a>
+      </div>
+    );
+  }
+  // Taken off a crew, with no company of their own: not a sign-up.
+  if (!company) {
+    const admin = saasAdmin();
+    const { data: gone } = admin
+      ? await admin.from("saas_memberships").select("company_id").eq("user_id", user.id).eq("status", "removed").limit(1).maybeSingle()
+      : { data: null };
+    if (gone) {
+      return (
+        <div className="flex flex-col gap-4">
+          <h1 className="text-xl font-semibold tracking-tight">You&apos;re not on a crew anymore</h1>
+          <p className="text-sm text-ink-dim">A manager took this login off the crew. Ask them for a new invite, or start your own company with a different email.</p>
+          <a href="/logout" className="inline-flex h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-base font-medium text-ink">Log out</a>
+        </div>
+      );
+    }
+  }
   const { ref, err } = await searchParams;
 
   // Coming back to an unpaid company: start from what they typed.

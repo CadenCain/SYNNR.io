@@ -175,7 +175,8 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
             { n: iron.dueSoon, label: "Test due soon", sub: "book the recert", href: "/app/compliance", bad: false },
             { n: iron.down, label: "Pulled from service", sub: "red-tagged, missing, or needs redress", href: "/app/equipment?f=down", bad: iron.down > 0 },
           ].map((x) => (
-            <Link key={x.label} href={x.href} className="rounded-2xl border border-line bg-surface px-3 py-3 hover:border-bone/50 sm:px-4">
+            // A yard picked here stays picked on the list the tile opens.
+            <Link key={x.label} href={yardId && x.href.startsWith("/app/equipment") ? `${x.href}&yard=${yardId}` : x.href} className="rounded-2xl border border-line bg-surface px-3 py-3 hover:border-bone/50 sm:px-4">
               <div className="text-[12px] font-medium leading-tight text-ink-dim sm:text-[13px]">{x.label}</div>
               <div className={cn("mt-1 text-2xl font-semibold tabular-nums", x.bad ? "text-red-400" : "text-ink")}>{x.n}</div>
               <div className={cn("text-xs", x.bad && x.label === "Pieces out on jobs" ? "font-semibold text-red-400" : "text-ink-faint")}>{x.sub}</div>

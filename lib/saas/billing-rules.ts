@@ -15,5 +15,10 @@ export function isBillableYard(name: string): boolean {
   return name !== SAMPLE_YARD_NAME;
 }
 
+/** The sample yard's name is the app's own: a yard someone names doesn't get to be free by taking it. */
+export function isReservedYardName(name: string): boolean {
+  return name.trim().toLowerCase() === SAMPLE_YARD_NAME.toLowerCase();
+}
+
 
 

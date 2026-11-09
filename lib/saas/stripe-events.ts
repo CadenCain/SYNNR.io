@@ -25,6 +25,8 @@ export interface CompanyFields {
   stripe_subscription_id?: string;
   yard_quantity?: number;
   subscribed_at?: string;
+  /** When a canceled subscription stops (null when it isn't ending). */
+  cancel_at?: string | null;
 }
 
 export type CompanyMatch = ({ stripe_customer_id: string } | { id: string }) & {
@@ -49,10 +51,14 @@ const idOf = (x: string | { id: string } | null | undefined) => (x == null ? nul
 /** The fields a live subscription puts on the company row. */
 export function subscriptionFields(sub: Stripe.Subscription): CompanyFields {
   const qty = sub.items?.data?.[0]?.quantity;
+  // Canceled in the portal: Stripe keeps it to the end of the paid month.
+  const periodEnd = (sub.items?.data?.[0] as { current_period_end?: number } | undefined)?.current_period_end;
+  const endsSec = sub.cancel_at ?? (sub.cancel_at_period_end && periodEnd ? periodEnd : null);
   return {
     subscription_status: sub.status,
     stripe_subscription_id: sub.id,
     ...(typeof qty === "number" ? { yard_quantity: qty } : {}),
+    cancel_at: endsSec ? new Date(endsSec * 1000).toISOString() : null,
   };
 }
 

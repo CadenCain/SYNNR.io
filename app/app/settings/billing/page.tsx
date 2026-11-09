@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fmtDay } from "@/lib/saas/format";
 import PendingButton from "@/components/ui/pending-button";
 import { revalidatePath } from "next/cache";
 import { requireCompany , assertCan } from "@/lib/saas/auth";
@@ -53,8 +54,8 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
   const { err, locked, changed } = await searchParams;
   const inUse = await billableYardCount(company.id);
   const db = await saasDb();
-  const { data: comp } = await db.from("saas_companies").select("subscription_status, stripe_customer_id, npt_day_estimate").eq("id", company.id).maybeSingle();
-  const c = comp as { subscription_status: string; stripe_customer_id: string | null; npt_day_estimate: number } | null;
+  const { data: comp } = await db.from("saas_companies").select("subscription_status, stripe_customer_id, npt_day_estimate, cancel_at").eq("id", company.id).maybeSingle();
+  const c = comp as { subscription_status: string; stripe_customer_id: string | null; npt_day_estimate: number; cancel_at: string | null } | null;
   const status = c?.subscription_status ?? "none";
   const nptDay = c?.npt_day_estimate ?? 10000;
   const subscribed = status === "active" || status === "past_due";
@@ -87,7 +88,8 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-sm text-ink-dim">Subscription</div>
-              <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}</div>
+              <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}{c?.cancel_at && subscribed ? `, ends ${fmtDay(c.cancel_at)}` : ""}</div>
+              {c?.cancel_at && subscribed ? <p className="mt-0.5 text-sm text-ink-dim">Canceled. After that your records stay readable and exportable. Changed your mind? Turn it back on under Card, invoices, or cancel.</p> : null}
             </div>
             {owner ? (
               // Anyone who ever paid can reach the portal: card, invoices and receipts, or cancel.

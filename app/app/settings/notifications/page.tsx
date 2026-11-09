@@ -161,6 +161,9 @@ export default async function NotificationsSettings() {
               )}
               <Button type="submit"><Plus className="h-[18px] w-[18px]" /> Add</Button>
             </div>
+            {yards.length > 1 ? (
+              <p className="text-[13px] text-ink-faint">&quot;Only&quot; a yard covers that yard&apos;s load-out and test alerts. The morning email and the out-too-long email cover every yard.</p>
+            ) : null}
           </form>
         </Card>}
       </section>

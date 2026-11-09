@@ -18,7 +18,10 @@ describe("photo of the loaded truck", () => {
   });
   it("doesn't count a photo taken before the load-out started or after it saved", () => {
     expect(photoPathOk(path(started, started - 10 * 60e3), co, truck, started, now)).toBe(false);
-    expect(photoPathOk(path(started, now + 10 * 60e3), co, truck, started, now)).toBe(false);
+    expect(photoPathOk(path(started, now + 15 * 60e3), co, truck, started, now)).toBe(false);
+  });
+  it("allows a phone clock a few minutes fast, like the start time does", () => {
+    expect(photoPathOk(path(started, now + 5 * 60e3), co, truck, started, now)).toBe(true);
   });
   it("doesn't count anything that isn't a path the phone makes", () => {
     for (const bad of [undefined, null, 42, "", `${co}/loadout/${truck}/../cert/x.jpg`, `${co}/cert/${truck}/${started}-${started}.jpg`, `${path(started, started)}.png`, `${co}/loadout/${truck}/${started}-${started}.jpg?x`]) {

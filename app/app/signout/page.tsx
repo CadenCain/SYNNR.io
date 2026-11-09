@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RedressedButton from "./redressed-button";
 import { PackageCheck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
@@ -11,7 +12,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { markRedressed } from "./actions";
 import SignOutPicker, { type Pickable } from "./picker";
 
 export const dynamic = "force-dynamic";
@@ -103,10 +103,7 @@ export default async function ToolsOutPage() {
           {needsRedress.map((r) => (
             <div key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-amber-500/40 bg-amber-500/[0.06] p-3">
               <Link href={`/app/assets/${r.id}`} className="min-w-0 break-words text-sm font-semibold hover:text-bone">{r.name}{r.identifier ? <span className="font-normal text-ink-dim"> · {r.identifier}</span> : null}</Link>
-              <form action={markRedressed}>
-                <input type="hidden" name="asset_id" value={r.id} />
-                <button type="submit" className={buttonClass("default", "default", "min-h-11")}>Mark it redressed</button>
-              </form>
+              <RedressedButton assetId={r.id} />
             </div>
           ))}
         </section>

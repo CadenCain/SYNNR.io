@@ -1,4 +1,5 @@
 import { requireCompany } from "@/lib/saas/auth";
+import { testText } from "@/lib/saas/judge";
 import { readAll } from "@/lib/saas/read-all";
 import { saasDb } from "@/lib/saas/db";
 import { YARD_TZ } from "@/lib/saas/format";
@@ -39,6 +40,8 @@ export async function GET() {
   if (ovErr) return new Response("Couldn't read the overrides. Try the export again.", { status: 500 });
   const overrides = new Map(((ov ?? []) as { loadout_id: string; by_name: string; reason: string; created_at: string }[]).map((o) => [o.loadout_id, o]));
   const yardName = new Map(((yards ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
+  const offRows = await readAll<{ loadout_id: string }>((a, b) => db.from("saas_loadout_link_offs").select("loadout_id", { count: "exact" }).eq("company_id", company.id).order("loadout_id").range(a, b));
+  const linkOff = new Set(offRows.map((o) => o.loadout_id));
 
   const header = ["Load-out", "Truck", "Yard", "Job or well", "Answer", "Why", "Loaded by", "Override by", "Override reason",
     "Piece", "Serial", "How", "Scanned at", "Scanned by", "Bad when scanned", "Tests when scanned", "Proof link"];
@@ -48,11 +51,12 @@ export async function GET() {
     const answer = { ready: "READY", override: "Rolled on override", blocked: "NOT READY" }[outcomeOf(r, o ? { ...o } : null)];
     const base = [when(r.finished_at), r.unit_name, r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.job ?? "", answer, reasonsOf(r).join("; "),
       r.scanned_by ?? "", o?.by_name ?? "", o?.reason ?? ""];
-    const tail = [`https://www.synnr.io/l/${r.proof_token}`];
+    // A link the shop shut off is dead: say so instead of handing it out again.
+    const tail = [linkOff.has(r.id) ? "shut off" : `https://www.synnr.io/l/${r.proof_token}`];
     if (!r.pieces.length) lines.push([...base, "", "", "", "", "", "", "", ...tail].map(esc).join(","));
     for (const p of r.pieces) {
       lines.push([...base, p.name, p.serial ?? "", HOW[p.how] ?? p.how, when(p.at), p.by ?? r.scanned_by ?? "", p.red ? "yes" : "",
-        (p.tests ?? []).map((t) => `${t.title}: ${t.good_until ?? "no date"}`).join("; "), ...tail].map(esc).join(","));
+        (p.tests ?? []).map((t) => testText(t)).join("; "), ...tail].map(esc).join(","));
     }
   }
   return new Response(lines.join("\n") + "\n", {

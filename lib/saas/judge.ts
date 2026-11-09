@@ -75,6 +75,13 @@ export function withSerial(name: string, serial: string | null | undefined): str
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "2026-09-23" → "Sep 23, 2026": how dates read everywhere a person sees them. */
+/** How a test stood when a piece went on a truck, in words: the record, the
+ *  operator's link and the spreadsheet all say it the same way. */
+export function testText(t: { title: string; good_until: string | null; result: string }): string {
+  return `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached"
+    : t.result === "pending" ? `retested, cert on the way (the old one ran out ${plainDate(t.good_until)})` : `good to ${plainDate(t.good_until)}`}`;
+}
+
 export function plainDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   return m && d ? `${MON[m - 1]} ${d}, ${y}` : iso;

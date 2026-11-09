@@ -46,7 +46,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   section("Out too long, not checked back in:", s.outTooLong);
   section("On the crew, nothing in RollReady this week:", s.idle);
   if (s.redressWaiting) out.push("", `${s.redressWaiting} ${s.redressWaiting === 1 ? "tool is" : "tools are"} back from a run and waiting on redress. They can't go out until someone redresses them.`);
-  if (s.noPaper) out.push("", `${s.noPaper} ${s.noPaper === 1 ? "test has" : "tests have"} a date but no cert attached, so that iron can't go out.`);
+  if (s.noPaper) out.push("", `${s.noPaper} ${s.noPaper === 1 ? "test or truck paper has" : "tests or truck papers have"} a date but no cert attached, so that can't go out.`);
   out.push("", "Open RollReady: https://www.synnr.io/app");
   const flag = s.late.length + s.unscanned.length;
   const subject = flag
@@ -97,7 +97,17 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         // is already counted by the load-out, so those are left out.
         readAll<{ actor: string }>((a, b) => admin.from("saas_events").select("actor", { count: "exact" }).eq("company_id", c.id).gte("created_at", weekAgo)
           .not("actor", "is", null).neq("kind", "asset_moved").order("id").range(a, b)).then((data) => ({ data })),
-        admin.from("saas_compliance_items_with_status").select("id", { count: "exact", head: true }).eq("company_id", c.id).neq("parent_type", "crew").eq("status", "no_paper"),
+        // Paper with a date but no cert, on iron that's still in use (retired iron is kept for the record, not counted).
+        admin.from("saas_compliance_items_with_status").select("parent_type, parent_id").eq("company_id", c.id).neq("parent_type", "crew").eq("status", "no_paper").limit(1000)
+          .then(async ({ data }) => {
+            const rows = (data ?? []) as { parent_type: string; parent_id: string }[];
+            const assetIds = [...new Set(rows.filter((r) => r.parent_type === "asset").map((r) => r.parent_id))];
+            const { data: gone } = assetIds.length
+              ? await admin.from("saas_assets").select("id").in("id", assetIds.slice(0, 500)).eq("status", "retired")
+              : { data: [] };
+            const retired = new Set(((gone ?? []) as { id: string }[]).map((g) => g.id));
+            return { count: rows.filter((r) => r.parent_type !== "asset" || !retired.has(r.parent_id)).length };
+          }),
       ]);
       const unitName = new Map(((units ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
       const loads = (lo ?? []) as { id: string; unit_id: string | null; unit_name: string; verdict: string | null; reasons: string[] | null; finished_at: string }[];

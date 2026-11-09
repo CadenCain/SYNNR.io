@@ -169,7 +169,9 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     for (const n of names) if (n && !people.has(n) && !activeAnywhere.has(n)) people.set(n, { name: n, loadouts: 0, returns: 0, overrides: 0, other: 0, idle: true });
   }
   const total = (p: PersonWeek) => p.loadouts + p.returns + p.overrides + p.other;
-  const byPerson = [...people.values()].sort((a, b) => Number(a.idle ?? false) - Number(b.idle ?? false) || total(b) - total(a)).slice(0, 25);
+  // The 25 busiest, then everyone idle (a big crew must never hide who hasn't used it).
+  const everyone = [...people.values()];
+  const byPerson = [...everyone.filter((p) => !p.idle).sort((a, b) => total(b) - total(a)).slice(0, 25), ...everyone.filter((p) => p.idle)];
 
   // A hand's own truck goes first: the one they picked on this phone, or the
   // one they last loaded out.

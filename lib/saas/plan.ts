@@ -60,7 +60,7 @@ export interface PlanCompany { subscription_status: string; comped: boolean; is_
 
 /** Paid up (or comped, or the demo): the full product, load-outs included. */
 export function hasFullAccess(c: PlanCompany): boolean {
-  return c.comped || c.is_demo || c.subscription_status === "active" || c.subscription_status === "past_due";
+  return c.comped || c.is_demo || c.subscription_status === "active" || c.subscription_status === "past_due" || c.subscription_status === "trialing";
 }
 
 /**

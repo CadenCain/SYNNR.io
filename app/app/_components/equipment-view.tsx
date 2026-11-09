@@ -64,19 +64,21 @@ export interface EquipmentViewProps {
   initialQuery?: string;
   /** Where filter from the link (the board's "Pieces out" tile). */
   initialPlace?: PlaceFilter;
+  /** A yard picked on the board, carried over to the list. */
+  initialYard?: string;
   /** Out this many days or more is "Out too long". */
   alertDays?: number;
   /** Server action for the add form. Absent on the screenshot. */
   addAction?: (fd: FormData) => Promise<void>;
 }
 
-export default function EquipmentView({ list, companyName, initialFilter = "all", initialQuery = "", initialPlace = "", alertDays = DEFAULT_OUT_ALERT_DAYS, addAction }: EquipmentViewProps) {
+export default function EquipmentView({ list, companyName, initialFilter = "all", initialQuery = "", initialPlace = "", initialYard = "", alertDays = DEFAULT_OUT_ALERT_DAYS, addAction }: EquipmentViewProps) {
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [place, setPlace] = useState<PlaceFilter>(initialPlace);
   const [now] = useState(() => Date.now());
   const placeById = useMemo(() => new Map(list.rows.map((r) => [r.id, placeOf({ status: r.status, unit_id: r.unitId, out_since: r.outSince }, now, alertDays)])), [list.rows, now, alertDays]);
   const [q, setQ] = useState(initialQuery);
-  const [yard, setYard] = useState("");
+  const [yard, setYard] = useState(initialYard);
   const [type, setType] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -97,13 +99,18 @@ export default function EquipmentView({ list, companyName, initialFilter = "all"
       .filter((r) => (filter === "all" ? r.state !== "retired" : r.state === filter))
       .filter((r) => !yard || r.yardOf === yard)
       .filter((r) => !type || r.category === type)
-      .filter((r) => !place || (place === "out" ? ["out", "out_too_long"].includes(placeById.get(r.id)!) : placeById.get(r.id) === place))
+      // "Out" means out on a job (or with someone), whatever else is wrong with it,
+      // so the list matches the board's count and the morning email.
+      .filter((r) => !place
+        || (place === "out" ? r.outSince != null
+        : place === "out_too_long" ? r.outSince != null && daysOut(r.outSince, now) >= alertDays
+        : placeById.get(r.id) === place))
       .filter((r) => !needle || [r.name, r.identifier ?? "", r.where, categoryLabel(r.category), r.next?.title ?? ""]
         .some((s) => s.toLowerCase().includes(needle)))
       .sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state]
         || (a.next?.exp ?? "9999").localeCompare(b.next?.exp ?? "9999")
         || a.name.localeCompare(b.name));
-  }, [list.rows, filter, yard, type, q, place, placeById]);
+  }, [list.rows, filter, yard, type, q, place, placeById, now, alertDays]);
 
   const c = list.counts;
   const countFor = (f: Filter) =>

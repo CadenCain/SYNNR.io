@@ -47,7 +47,7 @@ export function canLowerAllowance(newAllowance: number, billableInUse: number): 
  *  (Reversed from read-only-immediately after review, 2026-08-20.)
  *  Comped companies are always writable. Reading is never gated at all. */
 export function isWritable(subscriptionStatus: string, comped: boolean): boolean {
-  return comped || subscriptionStatus === "active" || subscriptionStatus === "past_due";
+  return comped || subscriptionStatus === "active" || subscriptionStatus === "past_due" || subscriptionStatus === "trialing";
 }
 
 export const READ_ONLY_MESSAGE =

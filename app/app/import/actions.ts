@@ -1,5 +1,6 @@
 "use server";
 
+import { isReservedYardName } from "@/lib/saas/billing-rules";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
@@ -104,6 +105,15 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
   }
   let yardOp: string | null = null;
   let createdYard = false;
+  // A yard name typed in that's already one of theirs is that yard, not a new one.
+  if (!resolvedYard && newYard.trim()) {
+    if (isReservedYardName(newYard)) {
+      return { ok: false, error: "That name is RollReady's own. Pick another name for the yard.", rows: [], creates: 0, updates: 0, errors: 0, committed: false };
+    }
+    const { data: same } = await db.from("saas_yards").select("id").eq("company_id", company.id)
+      .ilike("name", newYard.trim().replace(/[%_\\]/g, (c) => `\\${c}`)).limit(1).maybeSingle();
+    if (same) resolvedYard = (same as { id: string }).id;
+  }
   if (!resolvedYard && newYard.trim()) {
     const { count: inUseCount } = await db.from("saas_yards").select("id", { count: "exact", head: true })
       .eq("company_id", company.id).neq("name", "Sample Yard (demo)");

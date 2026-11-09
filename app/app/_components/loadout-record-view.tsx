@@ -1,6 +1,6 @@
 import { ShieldCheck, TriangleAlert, OctagonX, Lock } from "lucide-react";
 import { fmtWhen, YARD_TZ } from "@/lib/saas/format";
-import { plainDate } from "@/lib/saas/judge";
+import { testText as sharedTestText } from "@/lib/saas/judge";
 import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
 import { cn } from "@/lib/utils";
 import { lineSourceLabel } from "@/lib/saas/loadout-lines";
@@ -22,9 +22,7 @@ const time = (iso: string | undefined) =>
   iso ? new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" }) : "";
 const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 /** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
-const testText = (t: { title: string; good_until: string | null; result: string }) =>
-  `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached"
-    : t.result === "pending" ? `retested, cert on the way (the old one ran out ${plainDate(t.good_until)})` : `good to ${plainDate(t.good_until)}`}`;
+const testText = sharedTestText;
 
 export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false }: {
   rec: LoadoutRecord;

@@ -60,6 +60,11 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
   const loadOutActive = isActive(path, "/app", true, TRUCK_PAGES);
 
   async function signOut() {
+    // A shared phone: the next hand mustn't pick up this one's unsaved
+    // load-outs or check-ins and send them under their own name.
+    try {
+      for (const k of Object.keys(localStorage)) if (/^rr-(loadout|return)-/.test(k)) localStorage.removeItem(k);
+    } catch { /* storage off */ }
     const sb = getBrowserSupabase();
     if (sb) await sb.auth.signOut();
     router.replace("/login");

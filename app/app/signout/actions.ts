@@ -49,12 +49,12 @@ export async function signOutTools(input: { assetIds: string[]; note?: string; t
   const note = String(input.note ?? "").trim().slice(0, 120) || null;
 
   const [{ data: assetRows }, { data: itemRows }] = await Promise.all([
-    db.from("saas_assets").select("id, name, identifier, category, status, unit_id, out_since, out_with_name, needs_redress_since")
+    db.from("saas_assets").select("id, name, identifier, category, status, unit_id, out_since, out_with_user, out_with_name, needs_redress_since")
       .eq("company_id", company.id).in("id", ids),
     db.from("saas_compliance_items").select("id, title, parent_id, expiration_date, reminder_days, pending_until, last_upload_id")
       .eq("company_id", company.id).eq("parent_type", "asset").in("parent_id", ids),
   ]);
-  type A = { id: string; name: string; identifier: string | null; category: string; status: string; unit_id: string | null; out_since: string | null; out_with_name: string | null; needs_redress_since: string | null };
+  type A = { id: string; name: string; identifier: string | null; category: string; status: string; unit_id: string | null; out_since: string | null; out_with_user: string | null; out_with_name: string | null; needs_redress_since: string | null };
   type Item = { id: string; title: string; parent_id: string; expiration_date: string | null; reminder_days: number | null; pending_until: string | null; last_upload_id: string | null };
   const assets = (assetRows ?? []) as A[];
   if (assets.length !== ids.length) return { ok: false, error: "One of those isn't in your account anymore. Reload and pick again." };
@@ -62,7 +62,10 @@ export async function signOutTools(input: { assetIds: string[]; note?: string; t
   const today = localToday();
 
   const refused: { name: string; why: string }[] = [];
-  for (const a of assets) {
+  // Already out with the same person: a resend after a dropped signal, not a
+  // new sign-out. It counts as done, not refused.
+  const already = assets.filter((a) => a.out_with_user && a.out_with_user === toId);
+  for (const a of assets.filter((x) => !already.includes(x))) {
     const why = a.status === "retired" ? "Retired"
       : a.status === "out_of_service" ? "Red-tagged"
       : a.status === "missing" ? "Flagged missing"
@@ -82,16 +85,19 @@ export async function signOutTools(input: { assetIds: string[]; note?: string; t
   }
   if (refused.length) return { ok: false, refused, error: "Nothing was signed out. Leave these behind or get them fixed first." };
 
+  if (already.length === assets.length) {
+    return { ok: true, summary: `Already signed out to ${toName}: ${already.map(label).join(", ")}` };
+  }
   const now = new Date().toISOString();
   // Only what's still free right now: two hands tapping the same tool at
   // the same moment can't both walk off with it on paper.
   const { data: took, error } = await admin.from("saas_assets").update({
     out_since: now, out_with_user: toId, out_with_name: toName, out_loadout_id: null, out_alerted_at: null,
     unit_id: null, last_seen_where: `signed out to ${toName} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
-  }).eq("company_id", company.id).in("id", ids).is("out_since", null).is("needs_redress_since", null).select("id");
+  }).eq("company_id", company.id).in("id", ids.filter((id) => !already.some((a) => a.id === id))).is("out_since", null).is("needs_redress_since", null).select("id");
   if (error) return { ok: false, error: `Couldn't sign it out: ${error.message}` };
   const gotIds = new Set(((took ?? []) as { id: string }[]).map((r) => r.id));
-  const missed = assets.filter((a) => !gotIds.has(a.id));
+  const missed = assets.filter((a) => !gotIds.has(a.id) && !already.includes(a));
   const got = assets.filter((a) => gotIds.has(a.id));
   if (!got.length) return { ok: false, error: "Someone else just signed that out. Reload to see who has it." };
   await admin.from("saas_signouts").insert(got.map((a) => ({
