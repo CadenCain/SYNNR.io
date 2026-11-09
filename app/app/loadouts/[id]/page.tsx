@@ -13,6 +13,8 @@ import { rollLoadoutAnyway } from "./actions";
 import { recordPaper } from "@/lib/saas/paper";
 import { setLoadoutLink } from "../../_proof-actions";
 
+export const metadata = { title: "Load-out record" };
+
 export const dynamic = "force-dynamic";
 
 /** One load-out record: the answer, the list, every scan with a name on it, and its proof link. */

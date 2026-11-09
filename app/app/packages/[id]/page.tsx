@@ -6,8 +6,14 @@ import { buttonClass } from "@/components/ui/button";
 import LinesEditor from "../../_components/lines-editor";
 import RollChecksEditor from "../../_components/roll-checks-editor";
 import { renamePackage, deletePackage } from "../actions";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return titled("saas_packages", id, (n) => n, "Package");
+}
 
 /** One package: its name and lines. */
 export default async function PackagePage({ params }: { params: Promise<{ id: string }> }) {

@@ -8,8 +8,14 @@ import { fmtWhen } from "@/lib/saas/format";
 import { PageHeader } from "@/components/ui/page-header";
 import LockedCard from "../../../_components/locked-card";
 import ReturnScanner from "../../../return/return-scanner";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => `Check in: ${n}`, "Check in");
+}
 
 /** Check a truck back in after a job: what came back, who scanned it, where it went. */
 export default async function TruckReturnPage({ params }: { params: Promise<{ unitId: string }> }) {

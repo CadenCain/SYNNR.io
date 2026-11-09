@@ -18,6 +18,7 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { updateYard, deleteYard } from "@/app/app/_actions";
 import ShareProof from "@/app/app/_components/share-proof";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,11 @@ async function createUnit(formData: FormData) {
   const { error } = await db.from("saas_units").insert({ company_id: company.id, yard_id, name, type, identifier });
   if (error) throw new Error(error.message);
   revalidatePath(`/app/yards/${yard_id}`);
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ yardId: string }> }) {
+  const { yardId } = await params;
+  return titled("saas_yards", yardId, (n) => n, "Yard");
 }
 
 export default async function YardDetail({ params }: { params: Promise<{ yardId: string }> }) {

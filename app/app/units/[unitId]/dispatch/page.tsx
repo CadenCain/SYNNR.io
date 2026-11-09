@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { recordDispatchCheck, rollAnyway } from "./actions";
 import JobDatePicker from "./job-date-picker";
 import RecordButton from "./record-button";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,11 @@ const RESULT_UI: Record<string, string> = {
 };
 const RESULT_LABEL: Record<string, string> = { ok: "OK", warn: "Heads-up", missing: "Missing", expired: "Expired" };
 const SECTION = "text-sm font-semibold text-ink-dim";
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => `Paper check: ${n}`, "Paper check");
+}
 
 export default async function DispatchPage({ params, searchParams }: { params: Promise<{ unitId: string }>; searchParams: Promise<{ job?: string }> }) {
   const { company } = await requireCompany();

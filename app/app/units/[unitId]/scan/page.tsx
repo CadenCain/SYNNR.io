@@ -9,8 +9,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import LoadoutScanner, { type KitLine, type PackageOption } from "./scanner";
 import LockedCard from "../../../_components/locked-card";
 import { isWritable } from "@/lib/saas/entitlements";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => `Load-out: ${n}`, "Load-out");
+}
 
 /** Load-out scan for one truck: prove what actually goes on it. */
 export default async function LoadoutScanPage({ params }: { params: Promise<{ unitId: string }> }) {

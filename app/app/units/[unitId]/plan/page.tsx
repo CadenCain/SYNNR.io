@@ -8,11 +8,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import LockedCard from "../../../_components/locked-card";
 import PlanForm from "./plan-form";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
 
 type Pkg = { id: string; name: string; unit_id: string | null; saas_package_lines: { label: string; qty: number; sort: number }[] | null };
 const linesOf = (x: Pkg) => [...(x.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }));
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => `Plan: ${n}`, "Plan next job");
+}
 
 /** Plan a truck's next job: the manager says what goes, the hand proves it went. */
 export default async function PlanPage({ params }: { params: Promise<{ unitId: string }> }) {

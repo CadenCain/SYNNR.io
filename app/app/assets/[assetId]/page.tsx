@@ -30,10 +30,16 @@ import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
 import PhotoUpload from "./photo-upload";
 import { damagedLine } from "@/lib/saas/morning-summary";
 import { markRedressed, setRedressEachRun } from "@/app/app/signout/actions";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
 
 const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
+
+export async function generateMetadata({ params }: { params: Promise<{ assetId: string }> }) {
+  const { assetId } = await params;
+  return titled("saas_assets", assetId, (n) => n, "Piece");
+}
 
 export default async function AssetDetail({ params, searchParams }: { params: Promise<{ assetId: string }>; searchParams: Promise<{ err?: string }> }) {
   const { company } = await requireCompany();

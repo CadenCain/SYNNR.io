@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import type { UnitState } from "@/lib/saas/status";
 
+export const metadata = { title: "Paper check" };
+
 export const dynamic = "force-dynamic";
 
 const ORDER: Record<UnitState, number> = { not_ready: 0, due_soon: 1, not_setup: 2, ready: 3 };

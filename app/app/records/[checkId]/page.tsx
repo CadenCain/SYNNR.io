@@ -6,6 +6,8 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 
+export const metadata = { title: "Paper check record" };
+
 export const dynamic = "force-dynamic";
 
 /**

@@ -30,10 +30,16 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { worstStatus } from "@/lib/saas/status";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
 
 const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => n, "Truck");
+}
 
 export default async function UnitDetail({ params }: { params: Promise<{ unitId: string }> }) {
   const { company } = await requireCompany();

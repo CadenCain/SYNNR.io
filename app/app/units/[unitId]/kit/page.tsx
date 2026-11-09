@@ -8,8 +8,14 @@ import { buttonClass } from "@/components/ui/button";
 import LinesEditor from "../../../_components/lines-editor";
 import RollChecksEditor from "../../../_components/roll-checks-editor";
 import { kitFromTruck } from "../../../packages/actions";
+import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ unitId: string }> }) {
+  const { unitId } = await params;
+  return titled("saas_units", unitId, (n) => `Kit: ${n}`, "Truck kit");
+}
 
 /** A truck's default kit: what it always has to leave with. */
 export default async function TruckKitPage({ params }: { params: Promise<{ unitId: string }> }) {
