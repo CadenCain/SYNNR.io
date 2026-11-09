@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 
 /** Create a shareable readiness-proof link. Returns the public URL. */
 export async function createReadinessProof(args: {
@@ -55,4 +55,22 @@ export async function revokeReadinessProof(fd: FormData) {
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", id).eq("company_id", company.id);
   revalidatePath("/app/settings/proofs");
+}
+
+/** Shut off (or turn back on) the operator link a load-out made. Managers only. */
+export async function setLoadoutLink(fd: FormData) {
+  const { company, user } = await requireCompany();
+  assertCan(company, "revoke_proof");
+  const id = String(fd.get("loadout_id") ?? "");
+  const off = String(fd.get("off") ?? "") === "1";
+  const admin = saasAdmin();
+  if (!id || !admin) return;
+  const db = await saasDb();
+  const { data: rec } = await db.from("saas_loadout_scans").select("id").eq("id", id).eq("company_id", company.id).maybeSingle();
+  if (!rec) return;
+  const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "A manager";
+  if (off) await admin.from("saas_loadout_link_offs").upsert({ loadout_id: id, company_id: company.id, off_by: actor }, { onConflict: "loadout_id" });
+  else await admin.from("saas_loadout_link_offs").delete().eq("loadout_id", id).eq("company_id", company.id);
+  revalidatePath("/app/settings/proofs");
+  revalidatePath(`/app/loadouts/${id}`);
 }

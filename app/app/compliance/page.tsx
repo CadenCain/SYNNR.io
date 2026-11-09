@@ -40,7 +40,7 @@ export default async function CompliancePage() {
       .select("id, title, kind, expiration_date, status, parent_type, parent_id")
       .eq("company_id", company.id).neq("parent_type", "crew"),
     db.from("saas_units").select("id, name").eq("company_id", company.id),
-    db.from("saas_assets").select("id, name, status").eq("company_id", company.id),
+    db.from("saas_assets").select("id, name, status, identifier, unit_id").eq("company_id", company.id),
     db.from("saas_notification_settings").select("email_enabled, lead_days, recipients").eq("company_id", company.id).maybeSingle(),
     db.from("saas_alerts_sent")
       .select("sent_at, channel, recipient, label, saas_compliance_items(title)")
@@ -59,6 +59,15 @@ export default async function CompliancePage() {
   const name = (rows: unknown, id: string) =>
     (((rows ?? []) as { id: string; name: string }[]).find((r) => r.id === id)?.name) ?? "";
 
+  // A piece: its name, its serial, and where it is, so the right one can be found and booked.
+  const assetsById = new Map(((assetData ?? []) as { id: string; name: string; identifier: string | null; unit_id: string | null }[]).map((a) => [a.id, a]));
+  const pieceLabel = (id: string) => {
+    const a = assetsById.get(id);
+    if (!a) return "";
+    const truck = a.unit_id ? name(unitData, a.unit_id) : "";
+    return [a.name, a.identifier, truck ? `on ${truck}` : ""].filter(Boolean).join(" · ");
+  };
+
   const rows: CompItem[] = items.map((i) => ({
     id: i.id,
     title: i.title,
@@ -67,7 +76,7 @@ export default async function CompliancePage() {
     expiration_date: i.expiration_date,
     status: i.status,
     parent_type: i.parent_type,
-    parentLabel: i.parent_type === "unit" ? name(unitData, i.parent_id) : name(assetData, i.parent_id),
+    parentLabel: i.parent_type === "unit" ? name(unitData, i.parent_id) : pieceLabel(i.parent_id),
     href: i.parent_type === "unit" ? `/app/units/${i.parent_id}` : `/app/assets/${i.parent_id}`,
     customers: itemCustomers.get(i.id) ?? [],
   }));

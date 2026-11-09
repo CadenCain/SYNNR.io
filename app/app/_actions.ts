@@ -136,13 +136,25 @@ export async function updateAsset(fd: FormData) {
   // this keeps a hand's save from tripping it.
   const identifier = fd.has("identifier") && manager ? { identifier: str(fd, "identifier") || null } : {};
   const db = await saasDb();
-  const { data: before } = await db.from("saas_assets").select("status").eq("id", id).eq("company_id", company.id).maybeSingle();
-  const wasRedTagged = (before as { status: string } | null)?.status === "out_of_service";
+  const { data: before } = await db.from("saas_assets").select("status, name, identifier, unit_id").eq("id", id).eq("company_id", company.id).maybeSingle();
+  const b = before as { status: string; name: string; identifier: string | null; unit_id: string | null } | null;
+  const wasRedTagged = b?.status === "out_of_service";
   if (wasRedTagged && status !== "out_of_service" && !manager) {
-    throw new Error("Only a manager can put red-tagged gear back in service.");
+    redirect(`/app/assets/${id}?err=${encodeURIComponent("Only a manager can put red-tagged iron back in service.")}`);
+  }
+  // A red tag comes off with a note: what was fixed, so the record says why it's good again.
+  const clearNote = str(fd, "clear_note").slice(0, 200);
+  if (wasRedTagged && status !== "out_of_service" && clearNote.length < 5) {
+    redirect(`/app/assets/${id}?err=${encodeURIComponent("Say what was done to it before putting it back in service.")}`);
   }
   const { error } = await db.from("saas_assets").update({ ...named, status, ...identifier }).eq("id", id).eq("company_id", company.id);
   if (error) throw new Error(error.message);
+  if (wasRedTagged && status !== "out_of_service" && b) {
+    const { data: u } = await db.auth.getUser();
+    const actor = (u.user?.user_metadata?.full_name as string | undefined)?.trim() || u.user?.email?.split("@")[0] || "A manager";
+    void logEvent({ companyId: company.id, kind: "asset_status", unitId: b.unit_id, actor,
+      message: `${actor} took the red tag off ${b.name}${b.identifier ? ` ${b.identifier}` : ""}: "${clearNote}"` });
+  }
   revalidatePath(`/app/assets/${id}`);
 }
 /**

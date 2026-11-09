@@ -362,7 +362,7 @@ export const SHOWCASE_PROOF_TOKEN = "c7aae8c1e1a64d5eab617b46990f43932d78";
 // its members, and its proof links are kept: the reaper deletes those too,
 // a refresh must not.
 const YARD_TABLES = [
-  "saas_alerts_sent", "saas_signouts", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+  "saas_alerts_sent", "saas_signouts", "saas_asset_moves", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_link_offs", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
   "saas_dispatch_checks", "saas_readiness_snapshots", "saas_attachments",
   "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
   "saas_unit_crew", "saas_assets", "saas_units", "saas_yards",
@@ -421,7 +421,7 @@ export async function cleanupDemoCompanies(admin: SupabaseClient, maxAgeHours = 
       const { data: members } = await admin.from("saas_memberships").select("user_id").eq("company_id", cid);
       // Child tables first (not everything cascades), company last, users after.
       const tables = [
-        "saas_alerts_sent", "saas_signouts", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
+        "saas_alerts_sent", "saas_signouts", "saas_returns", "saas_loadout_plans", "saas_loadout_overrides", "saas_loadout_link_offs", "saas_loadout_scans", "saas_package_lines", "saas_packages", "saas_events", "saas_dispatch_check_items", "saas_dispatch_check_crew",
         "saas_dispatch_checks", "saas_readiness_snapshots", "saas_readiness_proofs", "saas_attachments",
         "saas_doc_requests", "saas_item_customers", "saas_customers", "saas_cert_uploads", "saas_compliance_items",
         "saas_unit_crew", "saas_assets", "saas_units", "saas_yards", "saas_alert_recipients",

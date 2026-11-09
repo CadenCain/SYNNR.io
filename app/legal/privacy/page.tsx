@@ -4,24 +4,24 @@ import { LegalShell } from "../LegalShell";
 // marketing site). Rewritten 2026-08-19. Lawyer flags: retention windows,
 // whether Texas/CCPA-style rights language is needed as customers grow.
 
-export const metadata = { title: "SYNNR — Privacy Policy" };
+export const metadata = { title: "Privacy Policy · RollReady" };
 
 export default function PrivacyPage() {
   return (
-    <LegalShell eyebrow="Legal" title="Privacy Policy" updated="August 19, 2026">
+    <LegalShell eyebrow="Legal" title="Privacy Policy" updated="November 9, 2026">
       <h2>1. What we collect</h2>
       <p>
         <strong>Account data:</strong> your email, name, and company name when you sign up.{" "}
-        <strong>Yard data:</strong> whatever your team enters — equipment, certification and
-        inspection dates, crew names and credential dates, phone numbers you add for alert
-        routing, photos you upload. <strong>Usage basics:</strong> standard server logs
+        <strong>Yard data:</strong> whatever your team enters: trucks, iron and tools, test dates and
+        cert photos, load-out, sign-out, and check-in records with the name of who did each one,
+        photos of loaded trucks, crew names, and phone numbers you add for alerts. <strong>Usage basics:</strong> standard server logs
         (IP, timestamps, pages) needed to run and secure the service.
       </p>
 
       <h2>2. What we use it for</h2>
       <p>
-        To run the product: showing your yard its own records, computing readiness, and sending
-        the expiration alerts you configured. We email you about your account and the service.
+        To run the product: showing your yard its own records, checking load-outs, and sending
+        the alerts and morning summaries you get. We email you about your account and the service.
         We do not sell your data, rent it, or use your yard records for advertising. Crew
         information you enter is used only to show it back to your company and to route alerts
         you set up.
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       <h2>3. Where it lives</h2>
       <p>
         Data is stored with Supabase (Postgres, US region) with row-level security separating
-        each company&apos;s records. The app runs on Vercel. Payments are processed by Stripe —
+        each company&apos;s records. The app runs on Vercel. Payments are processed by Stripe;
         we never see or store card numbers. Alert emails are delivered by Resend. Each of these
         processors handles data under their own security and privacy commitments.
       </p>
@@ -38,18 +38,19 @@ export default function PrivacyPage() {
       <h2>4. Who can see it</h2>
       <p>
         Your company&apos;s data is visible to your company&apos;s users, per the roles you
-        assign. If you create a shareable proof link, anyone with that link can see the
-        read-only status page it points to until you revoke it. The operator (us) can access
-        data for support and reliability work — the daily alert sweep, for example, reads
-        records to send your warnings.
+        assign. Every load-out makes a proof link for your operator, and you can make others. Anyone
+        with a link can see the read-only record it points to (the iron, its certs, who loaded
+        it, the photo of the truck) until you shut it off under Settings, Proof links. We can
+        access data for support and reliability work; the morning summary, for example, reads
+        records to send it.
       </p>
 
       <h2>5. Export and deletion</h2>
       <p>
-        Export everything as CSV from Settings at any time, in any subscription state. To
-        delete your account and company data, email{" "}
-        <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a> — we delete from the live
-        system and residual copies age out of encrypted backups on the backup schedule.
+        Export your records as spreadsheets at any time, in any subscription state. To delete
+        your account and company data, email{" "}
+        <a href="mailto:cadencain@synnr.io">cadencain@synnr.io</a>. We delete it from the live
+        system, and residual copies age out of encrypted backups on the backup schedule.
       </p>
 
       <h2>6. Cookies</h2>

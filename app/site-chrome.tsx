@@ -17,7 +17,7 @@ export function SiteNav() {
       <div className="nav-pill">
         <a className="brand" href="/" aria-label="RollReady by SYNNR">{MARK}<span className="wordmark">RollReady</span><span className="by-synnr">by SYNNR</span></a>
         <nav className="nav-links">
-          <a href="/#how">How it works</a>
+          <a href="/#trip">How it works</a>
           <a href="/#pricing">Pricing</a>
           <a href="/demo">Live demo</a>
         </nav>
@@ -32,7 +32,7 @@ export function SiteNav() {
         </div>
         <input type="checkbox" id="navMenu" className="nav-toggle" aria-hidden="true" />
         <nav className="nav-mobile">
-          <a href="/#how">How it works</a>
+          <a href="/#trip">How it works</a>
           <a href="/#pricing">Pricing</a>
           <a href="/demo">Live demo</a>
           <a href="/signup">Get started</a>

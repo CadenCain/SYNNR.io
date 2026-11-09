@@ -34,7 +34,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try RollReady with a demo yard</h1>
           <p className="text-base leading-relaxed text-ink-dim">
             Tap the button and you get your own copy of a made-up Odessa coil tubing company: 16 trucks and
-            trailers and 62 pieces of iron, with a few problems already in the yard. Start a load-out on CT&#8209;03
+            trailers and about 65 pieces of iron and tools, with a few problems already in the yard. Start a load-out on CT&#8209;03
             and check its pieces off: when you get to the BOP stack that&apos;s six days past its pressure test,
             RollReady tells you not to load it. Then open the yard map, and look under Review uploads at the cert
             photo a hand sent with a date that isn&apos;t on the paper.
@@ -102,7 +102,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div id="your-yard" className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-6 text-center sm:p-8">
           <h2 className="text-xl font-semibold">Want this set up with your iron?</h2>
           <p className="max-w-md text-sm leading-relaxed text-ink-dim">
-            Load it yourself for free, or I&apos;ll load it with you: free for the first 10 yards, then $1,000 a yard, one time.
+            Load it yourself for free, or I&apos;ll load it with you: $1,000 a yard, one time, and free for the first 10 yards I set up.
             Bring your binder or spreadsheets and we&apos;ll load your iron, serials, and test dates together in one afternoon.
             After that it&apos;s $500 a yard per month. No contract, and never per-seat.
           </p>

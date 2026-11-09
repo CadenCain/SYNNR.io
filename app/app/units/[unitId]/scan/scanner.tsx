@@ -246,9 +246,16 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }
   useEffect(() => { handleRef.current = handleScanSync; });
 
-  // Keep the load-out on the phone as it happens.
+  // Keep the load-out on the phone as it happens. Unchecking the last piece
+  // clears it (a draft from before this visit stays until picked up or dropped).
+  const hadScans = useRef(false);
   useEffect(() => {
-    if (saved || Object.keys(scans).length === 0) return;
+    if (saved) return;
+    if (Object.keys(scans).length === 0) {
+      if (hadScans.current) { clearDraft(truck.id); hadScans.current = false; }
+      return;
+    }
+    hadScans.current = true;
     writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, checks: checked, savedAt: Date.now() });
   }, [scans, outcomes, packageIds, quick, checked, startedAt, saved, truck.id]);
 
@@ -445,7 +452,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       // with signal, a reload gets the new page, and the scans come back.
       setSaveErr(withSignal && fails >= 2
         ? "Couldn't reach RollReady. Your scans are saved on this phone. Reload the page and tap Pick it back up."
-        : "No signal. Your scans are saved on this phone, and they'll send by themselves when you have signal.");
+        : "No signal. Your scans are saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
       return;
     }
     setSaving(false);
@@ -462,6 +469,19 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken });
     try { navigator.vibrate?.(res.verdict === "ready" ? 120 : [200, 100, 200, 100, 200]); } catch { /* no vibration */ }
   }
+  /**
+   * After NOT READY: keep every good piece already checked on and the roll
+   * checks, drop only the bad ones, and start a new load-out from there. The
+   * photo is retaken (it belongs to the load-out it was taken for).
+   */
+  function fixAndRescan() {
+    const keep = Object.fromEntries(Object.entries(scans).filter(([id]) => list.find((p) => p.id === id)?.problem !== "red"));
+    const dropped = Object.keys(scans).length - Object.keys(keep).length;
+    setSaved(null); setScans(keep); setOutcomes({}); setFinishing(false); setPhoto(null); uploadedPath.current = null;
+    setStartedAt(new Date().toISOString());
+    setBanner({ tone: "warn", text: `Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took off ${dropped} bad ${dropped === 1 ? "one" : "ones"}: put a good one on in its place` : ""}. Fix what's wrong, then save again.` });
+  }
+
   // When signal comes back, send the load-out that's waiting.
   const saveRef = useRef(save);
   useEffect(() => { saveRef.current = save; });
@@ -497,7 +517,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
           {!ready ? (
-            <button type="button" onClick={() => { setSaved(null); setScans({}); setOutcomes({}); setFinishing(false); setBanner(null); setPhoto(null); setChecked({}); uploadedPath.current = null; setStartedAt(new Date().toISOString()); }}
+            <button type="button" onClick={fixAndRescan}
               className={buttonClass("default", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Fix it and scan again</button>
           ) : null}
           <Link href={`/app/loadouts/${saved.id}`} className={buttonClass(ready ? "default" : "outline", "lg", "h-14 text-base")}>

@@ -28,13 +28,14 @@ import { localToday } from "@/lib/saas/status";
 import { qrSvg, tagUrl } from "@/lib/saas/qr";
 import { NfcWriteButton, NfcHowTo } from "@/app/app/_components/nfc-write";
 import PhotoUpload from "./photo-upload";
+import { damagedLine } from "@/lib/saas/morning-summary";
 import { markRedressed, setRedressEachRun } from "@/app/app/signout/actions";
 
 export const dynamic = "force-dynamic";
 
 const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
 
-export default async function AssetDetail({ params }: { params: Promise<{ assetId: string }> }) {
+export default async function AssetDetail({ params, searchParams }: { params: Promise<{ assetId: string }>; searchParams: Promise<{ err?: string }> }) {
   const { company } = await requireCompany();
   const { assetId } = await params;
   const db = await saasDb();
@@ -95,6 +96,16 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
   const showTag = !rules.requireTagScan || isManagerRole(company.role);
   const [paper, qr] = await Promise.all([paperLinks(db, items), showTag ? qrSvg(tagUrl(a.tag_token)) : Promise.resolve("")]);
   const isManager = isManagerRole(company.role);
+  const { err } = await searchParams;
+  // Red-tagged at a check-in: why, and whose job it came back from.
+  let redTagLine: string | null = null;
+  if (a.status === "out_of_service") {
+    const { data: ret } = await db.from("saas_returns").select("returned_by, finished_at, pieces").eq("company_id", company.id)
+      .contains("pieces", [{ asset_id: a.id }]).order("finished_at", { ascending: false }).limit(1).maybeSingle();
+    const r = ret as { returned_by: string; finished_at: string; pieces: { asset_id: string; name: string; serial: string | null; red_tag: string | null; went_out?: { truck?: string; by?: string | null; with?: string; at?: string | null } | null }[] } | null;
+    const piece = r?.pieces.find((x) => x.asset_id === a.id && x.red_tag);
+    if (r && piece) redTagLine = `Red-tagged at check-in ${fmtWhen(r.finished_at)}. ${damagedLine(piece, r.returned_by)}`;
+  }
 
   // The one line that matters: worst first, then the soonest due.
   const today = localToday();
@@ -115,6 +126,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
 
   return (
     <div className="flex flex-col gap-7">
+      {err ? <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm font-medium text-red-400">{err}</p> : null}
       <PageHeader
         back={{ href: "/app/equipment", label: "Equipment" }}
         title={a.name}
@@ -154,6 +166,10 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
                 )}
                 {isManager ? (
                   <label className="text-xs text-ink-faint">Serial number<input name="identifier" defaultValue={a.identifier ?? ""} className={`${fld} mt-1 w-full`} /></label>
+                ) : null}
+                {a.status === "out_of_service" && isManager ? (
+                  <label className="text-xs text-ink-faint">Taking the red tag off? Say what was done (it goes on the record)
+                    <input name="clear_note" maxLength={200} placeholder="Like: rams replaced and function tested" className={`${fld} mt-1 w-full`} /></label>
                 ) : null}
                 <Button type="submit" size="sm">Save</Button>
               </form>
@@ -219,7 +235,8 @@ export default async function AssetDetail({ params }: { params: Promise<{ assetI
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
           <p className="text-red-300">
             {a.status === "missing" ? "Flagged missing." : "Red-tagged. It can't go out."} {unit ? `${unit.name} reads NOT READY until this is cleared.` : ""}
-            {a.status === "out_of_service" ? " Only a manager can put it back in service." : ""}
+            {a.status === "out_of_service" ? " Only a manager can put it back in service, with a note on what was done." : ""}
+            {redTagLine ? <span className="mt-1 block font-medium">{redTagLine}</span> : null}
           </p>
         </Card>
       ) : a.status === "retired" ? (

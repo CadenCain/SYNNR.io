@@ -6,7 +6,9 @@ import { saasDb } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
-import { revokeReadinessProof } from "@/app/app/_proof-actions";
+import { revokeReadinessProof, setLoadoutLink } from "@/app/app/_proof-actions";
+import { isManagerRole } from "@/lib/saas/yard-rules";
+import { fmtWhen } from "@/lib/saas/format";
 
 export const metadata = { title: "Proof links" };
 
@@ -15,6 +17,15 @@ export const dynamic = "force-dynamic";
 export default async function ProofsSettings() {
   const { company } = await requireCompany();
   const db = await saasDb();
+  const manager = isManagerRole(company.role);
+  // The operator link every load-out made, newest first, and which are shut off.
+  const [{ data: loRows }, { data: offRows }] = await Promise.all([
+    db.from("saas_loadout_scans").select("id, unit_name, finished_at, verdict, proof_token, scanned_by")
+      .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(60),
+    db.from("saas_loadout_link_offs").select("loadout_id").eq("company_id", company.id),
+  ]);
+  const offIds = new Set(((offRows ?? []) as { loadout_id: string }[]).map((r) => r.loadout_id));
+  const loadouts = (loRows ?? []) as { id: string; unit_name: string; finished_at: string; verdict: string | null; proof_token: string; scanned_by: string | null }[];
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://synnr.io";
 
   const { data } = await db
@@ -39,6 +50,32 @@ export default async function ProofsSettings() {
         title="Proof links"
         description="Every link you've sent an operator. Shut one off and it stops working right away."
       />
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold">Load-out links</h2>
+        <p className="-mt-1 text-[13px] text-ink-faint">Each load-out makes one for the operator: the iron, its certs, who loaded it, and the photo of the truck.</p>
+        {loadouts.length === 0 ? <Card className="p-4 text-sm text-ink-dim">No load-outs yet.</Card> : loadouts.map((l) => {
+          const off = offIds.has(l.id);
+          return (
+            <Card key={l.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
+              <div className="min-w-0 text-sm">
+                <Link href={`/app/loadouts/${l.id}`} className="font-medium hover:text-bone">{l.unit_name}</Link>
+                <span className="text-ink-dim"> · {fmtWhen(l.finished_at)}{l.scanned_by ? ` · ${l.scanned_by}` : ""} · {l.verdict === "ready" ? "READY" : "NOT READY"}</span>
+                <div className="text-[13px]">{off ? <span className="text-ink-faint">Shut off</span> : <Link href={`/l/${l.proof_token}`} target="_blank" className="text-bone hover:underline">Open the link</Link>}</div>
+              </div>
+              {manager ? (
+                <form action={setLoadoutLink}>
+                  <input type="hidden" name="loadout_id" value={l.id} />
+                  <input type="hidden" name="off" value={off ? "0" : "1"} />
+                  <button type="submit" className={off ? "min-h-11 rounded-lg border border-line-2 px-3 text-sm text-ink hover:bg-elevated" : "inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-red-500/40 px-3 text-sm text-red-400 hover:bg-red-500/10"}>
+                    {off ? "Turn it back on" : <><Ban className="h-3.5 w-3.5" /> Shut off</>}
+                  </button>
+                </form>
+              ) : null}
+            </Card>
+          );
+        })}
+      </section>
+      <h2 className="-mb-4 text-sm font-semibold">Truck, yard, and company links</h2>
 
       {proofs.length === 0 ? (
         <Card className="px-6 py-12 text-center text-sm text-ink-dim">
@@ -70,7 +107,7 @@ export default async function ProofsSettings() {
                 <Td className="text-right">
                   {p.revoked_at ? (
                     <span className="rounded-sm border border-line-2 bg-elevated px-2.5 py-0.5 text-xs text-ink-faint">Shut off</span>
-                  ) : (
+                  ) : !manager ? null : (
                     <form action={revokeReadinessProof} className="inline">
                       <input type="hidden" name="id" value={p.id} />
                       <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 hover:bg-red-500/10">

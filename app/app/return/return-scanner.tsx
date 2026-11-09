@@ -130,7 +130,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       });
     } catch {
       setSaving(false); setWaiting(true);
-      setSaveErr("No signal. Your check-in is saved on this phone and will send by itself when you have signal.");
+      setSaveErr("No signal. Your check-in is saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
       return;
     }
     setSaving(false);

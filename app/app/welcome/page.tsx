@@ -89,7 +89,7 @@ export default async function Welcome() {
             <Link href="/app/equipment" className={buttonClass("outline", "lg")}>Add pieces by hand</Link>
           </div>
           <p className="text-sm text-ink-dim">
-            Rather hand it off? Email the list in any format to cadencain@synnr.io, or call or text Caden at <a href={OWNER_PHONE_TEL} className="text-bone underline underline-offset-2">{OWNER_PHONE}</a>. He&apos;ll load it with you: free for the first 10 yards, then $1,000 a yard, one time.
+            Rather hand it off? Email the list in any format to cadencain@synnr.io, or call or text Caden at <a href={OWNER_PHONE_TEL} className="text-bone underline underline-offset-2">{OWNER_PHONE}</a>. He&apos;ll load it with you: $1,000 a yard, one time, and free for the first 10 yards he sets up.
           </p>
         </div>
       ),

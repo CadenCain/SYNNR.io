@@ -106,7 +106,7 @@ export default function SignupForm() {
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-xs text-ink-dim">Invited by your shop? Use the email the invite went to. Starting a new account? Payment is step 3, $500 a yard a month, cancel anytime.</p>
+      <p className="text-center text-xs text-ink-dim">Joining your shop's crew? Tap the link your manager texted you instead. Starting a new account? Payment is step 3, $500 a yard a month, cancel anytime.</p>
     </form>
   );
 }

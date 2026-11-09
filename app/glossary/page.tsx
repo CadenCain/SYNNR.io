@@ -21,7 +21,7 @@ export default function GlossaryIndex() {
         <nav className="topnav">
           <Link className="brand" href="/">{MARK}<b>SYNNR</b></Link>
           <span className="crumb">Field-Ops Glossary</span>
-          <Link className="cta-sm" href="/ingest">Scan a sheet free</Link>
+          <Link className="cta-sm" href="/demo">Try the live demo</Link>
         </nav>
 
         <div className="eyebrow">The language of job readiness</div>

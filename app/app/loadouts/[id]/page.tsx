@@ -11,6 +11,7 @@ import LoadoutRecordView from "../../_components/loadout-record-view";
 import ProofLink from "../../_components/proof-link";
 import { rollLoadoutAnyway } from "./actions";
 import { recordPaper } from "@/lib/saas/paper";
+import { setLoadoutLink } from "../../_proof-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
     .eq("company_id", company.id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at)
     .order("finished_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
   const newer = newerRow as { id: string; finished_at: string } | null;
+  const { data: offRow } = await db.from("saas_loadout_link_offs").select("off_at, off_by").eq("loadout_id", rec.id).maybeSingle();
+  const linkOff = offRow as { off_at: string; off_by: string | null } | null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,11 +48,18 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         <div>
           <h2 className="font-semibold">Proof link for the operator</h2>
           <p className="text-sm text-ink-dim">
-            Anyone with this link sees this record, read-only.
-            {outcome === "blocked" ? " Right now it says NOT READY, because it is." : ""}
+            {linkOff ? `Shut off${linkOff.off_by ? ` by ${linkOff.off_by}` : ""}. Anyone who opens it sees that the shop shut it off.` : "Anyone with this link sees this record, read-only."}
+            {!linkOff && outcome === "blocked" ? " Right now it says NOT READY, because it is." : ""}
           </p>
         </div>
-        <ProofLink url={proofUrl} title={`${rec.unit_name} load-out`} />
+        {linkOff ? null : <ProofLink url={proofUrl} title={`${rec.unit_name} load-out`} />}
+        {manager ? (
+          <form action={setLoadoutLink} className="self-start">
+            <input type="hidden" name="loadout_id" value={rec.id} />
+            <input type="hidden" name="off" value={linkOff ? "0" : "1"} />
+            <button type="submit" className="min-h-11 rounded-lg px-1 text-sm text-ink-dim underline underline-offset-2 hover:text-ink">{linkOff ? "Turn the link back on" : "Shut this link off"}</button>
+          </form>
+        ) : null}
       </Card>
 
       {outcome === "blocked" && newer ? (

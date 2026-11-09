@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck } from "lucide-react";
+import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck, UserRound } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
 
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsHub() {
   const { company } = await requireCompany();
   const rows = [
+    { href: "/app/settings/account", icon: UserRound, title: "Your account", desc: "Your name on every scan, your password, the company name", live: true },
     { href: "/app/settings/rules", icon: ShieldCheck, title: "Rules", desc: "How tests get cleared, and who can change what", live: true },
     { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },

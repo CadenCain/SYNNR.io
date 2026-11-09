@@ -78,6 +78,7 @@ export default function Home() {
           <a href="#stops">What stops a truck</a>
           <a href="#pricing">Pricing</a>
           <Link href="/demo">Live demo</Link>
+          <Link href="/signup">Get started</Link>
           <Link href="/login">Log in</Link>
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
         </nav>
@@ -95,7 +96,7 @@ export default function Home() {
               </p>
               <div className="rr-cta">
                 <Link href="/demo" className="rr-btn">Open the live demo</Link>
-                <Link href="/l/showcase" className="rr-btn rr-btn-ghost">See a real load-out record</Link>
+                <Link href="/l/showcase" className="rr-btn rr-btn-ghost">See a load-out record</Link>
               </div>
               <p className="rr-note">The demo is the real app with a made-up yard. No signup, no card.</p>
             </div>
@@ -263,7 +264,7 @@ export default function Home() {
               <ul className="rr-checks">
                 <li>Your whole crew, each with their own login. Never per seat.</li>
                 <li>No contract. Cancel anytime.</li>
-                <li>Load it yourself, free. Or I’ll load it for you: free for the first 10 yards, then $1,000 a yard, one time.</li>
+                <li>Load it yourself, free. Or I’ll load it for you: $1,000 a yard, one time, and free for the first 10 yards I set up.</li>
                 <li>Your data is yours. Export it as a spreadsheet anytime.</li>
               </ul>
               <Link href="/signup" className="rr-btn rr-block">Get started</Link>

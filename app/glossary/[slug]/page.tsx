@@ -44,7 +44,7 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
         <nav className="topnav">
           <Link className="brand" href="/">{MARK}<b>SYNNR</b></Link>
           <Link className="crumb" href="/glossary">Field-Ops Glossary</Link>
-          <Link className="cta-sm" href="/ingest">Scan a sheet free</Link>
+          <Link className="cta-sm" href="/demo">Try the live demo</Link>
         </nav>
 
         <span className="chip">{t.category}</span>

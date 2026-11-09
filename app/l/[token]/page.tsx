@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function Gone() {
+function Gone({ shutOff = false }: { shutOff?: boolean }) {
   return (
     <div className="saas flex min-h-dvh items-center justify-center bg-coal px-4 text-ink antialiased">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 text-center">
-        <p className="font-semibold">This load-out link isn&apos;t valid.</p>
+        <p className="font-semibold">{shutOff ? "The shop shut this link off." : "This load-out link isn\u2019t valid."}</p>
         <p className="mt-1 text-sm text-ink-dim">Ask the shop to send it again.</p>
       </div>
     </div>
@@ -36,6 +36,10 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
     : null;
   if (!got) return <Gone />;
   const { rec, override } = got;
+  if (token !== "showcase") {
+    const { data: off } = await admin.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", rec.id).maybeSingle();
+    if (off) return <Gone shutOff />;
+  }
 
   const ids = rec.pieces.map((p) => p.asset_id);
   const [{ data: co }, { data: yard }, { data: tags }, { data: rule }] = await Promise.all([
