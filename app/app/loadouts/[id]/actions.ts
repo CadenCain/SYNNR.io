@@ -24,12 +24,17 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   const got = await getLoadout(db, { id, companyId: company.id });
   if (!got) redirect("/app/loadouts");
   if (verdictOf(got.rec) !== "not_ready" || got.override) redirect(`/app/loadouts/${id}`);
-  // Only the truck's newest load-out can roll: an older one isn't what's on the truck now.
-  if (got.rec.unit_id) {
-    const { data: newer } = await db.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id)
-      .gt("finished_at", got.rec.finished_at).limit(1).maybeSingle();
-    if (newer) redirect(`/app/loadouts/${id}?stale=1`);
-  }
+  // Only the truck's newest load-out can roll, and only before it's checked
+  // back in: an older one isn't what's on the truck, and a trip that's over can't start.
+  const staleNow = async (q: typeof db) => {
+    if (!got.rec.unit_id) return false;
+    const [{ data: newer }, { data: back }] = await Promise.all([
+      q.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id).gt("finished_at", got.rec.finished_at).limit(1).maybeSingle(),
+      q.from("saas_returns").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id).gt("finished_at", got.rec.finished_at).limit(1).maybeSingle(),
+    ]);
+    return Boolean(newer || back);
+  };
+  if (await staleNow(db)) redirect(`/app/loadouts/${id}?stale=1`);
 
   const admin = saasAdmin();
   if (!admin) throw new Error("Something's down on our end. Try again in a minute.");
@@ -43,13 +48,9 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   if (error) throw new Error(error.message);
   // A hand's newer load-out could have landed between the check above and
   // now: then this one isn't what's on the truck, and the override comes back off.
-  if (got.rec.unit_id) {
-    const { data: newer } = await admin.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id)
-      .gt("finished_at", got.rec.finished_at).limit(1).maybeSingle();
-    if (newer) {
-      await admin.from("saas_loadout_overrides").delete().eq("loadout_id", id).eq("company_id", company.id);
-      redirect(`/app/loadouts/${id}?stale=1`);
-    }
+  if (await staleNow(admin as unknown as typeof db)) {
+    await admin.from("saas_loadout_overrides").delete().eq("loadout_id", id).eq("company_id", company.id);
+    redirect(`/app/loadouts/${id}?stale=1`);
   }
 
   // It rolled: what went on is out on the job from now until it's checked in.

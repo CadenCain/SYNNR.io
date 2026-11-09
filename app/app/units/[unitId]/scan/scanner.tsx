@@ -159,7 +159,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   useEffect(() => { if (finishing) finishRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [finishing]);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string } | null>(null);
+  const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string; badIds: string[] } | null>(null);
   const [saveErr, setSaveErr] = useState("");
   const lockedIds = useMemo(() => plan?.packageIds ?? [], [plan]);
   const [packageIds, setPackageIds] = useState<string[]>(initialPackageIds ?? (plan ? plan.packageIds : lastPackageIds) ?? []);
@@ -516,7 +516,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
       : p.unitId === truck.id && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
     stopNfc(); stopCamera();
-    setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken });
+    setSaved({ id: res.id, verdict: res.verdict, reasons: res.reasons ?? [], proofToken: res.proofToken, badIds: res.badIds ?? [] });
     try { navigator.vibrate?.(res.verdict === "ready" ? 120 : [200, 100, 200, 100, 200]); } catch { /* no vibration */ }
   }
   /**
@@ -525,7 +525,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
    * photo is retaken (it belongs to the load-out it was taken for).
    */
   function fixAndRescan() {
-    const keep = Object.fromEntries(Object.entries(scans).filter(([id]) => list.find((p) => p.id === id)?.problem !== "red"));
+    // Off: what the phone flagged red, and what the server blocked by name.
+    const blocked = new Set(saved?.badIds ?? []);
+    const keep = Object.fromEntries(Object.entries(scans).filter(([id]) => list.find((p) => p.id === id)?.problem !== "red" && !blocked.has(id)));
+    // And it reads red from now on, with the server's reason, so nobody taps it back on.
+    if (blocked.size) setList((l) => l.map((p) => blocked.has(p.id) && p.problem !== "red"
+      ? { ...p, problem: "red", statusText: saved?.reasons.find((r) => r.includes(p.name)) ?? "Blocked at the last save. Put a good one on instead." } : p));
     const dropped = Object.keys(scans).length - Object.keys(keep).length;
     // "Can't find" stays said for what's still not found; the rest goes back to the default.
     setOutcomes((o) => Object.fromEntries(Object.entries(o).filter(([id, v]) => v === "missing" && !keep[id])));

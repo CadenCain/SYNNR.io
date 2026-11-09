@@ -56,12 +56,13 @@ type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
 async function savedLoadout(admin: Admin, companyId: string, userId: string, unitId: string, startedIso: string) {
   const { data } = await admin.from("saas_loadout_scans").select("id, proof_token, verdict, reasons, unit_name, scanned_by, pieces")
     .eq("company_id", companyId).eq("scanned_by_user", userId).eq("unit_id", unitId).eq("started_at", startedIso).maybeSingle();
-  const r = data as { id: string; proof_token: string; verdict: "ready" | "not_ready"; reasons: string[] | null; unit_name: string; scanned_by: string; pieces: unknown[] | null } | null;
+  const r = data as { id: string; proof_token: string; verdict: "ready" | "not_ready"; reasons: string[] | null; unit_name: string; scanned_by: string; pieces: { asset_id?: string; red?: boolean }[] | null } | null;
   if (!r) return null;
   const n = (r.pieces ?? []).length;
   const reasons = r.reasons ?? [];
   return {
     ok: true, id: r.id, verdict: r.verdict, reasons, proofToken: r.proof_token,
+    badIds: (r.pieces ?? []).filter((p) => p.red && p.asset_id).map((p) => p.asset_id as string),
     summary: r.verdict === "ready"
       ? `${r.unit_name} loaded out READY by ${r.scanned_by}: ${n} ${n === 1 ? "piece" : "pieces"} scanned`
       : `${r.unit_name} blocked at load-out (NOT READY) by ${r.scanned_by}: ${reasons.slice(0, 3).join("; ")}`,
@@ -107,7 +108,7 @@ export async function finishLoadout(input: {
   checks?: { label: string; at?: number }[];
   /** Which job or well (typed, or from the plan). */
   job?: string;
-}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[] }> {
+}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[]; badIds?: string[] }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
@@ -420,5 +421,7 @@ export async function finishLoadout(input: {
   revalidatePath(`/app/units/${unit.id}`);
   revalidatePath("/app/map");
   revalidatePath("/app");
-  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn };
+  // The pieces the records blocked, so "Fix it and scan again" takes them off
+  // even when the phone didn't know (a look-alike with no test, say).
+  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn, badIds: [...redIds] };
 }

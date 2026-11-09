@@ -60,3 +60,14 @@ describe("planned to leave, never scanned out", () => {
     expect(m.body).toContain("On the crew, nothing in RollReady this week:\n  Lupe Cardenas\n  Dale Wooten");
   });
 });
+
+describe("the Monday subject", () => {
+  it("one idle hand on a busy crew isn't 'nobody used it'", () => {
+    const m = summaryText({ ...base, idle: ["Tony Reyes"], crew: 6, weekly: true })!;
+    expect(m.subject).toBe("RollReady: 1 person hasn't used it this week at Caprock");
+  });
+  it("the whole crew idle is", () => {
+    const m = summaryText({ ...base, idle: ["A B", "C D"], crew: 2, weekly: true })!;
+    expect(m.subject).toBe("RollReady: nobody at Caprock used it this week");
+  });
+});

@@ -46,7 +46,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
-  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules, openPlans, { data: pkgNameRows }] = await Promise.all([
+  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules, openPlans, { data: pkgNameRows }, { data: latestScanRows }, { data: latestBackRows }] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
@@ -66,13 +66,22 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     getYardRules(db, company.id),
     getOpenPlans(db, company.id),
     db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null),
+    // Each truck's newest load-out and check-in, however old: the lists above
+    // are the newest few hundred, and a truck out a week can be past them.
+    db.from("saas_loadout_latest").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned").eq("company_id", company.id),
+    db.from("saas_return_latest").select("unit_id, finished_at, returned_by").eq("company_id", company.id),
   ]);
+  // The recent load-outs plus each truck's newest one, once each, newest first.
+  const allScans = [...new Map([...((latestScanRows ?? []) as LoadoutScanRow[]), ...((scanRows ?? []) as LoadoutScanRow[])].map((r) => [r.id, r])).values()]
+    .sort((a, b) => b.finished_at.localeCompare(a.finished_at));
+  const allReturns = [...((latestBackRows ?? []) as { unit_id: string | null; finished_at: string; returned_by: string | null }[]),
+    ...((returnRows ?? []) as { unit_id: string | null; finished_at: string; returned_by: string | null }[])];
   // Each truck's planned next job, in words.
   const pkgNames = new Map(((pkgNameRows ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]));
   // A planned job past its leave time with nothing rolled: nobody scanned it out.
   const latestScan = new Map<string, { finished_at: string; rolled: boolean }>();
   const overriddenIds = new Set(((overrideRows ?? []) as { loadout_id: string }[]).map((o) => o.loadout_id));
-  for (const r of (scanRows ?? []) as { id: string; unit_id: string | null; finished_at: string; verdict: string | null }[]) {
+  for (const r of allScans) {
     if (r.unit_id && !latestScan.has(r.unit_id)) latestScan.set(r.unit_id, { finished_at: r.finished_at, rolled: r.verdict === "ready" || overriddenIds.has(r.id) });
   }
   const timeText = (iso: string) => {
@@ -92,13 +101,13 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
 
   const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string }[];
   // Which truck each recent load-out was, so a yard's week counts only its own overrides.
-  const unitOfScan = new Map(((scanRows ?? []) as { id: string; unit_id: string | null }[]).map((r) => [r.id, r.unit_id ?? ""]));
+  const unitOfScan = new Map(allScans.map((r) => [r.id, r.unit_id ?? ""]));
   const kits = new Map(((kitRows ?? []) as { unit_id: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[])
     .map((k) => [k.unit_id, [...(k.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }))]));
   const inYard = <T extends { unit_id: string | null }>(r: T) => !yardId || (r.unit_id !== null && unitIds.has(r.unit_id));
   const nowMs = clock();
-  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, (scanRows ?? []) as LoadoutScanRow[], new Set(overrides.map((o) => o.loadout_id)), today, kitShortByTruck(kits, list.rows),
-    { returns: (returnRows ?? []) as { unit_id: string | null; finished_at: string; returned_by: string | null }[], now: nowMs, alertDays: rules.outAlertDays });
+  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, o.created_at])), today, kitShortByTruck(kits, list.rows),
+    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays });
 
   // The iron, for the manager: what's out, what's out too long, what's out of test.
   const inYardScope = (r: { yardId?: string | null; unitId?: string | null }) => !yardId || r.yardId === yardId || (r.unitId !== null && r.unitId !== undefined && unitIds.has(r.unitId));
@@ -115,6 +124,13 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
 
   // Last 7 days, by person: what each one did.
   const people = new Map<string, PersonWeek>();
+  // Anyone who did anything this week, in any yard: never called idle. (On
+  // one yard's view, a hand who worked another yard, or signed a tool out,
+  // just isn't listed there.)
+  const activeAnywhere = new Set([
+    ...((weekEvents ?? []) as { actor: string | null }[]).map((e) => e.actor),
+    ...((weekScans ?? []) as { scanned_by: string | null }[]).map((s) => s.scanned_by),
+  ].filter(Boolean) as string[]);
   for (const e of (weekEvents ?? []) as { kind: string; actor: string; unit_id: string | null }[]) {
     if (!e.actor || !inYard({ unit_id: e.unit_id })) continue;
     const p = people.get(e.actor) ?? { name: e.actor, loadouts: 0, returns: 0, overrides: 0, other: 0 };
@@ -141,7 +157,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
       const { data } = await admin.auth.admin.getUserById(m.user_id);
       return (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || null;
     })) : [];
-    for (const n of names) if (n && !people.has(n)) people.set(n, { name: n, loadouts: 0, returns: 0, overrides: 0, other: 0, idle: true });
+    for (const n of names) if (n && !people.has(n) && !activeAnywhere.has(n)) people.set(n, { name: n, loadouts: 0, returns: 0, overrides: 0, other: 0, idle: true });
   }
   const total = (p: PersonWeek) => p.loadouts + p.returns + p.overrides + p.other;
   const byPerson = [...people.values()].sort((a, b) => Number(a.idle ?? false) - Number(b.idle ?? false) || total(b) - total(a)).slice(0, 25);

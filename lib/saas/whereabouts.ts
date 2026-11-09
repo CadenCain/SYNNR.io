@@ -51,7 +51,7 @@ export function placeOf(
  * READY load-out nobody overrode never left.
  */
 export function truckOut(
-  loadouts: { id: string; unit_id: string | null; finished_at: string; rolled: boolean }[],
+  loadouts: { id: string; unit_id: string | null; finished_at: string; rolled: boolean; since?: string }[],
   returns: { unit_id: string | null; finished_at: string }[],
 ): Map<string, { since: string; loadoutId: string }> {
   const lastReturn = new Map<string, string>();
@@ -66,7 +66,8 @@ export function truckOut(
   for (const [unitId, l] of latest) {
     if (!l.rolled) continue;
     const back = lastReturn.get(unitId);
-    if (!back || back < l.finished_at) out.set(unitId, { since: l.finished_at, loadoutId: l.id });
+    // Out since it rolled: the load-out, or the manager's override if it rolled on one.
+    if (!back || back < l.finished_at) out.set(unitId, { since: l.since && l.since > l.finished_at ? l.since : l.finished_at, loadoutId: l.id });
   }
   return out;
 }

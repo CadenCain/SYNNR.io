@@ -2,6 +2,7 @@ import type { UnitTile } from "./readiness";
 import type { EquipRow } from "./equipment";
 import { YARD_TZ } from "./format";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
+import { TESTED_CATEGORIES } from "./taxonomy";
 import { fillLines, shortLines } from "./loadout-lines";
 import { truckOut, daysOut, DEFAULT_OUT_ALERT_DAYS } from "./whereabouts";
 
@@ -71,7 +72,9 @@ export function buildLoadOutTrucks(
   units: UnitTile[],
   rows: EquipRow[],
   scans: LoadoutScanRow[],
-  overridden: Set<string>,
+  /** Load-outs a manager rolled anyway: a set of ids, or ids to when the override was made
+   *  (the trip starts then, not when the NOT READY load-out was saved). */
+  overridden: Set<string> | Map<string, string>,
   today: string,
   kitShort: Map<string, string> = new Map(),
   opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number } = {},
@@ -83,13 +86,26 @@ export function buildLoadOutTrucks(
   for (const r of [...scans].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
     if (r.unit_id && !last.has(r.unit_id)) last.set(r.unit_id, r);
   }
-  const out = truckOut(scans.map((r) => ({ id: r.id, unit_id: r.unit_id, finished_at: r.finished_at, rolled: outcomeOf(r, ov(r.id)) !== "blocked" })), opts.returns ?? []);
+  const ovAt = (id: string) => (overridden instanceof Map ? overridden.get(id) : undefined);
+  const out = truckOut(scans.map((r) => {
+    const outcome = outcomeOf(r, ov(r.id));
+    return { id: r.id, unit_id: r.unit_id, finished_at: r.finished_at, rolled: outcome !== "blocked", since: outcome === "override" ? ovAt(r.id) : undefined };
+  }), opts.returns ?? []);
   const pieces = new Map<string, number>();
   const outNames = new Map<string, string[]>();
   for (const r of rows) {
     if (!r.unitId || r.state === "retired") continue;
     pieces.set(r.unitId, (pieces.get(r.unitId) ?? 0) + 1);
     if (r.outSince) outNames.set(r.unitId, [...(outNames.get(r.unitId) ?? []), r.name]);
+  }
+  // Iron on a truck the load-out will block that the truck's paper doesn't
+  // show: a tool waiting on redress, or pressure iron with no test on file.
+  const pieceWarn = new Map<string, string>();
+  const label = (r: EquipRow) => `${r.name}${r.identifier ? ` ${r.identifier}` : ""}`;
+  for (const r of rows) {
+    if (!r.unitId || r.state === "retired" || r.outSince || pieceWarn.has(r.unitId)) continue;
+    if (r.needsRedress) pieceWarn.set(r.unitId, `Needs redress before it goes: ${label(r)}. The load-out will block it.`);
+    else if (r.itemCount === 0 && TESTED_CATEGORIES.has(r.category)) pieceWarn.set(r.unitId, `No test on file: ${label(r)}. The load-out will block it.`);
   }
   const lastBack = new Map<string, { finished_at: string; returned_by?: string | null }>();
   for (const r of [...(opts.returns ?? [])].sort((a, b) => b.finished_at.localeCompare(a.finished_at))) {
@@ -136,7 +152,7 @@ export function buildLoadOutTrucks(
     const rest = { ...base, ...(isBack ? { doneToday: false, loadoutId: null } : {}), loadoutLine, stillOut };
     if (t.state === "not_ready") return { ...rest, status: "blocked", overridden: false, why: t.why, whyTone: "red" };
     const short = kitShort.get(t.id);
-    const why = short ?? (t.state === "due_soon" ? t.why : null);
+    const why = short ?? pieceWarn.get(t.id) ?? (t.state === "due_soon" ? t.why : null);
     return { ...rest, status: "ready", overridden: false, why, whyTone: why ? "amber" : null };
   }).sort((a, b) => ORDER[a.status] - ORDER[b.status] || Number(b.outTooLong) - Number(a.outTooLong) || a.t.name.localeCompare(b.t.name));
 

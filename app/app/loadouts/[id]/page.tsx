@@ -1,3 +1,4 @@
+import { fmtWhen } from "@/lib/saas/format";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ScanLine } from "lucide-react";
@@ -33,6 +34,11 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
     .eq("company_id", company.id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at)
     .order("finished_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
   const newer = newerRow as { id: string; finished_at: string } | null;
+  // Checked back in since: the trip this load-out was for is over.
+  const { data: backRow } = rec.unit_id && !newer ? await db.from("saas_returns").select("finished_at, returned_by")
+    .eq("company_id", company.id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at)
+    .order("finished_at", { ascending: true }).limit(1).maybeSingle() : { data: null };
+  const backSince = backRow as { finished_at: string; returned_by: string | null } | null;
   const { data: offRow } = await db.from("saas_loadout_link_offs").select("off_at, off_by").eq("loadout_id", rec.id).maybeSingle();
   const linkOff = offRow as { off_at: string; off_by: string | null } | null;
 
@@ -68,6 +74,11 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
           <p>{rec.unit_name} was loaded out again after this, so this one can&apos;t be rolled anymore.</p>
           <Link href={`/app/loadouts/${newer.id}`} className="font-medium text-bone underline underline-offset-2">See the newest load-out</Link>
+        </Card>
+      ) : outcome === "blocked" && backSince ? (
+        <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
+          <p>{rec.unit_name} was checked back in {fmtWhen(backSince.finished_at)}{backSince.returned_by ? ` by ${backSince.returned_by}` : ""}, so this load-out can&apos;t be rolled anymore. The record stays NOT READY.</p>
+          {rec.unit_id ? <Link href={`/app/units/${rec.unit_id}/scan`} className="font-medium text-bone underline underline-offset-2">Start a new load-out of {rec.unit_name}</Link> : null}
         </Card>
       ) : outcome === "blocked" ? (
         <Card className="flex flex-col gap-3 p-4">

@@ -182,6 +182,13 @@ export async function finishReturn(input: {
     }).eq("company_id", company.id).in("id", rackIds);
     if (error) return { ok: false, error: `Couldn't save the check-in: ${error.message}` };
   }
+  // A piece marked "can't find" that came back is found: in service again
+  // (a red tag, below, still wins if it came back damaged).
+  const found = scans.filter((x) => byId.get(x.assetId)!.status === "missing").map((x) => x.assetId);
+  if (found.length) {
+    await db.from("saas_assets").update({ status: "in_service" }).eq("company_id", company.id).in("id", found);
+    for (const id of found) byId.set(id, { ...byId.get(id)!, status: "in_service" });
+  }
   // Came back damaged: red-tagged right at check-in, with who and why. It
   // can't go out again until a manager puts it back in service.
   for (const s of scans.filter((x) => x.redTag)) {

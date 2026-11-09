@@ -26,6 +26,7 @@ export interface DaySummary {
   /** Monday: crew who haven't used it all week count as news, so a yard that stopped using it still hears. */
   weekly?: boolean;
   idle: string[];         // crew with nothing in RollReady in 7 days
+  crew?: number;          // everyone active on the crew (so "nobody used it" means nobody)
   noPaper: number;        // tests with a date but no cert attached
 }
 
@@ -50,7 +51,8 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   const subject = flag
     ? `RollReady: ${flag} ${flag === 1 ? "truck" : "trucks"} not scanned out at ${s.company}`
     : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
-    : s.weekly && s.idle.length && s.loadouts + s.checkins === 0 ? `RollReady: nobody at ${s.company} used it this week`
+    : s.weekly && s.idle.length && (s.crew ? s.idle.length >= s.crew : s.loadouts + s.checkins === 0) ? `RollReady: nobody at ${s.company} used it this week`
+    : s.weekly && s.idle.length ? `RollReady: ${s.idle.length} ${s.idle.length === 1 ? "person hasn't" : "people haven't"} used it this week at ${s.company}`
     : `RollReady: yesterday at ${s.company}`;
   return { subject, body: out.join("\n") };
 }
@@ -97,6 +99,13 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const loads = (lo ?? []) as { id: string; unit_id: string | null; unit_name: string; verdict: string | null; reasons: string[] | null; finished_at: string }[];
       const ovs = (ov ?? []) as { loadout_id: string; by_name: string; reason: string }[];
       const ovIds = new Set(ovs.map((o) => o.loadout_id));
+      // An override made today can be for a load-out from days ago: name its truck from the load-out itself.
+      const ovTruck = new Map(loads.map((l) => [l.id, l.unit_name]));
+      const ovMissing = ovs.map((o) => o.loadout_id).filter((id) => !ovTruck.has(id));
+      if (ovMissing.length) {
+        const { data: olds } = await admin.from("saas_loadout_scans").select("id, unit_name").in("id", ovMissing);
+        for (const o of (olds ?? []) as { id: string; unit_name: string }[]) ovTruck.set(o.id, o.unit_name);
+      }
 
       // Late: planned to leave, nothing that rolled since the plan was made.
       const late: string[] = [];
@@ -144,10 +153,10 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         loadouts: loads.length,
         ready: loads.filter((l) => l.verdict === "ready").length,
         blocked: loads.filter((l) => l.verdict !== "ready" && !ovIds.has(l.id)).map((l) => `${l.unit_name}: ${(l.reasons ?? [])[0] ?? "NOT READY"}`),
-        overrides: ovs.map((o) => `${loads.find((l) => l.id === o.loadout_id)?.unit_name ?? "A truck"} by ${o.by_name}: "${o.reason}"`),
+        overrides: ovs.map((o) => `${ovTruck.get(o.loadout_id) ?? "A truck"} by ${o.by_name}: "${o.reason}"`),
         checkins: checkins ?? 0,
         unscanned: ((ev ?? []) as { message: string }[]).map((e) => e.message),
-        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0,
+        late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0, crew: (members ?? []).length,
         weekly: new Date().toLocaleDateString("en-US", { timeZone: YARD_TZ, weekday: "short" }) === "Mon",
         noPaper: noPaper ?? 0,
       };
