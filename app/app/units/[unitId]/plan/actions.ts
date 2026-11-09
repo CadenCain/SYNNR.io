@@ -15,7 +15,7 @@ const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string 
  * it. The load-out is checked against it on the server, whatever the phone
  * sends.
  */
-export async function savePlan(input: { unitId: string; packageIds: string[]; lines: { label: string; qty: number }[]; note: string; leavesAt?: string | null }): Promise<{ ok: boolean; error?: string }> {
+export async function savePlan(input: { unitId: string; packageIds: string[]; lines: { label: string; qty: number }[]; note: string; job?: string; leavesAt?: string | null }): Promise<{ ok: boolean; error?: string }> {
   const { company, user } = await requireBillableCompany();
   if (company.role !== "owner" && company.role !== "admin") return { ok: false, error: "Only a manager can plan a load-out." };
   const db = await saasDb();
@@ -29,13 +29,14 @@ export async function savePlan(input: { unitId: string; packageIds: string[]; li
   const packageIds = [...new Set((input.packageIds ?? []).filter((id) => pkgs.some((x) => x.id === id)))].slice(0, 10);
   const lines = cleanPlanLines(input.lines ?? []);
   const note = String(input.note ?? "").trim().slice(0, 120) || null;
+  const job = String(input.job ?? "").replace(/\s+/g, " ").trim().slice(0, 120) || null;
   // When it leaves: from a day ago to a month out, or not set.
   const leavesMs = input.leavesAt ? Date.parse(input.leavesAt) : NaN;
   const leaves_at = Number.isFinite(leavesMs) && leavesMs > Date.now() - 864e5 && leavesMs < Date.now() + 31 * 864e5 ? new Date(leavesMs).toISOString() : null;
-  if (!packageIds.length && !lines.length && !note && !leaves_at) return clearPlan(unit.id);
+  if (!packageIds.length && !lines.length && !note && !leaves_at && !job) return clearPlan(unit.id);
 
   const actor = actorOf(user);
-  const row = { package_ids: packageIds, lines, note, leaves_at, planned_by: actor, planned_by_user: user.id, created_at: new Date().toISOString() };
+  const row = { package_ids: packageIds, lines, note, job, leaves_at, planned_by: actor, planned_by_user: user.id, created_at: new Date().toISOString() };
   const open = await getOpenPlan(db, company.id, unit.id);
   const { error } = open
     ? await db.from("saas_loadout_plans").update(row).eq("id", open.id).eq("company_id", company.id)

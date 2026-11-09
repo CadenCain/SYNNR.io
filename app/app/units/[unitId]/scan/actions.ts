@@ -97,6 +97,8 @@ export async function finishLoadout(input: {
   photoPath?: string;
   /** The roll checks the hand tapped, and when. */
   checks?: { label: string; at?: number }[];
+  /** Which job or well (typed, or from the plan). */
+  job?: string;
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
@@ -326,6 +328,7 @@ export async function finishLoadout(input: {
     started_at: startedIso, finished_at: now,
     expected: onList + notScanned.length, scanned: onList,
     verdict, reasons, photo_path: photoPath, roll_checks: rollChecks.length ? rollChecks : null,
+    job: String(input.job ?? "").replace(/\s+/g, " ").trim().slice(0, 120) || plan?.job || null,
     packages: pkgs.map((x) => x.name),
     plan: plan ? { id: plan.id, by: plan.by, at: plan.at, note: plan.note, packages: pkgs.filter((x) => plan.packageIds.includes(x.id)).map((x) => x.name), lines: plan.lines } : null,
     lines: filled.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: l.filled.map((f) => ({ asset_id: f.id, name: f.name, serial: f.serial })) })),

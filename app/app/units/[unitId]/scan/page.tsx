@@ -62,7 +62,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
       <LoadoutScanner truck={{ id: unit.id, name: unit.name }} pieces={pieces}
         kit={kitRow ? linesOf(kitRow) : []} kitChecks={kitRow?.roll_checks ?? []} packages={packages} stillOutIds={stillOutIds}
         lastPackageIds={packages.filter((x) => (last?.packages ?? []).includes(x.name)).map((x) => x.id)}
-        plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
+        plan={plan ? { by: plan.by, at: fmtWhen(plan.at), note: plan.note, job: plan.job, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
         tagRule={rules.requireTagScan}
         companyId={company.id}
         photoRule={rules.requireLoadoutPhoto ? (company.is_demo ? "optional" : "required") : "off"}

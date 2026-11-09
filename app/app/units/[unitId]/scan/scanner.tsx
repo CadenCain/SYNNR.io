@@ -58,7 +58,7 @@ const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "nu
 
 // Scans live on the phone until the load-out is saved, so a dead zone, a
 // dropped call, or a closed tab never loses them.
-type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; savedAt: number };
+type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; job?: string; savedAt: number };
 const draftKey = (truckId: string) => `rr-loadout-${truckId}`;
 /** The saved draft's raw text if it's from the last 18 hours and has scans, else null. */
 const readDraftRaw = (truckId: string): string | null => {
@@ -88,7 +88,7 @@ async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | nu
   } catch { return null; }
 }
 
-export interface ScanPlan { by: string | null; at: string; note: string | null; packageIds: string[]; lines: KitLine[] }
+export interface ScanPlan { by: string | null; at: string; note: string | null; job?: string | null; packageIds: string[]; lines: KitLine[] }
 
 export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], stillOutIds = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
@@ -158,6 +158,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const [quick, setQuick] = useState<KitLine[]>([]);
   const [quickLabel, setQuickLabel] = useState("");
   const [quickQty, setQuickQty] = useState("1");
+  // Which job or well: from the manager's plan, or typed at the start.
+  const [job, setJob] = useState(plan?.job ?? "");
   const [photo, setPhoto] = useState<Photo | null>(null);
   // Roll checks tapped, by label, with when.
   const [checked, setChecked] = useState<Record<string, number>>({});
@@ -256,14 +258,15 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       return;
     }
     hadScans.current = true;
-    writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, checks: checked, savedAt: Date.now() });
-  }, [scans, outcomes, packageIds, quick, checked, startedAt, saved, truck.id]);
+    writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, checks: checked, job, savedAt: Date.now() });
+  }, [scans, outcomes, packageIds, quick, checked, job, startedAt, saved, truck.id]);
 
   function pickUpDraft() {
     if (!draft) return;
     setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt);
     setPackageIds([...new Set([...lockedIds, ...(draft.packageIds ?? [])])].filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
     setChecked(draft.checks ?? {});
+    if (draft.job) setJob(draft.job);
     setStarted(true);
     setDraftHandled(true);
     setBanner({ tone: "good", text: `Picked up where you left off: ${Object.keys(draft.scans).length} scanned.` });
@@ -438,7 +441,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       res = await timeout(finishLoadout({
         unitId: truck.id, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
-        notScanned, packageIds, quick, photoPath,
+        notScanned, packageIds, quick, photoPath, job,
         checks: askChecks.filter((c) => checked[c]).map((c) => ({ label: c, at: checked[c] })),
       }));
     } catch {
@@ -574,6 +577,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             <h2 className="text-lg font-semibold">What&apos;s going on {truck.name} today?</h2>
             <p className="text-sm text-ink-dim">{plan ? "A manager planned this job. You can add to it, not take anything off." : "The truck\u2019s kit always counts. Pick the package for this job, or add a quick line."}</p>
           </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Which job or well? <span className="font-normal text-ink-faint">(optional, goes on the operator&apos;s proof link)</span></span>
+            <input value={job} onChange={(e) => setJob(e.target.value.slice(0, 120))} placeholder="Like: University 7-12 #3H" aria-label="Which job or well"
+              className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
+          </label>
           {plan ? (
             <div className="flex items-start gap-3 rounded-xl border-2 border-bone/50 bg-bone/10 px-4 py-3">
               <ListTodo className="mt-0.5 h-5 w-5 shrink-0 text-bone" />

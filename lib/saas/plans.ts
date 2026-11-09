@@ -13,17 +13,19 @@ export interface LoadoutPlan {
   packageIds: string[];
   lines: { label: string; qty: number }[];
   note: string | null;
+  /** Which job or well it's for: goes on the record and the operator's proof link. */
+  job: string | null;
   by: string | null;
   at: string;
   /** When the job is supposed to leave. Past it with no load-out that rolled = nobody scanned it out. */
   leavesAt: string | null;
 }
 
-type Row = { id: string; unit_id: string; package_ids: string[] | null; lines: { label: string; qty: number }[] | null; note: string | null; planned_by: string | null; created_at: string; leaves_at: string | null };
-const PLAN_COLS = "id, unit_id, package_ids, lines, note, planned_by, created_at, leaves_at";
+type Row = { id: string; unit_id: string; package_ids: string[] | null; lines: { label: string; qty: number }[] | null; note: string | null; job: string | null; planned_by: string | null; created_at: string; leaves_at: string | null };
+const PLAN_COLS = "id, unit_id, package_ids, lines, note, job, planned_by, created_at, leaves_at";
 const toPlan = (r: Row): LoadoutPlan => ({
   id: r.id, unitId: r.unit_id, packageIds: r.package_ids ?? [], lines: cleanPlanLines(r.lines ?? []),
-  note: r.note, by: r.planned_by, at: r.created_at, leavesAt: r.leaves_at,
+  note: r.note, job: r.job ?? null, by: r.planned_by, at: r.created_at, leavesAt: r.leaves_at,
 });
 
 /**

@@ -47,6 +47,8 @@ export interface LoadoutRecord {
   plan?: RecordPlan | null;
   /** The photo of the loaded truck (proofs bucket), named `<started ms>-<taken ms>.jpg`. */
   photo_path?: string | null;
+  /** Which job or well it was for. */
+  job?: string | null;
   /** What the hand was asked to confirm before it rolled, and who tapped it when. */
   roll_checks?: { label: string; ok: boolean; at: string | null; by: string | null }[] | null;
 }
@@ -54,7 +56,7 @@ export interface RecordPlan { id: string; by: string | null; at: string; note: s
 export interface LoadoutOverride { loadout_id: string; by_name: string; reason: string; created_at: string }
 
 export const RECORD_COLS =
-  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token, plan, photo_path, roll_checks";
+  "id, company_id, unit_id, unit_name, yard_id, scanned_by, started_at, finished_at, expected, scanned, verdict, reasons, lines, packages, pieces, not_scanned, proof_token, plan, photo_path, roll_checks, job";
 
 /**
  * READY or NOT READY. Load-outs saved before the server worked out the

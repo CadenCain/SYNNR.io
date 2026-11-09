@@ -62,6 +62,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           {rec.unit_name} load-out, {fmtWhen(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
           {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} scanned on.
         </p>
+        {rec.job ? <p className="mt-1 text-sm font-medium text-ink">For: {rec.job}</p> : null}
         {rec.plan ? (
           <p className="mt-1 text-sm text-ink-dim">
             Planned by {rec.plan.by ?? "a manager"} {fmtWhen(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note && !forOperator ? ` "${rec.plan.note}"` : ""}

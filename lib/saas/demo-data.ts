@@ -208,6 +208,7 @@ export const DEMO_PLAN = {
   leavesHour: 7,
   lines: [{ label: "2in 1502 pup joint", qty: 2 }],
   note: "Cleanout. Both pup joints off the rack go with it.",
+  job: "Cleanout, Ector County lease, well 4",
 };
 
 /**

@@ -25,11 +25,11 @@ export async function GET() {
   const { company } = await requireCompany();
   const db = await saasDb();
   const [{ data: rows }, { data: yards }] = await Promise.all([
-    db.from("saas_loadout_scans").select("id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, proof_token")
+    db.from("saas_loadout_scans").select("id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, proof_token, job")
       .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(5000),
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
   ]);
-  const recs = (rows ?? []) as (Pick<LoadoutRecord, "id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned" | "proof_token">)[];
+  const recs = (rows ?? []) as (Pick<LoadoutRecord, "id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned" | "proof_token" | "job">)[];
   // Every override the company has (a few per month), not a 5,000-id list in a URL.
   const { data: ov, error: ovErr } = recs.length
     ? await db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("company_id", company.id).limit(20000)
@@ -38,13 +38,13 @@ export async function GET() {
   const overrides = new Map(((ov ?? []) as { loadout_id: string; by_name: string; reason: string; created_at: string }[]).map((o) => [o.loadout_id, o]));
   const yardName = new Map(((yards ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
 
-  const header = ["Load-out", "Truck", "Yard", "Answer", "Why", "Loaded by", "Override by", "Override reason",
+  const header = ["Load-out", "Truck", "Yard", "Job or well", "Answer", "Why", "Loaded by", "Override by", "Override reason",
     "Piece", "Serial", "How", "Scanned at", "Scanned by", "Bad when scanned", "Tests when scanned", "Proof link"];
   const lines = [header.map(esc).join(",")];
   for (const r of recs) {
     const o = overrides.get(r.id);
     const answer = { ready: "READY", override: "Rolled on override", blocked: "NOT READY" }[outcomeOf(r, o ? { ...o } : null)];
-    const base = [when(r.finished_at), r.unit_name, r.yard_id ? yardName.get(r.yard_id) ?? "" : "", answer, reasonsOf(r).join("; "),
+    const base = [when(r.finished_at), r.unit_name, r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.job ?? "", answer, reasonsOf(r).join("; "),
       r.scanned_by ?? "", o?.by_name ?? "", o?.reason ?? ""];
     const tail = [`https://www.synnr.io/l/${r.proof_token}`];
     if (!r.pieces.length) lines.push([...base, "", "", "", "", "", "", "", ...tail].map(esc).join(","));

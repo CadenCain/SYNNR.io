@@ -180,7 +180,7 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
       const planUnit = DEMO_UNITS.find((u) => u.key === DEMO_PLAN.unitKey)!;
       await Promise.all([
         admin.from("saas_loadout_plans").insert({ company_id: companyId, unit_id: unitId(DEMO_PLAN.unitKey), package_ids: [], lines: DEMO_PLAN.lines,
-          note: DEMO_PLAN.note, planned_by: DEMO_PLAN.by, created_at: planAt, leaves_at: tsAgo(0, DEMO_PLAN.leavesHour, 0) }),
+          note: DEMO_PLAN.note, job: DEMO_PLAN.job, planned_by: DEMO_PLAN.by, created_at: planAt, leaves_at: tsAgo(0, DEMO_PLAN.leavesHour, 0) }),
         admin.from("saas_events").insert({ company_id: companyId, kind: "plan_set", unit_id: unitId(DEMO_PLAN.unitKey), actor: DEMO_PLAN.by, created_at: planAt,
           message: `${DEMO_PLAN.by} planned ${planUnit.name}'s next job: ${DEMO_PLAN.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}. "${DEMO_PLAN.note}"` }),
       ]);
