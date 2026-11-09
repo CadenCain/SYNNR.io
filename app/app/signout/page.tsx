@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PackageCheck } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { getEquipment, stateLabel } from "@/lib/saas/equipment";
 import { getYardRules } from "@/lib/saas/yard-rules";
 import { daysOut } from "@/lib/saas/whereabouts";
@@ -35,8 +35,20 @@ export default async function ToolsOutPage() {
     db.from("saas_assets").select("id").eq("company_id", company.id).eq("out_with_user", user.id),
     db.from("saas_assets").select("id").eq("company_id", company.id).eq("redress_each_run", true),
     db.from("saas_signouts").select("id, asset_id, asset_name, serial, out_name, job_note, out_at, back_at, back_by, back_note")
-      .eq("company_id", company.id).order("out_at", { ascending: false }).limit(25),
+      .eq("company_id", company.id).order("out_at", { ascending: false }).limit(60),
   ]);
+  // A manager at the counter can hand a tool to anyone on the crew.
+  const manager = company.role === "owner" || company.role === "admin";
+  const crew: { id: string; name: string }[] = [];
+  const admin = manager ? saasAdmin() : null;
+  if (admin) {
+    const { data: mem } = await db.from("saas_memberships").select("user_id").eq("company_id", company.id).eq("status", "active").limit(100);
+    for (const m of (mem ?? []) as { user_id: string }[]) {
+      const { data } = await admin.auth.admin.getUserById(m.user_id);
+      crew.push({ id: m.user_id, name: (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || "Someone" });
+    }
+    crew.sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name));
+  }
   const mine = new Set(((mineRows ?? []) as { id: string }[]).map((r) => r.id));
   const redressKind = new Set(((redressRows ?? []) as { id: string }[]).map((r) => r.id));
   const live = list.rows.filter((r) => r.state !== "retired");
@@ -67,7 +79,7 @@ export default async function ToolsOutPage() {
             {me ? "With you" : `With ${r.outWith}`} · {d === 0 ? "since today" : `${d} ${d === 1 ? "day" : "days"}`}{late ? `, past the ${rules.outAlertDays}-day limit` : ""}
           </div>
         </div>
-        {me ? <Link href="/app/return" className={buttonClass("outline", "default", "min-h-11")}><PackageCheck className="h-4 w-4" /> Check it back in</Link> : null}
+        {me ? <Link href={`/app/return?asset=${r.id}`} className={buttonClass("outline", "default", "min-h-11")}><PackageCheck className="h-4 w-4" /> Check it back in</Link> : null}
       </div>
     );
   };
@@ -98,7 +110,7 @@ export default async function ToolsOutPage() {
         </section>
       ) : null}
 
-      <SignOutPicker pieces={pickable} />
+      <SignOutPicker pieces={pickable} crew={crew} me={user.id} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold">Out with the crew ({withCrew.length})</h2>

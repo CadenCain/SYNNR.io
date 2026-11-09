@@ -33,7 +33,7 @@ import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-rec
 
 export const dynamic = "force-dynamic";
 
-const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
+const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
 
 export default async function UnitDetail({ params }: { params: Promise<{ unitId: string }> }) {
   const { company } = await requireCompany();

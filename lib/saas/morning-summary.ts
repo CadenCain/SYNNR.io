@@ -23,12 +23,15 @@ export interface DaySummary {
   outTooLong: string[];   // "CT-08: 5 pieces, out 9 days" or "With Dale Wooten: Silver Fox #2, out 9 days"
   damaged: string[];      // "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy."
   redressWaiting?: number; // tools back from a run, not redressed yet
+  /** Monday: crew who haven't used it all week count as news, so a yard that stopped using it still hears. */
+  weekly?: boolean;
   idle: string[];         // crew with nothing in RollReady in 7 days
   noPaper: number;        // tests with a date but no cert attached
 }
 
 export function summaryText(s: DaySummary): { subject: string; body: string } | null {
-  const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + s.outTooLong.length + s.damaged.length;
+  const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + s.outTooLong.length + s.damaged.length
+    + (s.weekly ? s.idle.length : 0);
   if (s.loadouts + s.checkins + problems === 0) return null;
   const out: string[] = [];
   out.push(`${s.company}, the last 24 hours:`);
@@ -47,6 +50,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   const subject = flag
     ? `RollReady: ${flag} ${flag === 1 ? "truck" : "trucks"} not scanned out at ${s.company}`
     : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
+    : s.weekly && s.idle.length && s.loadouts + s.checkins === 0 ? `RollReady: nobody at ${s.company} used it this week`
     : `RollReady: yesterday at ${s.company}`;
   return { subject, body: out.join("\n") };
 }
@@ -144,6 +148,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         checkins: checkins ?? 0,
         unscanned: ((ev ?? []) as { message: string }[]).map((e) => e.message),
         late, outTooLong, idle, damaged, redressWaiting: redressWaiting ?? 0,
+        weekly: new Date().toLocaleDateString("en-US", { timeZone: YARD_TZ, weekday: "short" }) === "Mon",
         noPaper: noPaper ?? 0,
       };
       const msg = summaryText(s);

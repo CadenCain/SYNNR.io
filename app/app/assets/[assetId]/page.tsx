@@ -33,7 +33,7 @@ import { markRedressed, setRedressEachRun } from "@/app/app/signout/actions";
 
 export const dynamic = "force-dynamic";
 
-const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
+const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
 
 export default async function AssetDetail({ params, searchParams }: { params: Promise<{ assetId: string }>; searchParams: Promise<{ err?: string }> }) {
   const { company } = await requireCompany();

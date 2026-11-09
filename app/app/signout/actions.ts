@@ -28,12 +28,22 @@ function refresh() {
  * already out: nothing gets signed out, and the phone says which and why.
  * It stays out with you until it's checked back in.
  */
-export async function signOutTools(input: { assetIds: string[]; note?: string }): Promise<{ ok: boolean; error?: string; refused?: { name: string; why: string }[]; summary?: string }> {
+export async function signOutTools(input: { assetIds: string[]; note?: string; to?: string }): Promise<{ ok: boolean; error?: string; refused?: { name: string; why: string }[]; summary?: string }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
   const admin = saasAdmin();
   if (!admin) return { ok: false, error: "Saving is down right now. Try again in a minute." };
+  // Who it goes out to: yourself, or (a manager at the counter) someone on the crew.
+  let toId = user.id, toName = actor;
+  if (input.to && input.to !== user.id) {
+    if (company.role !== "owner" && company.role !== "admin") return { ok: false, error: "Only a manager can sign a tool out to someone else." };
+    const { data: m } = await admin.from("saas_memberships").select("user_id").eq("company_id", company.id).eq("user_id", input.to).eq("status", "active").maybeSingle();
+    if (!m) return { ok: false, error: "That person isn't on the crew." };
+    const { data: who } = await admin.auth.admin.getUserById(input.to);
+    toId = input.to;
+    toName = (who?.user?.user_metadata?.full_name as string | undefined)?.trim() || who?.user?.email?.split("@")[0] || "someone";
+  }
   const ids = [...new Set((input.assetIds ?? []).filter((x) => typeof x === "string"))].slice(0, 40);
   if (!ids.length) return { ok: false, error: "Pick what you're taking." };
   const note = String(input.note ?? "").trim().slice(0, 120) || null;
@@ -76,8 +86,8 @@ export async function signOutTools(input: { assetIds: string[]; note?: string })
   // Only what's still free right now: two hands tapping the same tool at
   // the same moment can't both walk off with it on paper.
   const { data: took, error } = await admin.from("saas_assets").update({
-    out_since: now, out_with_user: user.id, out_with_name: actor, out_loadout_id: null, out_alerted_at: null,
-    unit_id: null, last_seen_where: `signed out to ${actor} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
+    out_since: now, out_with_user: toId, out_with_name: toName, out_loadout_id: null, out_alerted_at: null,
+    unit_id: null, last_seen_where: `signed out to ${toName} ${dayLabel(now)}${note ? ` (${note})` : ""}`, last_seen_by: actor, last_seen_at: now,
   }).eq("company_id", company.id).in("id", ids).is("out_since", null).is("needs_redress_since", null).select("id");
   if (error) return { ok: false, error: `Couldn't sign it out: ${error.message}` };
   const gotIds = new Set(((took ?? []) as { id: string }[]).map((r) => r.id));
@@ -86,9 +96,11 @@ export async function signOutTools(input: { assetIds: string[]; note?: string })
   if (!got.length) return { ok: false, error: "Someone else just signed that out. Reload to see who has it." };
   await admin.from("saas_signouts").insert(got.map((a) => ({
     company_id: company.id, asset_id: a.id, asset_name: a.name, serial: a.identifier,
-    out_user: user.id, out_name: actor, job_note: note, out_at: now,
+    out_user: toId, out_name: toName, job_note: note, out_at: now,
   })));
-  const summary = `${actor} signed out ${got.map(label).join(", ")}${note ? ` for ${note}` : ""}`;
+  const summary = toId === user.id
+    ? `${actor} signed out ${got.map(label).join(", ")}${note ? ` for ${note}` : ""}`
+    : `${actor} signed out ${got.map(label).join(", ")} to ${toName}${note ? ` for ${note}` : ""}`;
   void logEvent({ companyId: company.id, kind: "signed_out", actor, message: summary });
   refresh();
   if (missed.length) return { ok: true, summary, refused: missed.map((a) => ({ name: label(a), why: "Someone else just signed it out" })) };

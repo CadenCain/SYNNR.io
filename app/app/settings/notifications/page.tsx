@@ -11,7 +11,7 @@ export const metadata = { title: "Notifications" };
 
 export const dynamic = "force-dynamic";
 
-const fld = "h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]";
+const fld = "h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
 
 async function saveSettings(formData: FormData) {
   "use server";
@@ -89,8 +89,8 @@ export default async function NotificationsSettings() {
       <Card className="p-5">
         <form action={saveSettings} className="flex flex-col gap-5">
           <label className="flex items-center gap-3 text-sm">
-            <input type="checkbox" name="email_enabled" defaultChecked={s?.email_enabled ?? true} className="h-4 w-4 accent-[#1d4ed8]" />
-            Alerts enabled
+            <input type="checkbox" name="email_enabled" defaultChecked={s?.email_enabled ?? true} className="h-5 w-5 accent-[#1d4ed8]" />
+            Warnings before a test or cert expires
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-ink">Lead time (days before expiration)</span>
@@ -144,8 +144,9 @@ export default async function NotificationsSettings() {
           <form action={addRecipient} className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 lg:flex-row">
               <input name="name" required placeholder="Name" className={`${fld} w-full min-w-0 grow`} />
-              <input name="email" type="email" placeholder="Email (optional)" className={`${fld} w-full min-w-0 grow`} />
-              <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} w-full min-w-0 grow`} />
+              <input name="email" type="email" required={!smsReady} placeholder={smsReady ? "Email (optional)" : "Email"} className={`${fld} w-full min-w-0 grow`} />
+              {/* Texts aren't hooked up yet: a cell alone would get nothing, so only ask for email. */}
+              {smsReady ? <input name="phone" type="tel" placeholder="Cell for texts (optional)" className={`${fld} w-full min-w-0 grow`} /> : null}
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="ch_email" defaultChecked className="h-4 w-4 accent-[#1d4ed8]" /> Email</label>

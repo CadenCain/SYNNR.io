@@ -28,7 +28,7 @@ interface Outcome {
   uploadId?: string;
 }
 
-const fld = "h-11 w-full rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
+const fld = "h-11 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
 const primary = "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg bg-bone px-4 text-sm font-semibold text-coal hover:bg-bone-soft disabled:cursor-default disabled:opacity-50";
 const secondary = "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-line-2 px-4 text-sm font-medium text-ink hover:bg-elevated disabled:opacity-50";
 

@@ -42,7 +42,7 @@ const readDraftRaw = (k: string): string | null => {
   } catch { return null; }
 };
 
-export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false }: {
+export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false, firstId = null }: {
   truck: { id: string; name: string } | null;
   pieces: ScanPiece[];
   /** Days out, for pieces out on a job. */
@@ -53,6 +53,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   alertDays?: number;
   /** Checking a piece by hand means typing the last 4 of its serial (a yard setting). */
   last4?: boolean;
+  /** The piece they came here to check in (from Tools out): first on the list. */
+  firstId?: string | null;
 }) {
   const key = truck?.id ?? "yard";
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
@@ -74,7 +76,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
 
   // What should come back: the truck's iron, or (no truck) everything out on a job.
   const expected = useMemo(() => truck ? pieces.filter((p) => p.unitId === truck.id) : pieces.filter((p) => outDays[p.id] !== undefined)
-    .sort((a, b) => (outDays[b.id] ?? 0) - (outDays[a.id] ?? 0)), [pieces, truck, outDays]);
+    .sort((a, b) => Number(b.id === firstId) - Number(a.id === firstId) || (outDays[b.id] ?? 0) - (outDays[a.id] ?? 0)), [pieces, truck, outDays, firstId]);
   const extra = pieces.filter((p) => scans[p.id] && !expected.some((e) => e.id === p.id));
   const yardName = yards.find((y) => y.id === yardId)?.name ?? "the yard";
   const destText = (s: Scan) => s.to === "truck" && truck ? `back on ${truck.name}` : `into ${yardName}${s.rack ? `, ${s.rack}` : ""}`;

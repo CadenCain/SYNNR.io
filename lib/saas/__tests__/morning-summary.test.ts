@@ -53,4 +53,10 @@ describe("planned to leave, never scanned out", () => {
     expect(m.body).toContain("Came back damaged:\n  Quad BOP #11 QB-4411: rams bent.");
     expect(m.body).toContain("2 tools are back from a run and waiting on redress.");
   });
+  it("on Mondays, a crew that stopped using it is news (once a week, not every day)", () => {
+    expect(summaryText({ ...base, idle: ["Lupe Cardenas", "Dale Wooten"] })).toBeNull();
+    const m = summaryText({ ...base, idle: ["Lupe Cardenas", "Dale Wooten"], weekly: true })!;
+    expect(m.subject).toBe("RollReady: nobody at Caprock used it this week");
+    expect(m.body).toContain("On the crew, nothing in RollReady this week:\n  Lupe Cardenas\n  Dale Wooten");
+  });
 });

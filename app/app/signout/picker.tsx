@@ -16,11 +16,16 @@ export interface Pickable { id: string; name: string; serial: string | null; whe
  * and sign out. Anything not fit to go shows why and can't be picked; the
  * server checks again before anything is signed out.
  */
-export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
+export default function SignOutPicker({ pieces, crew = [], me }: { pieces: Pickable[];
+  /** Managers only: the crew, to hand a tool to someone at the counter. */
+  crew?: { id: string; name: string }[];
+  me?: string;
+}) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [to, setTo] = useState(me ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ tone: "good" | "bad"; text: string; list?: { name: string; why: string }[] } | null>(null);
 
@@ -36,10 +41,11 @@ export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
     if (!picked.length) return;
     setBusy(true); setMsg(null);
     try {
-      const r = await signOutTools({ assetIds: picked, note });
+      const r = await signOutTools({ assetIds: picked, note, to: to || undefined });
       if (r.ok) {
         const n = picked.length - (r.refused?.length ?? 0);
-        setMsg({ tone: r.refused?.length ? "bad" : "good", text: `Signed out to you: ${n} ${n === 1 ? "tool" : "tools"}. Check it back in when it comes back.`, list: r.refused });
+        const who = to && to !== me ? crew.find((c) => c.id === to)?.name ?? "them" : "you";
+        setMsg({ tone: r.refused?.length ? "bad" : "good", text: `Signed out to ${who}: ${n} ${n === 1 ? "tool" : "tools"}. Check it back in when it comes back.`, list: r.refused });
         setPicked([]); setNote(""); setQ("");
         router.refresh();
       } else {
@@ -85,10 +91,16 @@ export default function SignOutPicker({ pieces }: { pieces: Pickable[] }) {
       </div>
       {picked.length ? (
         <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 flex flex-col gap-2 rounded-2xl border border-line bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+          {crew.length > 1 ? (
+            <select value={to} onChange={(e) => setTo(e.target.value)} aria-label="Who's taking it"
+              className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone">
+              {crew.map((c) => <option key={c.id} value={c.id}>{c.id === me ? `Me (${c.name})` : c.name}</option>)}
+            </select>
+          ) : null}
           <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 120))} placeholder="For which job? (optional)" aria-label="For which job"
             className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
           <button type="button" onClick={submit} disabled={busy} className={buttonClass("default", "lg", "h-14 text-base")}>
-            {busy ? "Signing out…" : `Sign out ${picked.length} to me`}
+            {busy ? "Signing out…" : `Sign out ${picked.length} to ${to && to !== me ? crew.find((c) => c.id === to)?.name ?? "them" : "me"}`}
           </button>
         </div>
       ) : null}

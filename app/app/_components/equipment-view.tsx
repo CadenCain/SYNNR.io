@@ -312,7 +312,7 @@ function PhoneRow({ r, place, outDays }: { r: EquipRow; place: Place; outDays: n
   );
 }
 
-const fld = "h-11 w-full rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-bone";
+const fld = "h-11 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
 
 function AddForm({ action, list }: { action: (fd: FormData) => Promise<void>; list: EquipmentList }) {
   const [busy, setBusy] = useState(false);

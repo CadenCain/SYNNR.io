@@ -12,7 +12,8 @@ export const metadata = { title: "Check iron in" };
 export const dynamic = "force-dynamic";
 
 /** Check loose iron into the yard: a hotshot, the testing company's truck, a pickup. */
-export default async function YardReturnPage() {
+export default async function YardReturnPage({ searchParams }: { searchParams: Promise<{ asset?: string }> }) {
+  const { asset } = await searchParams;
   const { company } = await requireCompany();
   const db = await saasDb();
   const [{ data: yardRows }, rules] = await Promise.all([
@@ -33,7 +34,7 @@ export default async function YardReturnPage() {
     <div className="flex flex-col gap-5">
       <PageHeader back={{ href: "/app", label: "Load out" }} title="Check iron in"
         description="For iron that came back without its truck (a hotshot, the testing company, a pickup) and tools signed out to someone. Tap each one and say where it sits." />
-      <ReturnScanner truck={null} pieces={pieces} outDays={outDays} yards={yards} defaultYardId={yards[0]?.id ?? null} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} />
+      <ReturnScanner truck={null} pieces={pieces} outDays={outDays} yards={yards} defaultYardId={yards[0]?.id ?? null} alertDays={rules.outAlertDays} last4={rules.requireLast4 && !company.is_demo} firstId={asset && /^[0-9a-f-]{36}$/.test(asset) ? asset : null} />
     </div>
   );
 }

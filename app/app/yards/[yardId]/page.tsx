@@ -21,7 +21,7 @@ import ShareProof from "@/app/app/_components/share-proof";
 
 export const dynamic = "force-dynamic";
 
-const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-ink outline-none focus:border-bone";
+const fld = "h-11 rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone";
 
 async function createUnit(formData: FormData) {
   "use server";

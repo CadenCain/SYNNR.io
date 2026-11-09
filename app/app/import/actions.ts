@@ -159,14 +159,23 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     ctx.units.set(key, id);
     return id;
   }
-  async function ensureAsset(name: string, serial: string, unitId: string | null, category: string, ops: string[]): Promise<string> {
+  // No-serial pieces this sheet made, and the tests each row gave them: two
+  // rows of "2in pup joint" on CT-03 with the same test are two pup joints,
+  // not one piece whose dates get overwritten.
+  const madeHere = new Map<string, Set<string>>();
+  async function ensureAsset(name: string, serial: string, unitId: string | null, category: string, ops: string[], testTitle = ""): Promise<string> {
     // The serial is the piece's identity: the same serial on another row (or
     // already in RollReady) is the same iron, wherever the sheet says it sits.
     const bySerial = serial ? ctx.serials.get(serial.toLowerCase()) : undefined;
     if (bySerial) return bySerial;
     const key = `${unitId ?? "yard"}|${name.toLowerCase()}`;
     const hit = serial ? undefined : ctx.assets.get(key);
-    if (hit) return hit;
+    const tests = hit ? madeHere.get(hit) : undefined;
+    const sameTestAgain = Boolean(tests && testTitle && tests.has(testTitle.toLowerCase()));
+    if (hit && !sameTestAgain) {
+      if (tests && testTitle) tests.add(testTitle.toLowerCase());
+      return hit;
+    }
     ops.push(`add "${name}"${serial && serial !== name ? ` (serial ${serial})` : ""}${unitId ? "" : " in the yard"}`);
     creates++;
     let id = `new-asset-${fakeId++}`;
@@ -179,6 +188,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
     }
     ctx.assets.set(key, id);
     if (serial) ctx.serials.set(serial.toLowerCase(), id);
+    else madeHere.set(id, new Set(testTitle ? [testTitle.toLowerCase()] : []));
     return id;
   }
   async function upsertCert(parentType: string, parentId: string, title: string, kind: string, issued: string | null, expires: string | null, ops: string[]) {
@@ -235,7 +245,7 @@ async function runImport(csv: string, yardId: string, newYard: string, commit: b
       const unitId = unitName ? await ensureUnit(unitName, get(r, col.unitType), ops) : null;
       let parentType = "unit", parentId = unitId as string;
       if (assetName) {
-        parentId = await ensureAsset(assetName, serial, unitId, get(r, col.category), ops);
+        parentId = await ensureAsset(assetName, serial, unitId, get(r, col.category), ops, itemTitle);
         parentType = "asset";
       }
       if (itemTitle) await upsertCert(parentType, parentId, itemTitle, get(r, col.kind), issued, expires, ops);
