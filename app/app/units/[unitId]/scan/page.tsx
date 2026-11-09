@@ -43,7 +43,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   if (!isWritable(company.subscription_status, company.comped)) {
     return (
       <div className="flex flex-col gap-5">
-        <PageHeader back={{ href: `/app/units/${unit.id}`, label: unit.name }} title={`Load-out scan: ${unit.name}`} />
+        <PageHeader back={{ href: `/app/units/${unit.id}`, label: unit.name }} title={`Load-out: ${unit.name}`} />
         <LockedCard owner={company.role === "owner"} />
       </div>
     );
@@ -60,7 +60,7 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
     <div className="flex flex-col gap-5">
       <PageHeader
         back={{ href: `/app/units/${unit.id}`, label: unit.name }}
-        title={`Load-out scan: ${unit.name}`}
+        title={`Load-out: ${unit.name}`}
         description={last
           ? `Last load-out: ${fmtWhen(last.finished_at)}${last.scanned_by ? ` by ${last.scanned_by}` : ""}${last.verdict ? `, ${last.verdict === "ready" ? "READY" : "NOT READY"}` : ""}.`
           : "No load-out scanned on this truck yet."}

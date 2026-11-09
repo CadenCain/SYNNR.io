@@ -31,7 +31,7 @@ export default async function Shot({ searchParams }: { searchParams: Promise<{ v
             : view === "scan"
             ? (() => { const d = demoScanInProgress(nfc === "off" ? "hand" : "nfc"); const k = demoKitAndPackages("ct3"); return (
                 <div className="flex flex-col gap-5">
-                  <div><h1 className="text-[22px] font-semibold tracking-tight">Load-out scan: CT-03</h1></div>
+                  <div><h1 className="text-[22px] font-semibold tracking-tight">Load-out: CT-03</h1></div>
                   <LoadoutScanner truck={d.truck} pieces={d.pieces} kit={k.kit} packages={k.packages} initialScans={d.initialScans} initialBanner={d.initialBanner} previewNfc={nfc !== "off"} />
                 </div>
               ); })()

@@ -54,3 +54,16 @@ describe("password reset email", () => {
     expect(resetEmailHtml("https://x", "<b>Bo</b> Duke")).toContain("Hi &lt;b&gt;Bo&lt;/b&gt;,");
   });
 });
+
+describe("reset keeps where they were headed", () => {
+  it("an invite or a truck rides through the email link to the reset page", () => {
+    const link = new URL(resetLink("tok", "/invite/abc123"));
+    expect(link.searchParams.get("next")).toBe("/reset?next=%2Finvite%2Fabc123");
+    expect(new URL(link.searchParams.get("next")!, "https://x.test").searchParams.get("next")).toBe("/invite/abc123");
+  });
+  it("never another site", () => {
+    for (const bad of ["//evil.test", "https://evil.test", "/\\evil.test", "javascript:alert(1)"]) {
+      expect(new URL(resetLink("tok", bad)).searchParams.get("next")).toBe("/reset");
+    }
+  });
+});

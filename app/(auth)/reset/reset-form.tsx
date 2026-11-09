@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export default function ResetForm() {
+export default function ResetForm({ next = "" }: { next?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -26,7 +26,7 @@ export default function ResetForm() {
       setBusy(false);
       return;
     }
-    router.replace("/app");
+    router.replace(next || "/app");
     router.refresh();
   }
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { requestReset } from "./actions";
 
-export default function ForgotForm() {
+export default function ForgotForm({ next = "" }: { next?: string }) {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState("");
   const [err, setErr] = useState("");
@@ -16,7 +16,7 @@ export default function ForgotForm() {
     if (!email) return;
     setBusy(true);
     try {
-      await requestReset(email);
+      await requestReset(email, next);
       setSent(email);
     } catch {
       setErr("Couldn't send it. Check your signal and try again.");

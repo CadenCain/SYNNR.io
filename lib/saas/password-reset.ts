@@ -18,9 +18,16 @@ const PER_HOUR = 3;
 
 export const emailHash = (email: string) => createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 
-/** The link in the email: /auth/confirm checks the token and signs them in to set a new password. */
-export const resetLink = (tokenHash: string) =>
-  `${SITE}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=recovery&next=${encodeURIComponent("/reset")}`;
+/** A path inside the app to go on to, or "" (never another site). */
+export const safeNext = (n: unknown) => {
+  const s = String(n ?? "");
+  return s.startsWith("/") && !s.startsWith("//") && !s.startsWith("/\\") && s.length < 300 ? s : "";
+};
+
+/** The link in the email: /auth/confirm checks the token and signs them in to
+ *  set a new password, then on to where they were headed (an invite, a truck). */
+export const resetLink = (tokenHash: string, next = "") =>
+  `${SITE}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=recovery&next=${encodeURIComponent(safeNext(next) ? `/reset?next=${encodeURIComponent(safeNext(next))}` : "/reset")}`;
 
 export function resetEmailHtml(link: string, name?: string | null): string {
   const hi = name?.trim() ? `Hi ${escHtml(name.trim().split(/\s+/)[0])},` : "Hi,";
@@ -38,7 +45,7 @@ export function resetEmailHtml(link: string, name?: string | null): string {
  * hour. Returns what happened, for the server's own use only: callers show
  * the same message either way.
  */
-export async function sendPasswordReset(admin: SupabaseClient, email: string): Promise<"sent" | "skipped" | "failed"> {
+export async function sendPasswordReset(admin: SupabaseClient, email: string, next = ""): Promise<"sent" | "skipped" | "failed"> {
   const clean = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.endsWith("@demo.synnr.io")) return "skipped";
   const hash = emailHash(clean);
@@ -52,6 +59,6 @@ export async function sendPasswordReset(admin: SupabaseClient, email: string): P
   const token = data?.properties?.hashed_token;
   if (error || !token) return "skipped"; // no login with that email
   const name = data.user?.user_metadata?.full_name as string | undefined;
-  const ok = await sendEmail([clean], "Reset your RollReady password", resetEmailHtml(resetLink(token), name));
+  const ok = await sendEmail([clean], "Reset your RollReady password", resetEmailHtml(resetLink(token, next), name));
   return ok ? "sent" : "failed";
 }

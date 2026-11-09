@@ -41,19 +41,30 @@ export default async function SettingsHub() {
             </Link>
           );
         })}
-        {/* Plain <a> so the browser downloads the CSV instead of client-routing */}
-        <a href="/api/saas/export">
-          <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
-              <Download className="h-5 w-5 text-ink-dim" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-medium">Export data</div>
-              <div className="text-sm text-ink-dim">Every test, cert, and truck paper item, with serials, as a spreadsheet</div>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
-          </Card>
-        </a>
+      </div>
+
+      {/* Everything out, in one place: what an auditor, an operator, or a new
+          system would ask for. Plain <a> so the browser downloads the file. */}
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold text-ink-dim">Download your data</h2>
+        {[
+          { href: "/api/saas/export", title: "Tests and certs", desc: "Every test, cert, and truck paper item, with serials and dates" },
+          { href: "/app/equipment/export", title: "Equipment list", desc: "Every piece: where it is, what truck, its next test" },
+          { href: "/app/loadouts/export", title: "Load-out records", desc: "Every load-out: truck, job or well, who, READY or NOT, overrides" },
+        ].map((d) => (
+          <a key={d.href} href={d.href} download>
+            <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
+                <Download className="h-5 w-5 text-ink-dim" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{d.title}</div>
+                <div className="text-sm text-ink-dim">{d.desc}</div>
+              </div>
+              <span className="shrink-0 text-sm text-ink-faint">Spreadsheet</span>
+            </Card>
+          </a>
+        ))}
       </div>
     </div>
   );

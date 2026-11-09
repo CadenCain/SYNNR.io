@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  // Forgot password keeps where they were headed (an invite, a truck) through the reset.
+  const headed = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return n.startsWith("/") && !n.startsWith("//") ? n : ""; })();
+  const forgotHref = headed ? `/forgot?next=${encodeURIComponent(headed)}` : "/forgot";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -63,7 +66,7 @@ export default function LoginForm() {
       <Button type="submit" disabled={busy} className="h-12 w-full text-base">
         {busy ? "Logging in…" : "Log in"}
       </Button>
-      <a href="/forgot" className="inline-flex min-h-12 items-center justify-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
+      <a href={forgotHref} className="inline-flex min-h-12 items-center justify-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
     </form>
   );
 }

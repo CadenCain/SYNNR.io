@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getSaasUser } from "@/lib/saas/auth";
 import ResetForm from "./reset-form";
+import { safeNext } from "@/lib/saas/password-reset";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Set new password · RollReady" };
 
 // The reset link (/auth/confirm) signs them in before this page loads.
-export default async function ResetPage() {
+export default async function ResetPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
   const user = await getSaasUser();
   if (!user) {
     return (
@@ -23,7 +25,7 @@ export default async function ResetPage() {
         <h1 className="text-xl font-semibold tracking-tight">Set a new password</h1>
         <p className="mt-1 text-sm text-ink-dim">For {user.email}. Pick something you&apos;ll remember.</p>
       </div>
-      <ResetForm />
+      <ResetForm next={safeNext(next)} />
     </div>
   );
 }

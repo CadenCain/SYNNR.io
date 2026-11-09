@@ -682,7 +682,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
           })()}
           <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 -mx-1 rounded-2xl bg-surface/95 p-1 backdrop-blur md:bottom-4">
             <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); setKeptSince(null); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
-              <ScanLine className="h-5 w-5" /> Start scanning{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
+              <ScanLine className="h-5 w-5" /> {tapToCheck ? "Start loading" : "Start scanning"}{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
             </button>
           </div>
         </section>

@@ -60,7 +60,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         </div>
         <p className="mt-1 text-sm text-ink-dim">
           {rec.unit_name} load-out, {fmtWhen(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
-          {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} scanned on.
+          {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} went on.
         </p>
         {rec.job ? <p className="mt-1 text-sm font-medium text-ink">For: {rec.job}</p> : null}
         {rec.plan ? (
@@ -142,7 +142,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold">What went on the truck</h2>
-        {rec.pieces.length === 0 ? <p className="text-sm text-ink-faint">Nothing was scanned on.</p> : null}
+        {rec.pieces.length === 0 ? <p className="text-sm text-ink-faint">Nothing went on.</p> : null}
         <div className="flex flex-col gap-2 lg:hidden">
           {rec.pieces.map((p) => {
             const href = tagHref?.(p.asset_id) ?? null;
