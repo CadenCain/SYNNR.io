@@ -43,6 +43,8 @@ type NdefCtor = new () => NdefScanner;
 const ndef = (): NdefCtor | null =>
   typeof window !== "undefined" && "NDEFReader" in window ? (window as unknown as { NDEFReader: NdefCtor }).NDEFReader : null;
 const noSubscribe = () => () => {};
+/** Now, read outside render (for the upload clock). */
+const nowMs = () => Date.now();
 const useHasNfc = () => useSyncExternalStore(noSubscribe, () => ndef() !== null, () => false);
 
 /** A piece checked onto the truck. A tag scan carries the code read off the tag, for the server to check. */
@@ -139,6 +141,9 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   }, [draftRaw]);
   const [waitingForSignal, setWaitingForSignal] = useState(false);
   const [failsWithSignal, setFailsWithSignal] = useState(0);
+  // Tries in a row that timed out with signal: slow is fine for a while, but
+  // a request stuck on this page holds up every retry behind it.
+  const [slowTries, setSlowTries] = useState(0);
   const [list, setList] = useState(pieces); // local copy so a newly linked tag works on the next scan
   const [scans, setScans] = useState<Record<string, Scan>>(initialScans ?? {});
   const [banner, setBanner] = useState<{ tone: keyof typeof TONE; text: string } | null>(initialBanner ?? null);
@@ -415,12 +420,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
 
   /** The photo upload in flight. A retry waits on it instead of starting a
    *  second upload that splits one bar of signal with the first. */
-  const photoSend = useRef<{ key: string; p: Promise<string | undefined | false> } | null>(null);
+  const photoSend = useRef<{ key: string; p: Promise<string | undefined | false>; at: number } | null>(null);
   function sendPhotoOnce(): Promise<string | undefined | false> {
     const key = photo ? `${startedAt}-${photo.at}` : "none";
-    if (photoSend.current?.key === key) return photoSend.current.p;
+    // A dead connection can hang an upload for many minutes: after 90 seconds
+    // start a fresh one (a second copy landing is fine, it says "already there").
+    if (photoSend.current?.key === key && nowMs() - photoSend.current.at < 90e3) return photoSend.current.p;
     const p = sendPhoto();
-    photoSend.current = { key, p };
+    photoSend.current = { key, p, at: nowMs() };
     // A failed upload is tried again next time; a finished one is reused.
     p.then((r) => { if (r === false && photoSend.current?.p === p) photoSend.current = null; },
       () => { if (photoSend.current?.p === p) photoSend.current = null; });
@@ -473,9 +480,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       setSaving(false);
       setWaitingForSignal(true);
       const slow = e instanceof Error && e.message === "timeout";
-      // Slow isn't broken: only a real failure with signal counts toward "reload".
-      const withSignal = navigator.onLine && !slow;
-      const fails = withSignal ? failsWithSignal + 1 : failsWithSignal;
+      // Slow isn't broken: a real failure with signal counts toward "reload",
+      // and so do three slow tries in a row (one stuck request blocks the rest).
+      const slowNow = slow && navigator.onLine ? slowTries + 1 : 0;
+      setSlowTries(slowNow);
+      const withSignal = navigator.onLine && (!slow || slowNow >= 3);
+      const fails = withSignal ? Math.max(failsWithSignal + 1, slowNow >= 3 ? 2 : 0) : failsWithSignal;
       setFailsWithSignal(fails);
       // A page saved for no signal can be older than the app. If it fails
       // with signal, a reload gets the new page, and the scans come back.
@@ -489,6 +499,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       savingNow.current = false;
     }
     setSaving(false);
+    setSlowTries(0);
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
     setWaitingForSignal(false);
     clearDraft(truck.id);
@@ -496,7 +507,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     // (bad pieces too, until someone takes them off), and anything marked not
     // going is back in the yard. Scanning again starts from there.
     const went = new Set(Object.keys(scans));
-    if (res.backOn?.length) setBackOn((b) => [...new Set([...b, ...res.backOn!])]);
+    // Still-out pieces this NOT READY save scanned are on this truck now (the
+    // server says so too; worked out here as well, since a resend's answer doesn't carry it).
+    if (res.verdict !== "ready") {
+      const back = [...(res.backOn ?? []), ...stillOutIds.filter((id) => went.has(id))];
+      if (back.length) setBackOn((b) => [...new Set([...b, ...back])]);
+    }
     setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
       : p.unitId === truck.id && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
     stopNfc(); stopCamera();
@@ -515,8 +531,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     setOutcomes((o) => Object.fromEntries(Object.entries(o).filter(([id, v]) => v === "missing" && !keep[id])));
     setSaved(null); setScans(keep); setFinishing(false); setPhoto(null); uploadedPath.current = null; photoSend.current = null;
     setKeptSince((k) => k ?? startedAt);
+    // A piece came off and another goes on in its place: the checks before it
+    // rolls ("BOP rams closed") were about the old load, so they're done again.
+    if (dropped) setChecked({});
     setStartedAt(new Date().toISOString());
-    setBanner({ tone: "warn", text: `Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took off ${dropped} bad ${dropped === 1 ? "one" : "ones"}: put a good one on in its place` : ""}. Fix what's wrong, then save again.` });
+    setBanner({ tone: "warn", text: `Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took off ${dropped} bad ${dropped === 1 ? "one" : "ones"}: put a good one on in its place${askChecks.length ? ", and tap the checks before it rolls again" : ""}` : ""}. Fix what's wrong, then save again.` });
   }
 
   // When signal comes back, send the load-out that's waiting.

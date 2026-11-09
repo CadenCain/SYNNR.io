@@ -222,7 +222,23 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
       {byPerson.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Last 7 days, by person</h2>
-          <Card className="overflow-x-auto">
+          {/* Phones: one line per person, no sideways scrolling. */}
+          <Card className="divide-y divide-line sm:hidden">
+            {byPerson.map((p) => (
+              <div key={p.name} className="flex flex-col gap-0.5 px-4 py-3 text-sm">
+                <span className="font-medium">{p.name}</span>
+                {p.idle ? <span className="font-semibold text-red-400">Nothing in RollReady this week</span> : (
+                  <span className="text-ink-dim">
+                    {p.loadouts} {p.loadouts === 1 ? "load-out" : "load-outs"} · {p.returns} {p.returns === 1 ? "check-in" : "check-ins"}
+                    {p.overrides ? <> · <span className="font-semibold text-amber-400">{p.overrides} {p.overrides === 1 ? "override" : "overrides"}</span></> : null}
+                    {p.pieces ? <> · <span className={p.pieces && (p.byHand ?? 0) / p.pieces > 0.5 ? "font-semibold text-amber-400" : ""}>{p.byHand ?? 0} of {p.pieces} checked by hand</span></> : null}
+                    {p.other ? <> · {p.other} other</> : null}
+                  </span>
+                )}
+              </div>
+            ))}
+          </Card>
+          <Card className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[420px] text-left text-sm">
               <thead className="text-[13px] text-ink-dim">
                 <tr><th className="px-4 py-2 font-medium">Person</th><th className="px-3 py-2 text-right font-medium">Load-outs</th><th className="px-3 py-2 text-right font-medium">Check-ins</th><th className="px-3 py-2 text-right font-medium">Overrides</th><th className="px-3 py-2 text-right font-medium">Checked by hand</th><th className="px-4 py-2 text-right font-medium">Other</th></tr>

@@ -108,10 +108,11 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
   if (a.status === "out_of_service") {
     // jsonb containment needs the JSON as a string (an array is sent as a Postgres array).
     const { data: rets } = await db.from("saas_returns").select("returned_by, finished_at, pieces").eq("company_id", company.id)
-      .contains("pieces", JSON.stringify([{ asset_id: a.id }])).order("finished_at", { ascending: false }).limit(5);
+      .contains("pieces", JSON.stringify([{ asset_id: a.id }])).order("finished_at", { ascending: false }).limit(1);
     type Ret = { returned_by: string; finished_at: string; pieces: { asset_id: string; name: string; serial: string | null; red_tag: string | null; went_out?: { truck?: string; by?: string | null; with?: string; at?: string | null } | null }[] };
-    // The newest check-in that red-tagged it.
-    const r = ((rets ?? []) as Ret[]).find((x) => x.pieces.some((y) => y.asset_id === a.id && y.red_tag)) ?? null;
+    // Only the newest check-in it came back on: an old tag that was cleared
+    // isn't the reason it's tagged now (a manager may have tagged it by hand since).
+    const r = ((rets ?? []) as Ret[])[0] ?? null;
     const piece = r?.pieces.find((x) => x.asset_id === a.id && x.red_tag);
     if (r && piece) redTagLine = `Red-tagged at check-in ${fmtWhen(r.finished_at)}. ${damagedLine(piece, r.returned_by)}`;
   }

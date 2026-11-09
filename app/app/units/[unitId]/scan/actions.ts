@@ -71,8 +71,13 @@ async function savedLoadout(admin: Admin, companyId: string, userId: string, uni
 /** The photo of the loaded truck, if the phone sent one that's this load-out's and is really in storage. */
 async function loadoutPhoto(admin: Admin, path: unknown, companyId: string, unitId: string, startedMs: number, nowMs: number): Promise<string | null> {
   if (!photoPathOk(path, companyId, unitId, startedMs, nowMs)) return null;
-  const { error } = await admin.storage.from("proofs").createSignedUrl(path, 60);
-  return error ? null : path;
+  // One photo, one load-out: a photo already on another record (someone
+  // else's, or an earlier try) doesn't prove this load.
+  const [{ error }, { data: used }] = await Promise.all([
+    admin.storage.from("proofs").createSignedUrl(path, 60),
+    admin.from("saas_loadout_scans").select("id").eq("company_id", companyId).eq("photo_path", path).limit(1),
+  ]);
+  return error || (used ?? []).length ? null : path;
 }
 
 /**
@@ -120,6 +125,12 @@ export async function finishLoadout(input: {
   const startedIso = new Date(startedMs).toISOString();
   const already = await savedLoadout(admin, company.id, user.id, unit.id, startedIso);
   if (already) return already;
+  // A load-out is one shift's work. One that says it started a day ago (or
+  // tomorrow) is a phone clock gone wrong or someone borrowing an old start
+  // to fit an old photo.
+  if (startedMs < Date.now() - 20 * 3600e3 || startedMs > Date.now() + 10 * 60e3) {
+    return { ok: false, error: "This load-out was started too long ago to save. Start it again from the truck." };
+  }
   // The earliest a scan or check can be from: this load-out's start, or the
   // NOT READY try it picks up from (only if that really is this hand's, on
   // this truck, earlier the same shift).
@@ -235,18 +246,24 @@ export async function finishLoadout(input: {
       const words = [...new Set(lineTokens(label).filter((t) => /^[a-z]+$/.test(t)))];
       if (!words.length) continue;
       const kin: string[] = [];
-      for (let from = 0; from < 20000; from += 1000) {
+      // If the database can't answer, the line counts as tested: an untested
+      // piece blocks rather than slipping through.
+      let failed = false;
+      for (let from = 0, pages = 0; pages < 40; pages++) {
         let q = db.from("saas_assets").select("id, name").eq("company_id", company.id).neq("status", "retired");
         for (const w of words) q = q.ilike("name", `%${w}%`);
-        const { data: like } = await q.order("id").range(from, from + 999);
+        const { data: like, error } = await q.order("id").range(from, from + 999);
+        if (error) { failed = true; break; }
         const rows = (like ?? []) as { id: string; name: string }[];
+        if (!rows.length) break;
         kin.push(...rows.filter((p) => !untested.includes(p.id) && lineMatches(label, p.name)).map((p) => p.id));
-        if (rows.length < 1000) break;
+        from += rows.length;
       }
+      if (failed) { testedLabels.add(label); continue; }
       for (let i = 0; i < kin.length && !testedLabels.has(label); i += 200) {
-        const { data: t } = await db.from("saas_compliance_items").select("id").eq("company_id", company.id)
+        const { data: t, error } = await db.from("saas_compliance_items").select("id").eq("company_id", company.id)
           .eq("parent_type", "asset").in("parent_id", kin.slice(i, i + 200)).limit(1);
-        if ((t ?? []).length) testedLabels.add(label);
+        if (error || (t ?? []).length) testedLabels.add(label);
       }
     }
   }

@@ -41,6 +41,16 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   // the iron, email the office, or log it a second time.
   if (error && /duplicate key/i.test(error.message)) redirect(`/app/loadouts/${id}`);
   if (error) throw new Error(error.message);
+  // A hand's newer load-out could have landed between the check above and
+  // now: then this one isn't what's on the truck, and the override comes back off.
+  if (got.rec.unit_id) {
+    const { data: newer } = await admin.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id)
+      .gt("finished_at", got.rec.finished_at).limit(1).maybeSingle();
+    if (newer) {
+      await admin.from("saas_loadout_overrides").delete().eq("loadout_id", id).eq("company_id", company.id);
+      redirect(`/app/loadouts/${id}?stale=1`);
+    }
+  }
 
   // It rolled: what went on is out on the job from now until it's checked in.
   // A tool that was signed out to someone went on this truck: that sign-out closes.
