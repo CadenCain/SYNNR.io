@@ -91,6 +91,8 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const unitIds = new Set(units.map((u) => u.id));
 
   const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string }[];
+  // Which truck each recent load-out was, so a yard's week counts only its own overrides.
+  const unitOfScan = new Map(((scanRows ?? []) as { id: string; unit_id: string | null }[]).map((r) => [r.id, r.unit_id ?? ""]));
   const kits = new Map(((kitRows ?? []) as { unit_id: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[])
     .map((k) => [k.unit_id, [...(k.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty }))]));
   const inYard = <T extends { unit_id: string | null }>(r: T) => !yardId || (r.unit_id !== null && unitIds.has(r.unit_id));
@@ -152,7 +154,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     ? await db.from("saas_loadout_scans").select("unit_id").eq("company_id", company.id).eq("scanned_by_user", user.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const myTruckId = (picked && units.some((u) => u.id === picked) ? picked : null) ?? (mine as { unit_id: string | null } | null)?.unit_id ?? null;
-  const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo)).length + (yardId ? 0 : oldOverrides ?? 0));
+  const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo) && (!yardId || unitIds.has(unitOfScan.get(o.loadout_id) ?? ""))).length + (yardId ? 0 : oldOverrides ?? 0));
 
   const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
   const activity: ActivityLine[] = ((eventRows ?? []) as { id: string; kind: string; actor: string | null; message: string; unit_id: string | null; created_at: string }[])
