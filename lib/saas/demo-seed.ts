@@ -285,7 +285,8 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
         const { readFile } = await import("node:fs/promises");
         const path = await import("node:path");
         const { createHash } = await import("node:crypto");
-        const bytes = await readFile(path.join(process.cwd(), w.image));
+        // Scoped to the one folder so the build packs only these photos, not the whole project.
+        const bytes = await readFile(path.join(process.cwd(), "lib", "saas", "demo-assets", path.basename(w.image)));
         const storagePath = `${companyId}/cert/${itemRowId}/demo-bop-cert.jpg`;
         const { error: upErr } = await admin.storage.from("proofs").upload(storagePath, bytes, { contentType: "image/jpeg", upsert: true });
         if (upErr) return;
