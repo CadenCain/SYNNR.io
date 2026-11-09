@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, assertCan } from "@/lib/saas/auth";
 import { canPerform } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { logEvent } from "@/lib/saas/notify";
+import { logEvent, logEventNow } from "@/lib/saas/notify";
 
 // Every record change is logged under the hand who made it — "who renewed
 // this" is half the point of a compliance trail.
@@ -152,10 +152,12 @@ export async function updateAsset(fd: FormData) {
   if (wasRedTagged && status !== "out_of_service" && b) {
     const { data: u } = await db.auth.getUser();
     const actor = (u.user?.user_metadata?.full_name as string | undefined)?.trim() || u.user?.email?.split("@")[0] || "A manager";
-    void logEvent({ companyId: company.id, kind: "asset_status", unitId: b.unit_id, actor,
+    await logEventNow({ companyId: company.id, kind: "asset_status", unitId: b.unit_id, actor,
       message: `${actor} took the red tag off ${b.name}${b.identifier ? ` ${b.identifier}` : ""}: "${clearNote}"` });
   }
   revalidatePath(`/app/assets/${id}`);
+  // Back to the plain page: an error from an earlier try doesn't stay up.
+  redirect(`/app/assets/${id}`);
 }
 /**
  * "Last seen" — where a piece of gear was last spotted and who said so.

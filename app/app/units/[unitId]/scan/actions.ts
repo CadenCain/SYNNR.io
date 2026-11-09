@@ -89,6 +89,9 @@ async function loadoutPhoto(admin: Admin, path: unknown, companyId: string, unit
 export async function finishLoadout(input: {
   unitId: string;
   startedAt: string;
+  /** After NOT READY and "Fix it and scan again": when the first try started.
+   *  Pieces and checks kept from it keep their real times. */
+  keptSince?: string;
   scans: { assetId: string; how: ScanHow; at?: number; proof?: string }[];
   notScanned: { assetId: string; outcome: Outcome }[];
   packageIds?: string[];
@@ -99,7 +102,7 @@ export async function finishLoadout(input: {
   checks?: { label: string; at?: number }[];
   /** Which job or well (typed, or from the plan). */
   job?: string;
-}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string }> {
+}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[] }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
@@ -117,6 +120,13 @@ export async function finishLoadout(input: {
   const startedIso = new Date(startedMs).toISOString();
   const already = await savedLoadout(admin, company.id, user.id, unit.id, startedIso);
   if (already) return already;
+  // The earliest a scan or check can be from: this load-out's start, or the
+  // NOT READY try it picks up from (only if that really is this hand's, on
+  // this truck, earlier the same shift).
+  const keptMs = Date.parse(String(input.keptSince ?? ""));
+  const floorMs = Number.isFinite(keptMs) && keptMs < startedMs && startedMs - keptMs < 12 * 3600e3
+    && await savedLoadout(admin, company.id, user.id, unit.id, new Date(keptMs).toISOString())
+    ? keptMs : startedMs;
 
   // The list. Kit, packages, and the manager's plan come from the database,
   // not the phone, so a phone can only add lines (quick ones), never drop one.
@@ -179,7 +189,7 @@ export async function finishLoadout(input: {
     seen.add(s.assetId);
     return true;
   }).map((s) => {
-    const at = typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now;
+    const at = typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= floorMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now;
     // A tag scan only counts if the code read off the tag is this piece's.
     const how = provenHow(s.how, s.proof, byId.get(s.assetId)!);
     return { assetId: s.assetId, how, at };
@@ -219,16 +229,25 @@ export async function finishLoadout(input: {
     const labels = new Set<string>();
     for (const id of untested) for (const l of filled) if (lineMatches(l.label, byId.get(id)!.name)) labels.add(l.label);
     for (const label of labels) {
-      // Search by the longest plain word (not a size like "2.0625in").
-      const word = [...lineTokens(label)].filter((t) => /^[a-z]+$/.test(t)).sort((a, b) => b.length - a.length)[0];
-      if (!word) continue;
-      const { data: like } = await db.from("saas_assets").select("id, name").eq("company_id", company.id)
-        .neq("status", "retired").ilike("name", `%${word}%`).limit(300);
-      const kin = ((like ?? []) as { id: string; name: string }[]).filter((p) => !untested.includes(p.id) && lineMatches(label, p.name)).map((p) => p.id);
-      if (!kin.length) continue;
-      const { data: t } = await db.from("saas_compliance_items").select("id").eq("company_id", company.id)
-        .eq("parent_type", "asset").in("parent_id", kin.slice(0, 200)).limit(1);
-      if ((t ?? []).length) testedLabels.add(label);
+      // Every plain word of the line (not a size like "2.0625in") is in the
+      // name of any piece that fits it, so the database narrows by all of
+      // them, and every page is read: a big yard can't hide the tested ones.
+      const words = [...new Set(lineTokens(label).filter((t) => /^[a-z]+$/.test(t)))];
+      if (!words.length) continue;
+      const kin: string[] = [];
+      for (let from = 0; from < 20000; from += 1000) {
+        let q = db.from("saas_assets").select("id, name").eq("company_id", company.id).neq("status", "retired");
+        for (const w of words) q = q.ilike("name", `%${w}%`);
+        const { data: like } = await q.order("id").range(from, from + 999);
+        const rows = (like ?? []) as { id: string; name: string }[];
+        kin.push(...rows.filter((p) => !untested.includes(p.id) && lineMatches(label, p.name)).map((p) => p.id));
+        if (rows.length < 1000) break;
+      }
+      for (let i = 0; i < kin.length && !testedLabels.has(label); i += 200) {
+        const { data: t } = await db.from("saas_compliance_items").select("id").eq("company_id", company.id)
+          .eq("parent_type", "asset").in("parent_id", kin.slice(i, i + 200)).limit(1);
+        if ((t ?? []).length) testedLabels.add(label);
+      }
     }
   }
   bad.push(...untestedPieces({
@@ -284,7 +303,7 @@ export async function finishLoadout(input: {
   // before it rolls, from the database, never from the phone.
   const asked = requiredChecks(kit?.roll_checks, ...pkgs.map((x) => x.roll_checks));
   const tapped = new Map((input.checks ?? []).filter((c) => typeof c?.label === "string")
-    .map((c) => [c.label.trim().toLowerCase(), typeof c.at === "number" && c.at >= startedMs - 60e3 && c.at <= nowMs + 60e3 ? new Date(c.at).toISOString() : now]));
+    .map((c) => [c.label.trim().toLowerCase(), typeof c.at === "number" && c.at >= floorMs - 60e3 && c.at <= nowMs + 60e3 ? new Date(c.at).toISOString() : now]));
   const notTapped = missingChecks(asked, [...tapped.keys()]);
   const rollChecks = asked.map((label) => ({ label, ok: tapped.has(label.toLowerCase()), at: tapped.get(label.toLowerCase()) ?? null, by: tapped.has(label.toLowerCase()) ? actor : null }));
   const reasons = [...v.reasons, ...unaccounted.map((a) => `Not scanned: ${label(a)}`),
@@ -346,6 +365,8 @@ export async function finishLoadout(input: {
   // Out on a job: a READY load-out puts what went on out until it's checked
   // back in. A NOT READY one didn't leave (unless a manager overrides it, which
   // starts the clock then). Anything taken off is back in the yard.
+  // Pieces a NOT READY save took off the last job and back onto this truck.
+  let backOn: string[] = [];
   if (scannedIds.length) {
     // NOT READY: nothing left. A tool still signed out to someone stays out
     // with them (their clock keeps running) until the truck really rolls.
@@ -354,6 +375,7 @@ export async function finishLoadout(input: {
       ? { out_since: now, out_loadout_id: saved.id, out_alerted_at: null, out_with_user: null, out_with_name: null }
       : { out_since: null, out_loadout_id: null, out_alerted_at: null })
       .eq("company_id", company.id).in("id", resetIds);
+    if (verdict !== "ready") backOn = resetIds.filter((id) => stillOut.has(id));
     // A tool signed out to someone that went on a truck that rolled: it's on
     // the truck now, so the sign-out closes.
     const handed = scannedIds.filter((id) => byId.get(id)!.out_with_user);
@@ -381,5 +403,5 @@ export async function finishLoadout(input: {
   revalidatePath(`/app/units/${unit.id}`);
   revalidatePath("/app/map");
   revalidatePath("/app");
-  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token };
+  return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn };
 }

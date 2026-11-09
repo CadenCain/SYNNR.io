@@ -140,7 +140,8 @@ export async function finishReturn(input: {
     assetId: s.assetId,
     // A tag scan only counts if the code read off the tag is this piece's.
     how: provenHow(s.how, s.proof, byId.get(s.assetId)!),
-    to: (s.to === "truck" && unit ? "truck" : "yard") as ReturnDest,
+    // Red-tagged iron goes into the yard, whatever the phone sent: it can't go out.
+    to: (s.to === "truck" && unit && !String(s.redTag ?? "").trim() ? "truck" : "yard") as ReturnDest,
     redTag: String(s.redTag ?? "").trim().slice(0, 140) || null,
     rack: String(s.rack ?? "").trim().slice(0, 80),
     at: typeof s.at === "number" && s.at <= nowMs + 60e3 && s.at >= startedMs - 60e3 ? new Date(Math.min(s.at, nowMs)).toISOString() : now,

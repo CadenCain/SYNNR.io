@@ -110,7 +110,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   }
   /** Came back damaged: red-tag it right here, with why. Empty reason takes it back off. */
   // Red-tagged iron goes into the yard, not back on the truck: it can't go out.
-  const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined, ...(why ? { to: "yard" as ReturnDest } : {}) } } : x));
+  const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined,
+    // Tag off: back to where this check-in is sending things.
+    ...(why ? { to: "yard" as ReturnDest } : { to: dest, rack: dest === "yard" ? rack.trim() : "" }) } } : x));
   const flip = (id: string) => setScans((x) => {
     const s = x[id]; if (!s || !truck) return x;
     return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim() } : { ...s, to: "truck", rack: "" } };
@@ -244,13 +246,13 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
         {expected.length === 0 ? <p className="text-sm text-ink-faint">{truck ? `Nothing is logged on ${truck.name}.` : "Nothing is out on a job right now."} Scan anything that came back and it gets checked in.</p> : null}
         {expected.map((p) => (
           <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={scans[p.id] ? destText(scans[p.id]) : ""}
-            onHand={() => mark(p, "hand")} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />
+            onHand={() => mark(p, "hand")} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />
         ))}
       </section>
       {extra.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Also came back</h2>
-          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
+          {extra.map((p) => <Row key={p.id} p={p} scan={scans[p.id]} days={outDays[p.id]} alertDays={alertDays} last4={last4} strong={!hasNfc} destText={destText(scans[p.id])} onHand={() => {}} onFlip={truck && !scans[p.id]?.redTag ? () => flip(p.id) : undefined} onRedTag={(why) => tagRed(p.id, why)} />)}
         </section>
       ) : null}
 

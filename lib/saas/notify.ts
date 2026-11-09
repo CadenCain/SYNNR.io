@@ -174,6 +174,18 @@ export function logEvent(args: {
   return later(() => writeEvent(args));
 }
 
+/** Append to the feed before the page that shows it renders (a redirect
+ *  straight to the board should already have "X joined the crew"). */
+export function logEventNow(args: {
+  companyId: string;
+  kind: string;
+  message: string;
+  unitId?: string | null;
+  actor?: string | null;
+}): Promise<void> {
+  return writeEvent(args);
+}
+
 async function writeEvent(args: { companyId: string; kind: string; message: string; unitId?: string | null; actor?: string | null }): Promise<void> {
   try {
     const admin = saasAdmin();

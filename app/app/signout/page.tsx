@@ -43,10 +43,12 @@ export default async function ToolsOutPage() {
   const admin = manager ? saasAdmin() : null;
   if (admin) {
     const { data: mem } = await db.from("saas_memberships").select("user_id").eq("company_id", company.id).eq("status", "active").limit(100);
-    for (const m of (mem ?? []) as { user_id: string }[]) {
+    // All at once, not one after another: a 40-man crew is one wait, not 40.
+    const people = await Promise.all(((mem ?? []) as { user_id: string }[]).map(async (m) => {
       const { data } = await admin.auth.admin.getUserById(m.user_id);
-      crew.push({ id: m.user_id, name: (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || "Someone" });
-    }
+      return { id: m.user_id, name: (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || data?.user?.email?.split("@")[0] || "Someone" };
+    }));
+    crew.push(...people);
     crew.sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name));
   }
   const mine = new Set(((mineRows ?? []) as { id: string }[]).map((r) => r.id));

@@ -58,7 +58,7 @@ const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { hour: "nu
 
 // Scans live on the phone until the load-out is saved, so a dead zone, a
 // dropped call, or a closed tab never loses them.
-type Draft = { startedAt: string; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; job?: string; savedAt: number };
+type Draft = { startedAt: string; keptSince?: string | null; scans: Record<string, Scan>; outcomes: Record<string, Outcome>; packageIds?: string[]; quick?: KitLine[]; checks?: Record<string, number>; job?: string; savedAt: number };
 const draftKey = (truckId: string) => `rr-loadout-${truckId}`;
 /** The saved draft's raw text if it's from the last 18 hours and has scans, else null. */
 const readDraftRaw = (truckId: string): string | null => {
@@ -125,6 +125,11 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const hasNfcHere = useHasNfc();
   const hasNfc = hasNfcHere || previewNfc;
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
+  // After NOT READY and "Fix it and scan again": when the first try started,
+  // so the pieces kept from it keep the times they were really scanned.
+  const [keptSince, setKeptSince] = useState<string | null>(null);
+  // Still-out pieces a NOT READY save brought back onto this truck.
+  const [backOn, setBackOn] = useState<string[]>([]);
   // An unsaved load-out from earlier on this phone (read once, offered to pick back up).
   const draftRaw = useSyncExternalStore(noSubscribe, () => readDraftRaw(truck.id), () => null);
   const [draftHandled, setDraftHandled] = useState(false);
@@ -179,7 +184,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   const handleRef = useRef<(i: { link: string | null; chipId: string | null; how: ScanHow }) => void>(() => {});
   const handleScanSync = (i: { link: string | null; chipId: string | null; how: ScanHow }) => { void handleScan(i); };
 
-  const stillOut = useMemo(() => new Set(stillOutIds), [stillOutIds]);
+  const stillOut = useMemo(() => new Set(stillOutIds.filter((id) => !backOn.includes(id))), [stillOutIds, backOn]);
   // On the truck: logged on it, minus what's still out on the last job (unless it got scanned).
   const expected = useMemo(() => list.filter((p) => p.unitId === truck.id && (!stillOut.has(p.id) || scans[p.id])), [list, truck.id, stillOut, scans]);
   const added = useMemo(() => list.filter((p) => p.unitId !== truck.id && scans[p.id]), [list, scans, truck.id]);
@@ -258,12 +263,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
       return;
     }
     hadScans.current = true;
-    writeDraft(truck.id, { startedAt, scans, outcomes, packageIds, quick, checks: checked, job, savedAt: Date.now() });
-  }, [scans, outcomes, packageIds, quick, checked, job, startedAt, saved, truck.id]);
+    writeDraft(truck.id, { startedAt, keptSince, scans, outcomes, packageIds, quick, checks: checked, job, savedAt: Date.now() });
+  }, [scans, outcomes, packageIds, quick, checked, job, startedAt, keptSince, saved, truck.id]);
 
   function pickUpDraft() {
     if (!draft) return;
-    setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt);
+    setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt); setKeptSince(draft.keptSince ?? null);
     setPackageIds([...new Set([...lockedIds, ...(draft.packageIds ?? [])])].filter((id) => packages.some((x) => x.id === id))); setQuick(draft.quick ?? []);
     setChecked(draft.checks ?? {});
     if (draft.job) setJob(draft.job);
@@ -408,6 +413,20 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     keepPhoto(truck.id, startedAt, small, at);
   }
 
+  /** The photo upload in flight. A retry waits on it instead of starting a
+   *  second upload that splits one bar of signal with the first. */
+  const photoSend = useRef<{ key: string; p: Promise<string | undefined | false> } | null>(null);
+  function sendPhotoOnce(): Promise<string | undefined | false> {
+    const key = photo ? `${startedAt}-${photo.at}` : "none";
+    if (photoSend.current?.key === key) return photoSend.current.p;
+    const p = sendPhoto();
+    photoSend.current = { key, p };
+    // A failed upload is tried again next time; a finished one is reused.
+    p.then((r) => { if (r === false && photoSend.current?.p === p) photoSend.current = null; },
+      () => { if (photoSend.current?.p === p) photoSend.current = null; });
+    return p;
+  }
+
   /** Send the photo to storage (once per photo). Throws when there's no signal. */
   async function sendPhoto(): Promise<string | undefined | false> {
     if (!photo || !companyId) return undefined;
@@ -428,35 +447,46 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     return path;
   }
 
+  const savingNow = useRef(false);
   async function save() {
+    // The 30-second retry never starts a second save over one still going.
+    if (savingNow.current) return;
+    savingNow.current = true;
     setSaving(true); setSaveErr("");
     const notScanned = expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "yard" as Outcome }));
     let res: Awaited<ReturnType<typeof finishLoadout>>;
     try {
-      // One bar of signal: give up after 25 seconds and keep it on the phone
-      // (a resend can't make a second record).
-      const timeout = <T,>(p: Promise<T>) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 25000))]);
-      const photoPath = await timeout(sendPhoto());
+      // One bar of signal: stop waiting and keep it on the phone (a resend
+      // can't make a second record). The photo keeps uploading meanwhile, and
+      // the next try picks it up where it is.
+      const timeout = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+      const photoPath = await timeout(sendPhotoOnce(), 45000);
       if (photoPath === false) { setSaving(false); return; }
       res = await timeout(finishLoadout({
-        unitId: truck.id, startedAt,
+        unitId: truck.id, startedAt, keptSince: keptSince ?? undefined,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
         notScanned, packageIds, quick, photoPath, job,
         checks: askChecks.filter((c) => checked[c]).map((c) => ({ label: c, at: checked[c] })),
-      }));
-    } catch {
-      // No signal (or the request died). Everything is still on the phone.
+      }), 25000);
+    } catch (e) {
+      // No signal, weak signal, or the request died. Everything is still on the phone.
       setSaving(false);
       setWaitingForSignal(true);
-      const withSignal = navigator.onLine;
+      const slow = e instanceof Error && e.message === "timeout";
+      // Slow isn't broken: only a real failure with signal counts toward "reload".
+      const withSignal = navigator.onLine && !slow;
       const fails = withSignal ? failsWithSignal + 1 : failsWithSignal;
       setFailsWithSignal(fails);
       // A page saved for no signal can be older than the app. If it fails
       // with signal, a reload gets the new page, and the scans come back.
       setSaveErr(withSignal && fails >= 2
         ? "Couldn't reach RollReady. Your scans are saved on this phone. Reload the page and tap Pick it back up."
-        : "No signal. Your scans are saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
+        : slow && navigator.onLine
+          ? "Weak signal, still sending. Your scans are saved on this phone. Leave this screen open and it keeps trying."
+          : "No signal. Your scans are saved on this phone. Leave this screen open and it sends when signal comes back, or open it again later from Load out.");
       return;
+    } finally {
+      savingNow.current = false;
     }
     setSaving(false);
     if (!res.ok || !res.id || !res.verdict || !res.proofToken) { setSaveErr(res.error ?? "Couldn't save the load-out."); return; }
@@ -466,6 +496,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
     // (bad pieces too, until someone takes them off), and anything marked not
     // going is back in the yard. Scanning again starts from there.
     const went = new Set(Object.keys(scans));
+    if (res.backOn?.length) setBackOn((b) => [...new Set([...b, ...res.backOn!])]);
     setList((l) => l.map((p) => went.has(p.id) ? { ...p, unitId: truck.id }
       : p.unitId === truck.id && (outcomes[p.id] ?? "yard") === "yard" ? { ...p, unitId: null } : p));
     stopNfc(); stopCamera();
@@ -480,7 +511,10 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   function fixAndRescan() {
     const keep = Object.fromEntries(Object.entries(scans).filter(([id]) => list.find((p) => p.id === id)?.problem !== "red"));
     const dropped = Object.keys(scans).length - Object.keys(keep).length;
-    setSaved(null); setScans(keep); setOutcomes({}); setFinishing(false); setPhoto(null); uploadedPath.current = null;
+    // "Can't find" stays said for what's still not found; the rest goes back to the default.
+    setOutcomes((o) => Object.fromEntries(Object.entries(o).filter(([id, v]) => v === "missing" && !keep[id])));
+    setSaved(null); setScans(keep); setFinishing(false); setPhoto(null); uploadedPath.current = null; photoSend.current = null;
+    setKeptSince((k) => k ?? startedAt);
     setStartedAt(new Date().toISOString());
     setBanner({ tone: "warn", text: `Kept the ${Object.keys(keep).length} good ${Object.keys(keep).length === 1 ? "piece" : "pieces"}${dropped ? `. Took off ${dropped} bad ${dropped === 1 ? "one" : "ones"}: put a good one on in its place` : ""}. Fix what's wrong, then save again.` });
   }
@@ -562,7 +596,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
   if (!started) {
     return (
       <div className="flex flex-col gap-5">
-        {draft && !draftHandled ? (
+        {draft && !draftHandled && draft.startedAt !== startedAt ? (
           <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
             <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
             <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
@@ -647,7 +681,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
             ) : extras;
           })()}
           <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-20 -mx-1 rounded-2xl bg-surface/95 p-1 backdrop-blur md:bottom-4">
-            <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
+            <button type="button" onClick={() => { setStarted(true); setStartedAt(new Date().toISOString()); setKeptSince(null); }} className={buttonClass("default", "lg", "h-14 w-full text-base")}>
               <ScanLine className="h-5 w-5" /> Start scanning{required ? ` (${required} ${required === 1 ? "piece" : "pieces"} required)` : ""}
             </button>
           </div>
@@ -658,7 +692,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], sti
 
   return (
     <div className="flex flex-col gap-5">
-      {draft && !draftHandled && Object.keys(scans).length === 0 ? (
+      {draft && !draftHandled && draft.startedAt !== startedAt && Object.keys(scans).length === 0 ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
           <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
           <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>

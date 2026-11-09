@@ -54,7 +54,9 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     db.from("saas_loadout_scans").select("pieces, unit_id, scanned_by").eq("company_id", company.id).gte("finished_at", weekAgo),
     db.from("saas_dispatch_checks").select("id", { count: "exact", head: true })
       .eq("company_id", company.id).eq("status", "not_ready_override").gte("started_at", weekAgo),
-    db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).gte("created_at", weekAgo),
+    // Every override, not just this week's: a truck that rolled on one 10 days
+    // ago is still out on it, not blocked. Overrides are rare; 2,000 is years.
+    db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", company.id).order("created_at", { ascending: false }).limit(2000),
     db.from("saas_events").select("id, kind, actor, message, unit_id, created_at")
       .eq("company_id", company.id).gte("created_at", sinceIso()).order("created_at", { ascending: false }).limit(60),
     db.from("saas_packages").select("unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).not("unit_id", "is", null),
@@ -150,7 +152,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     ? await db.from("saas_loadout_scans").select("unit_id").eq("company_id", company.id).eq("scanned_by_user", user.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const myTruckId = (picked && units.some((u) => u.id === picked) ? picked : null) ?? (mine as { unit_id: string | null } | null)?.unit_id ?? null;
-  const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.length + (yardId ? 0 : oldOverrides ?? 0));
+  const week = weekNumbers(((weekScans ?? []) as { pieces: { red?: boolean }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo)).length + (yardId ? 0 : oldOverrides ?? 0));
 
   const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
   const activity: ActivityLine[] = ((eventRows ?? []) as { id: string; kind: string; actor: string | null; message: string; unit_id: string | null; created_at: string }[])

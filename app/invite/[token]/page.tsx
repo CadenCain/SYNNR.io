@@ -7,7 +7,7 @@ import { getSaasUser } from "@/lib/saas/auth";
 import { isDemoUser } from "@/lib/saas/plan";
 import { Button } from "@/components/ui/button";
 import JoinForm from "./join-form";
-import { logEvent } from "@/lib/saas/notify";
+import { logEventNow } from "@/lib/saas/notify";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Join your crew · RollReady", robots: { index: false, follow: false } };
@@ -25,7 +25,7 @@ async function noteJoin(sb: SupabaseClient, companyId: unknown) {
   const u = data.user;
   if (!u || typeof companyId !== "string") return;
   const name = (u.user_metadata?.full_name as string | undefined)?.trim() || u.email?.split("@")[0] || "Someone";
-  await logEvent({ companyId, kind: "crew_joined", actor: name, message: `${name} joined the crew` });
+  await logEventNow({ companyId, kind: "crew_joined", actor: name, message: `${name} joined the crew` });
 }
 
 /** Signed in already: accept and go to the trucks. */

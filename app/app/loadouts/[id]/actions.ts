@@ -37,17 +37,23 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   const { error } = await admin.from("saas_loadout_overrides").insert({
     company_id: company.id, loadout_id: id, by_name: actor, by_user: user.id, reason,
   });
-  if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
+  // Two taps (or two managers) at once: the first one rolled it. Don't move
+  // the iron, email the office, or log it a second time.
+  if (error && /duplicate key/i.test(error.message)) redirect(`/app/loadouts/${id}`);
+  if (error) throw new Error(error.message);
 
   // It rolled: what went on is out on the job from now until it's checked in.
   // A tool that was signed out to someone went on this truck: that sign-out closes.
   const ids = got.rec.pieces.map((p) => p.asset_id);
   const nowIso = new Date().toISOString();
   if (ids.length && got.rec.unit_id) {
-    await admin.from("saas_assets").update({ out_since: nowIso, out_loadout_id: id, out_alerted_at: null, out_with_user: null, out_with_name: null })
-      .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).in("id", ids);
-    await admin.from("saas_signouts").update({ back_at: nowIso, back_by: actor, back_note: `went out on ${got.rec.unit_name} (override)` })
-      .eq("company_id", company.id).in("asset_id", ids).is("back_at", null);
+    // Only what's still on the truck rolled. A piece taken off since (and
+    // maybe signed out to someone) stays where it is now.
+    const { data: rolled } = await admin.from("saas_assets").update({ out_since: nowIso, out_loadout_id: id, out_alerted_at: null, out_with_user: null, out_with_name: null })
+      .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).in("id", ids).select("id");
+    const rolledIds = ((rolled ?? []) as { id: string }[]).map((r) => r.id);
+    if (rolledIds.length) await admin.from("saas_signouts").update({ back_at: nowIso, back_by: actor, back_note: `went out on ${got.rec.unit_name} (override)` })
+      .eq("company_id", company.id).in("asset_id", rolledIds).is("back_at", null);
   }
 
   // The truck rolled: the plan this load-out was checked against is used up.

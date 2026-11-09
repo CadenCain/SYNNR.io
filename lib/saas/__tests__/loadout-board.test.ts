@@ -44,6 +44,16 @@ describe("the Load out board", () => {
     expect(trucks[0].loadoutLine).toBe("Out on a manager's override since today 5:55 AM by Ray Hinojosa");
   });
 
+  it("a truck that rolled on an override 10 days ago is still out on it, and out too long, not blocked", () => {
+    const s = scan("a", "2026-10-04T12:00:00Z", { verdict: "not_ready", reasons: ["Short: Lubricator, 0 of 1 scanned"] });
+    const { trucks, counts } = buildLoadOutTrucks([unit("a", "ready")], [], [s], new Set([s.id]), TODAY, new Map(), o());
+    expect(trucks[0].status).toBe("out");
+    expect(trucks[0].overridden).toBe(true);
+    expect(trucks[0].outTooLong).toBe(true);
+    expect(trucks[0].loadoutLine).toMatch(/^Out on a manager's override since .*\(10 days\)/);
+    expect(counts.blocked).toBe(0);
+  });
+
   it("only the latest load-out counts: a re-scan that comes back READY clears the block", () => {
     const { trucks } = buildLoadOutTrucks([unit("a", "ready")], [], [
       scan("a", "2026-10-14T10:55:00Z", { verdict: "not_ready", reasons: ["Short: Lubricator, 0 of 1 scanned"] }),
