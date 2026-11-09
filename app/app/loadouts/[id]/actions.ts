@@ -24,6 +24,12 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   const got = await getLoadout(db, { id, companyId: company.id });
   if (!got) redirect("/app/loadouts");
   if (verdictOf(got.rec) !== "not_ready" || got.override) redirect(`/app/loadouts/${id}`);
+  // Only the truck's newest load-out can roll: an older one isn't what's on the truck now.
+  if (got.rec.unit_id) {
+    const { data: newer } = await db.from("saas_loadout_scans").select("id").eq("company_id", company.id).eq("unit_id", got.rec.unit_id)
+      .gt("finished_at", got.rec.finished_at).limit(1).maybeSingle();
+    if (newer) redirect(`/app/loadouts/${id}?stale=1`);
+  }
 
   const admin = saasAdmin();
   if (!admin) throw new Error("Something's down on our end. Try again in a minute.");
@@ -34,10 +40,14 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   if (error && !/duplicate key/i.test(error.message)) throw new Error(error.message);
 
   // It rolled: what went on is out on the job from now until it's checked in.
+  // A tool that was signed out to someone went on this truck: that sign-out closes.
   const ids = got.rec.pieces.map((p) => p.asset_id);
+  const nowIso = new Date().toISOString();
   if (ids.length && got.rec.unit_id) {
-    await admin.from("saas_assets").update({ out_since: new Date().toISOString(), out_loadout_id: id, out_alerted_at: null })
+    await admin.from("saas_assets").update({ out_since: nowIso, out_loadout_id: id, out_alerted_at: null, out_with_user: null, out_with_name: null })
       .eq("company_id", company.id).eq("unit_id", got.rec.unit_id).in("id", ids);
+    await admin.from("saas_signouts").update({ back_at: nowIso, back_by: actor, back_note: `went out on ${got.rec.unit_name} (override)` })
+      .eq("company_id", company.id).in("asset_id", ids).is("back_at", null);
   }
 
   // The truck rolled: the plan this load-out was checked against is used up.
@@ -49,7 +59,7 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");
   const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason.replace(/[.\s]+$/, "")}". Not ready because: ${why}`;
   void logEvent({ companyId: company.id, kind: "rolled_override", unitId: got.rec.unit_id, actor, message });
-  void notifyEvent({ companyId: company.id, companyName: company.name, yardId: got.rec.yard_id, message });
+  void notifyEvent({ companyId: company.id, companyName: company.name, yardId: got.rec.yard_id, message, href: `/app/loadouts/${id}` });
 
   revalidatePath(`/app/loadouts/${id}`);
   revalidatePath("/app");

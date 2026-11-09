@@ -30,9 +30,11 @@ export async function GET() {
     db.from("saas_yards").select("id, name").eq("company_id", company.id),
   ]);
   const recs = (rows ?? []) as (Pick<LoadoutRecord, "id" | "unit_name" | "yard_id" | "finished_at" | "scanned_by" | "verdict" | "reasons" | "pieces" | "not_scanned" | "proof_token">)[];
-  const { data: ov } = recs.length
-    ? await db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").in("loadout_id", recs.map((r) => r.id))
-    : { data: [] };
+  // Every override the company has (a few per month), not a 5,000-id list in a URL.
+  const { data: ov, error: ovErr } = recs.length
+    ? await db.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("company_id", company.id).limit(20000)
+    : { data: [], error: null };
+  if (ovErr) return new Response("Couldn't read the overrides. Try the export again.", { status: 500 });
   const overrides = new Map(((ov ?? []) as { loadout_id: string; by_name: string; reason: string; created_at: string }[]).map((o) => [o.loadout_id, o]));
   const yardName = new Map(((yards ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
 

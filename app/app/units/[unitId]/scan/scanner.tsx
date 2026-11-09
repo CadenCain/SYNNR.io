@@ -90,13 +90,15 @@ async function keptPhoto(truckId: string, startedAt: string): Promise<Photo | nu
 
 export interface ScanPlan { by: string | null; at: string; note: string | null; packageIds: string[]; lines: KitLine[] }
 
-export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
+export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], stillOutIds = [], packages, manager = false, lastPackageIds, plan = null, tagRule = false, companyId, photoRule = "off", last4 = false, initialScans, initialBanner, initialPackageIds, previewNfc = false }: {
   truck: { id: string; name: string };
   pieces: ScanPiece[];
   /** The truck's default kit lines (empty if none set). */
   kit: KitLine[];
   /** What the truck's kit asks the hand to confirm before it rolls. */
   kitChecks?: string[];
+  /** Pieces logged on this truck but still out on the last job (marked so at check-in). */
+  stillOutIds?: string[];
   /** Packages a hand can add for the job. */
   packages: PackageOption[];
   manager?: boolean;
@@ -142,6 +144,9 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
   const [nfcOn, setNfcOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const finishRef = useRef<HTMLElement | null>(null);
+  // "Done loading" opens "Before you save" at the bottom: bring it into view.
+  useEffect(() => { if (finishing) finishRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [finishing]);
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ id: string; verdict: "ready" | "not_ready"; reasons: string[]; proofToken: string } | null>(null);
@@ -172,7 +177,9 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
   const handleRef = useRef<(i: { link: string | null; chipId: string | null; how: ScanHow }) => void>(() => {});
   const handleScanSync = (i: { link: string | null; chipId: string | null; how: ScanHow }) => { void handleScan(i); };
 
-  const expected = useMemo(() => list.filter((p) => p.unitId === truck.id), [list, truck.id]);
+  const stillOut = useMemo(() => new Set(stillOutIds), [stillOutIds]);
+  // On the truck: logged on it, minus what's still out on the last job (unless it got scanned).
+  const expected = useMemo(() => list.filter((p) => p.unitId === truck.id && (!stillOut.has(p.id) || scans[p.id])), [list, truck.id, stillOut, scans]);
   const added = useMemo(() => list.filter((p) => p.unitId !== truck.id && scans[p.id]), [list, scans, truck.id]);
 
   // The list, filled in as pieces get scanned.
@@ -199,6 +206,12 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
     if (!already) setScans((s) => ({ ...s, [piece.id]: { how, at: Date.now(), ...(proof ? { proof } : {}) } }));
     try { navigator.vibrate?.(msg.tone === "good" ? 80 : msg.tone === "bad" ? [300, 120, 300] : [120, 80, 120]); } catch { /* no vibration */ }
     scanSound(msg.tone);
+  }
+
+  /** Tapped the wrong row: that one isn't on the truck after all. */
+  function undo(piece: ScanPiece) {
+    setScans((s) => { const n = { ...s }; delete n[piece.id]; return n; });
+    setBanner({ tone: "warn", text: `${piece.name}${piece.serial ? ` ${piece.serial}` : ""} is unchecked.` });
   }
 
   /** A bad piece came back off the truck: it's not part of this load-out. */
@@ -410,14 +423,17 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
     const notScanned = expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "yard" as Outcome }));
     let res: Awaited<ReturnType<typeof finishLoadout>>;
     try {
-      const photoPath = await sendPhoto();
+      // One bar of signal: give up after 25 seconds and keep it on the phone
+      // (a resend can't make a second record).
+      const timeout = <T,>(p: Promise<T>) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 25000))]);
+      const photoPath = await timeout(sendPhoto());
       if (photoPath === false) { setSaving(false); return; }
-      res = await finishLoadout({
+      res = await timeout(finishLoadout({
         unitId: truck.id, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, proof: s.proof })),
         notScanned, packageIds, quick, photoPath,
         checks: askChecks.filter((c) => checked[c]).map((c) => ({ label: c, at: checked[c] })),
-      });
+      }));
     } catch {
       // No signal (or the request died). Everything is still on the phone.
       setSaving(false);
@@ -526,7 +542,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
         {draft && !draftHandled ? (
           <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
             <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
-            <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} pieces scanned, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
+            <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={pickUpDraft} className={buttonClass("default", "lg")}>Pick it back up</button>
               <button type="button" onClick={dropDraft} className={buttonClass("ghost", "lg")}>Start over</button>
@@ -583,7 +599,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
                       <span key={`${l.label}-${i}`} className="inline-flex items-center gap-1 rounded-lg border border-line-2 py-1 pl-3 pr-1 text-sm">
                         {l.label}{l.qty > 1 ? ` × ${l.qty}` : ""}
                         <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => [...q.slice(0, i), ...q.slice(i + 1)])}
-                          className="flex h-9 w-9 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                          className="flex h-11 w-11 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
                       </span>
                     ))}
                   </div>
@@ -617,7 +633,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
       {draft && !draftHandled && Object.keys(scans).length === 0 ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
           <div className="font-semibold">There&apos;s an unsaved load-out on this phone</div>
-          <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} pieces scanned, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
+          <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}. Pick it back up, or start over.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={pickUpDraft} className={buttonClass("default", "lg")}>Pick it back up</button>
             <button type="button" onClick={dropDraft} className={buttonClass("ghost", "lg")}>Start over</button>
@@ -688,7 +704,8 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
         for (const l of lines) for (const f of l.filled) used.add(f.id);
         const view = lines.map((l) => {
           const need = Math.max(0, l.qty - l.filled.length);
-          const onTruck = need ? expected.filter((p) => !scans[p.id] && !used.has(p.id) && lineMatches(l.label, p.name)).slice(0, need) : [];
+          // What could fill it from the truck: not a bad piece, and not one marked not going.
+          const onTruck = need ? expected.filter((p) => !scans[p.id] && !used.has(p.id) && p.problem !== "red" && outcomes[p.id] !== "yard" && lineMatches(l.label, p.name)).slice(0, need) : [];
           onTruck.forEach((p) => used.add(p.id));
           const stillNeed = need - onTruck.length;
           const inYard = stillNeed
@@ -702,7 +719,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
         const extras = added.filter((p) => !used.has(p.id));
         const rowOf = (p: ScanPiece, place?: string) => (
           <Row key={p.id} p={p} scan={scans[p.id]} last4={last4} strong={tapToCheck} tagOnly={needsTag(p)} nested place={place}
-            onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} />
+            onHand={() => markScanned(p, "hand")} onTakeOff={() => takeOff(p)} onUndo={() => undo(p)} />
         );
         const yardPlace = (p: ScanPiece) => `${p.unitId ? `On ${p.where}` : `In ${p.where}`}${p.spot ? `, ${p.spot}` : ""}`;
         return (
@@ -729,7 +746,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
                     <span className={cn("shrink-0 text-base font-semibold tabular-nums", bad ? "text-red-400" : done ? "text-emerald-400" : "text-ink-dim")}>{l.filled.length}/{l.qty}</span>
                     {l.source === "quick" ? (
                       <button type="button" aria-label={`Remove ${l.label}`} onClick={() => setQuick((q) => { const idx = q.findIndex((x) => x.label === l.label && x.qty === l.qty); return idx < 0 ? q : [...q.slice(0, idx), ...q.slice(idx + 1)]; })}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-elevated"><X className="h-4 w-4" /></button>
                     ) : null}
                   </div>
                   {l.filled.map((f) => { const p = byId.get(f.id); return p ? rowOf(p) : null; })}
@@ -772,14 +789,14 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
                       {x.name}
                       {lockedIds.includes(x.id) ? null : (
                         <button type="button" onClick={() => setPackageIds((ids) => ids.filter((i) => i !== x.id))} aria-label={`Take ${x.name} off the list`}
-                          className="flex h-9 w-9 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
+                          className="flex h-11 w-11 items-center justify-center rounded-md text-ink-dim hover:bg-elevated"><X className="h-4 w-4" /></button>
                       )}
                     </span>
                   ))}
                   {planned.length ? <span className="inline-flex items-center gap-1 rounded-lg border border-bone/40 bg-bone/10 px-3 py-2 text-sm font-medium"><Lock className="h-3.5 w-3.5 text-bone" /> Planned extras</span> : null}
                   {packages.filter((x) => !packageIds.includes(x.id)).length ? (
                     <select value="" onChange={(e) => { const v = e.target.value; if (v) setPackageIds((ids) => [...ids, v]); }} aria-label="Add a package"
-                      className="h-11 min-w-0 rounded-lg border border-line-2 bg-surface px-3 text-sm text-ink outline-none focus:border-bone">
+                      className="h-12 min-w-0 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone">
                       <option value="">+ Add a package</option>
                       {packages.filter((x) => !packageIds.includes(x.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                     </select>
@@ -814,7 +831,7 @@ export default function LoadoutScanner({ truck, pieces, kit, kitChecks = [], pac
           </div>
         </div>
       ) : (
-        <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
+        <section ref={finishRef} className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>
           {notYet.length > 0 ? (
             <div className="flex flex-col gap-2">
@@ -922,8 +939,10 @@ function maskSerial(serial: string): string {
  * the screen hides them until the piece is checked, so the check proves
  * someone looked at the iron.
  */
-function Row({ p, scan, onHand, onTakeOff, last4 = false, strong = false, tagOnly = false, nested = false, place }: {
+function Row({ p, scan, onHand, onTakeOff, onUndo, last4 = false, strong = false, tagOnly = false, nested = false, place }: {
   p: ScanPiece; scan?: Scan; onHand: () => void; onTakeOff: () => void; last4?: boolean; tagOnly?: boolean;
+  /** Tapped the wrong row: take just this one check back. */
+  onUndo?: () => void;
   /** This phone checks pieces off by hand (no tags): make the button the obvious thing to tap. */
   strong?: boolean;
   /** Inside a line on the list: lighter, so it reads as part of that line. */
@@ -965,6 +984,8 @@ function Row({ p, scan, onHand, onTakeOff, last4 = false, strong = false, tagOnl
         </button>
       ) : p.problem === "red" ? (
         <button type="button" onClick={onTakeOff} className="min-h-12 w-full shrink-0 rounded-lg border border-red-500/50 px-4 text-sm font-semibold text-red-400 hover:bg-red-500/10 sm:w-auto">Took it off</button>
+      ) : onUndo ? (
+        <button type="button" onClick={onUndo} className="min-h-12 shrink-0 rounded-lg px-3 text-[13px] text-ink-faint underline underline-offset-2 hover:text-ink">Not on it</button>
       ) : null}
       {asking && !scan ? (
         <div className="flex w-full flex-col gap-1">

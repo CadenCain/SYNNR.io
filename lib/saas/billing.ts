@@ -28,13 +28,13 @@ export async function setYardAllowance(companyId: string, newAllowance: number):
     .eq("id", companyId).maybeSingle();
   const c = data as { stripe_subscription_id: string | null; subscription_status: string; comped: boolean } | null;
   if (!c) return { ok: false, error: "Company not found." };
-  if (c.comped) return { ok: false, error: "This account is comped — there's no subscription to change." };
-  if (!c.stripe_subscription_id) return { ok: false, error: "No subscription yet — subscribe first." };
+  if (c.comped) return { ok: false, error: "This account is comped, so there's no subscription to change." };
+  if (!c.stripe_subscription_id) return { ok: false, error: "No subscription yet. Subscribe first." };
 
   try {
     const sub = await stripe.subscriptions.retrieve(c.stripe_subscription_id);
     const item = sub.items.data[0];
-    if (!item) return { ok: false, error: "Subscription has no line item — contact support." };
+    if (!item) return { ok: false, error: "Something's off with the subscription. Call or text 432-250-0715." };
     if (item.quantity !== newAllowance) {
       await stripe.subscriptions.update(c.stripe_subscription_id, {
         items: [{ id: item.id, quantity: newAllowance }],

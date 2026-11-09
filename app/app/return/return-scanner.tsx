@@ -107,7 +107,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
     mark(p, "hand"); setSerialText("");
   }
   /** Came back damaged: red-tag it right here, with why. Empty reason takes it back off. */
-  const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined } } : x));
+  // Red-tagged iron goes into the yard, not back on the truck: it can't go out.
+  const tagRed = (id: string, why: string) => setScans((x) => (x[id] ? { ...x, [id]: { ...x[id], redTag: why || undefined, ...(why ? { to: "yard" as ReturnDest } : {}) } } : x));
   const flip = (id: string) => setScans((x) => {
     const s = x[id]; if (!s || !truck) return x;
     return { ...x, [id]: s.to === "truck" ? { ...s, to: "yard", rack: rack.trim() } : { ...s, to: "truck", rack: "" } };
@@ -157,6 +158,8 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
           <p className="mt-1 text-base text-ink">{saved}</p>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          {/* A tool that gets redressed after every run just came back: say where to clear it. */}
+          {/needs? redress/.test(saved) ? <Link href="/app/signout" className={buttonClass("outline", "lg", "h-14 text-base")}>Mark it redressed</Link> : null}
           <Link href="/app" className={buttonClass("default", "lg", "h-14 text-base")}>Back to Load out</Link>
           {truck ? <Link href={`/app/units/${truck.id}/scan`} className={buttonClass("outline", "lg", "h-14 text-base")}><ScanLine className="h-5 w-5" /> Load {truck.name} out again</Link> : null}
         </div>
@@ -173,7 +176,7 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       {draft && !draftHandled && Object.keys(scans).length === 0 ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
           <div className="font-semibold">There&apos;s an unsaved check-in on this phone</div>
-          <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} pieces scanned, last at {clock(draft.savedAt)}.</p>
+          <p className="text-sm text-ink-dim">{Object.keys(draft.scans).length} {Object.keys(draft.scans).length === 1 ? "piece" : "pieces"} checked, last at {clock(draft.savedAt)}.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => { setScans(draft.scans); setOutcomes(draft.outcomes ?? {}); setStartedAt(draft.startedAt); setDraftHandled(true); }} className={buttonClass("default", "lg")}>Pick it back up</button>
             <button type="button" onClick={() => { try { localStorage.removeItem(draftKey(key)); } catch { /* */ } setDraftHandled(true); }} className={buttonClass("ghost", "lg")}>Start over</button>
@@ -340,7 +343,7 @@ function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip
         scan.redTag ? (
           <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400">
             <span className="min-w-0 break-words">Red-tagged: {scan.redTag}</span>
-            <button type="button" onClick={() => onRedTag("")} className="min-h-10 rounded-md px-2 text-[13px] text-ink-dim underline underline-offset-2">Undo</button>
+            <button type="button" onClick={() => onRedTag("")} className="min-h-12 rounded-md px-3 text-[13px] text-ink-dim underline underline-offset-2">Undo</button>
           </div>
         ) : tagging ? (
           <div className="flex w-full flex-col gap-2">
@@ -355,7 +358,7 @@ function Row({ p, scan, days, alertDays, last4, strong, destText, onHand, onFlip
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setTagging(true)} className="min-h-10 px-1 text-[13px] text-ink-dim underline underline-offset-2">Came back damaged? Red-tag it</button>
+          <button type="button" onClick={() => setTagging(true)} className="min-h-12 px-1 text-sm text-ink-dim underline underline-offset-2">Came back damaged? Red-tag it</button>
         )
       ) : null}
       {asking && !scan ? (

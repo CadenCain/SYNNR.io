@@ -118,7 +118,7 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial }: 
       </section>
 
       <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
-        <label htmlFor="plan-note" className="font-semibold">Note for the hand <span className="font-normal text-ink-faint">(optional)</span></label>
+        <label htmlFor="plan-note" className="font-semibold">Note for the hand <span className="font-normal text-ink-faint">(optional, stays inside RollReady)</span></label>
         <input id="plan-note" value={note} onChange={(e) => setNote(e.target.value.slice(0, 120))} placeholder="Like: flowback, leaves at 5 AM"
           className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
       </section>

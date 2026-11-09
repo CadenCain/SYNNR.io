@@ -67,7 +67,7 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
           </div>
           <span className="text-sm text-ink-dim">{[company, yardName].filter(Boolean).join(" · ")}</span>
         </div>
-        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} photo={photo} />
+        <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} photo={photo} forOperator />
         <p className="text-[13px] text-ink-faint">Tap a piece to see its tests and cert. Sent from RollReady by SYNNR.</p>
       </div>
     </div>

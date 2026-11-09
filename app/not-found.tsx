@@ -15,7 +15,7 @@ export default function NotFound() {
             The link may be old or the page moved. Head back and pick up where you left off.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
-            <Link className="btn btn-primary" href="/dashboard">Your apps</Link>
+            <Link className="btn btn-primary" href="/app">Open RollReady</Link>
             <Link className="btn btn-ghost" href="/">Home</Link>
           </div>
         </div>

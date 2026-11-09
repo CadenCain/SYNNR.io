@@ -18,7 +18,7 @@ import { pickMyTruck, myTruckCookie } from "./my-truck";
 import { isBillableYard } from "@/lib/saas/billing-rules";
 import { isWritable } from "@/lib/saas/entitlements";
 
-export const metadata = { title: "Load out" };
+export const metadata = { title: "Load out · RollReady" };
 
 export const dynamic = "force-dynamic";
 

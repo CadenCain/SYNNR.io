@@ -3,6 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { clampYards, yardsToMake } from "./plan";
 import { isBillableYard } from "./billing-rules";
 import { yardPriceId } from "./stripe-setup";
+import { subscriptionFields } from "./stripe-events";
+import { tellOwner, monthly } from "./tell-owner";
+
+/** Subscription states that mean they're already paying (or Stripe is still collecting). */
+const PAYING = new Set(["active", "trialing", "past_due", "unpaid"]);
 
 /**
  * Getting a shop from "Continue to payment" to a working account. Shared by
@@ -18,22 +23,32 @@ import { yardPriceId } from "./stripe-setup";
  */
 export async function provisionPaidYards(admin: SupabaseClient, companyId: string, paidFor: number): Promise<string[]> {
   const [{ data: co }, { data: yardRows }] = await Promise.all([
-    admin.from("saas_companies").select("first_yard_name").eq("id", companyId).maybeSingle(),
+    admin.from("saas_companies").select("first_yard_name, name, contact_name, contact_email, contact_phone").eq("id", companyId).maybeSingle(),
     admin.from("saas_yards").select("name").eq("company_id", companyId),
   ]);
+  const c = co as { first_yard_name: string | null; name?: string; contact_name?: string | null; contact_email?: string | null; contact_phone?: string | null } | null;
   const existing = ((yardRows ?? []) as { name: string }[]).map((y) => y.name).filter(isBillableYard);
-  const names = yardsToMake(paidFor, (co as { first_yard_name: string | null } | null)?.first_yard_name, existing);
+  const names = yardsToMake(paidFor, c?.first_yard_name, existing);
   if (!names.length) return [];
   const { error } = await admin.from("saas_yards")
     .upsert(names.map((name) => ({ company_id: companyId, name })), { onConflict: "company_id,name", ignoreDuplicates: true });
   if (error) throw new Error(`yards: ${error.message}`);
+  // A company's first yards made = it just paid. Whoever got here first (the
+  // success page or the webhook) sends the heads-up.
+  if (!existing.length) {
+    tellOwner(`RollReady paid: ${c?.name ?? "a new company"}, ${paidFor} ${paidFor === 1 ? "yard" : "yards"}`, [
+      `${c?.name ?? "A company"} just paid for ${paidFor} ${paidFor === 1 ? "yard" : "yards"} (${monthly(paidFor)}).`,
+      [c?.contact_name, c?.contact_email, c?.contact_phone].filter(Boolean).join(", ") || null,
+      "Call to welcome them and offer to load their iron.",
+    ]);
+  }
   return names;
 }
 
 /** A Stripe Checkout for N yards at $500 each a month, tied to this company. */
 export async function createYardCheckout(stripe: Stripe, admin: SupabaseClient, args: {
   companyId: string; companyName: string; userEmail: string | null; quantity: number; origin: string;
-}): Promise<{ url: string; quantity: number; amountTotal: number | null }> {
+}): Promise<{ url: string; quantity: number; amountTotal: number | null; already?: boolean }> {
   const quantity = clampYards(args.quantity);
   const price = await yardPriceId(stripe);
 
@@ -57,6 +72,22 @@ export async function createYardCheckout(stripe: Stripe, admin: SupabaseClient, 
     });
     customerId = customer.id;
     await admin.from("saas_companies").update({ stripe_customer_id: customerId }).eq("id", args.companyId);
+  }
+
+  // Already paying (they came back before the webhook landed, or hit Pay
+  // twice): never start a second subscription. Take what Stripe has, make
+  // their yards, and send them in. Otherwise close any checkout page still
+  // open for them, so only the newest one can be paid.
+  if (c?.stripe_customer_id && customerId === c.stripe_customer_id) {
+    const subs = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 20 });
+    const live = subs.data.find((s) => PAYING.has(s.status));
+    if (live) {
+      await admin.from("saas_companies").update(subscriptionFields(live)).eq("id", args.companyId);
+      await provisionPaidYards(admin, args.companyId, live.items?.data?.[0]?.quantity ?? quantity);
+      return { url: `${args.origin}/app`, quantity: live.items?.data?.[0]?.quantity ?? quantity, amountTotal: null, already: true };
+    }
+    const open = await stripe.checkout.sessions.list({ customer: customerId, status: "open", limit: 20 });
+    for (const s of open.data) await stripe.checkout.sessions.expire(s.id).catch(() => {});
   }
 
   const session = await stripe.checkout.sessions.create({

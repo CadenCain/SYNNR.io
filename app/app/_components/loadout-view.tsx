@@ -72,7 +72,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         ) : mine && !picking ? (
           <section className="flex flex-col gap-2">
             {card(mine, true)}
-            <Link href="/app?pick=1" className="self-start px-1 text-sm text-ink-dim underline underline-offset-2">Not your truck today? Pick another</Link>
+            <Link href="/app?pick=1" className="inline-flex min-h-12 items-center self-start px-1 text-sm text-ink-dim underline underline-offset-2">Not your truck today? Pick another</Link>
           </section>
         ) : (
           <Card className="flex flex-col gap-3 p-4">

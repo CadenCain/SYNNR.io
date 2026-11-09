@@ -51,7 +51,7 @@ export function isWritable(subscriptionStatus: string, comped: boolean): boolean
 }
 
 export const READ_ONLY_MESSAGE =
-  "Your subscription is paused. Your records are safe and exportable — update billing to start editing again.";
+  "Your subscription is paused. Your records are safe and exportable. Update billing to start editing again.";
 
 // ── Role matrix ─────────────────────────────────────────────────────────────
 

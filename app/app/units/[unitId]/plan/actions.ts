@@ -32,7 +32,7 @@ export async function savePlan(input: { unitId: string; packageIds: string[]; li
   // When it leaves: from a day ago to a month out, or not set.
   const leavesMs = input.leavesAt ? Date.parse(input.leavesAt) : NaN;
   const leaves_at = Number.isFinite(leavesMs) && leavesMs > Date.now() - 864e5 && leavesMs < Date.now() + 31 * 864e5 ? new Date(leavesMs).toISOString() : null;
-  if (!packageIds.length && !lines.length && !note) return clearPlan(unit.id);
+  if (!packageIds.length && !lines.length && !note && !leaves_at) return clearPlan(unit.id);
 
   const actor = actorOf(user);
   const row = { package_ids: packageIds, lines, note, leaves_at, planned_by: actor, planned_by_user: user.id, created_at: new Date().toISOString() };

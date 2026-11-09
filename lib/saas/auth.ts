@@ -113,7 +113,7 @@ export async function requireWritableCompany(): Promise<
 > {
   const got = await requireCompany();
   if (!isWritable(got.company.subscription_status, got.company.comped)) {
-    return { ok: false, error: "Subscription paused — your records are safe and exportable. Update billing to edit again." };
+    return { ok: false, error: "Subscription paused. Your records are safe and exportable. Update billing to edit again." };
   }
   return { ok: true, ...got };
 }

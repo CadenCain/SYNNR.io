@@ -129,7 +129,7 @@ export default async function CompliancePage() {
           </span>
           <div>
             <div className="font-medium">{s?.email_enabled === false ? "Alerts off" : "Alerts on"}</div>
-            <div className="text-sm text-ink-dim">Heads-up {leadDays} days before expiration · daily sweep at 6:30am CT</div>
+            <div className="text-sm text-ink-dim">Heads-up {leadDays} days before expiration · checked every morning</div>
           </div>
         </div>
         <div className="text-sm text-ink-dim">

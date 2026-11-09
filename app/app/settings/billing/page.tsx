@@ -86,8 +86,9 @@ export default async function BillingSettings({ searchParams }: { searchParams: 
               <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}</div>
             </div>
             {owner ? (
-              subscribed && c?.stripe_customer_id
-                ? <BillingActions mode="portal" />
+              // Anyone who ever paid can reach the portal: card, invoices and receipts, or cancel.
+              c?.stripe_customer_id && status !== "none"
+                ? <div className="flex flex-col items-end gap-2"><BillingActions mode="portal" />{subscribed ? null : <Link href="/onboarding/billing" className={buttonClass("default", "lg")}>Restart the subscription</Link>}</div>
                 : <Link href="/onboarding/billing" className={buttonClass("default", "lg")}>{status === "none" ? "Start the subscription" : "Restart the subscription"}</Link>
             ) : <span className="text-sm text-ink-faint">The account owner manages billing.</span>}
           </div>

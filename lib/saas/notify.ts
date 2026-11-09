@@ -1,5 +1,15 @@
+import { after } from "next/server";
 import { saasAdmin } from "./db";
 import { escHtml } from "./html";
+
+/**
+ * Run work after the response is sent: the phone isn't kept waiting, and the
+ * platform keeps the function alive until it's done (a bare floating promise
+ * can be cut off). Outside a request (tests, scripts) it just runs.
+ */
+function later(work: () => Promise<void>): Promise<void> {
+  try { after(work); return Promise.resolve(); } catch { return work(); }
+}
 
 /**
  * Outbound notifications: email (Resend) + SMS (Twilio) behind one interface.
@@ -103,12 +113,18 @@ export async function resolveRecipients(companyId: string, yardId?: string | nul
  * daily digest. Fire-and-forget from server actions: never throws, never
  * blocks the save. Logs every send to saas_alerts_sent (label, channel).
  */
-export async function notifyEvent(args: {
+export function notifyEvent(args: {
   companyId: string;
   companyName: string;
   yardId?: string | null;
-  message: string;          // "hu-179 rolled out NOT ready — BOP missing"
+  message: string;          // "CT-03 blocked at load-out (NOT READY) by Dale: Out of test: BOP"
+  /** The page the alert is about, like /app/loadouts/<id>: the email links straight to it. */
+  href?: string;
 }): Promise<void> {
+  return later(() => sendNotify(args));
+}
+
+async function sendNotify(args: { companyId: string; companyName: string; yardId?: string | null; message: string; href?: string }): Promise<void> {
   try {
     const admin = saasAdmin();
     if (!admin) return;
@@ -128,7 +144,7 @@ export async function notifyEvent(args: {
     const sends: { channel: string; recipient: string }[] = [];
     if (emails.length) {
       const ok = await sendEmail(emails, `RollReady alert: ${args.message}`,
-        `<p style="font:14px/1.5 -apple-system,sans-serif">${escHtml(args.message)}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${escHtml(args.companyName)} · <a href="https://www.synnr.io/app">open RollReady</a></p>`);
+        `<p style="font:14px/1.5 -apple-system,sans-serif">${escHtml(args.message)}</p><p style="font:12px/1.5 -apple-system,sans-serif;color:#888">${escHtml(args.companyName)} · <a href="https://www.synnr.io${args.href && args.href.startsWith("/app") ? escHtml(args.href) : "/app"}">${args.href ? "open the record" : "open RollReady"}</a></p>`);
       if (ok) sends.push({ channel: "email", recipient: emailNames.join(", ") });
       else await admin.from("saas_events").insert({ company_id: args.companyId, kind: "alert_failed", message: `Instant alert email FAILED (${emailNames.join(", ")}): ${args.message}` });
     }
@@ -147,14 +163,18 @@ export async function notifyEvent(args: {
   }
 }
 
-/** Append to the command-center activity stream. Fire-and-forget. */
-export async function logEvent(args: {
+/** Append to the activity feed, after the response (see later). */
+export function logEvent(args: {
   companyId: string;
   kind: string;
   message: string;
   unitId?: string | null;
   actor?: string | null;
 }): Promise<void> {
+  return later(() => writeEvent(args));
+}
+
+async function writeEvent(args: { companyId: string; kind: string; message: string; unitId?: string | null; actor?: string | null }): Promise<void> {
   try {
     const admin = saasAdmin();
     if (!admin) return;

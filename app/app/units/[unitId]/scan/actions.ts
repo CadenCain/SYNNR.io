@@ -145,8 +145,16 @@ export async function finishLoadout(input: {
   });
 
   // Everything logged on the truck right now, plus whatever the phone sent.
-  const { data: onTruckRows } = await db.from("saas_assets").select("id").eq("company_id", company.id).eq("unit_id", unit.id).neq("status", "retired");
-  const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id);
+  const [{ data: onTruckRows }, { data: lastBackRow }] = await Promise.all([
+    db.from("saas_assets").select("id, out_since").eq("company_id", company.id).eq("unit_id", unit.id).neq("status", "retired"),
+    db.from("saas_returns").select("finished_at").eq("company_id", company.id).eq("unit_id", unit.id).order("finished_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  // Marked "still out" at the last check-in: still on the last job, not on
+  // this truck. Left alone (its out clock keeps running) unless it's scanned.
+  const lastBack = (lastBackRow as { finished_at: string } | null)?.finished_at ?? null;
+  const stillOut = new Set(((onTruckRows ?? []) as { id: string; out_since: string | null }[])
+    .filter((r) => r.out_since && lastBack && r.out_since < lastBack).map((r) => r.id));
+  const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !stillOut.has(id));
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
     ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user").eq("company_id", company.id).in("id", ids)
@@ -204,10 +212,13 @@ export async function finishLoadout(input: {
   const untested = scannedIds.filter((id) => !hasTest.has(id));
   const testedLabels = new Set<string>();
   if (untested.length) {
-    const lineOf = new Map<string, string>();
-    for (const l of filled) for (const f of l.filled) lineOf.set(f.id, l.label);
-    for (const label of new Set(untested.map((id) => lineOf.get(id)).filter((x): x is string => Boolean(x)))) {
-      const word = [...lineTokens(label)].sort((a, b) => b.length - a.length)[0];
+    // Every line an untested piece could fill, not just the one it landed in:
+    // the answer can't depend on which piece got scanned first.
+    const labels = new Set<string>();
+    for (const id of untested) for (const l of filled) if (lineMatches(l.label, byId.get(id)!.name)) labels.add(l.label);
+    for (const label of labels) {
+      // Search by the longest plain word (not a size like "2.0625in").
+      const word = [...lineTokens(label)].filter((t) => /^[a-z]+$/.test(t)).sort((a, b) => b.length - a.length)[0];
       if (!word) continue;
       const { data: like } = await db.from("saas_assets").select("id, name").eq("company_id", company.id)
         .neq("status", "retired").ilike("name", `%${word}%`).limit(300);
@@ -333,10 +344,13 @@ export async function finishLoadout(input: {
   // back in. A NOT READY one didn't leave (unless a manager overrides it, which
   // starts the clock then). Anything taken off is back in the yard.
   if (scannedIds.length) {
-    await admin.from("saas_assets").update(verdict === "ready"
+    // NOT READY: nothing left. A tool still signed out to someone stays out
+    // with them (their clock keeps running) until the truck really rolls.
+    const resetIds = verdict === "ready" ? scannedIds : scannedIds.filter((id) => !byId.get(id)!.out_with_user);
+    if (resetIds.length) await admin.from("saas_assets").update(verdict === "ready"
       ? { out_since: now, out_loadout_id: saved.id, out_alerted_at: null, out_with_user: null, out_with_name: null }
       : { out_since: null, out_loadout_id: null, out_alerted_at: null })
-      .eq("company_id", company.id).in("id", scannedIds);
+      .eq("company_id", company.id).in("id", resetIds);
     // A tool signed out to someone that went on a truck that rolled: it's on
     // the truck now, so the sign-out closes.
     const handed = scannedIds.filter((id) => byId.get(id)!.out_with_user);
@@ -359,7 +373,7 @@ export async function finishLoadout(input: {
     ? `${unit.name} loaded out READY by ${actor}: ${scans.length} ${scans.length === 1 ? "piece" : "pieces"} scanned`
     : `${unit.name} blocked at load-out (NOT READY) by ${actor}: ${reasons.slice(0, 3).join("; ")}${reasons.length > 3 ? `; and ${reasons.length - 3} more` : ""}`;
   void logEvent({ companyId: company.id, kind: verdict === "ready" ? "loadout_ready" : "loadout_blocked", unitId: unit.id, actor, message: summary });
-  if (verdict === "not_ready") void notifyEvent({ companyId: company.id, companyName: company.name, yardId: unit.yard_id, message: summary });
+  if (verdict === "not_ready") void notifyEvent({ companyId: company.id, companyName: company.name, yardId: unit.yard_id, message: summary, href: `/app/loadouts/${saved.id}` });
 
   revalidatePath(`/app/units/${unit.id}`);
   revalidatePath("/app/map");

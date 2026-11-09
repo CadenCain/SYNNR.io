@@ -49,8 +49,12 @@ export async function recordPaper(
   const noSnapshot: string[] = [];
   for (const p of pieces) {
     const kept = (p.tests ?? []).filter((t) => t.paper);
-    if (kept.length) for (const t of kept) want.push({ asset: p.asset_id, title: t.title, upload: t.paper! });
-    else noSnapshot.push(p.asset_id);
+    for (const t of kept) want.push({ asset: p.asset_id, title: t.title, upload: t.paper! });
+    // Only records saved before the paper was kept fall back to today's cert.
+    // A newer record that says "no cert attached" stays that way: paper that
+    // came in after the truck rolled isn't proof for that load-out.
+    const snapshotted = (p.tests ?? []).some((t) => "paper" in t);
+    if (!kept.length && !snapshotted) noSnapshot.push(p.asset_id);
   }
   if (noSnapshot.length) {
     const { data } = await client.from("saas_compliance_items").select("title, parent_id, last_upload_id")

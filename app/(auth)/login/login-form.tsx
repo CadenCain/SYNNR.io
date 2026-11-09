@@ -44,7 +44,7 @@ export default function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
+          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
           placeholder="you@shop.com"
         />
       </label>
@@ -55,15 +55,15 @@ export default function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-ink outline-none focus:border-[#1d4ed8]"
+          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
           placeholder="••••••••"
         />
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
-      <Button type="submit" disabled={busy} className="w-full">
+      <Button type="submit" disabled={busy} className="h-12 w-full text-base">
         {busy ? "Logging in…" : "Log in"}
       </Button>
-      <a href="/forgot" className="text-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
+      <a href="/forgot" className="inline-flex min-h-12 items-center justify-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
     </form>
   );
 }

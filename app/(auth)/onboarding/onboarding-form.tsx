@@ -13,10 +13,13 @@ export default function OnboardingForm({ action, defaults, error }: {
   error?: string;
 }) {
   const [yards, setYards] = useState(clampYards(defaults.yards));
+  // What's in the box while typing: it can be empty for a moment, so
+  // backspacing the 1 and typing 5 gives 5, not 15.
+  const [typed, setTyped] = useState(String(clampYards(defaults.yards)));
   const [busy, setBusy] = useState(false);
-  const step = (d: number) => setYards((y) => clampYards(y + d));
+  const step = (d: number) => setYards((y) => { const n = clampYards(y + d); setTyped(String(n)); return n; });
   return (
-    <form action={action} onSubmit={() => setBusy(true)} className="flex flex-col gap-4">
+    <form action={action} onSubmit={() => { setTyped(String(yards)); setBusy(true); }} className="flex flex-col gap-4">
       <input type="hidden" name="ref" value={defaults.ref} />
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-ink">Company name</span>
@@ -33,8 +36,10 @@ export default function OnboardingForm({ action, defaults, error }: {
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => step(-1)} disabled={yards <= 1} aria-label="Fewer yards"
               className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
-            <input name="yards" value={yards} inputMode="numeric" aria-label="Number of yards" required
-              onChange={(e) => setYards(clampYards(e.target.value.replace(/\D/g, "") || 1))}
+            <input name="yards" value={typed} inputMode="numeric" aria-label="Number of yards" required
+              onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 2); setTyped(v); if (v) setYards(clampYards(v)); }}
+              onBlur={() => setTyped(String(yards))}
+              onFocus={(e) => e.target.select()}
               className="h-12 w-14 rounded-lg border border-line-2 bg-coal text-center text-xl font-semibold tabular-nums text-ink outline-none focus:border-[#1d4ed8]" />
             <button type="button" onClick={() => step(1)} disabled={yards >= MAX_YARDS} aria-label="More yards"
               className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>

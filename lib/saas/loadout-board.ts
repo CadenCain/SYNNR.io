@@ -111,18 +111,21 @@ export function buildLoadOutTrucks(
         why: tooLong ? `Out ${days} days. Check it in, or find out where it is.` : null, whyTone: tooLong ? "red" : null,
         loadoutLine: `${overrode ? "Out on a manager's override" : "Out on a job"} since ${when}${by}` };
     }
-    if (s && doneToday) {
-      const outcome = outcomeOf(s, ov(s.id));
-      if (outcome === "blocked") {
-        const reasons = reasonsOf(s);
-        return { ...base, status: "blocked", overridden: false, whyTone: "red",
-          why: reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
-          loadoutLine: `Blocked at load-out ${timeOf(s.finished_at)}${by}` };
-      }
-    }
     // Checked back in since its last load-out: say so, and name anything that didn't come back.
     const back = lastBack.get(t.id);
     const isBack = Boolean(back && (!s || back.finished_at > s.finished_at));
+    // Its newest load-out was NOT READY and nobody rolled it: blocked until a
+    // newer load-out (or a check-in), even when it was loaded last night.
+    if (s && !isBack) {
+      const outcome = outcomeOf(s, ov(s.id));
+      if (outcome === "blocked") {
+        const reasons = reasonsOf(s);
+        const when = dayOf(s.finished_at) === today ? timeOf(s.finished_at) : `${shortDay(s.finished_at)} ${timeOf(s.finished_at)}`;
+        return { ...base, loadoutId: s.id, status: "blocked", overridden: false, whyTone: "red",
+          why: reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
+          loadoutLine: `Blocked at load-out ${when}${by}` };
+      }
+    }
     const backBy = back?.returned_by ? ` by ${back.returned_by}` : "";
     const loadoutLine = isBack && back
       ? `Checked in ${dayOf(back.finished_at) === today ? `today ${timeOf(back.finished_at)}` : shortDay(back.finished_at)}${backBy}`

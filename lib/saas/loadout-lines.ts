@@ -29,11 +29,15 @@ export interface FilledLine extends ExpectedLine {
 export function lineTokens(s: string): string[] {
   return s
     .toLowerCase()
+    .replace(/[\u201c\u201d\u2033]/g, '"').replace(/[\u2018\u2019\u2032]/g, "'")
+    .replace(/(?:(\d+)(?:-|\s+))?(\d+)\/(\d+)/g, (_m, w, n, d) => String((w ? Number(w) : 0) + Number(n) / Number(d)))
     .replace(/(\d)\s*(?:"|''|-?\s*inch(?:es)?\b|-?\s*in\b\.?)/g, "$1in ")
-    .replace(/[^a-z0-9.]+/g, " ")
+    .replace(/(\d)\s*(?:'|-?\s*f(?:oo|ee)?t\b\.?)/g, "$1ft ")
+    .replace(/#\s*(\d)/g, "#$1")
+    .replace(/[^a-z0-9.#]+/g, " ")
     .split(" ")
     .map((t) => t.replace(/^\.+|\.+$/g, ""))
-    .filter((t) => t && !STOP.has(t));
+    .filter((t) => t && t !== "#" && !STOP.has(t));
 }
 const STOP = new Set(["a", "an", "the", "of", "and", "for", "with", "w"]);
 
@@ -56,19 +60,31 @@ export function lineMatches(label: string, pieceName: string): boolean {
  */
 export function fillLines(lines: ExpectedLine[], scanned: LinePiece[]): FilledLine[] {
   const out: FilledLine[] = lines.map((l) => ({ ...l, qty: Math.max(1, Math.floor(l.qty) || 1), filled: [] }));
-  const used = new Set<string>();
-  const take = (line: FilledLine, ok: (p: LinePiece) => boolean) => {
-    for (const p of scanned) {
-      if (line.filled.length >= line.qty) return;
-      if (!used.has(p.id) && ok(p)) { line.filled.push(p); used.add(p.id); }
+  const want = out.map((l) => lineTokens(l.label));
+  const exact = (li: number, p: LinePiece) => sameWords(want[li], lineTokens(p.name));
+  // Exact-name lines first, then the most specific: same preference as before, but as an order to try, not a final say.
+  const order = (p: LinePiece) => out.map((_, i) => i).filter((i) => lineMatches(out[i].label, p.name))
+    .sort((a, b) => Number(exact(b, p)) - Number(exact(a, p)) || want[b].length - want[a].length || a - b);
+  const prefs = new Map(scanned.map((p) => [p.id, order(p)]));
+  // Augmenting paths: a piece can bump another piece to a different line it also fits, so no line is short while a fit exists.
+  const place = (p: LinePiece, seen: Set<number>): boolean => {
+    for (const li of prefs.get(p.id)!) {
+      if (seen.has(li)) continue;
+      seen.add(li);
+      const line = out[li];
+      if (line.filled.length < line.qty) { line.filled.push(p); return true; }
+      for (let k = 0; k < line.filled.length; k++) {
+        const other = line.filled[k];
+        if (place(other, seen)) { line.filled.splice(k, 1, p); return true; }
+      }
     }
+    return false;
   };
-  for (const line of out) {
-    const want = lineTokens(line.label);
-    take(line, (p) => sameWords(want, lineTokens(p.name)));
-  }
-  const bySpecific = [...out].sort((a, b) => lineTokens(b.label).length - lineTokens(a.label).length);
-  for (const line of bySpecific) take(line, (p) => lineMatches(line.label, p.name));
+  const used = new Set<string>();
+  for (const p of scanned) { if (!used.has(p.id) && place(p, new Set())) used.add(p.id); }
+  // Keep each line's pieces in scan order.
+  const at = new Map(scanned.map((p, i) => [p.id, i]));
+  for (const l of out) l.filled.sort((a, b) => at.get(a.id)! - at.get(b.id)!);
   return out;
 }
 
@@ -138,7 +154,7 @@ export function untestedPieces(input: {
   for (const l of input.filled) for (const f of l.filled) lineOf.set(f.id, l.label);
   return input.scanned
     .filter((p) => !input.hasTest.has(p.id))
-    .filter((p) => input.testedCategories.has(p.category) || (lineOf.has(p.id) && input.lineIsTested(lineOf.get(p.id)!)))
+    .filter((p) => input.testedCategories.has(p.category) || input.filled.some((l) => lineMatches(l.label, p.name) && input.lineIsTested(l.label)))
     .map((p) => ({ id: p.id, name: p.name, serial: p.serial, why: "no_test_on_file" as const }));
 }
 

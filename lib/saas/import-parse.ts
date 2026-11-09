@@ -127,7 +127,7 @@ export function parseDate(s: string): string | null {
     const [y, mo, d] = iso.split("-").map(Number);
     const dt = new Date(Date.UTC(y, mo - 1, d));
     if (dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d) return iso;
-    throw new Error(`impossible date "${s}" — check month and day`);
+    throw new Error(`impossible date "${s}". Check the month and day`);
   }
   throw new Error(`bad date "${s}" (use YYYY-MM-DD or M/D/YYYY)`);
 }

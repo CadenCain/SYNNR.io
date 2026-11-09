@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { judgeItem, type LineResult } from "./judge";
+import { judgeItem, type LineResult, isNoPaper } from "./judge";
 import { localToday } from "./status";
 
 /**
@@ -164,7 +164,9 @@ export const STATE_LABEL: Record<EquipState, string> = {
 };
 
 /** Status chip text for one row: red-tagged and missing read differently. */
-export function stateLabel(r: Pick<EquipRow, "state" | "status"> & { needsRedress?: boolean }): string {
+export function stateLabel(r: Pick<EquipRow, "state" | "status"> & { needsRedress?: boolean; next?: EquipNext | null }): string {
   if (r.state === "down") return r.status === "missing" ? "Missing" : r.status === "out_of_service" ? "Red-tagged" : r.needsRedress ? "Needs redress" : "Red-tagged";
+  // In date but no cert attached: it needs its paper, not a retest.
+  if (r.state === "overdue" && r.next && isNoPaper(r.next)) return "No paper";
   return STATE_LABEL[r.state];
 }

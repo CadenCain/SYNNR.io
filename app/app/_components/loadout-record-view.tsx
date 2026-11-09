@@ -25,7 +25,7 @@ const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p
 const testText = (t: { title: string; good_until: string | null; result: string }) =>
   `${t.title}: ${!t.good_until ? "no date" : t.result === "expired" ? `expired ${plainDate(t.good_until)}` : t.result === "no_paper" ? "no cert attached" : `good to ${plainDate(t.good_until)}`}`;
 
-export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null }: {
+export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false }: {
   rec: LoadoutRecord;
   override: LoadoutOverride | null;
   /** Link to a piece's public tag page (tests and the cert), when known. */
@@ -34,6 +34,8 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
   paper?: Record<string, { title: string; url: string }[]>;
   /** The photo of the loaded truck: what was actually on it when it rolled. */
   photo?: { url: string; at: string } | null;
+  /** The operator's proof link: the manager's note to the crew stays inside the shop. */
+  forOperator?: boolean;
 }) {
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
@@ -62,7 +64,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         </p>
         {rec.plan ? (
           <p className="mt-1 text-sm text-ink-dim">
-            Planned by {rec.plan.by ?? "a manager"} {fmtWhen(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note ? ` "${rec.plan.note}"` : ""}
+            Planned by {rec.plan.by ?? "a manager"} {fmtWhen(rec.plan.at)}{rec.plan.packages.length ? `: ${rec.plan.packages.join(", ")}` : ""}{rec.plan.lines.length ? `${rec.plan.packages.length ? "," : ":"} ${rec.plan.lines.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ")}` : ""}.{rec.plan.note && !forOperator ? ` "${rec.plan.note}"` : ""}
           </p>
         ) : null}
         {byHand > 0 ? (

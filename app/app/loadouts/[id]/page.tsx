@@ -25,6 +25,11 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
   const outcome = outcomeOf(rec, override);
   const manager = company.role === "owner" || company.role === "admin";
   const proofUrl = `https://www.synnr.io/l/${rec.proof_token}`;
+  // A newer load-out of this truck: that one is what's on the truck now.
+  const { data: newerRow } = rec.unit_id ? await db.from("saas_loadout_scans").select("id, finished_at")
+    .eq("company_id", company.id).eq("unit_id", rec.unit_id).gt("finished_at", rec.finished_at)
+    .order("finished_at", { ascending: false }).limit(1).maybeSingle() : { data: null };
+  const newer = newerRow as { id: string; finished_at: string } | null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,7 +52,12 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         <ProofLink url={proofUrl} title={`${rec.unit_name} load-out`} />
       </Card>
 
-      {outcome === "blocked" ? (
+      {outcome === "blocked" && newer ? (
+        <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
+          <p>{rec.unit_name} was loaded out again after this, so this one can&apos;t be rolled anymore.</p>
+          <Link href={`/app/loadouts/${newer.id}`} className="font-medium text-bone underline underline-offset-2">See the newest load-out</Link>
+        </Card>
+      ) : outcome === "blocked" ? (
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="font-semibold">Fix it and scan again</h2>
           <p className="text-sm text-ink-dim">Swap the bad piece for a good one, find what&apos;s missing, or upload the new cert. Then run the load-out again.</p>

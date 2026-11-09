@@ -19,13 +19,17 @@ export interface SearchablePiece {
   nextTitle: string | null;
   state: EquipState;
   place: Place;
+  /** Back from a run and not redressed yet. */
+  needsRedress?: boolean;
 }
 
-export type StatusWant = { state?: EquipState; place?: Place | "out_any" };
+export type StatusWant = { state?: EquipState; place?: Place | "out_any"; redress?: boolean };
 
 const PHRASES: [RegExp, StatusWant][] = [
-  [/\bout of test\b|\bexpired\b|\boverdue test\b|\bpast due\b/g, { state: "overdue" }],
-  [/\bout too long\b|\btoo long\b|\boverdue\b/g, { place: "out_too_long" }],
+  [/\bneeds? redress\b|\bredress\b/g, { redress: true }],
+  // "Overdue" is what the equipment list calls a test past due.
+  [/\bout of test\b|\bexpired\b|\boverdue( test)?\b|\bpast due\b/g, { state: "overdue" }],
+  [/\bout too long\b|\btoo long\b/g, { place: "out_too_long" }],
   [/\bred[- ]?tag(ged)?\b|\bout of service\b/g, { place: "red_tagged" }],
   [/\bmissing\b|\bcan'?t find\b|\blost\b/g, { place: "missing" }],
   [/\bdue soon\b|\bdue\b/g, { state: "due" }],
@@ -41,6 +45,7 @@ export function parseQuery(q: string): { words: string[]; want: StatusWant } {
     if (re.test(rest)) {
       if (w.state && !want.state) want.state = w.state;
       if (w.place && !want.place) want.place = w.place;
+      if (w.redress) want.redress = true;
       rest = rest.replace(re, " ");
     }
     re.lastIndex = 0;
@@ -53,10 +58,11 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export function searchPieces<P extends SearchablePiece>(pieces: P[], q: string, limit = 50): P[] {
   const { words, want } = parseQuery(q);
-  if (!words.length && !want.state && !want.place) return [];
+  if (!words.length && !want.state && !want.place && !want.redress) return [];
   const scored: { p: P; score: number }[] = [];
   for (const p of pieces) {
     if (want.state && p.state !== want.state) continue;
+    if (want.redress && !p.needsRedress) continue;
     if (want.place && (want.place === "out_any" ? !(p.place === "out" || p.place === "out_too_long") : p.place !== want.place)) continue;
     const hay = [p.name, p.serial ?? "", p.typeLabel, p.where, p.note ?? "", p.nextTitle ?? ""].join(" ").toLowerCase();
     const hayN = norm(hay);

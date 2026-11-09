@@ -29,7 +29,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
   const yards = (yardRows ?? []) as { id: string; name: string }[];
   const all = (rows ?? []) as Row[];
   const { data: ov } = all.length
-    ? await db.from("saas_loadout_overrides").select("loadout_id, by_name").in("loadout_id", all.map((r) => r.id))
+    ? await db.from("saas_loadout_overrides").select("loadout_id, by_name").eq("company_id", company.id).limit(20000)
     : { data: [] };
   const overrides = new Map(((ov ?? []) as { loadout_id: string; by_name: string }[]).map((o) => [o.loadout_id, o.by_name]));
   const people = [...new Set(all.map((r) => r.scanned_by).filter((x): x is string => Boolean(x)))].sort();

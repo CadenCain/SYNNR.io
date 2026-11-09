@@ -103,14 +103,14 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
         {!preview || !preview.valid ? (
           <>
             <h1 className="text-lg font-semibold">This invite doesn&apos;t work anymore</h1>
-            <p className="mt-1 text-sm text-ink-dim">It expired or was already used. Ask your manager to send a new one from Settings, Team.</p>
-            <Link href="/" className="mt-4 inline-block text-sm text-[#1d4ed8] hover:underline">← Home</Link>
+            <p className="mt-1 text-sm text-ink-dim">It expired or was already used. Ask your manager for the crew link from Settings, Team.</p>
+            <p className="mt-3 text-sm text-ink-dim">Already on the crew? <Link href="/login" className="font-medium text-bone underline underline-offset-2">Log in</Link> to get to the trucks.</p>
           </>
         ) : !user ? (
           <>
             <h1 className="text-xl font-semibold">Join {preview.company_name}</h1>
             <p className="mt-1 text-sm text-ink-dim">You&apos;re joining as {asWhat}. Make your login and you&apos;ll go straight to the trucks.</p>
-            <JoinForm action={joinWithNewLogin} token={token} error={err} />
+            <JoinForm key={err ?? ""} action={joinWithNewLogin} token={token} error={err} />
             <p className="mt-4 text-center text-sm text-ink-dim">Already have a RollReady login? <Link href={`/login?next=/invite/${token}`} className="font-medium text-bone hover:underline">Log in</Link></p>
           </>
         ) : (

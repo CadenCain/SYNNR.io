@@ -94,8 +94,16 @@ describe("the Load out board", () => {
     expect(summary).toBe("2 trucks. 2 out on jobs (1 out too long). Nothing blocked.");
   });
 
-  it("a NOT READY load-out nobody overrode never left", () => {
-    const { trucks } = buildLoadOutTrucks([unit("z", "ready")], [], [scan("z", "2026-10-12T11:00:00Z", { verdict: "not_ready", reasons: ["Short: BOP, 0 of 1 scanned"] })], new Set(), TODAY, new Map(), o());
+  it("a NOT READY load-out nobody overrode never left, and the truck stays blocked (even the next day) until it's scanned again", () => {
+    const { trucks, counts } = buildLoadOutTrucks([unit("z", "ready")], [], [scan("z", "2026-10-12T11:00:00Z", { verdict: "not_ready", reasons: ["Short: BOP, 0 of 1 scanned"] })], new Set(), TODAY, new Map(), o());
+    expect(trucks[0].status).toBe("blocked");
+    expect(trucks[0].why).toBe("Short: BOP, 0 of 1 scanned");
+    expect(trucks[0].loadoutId).not.toBeNull();
+    expect(counts.out).toBe(0);
+  });
+  it("a truck checked in after a NOT READY load-out starts fresh", () => {
+    const { trucks } = buildLoadOutTrucks([unit("z", "ready")], [], [scan("z", "2026-10-12T11:00:00Z", { verdict: "not_ready", reasons: ["Short: BOP, 0 of 1 scanned"] })], new Set(), TODAY, new Map(),
+      { ...o(), returns: [{ unit_id: "z", finished_at: "2026-10-12T15:00:00Z", returned_by: "Freddy" }] });
     expect(trucks[0].status).toBe("ready");
   });
 

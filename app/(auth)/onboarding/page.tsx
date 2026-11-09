@@ -8,6 +8,7 @@ import { getStripe } from "@/lib/stripe";
 import { clampYards, isDemoUser, mustSubscribe } from "@/lib/saas/plan";
 import { createYardCheckout, siteOrigin } from "@/lib/saas/onboarding";
 import OnboardingForm from "./onboarding-form";
+import { tellOwner, monthly } from "@/lib/saas/tell-owner";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your company · RollReady" };
@@ -58,6 +59,13 @@ async function startCompany(formData: FormData) {
   const cookieRef = (await cookies()).get("synnr_ref")?.value ?? "";
   const ref = (clip(formData.get("ref"), 60) || cookieRef).slice(0, 60) || null;
   if (ref) await admin!.from("saas_companies").update({ referred_by: ref }).eq("id", companyId!).is("referred_by", null);
+  // Heads-up to call them back, whether or not they finish paying.
+  tellOwner(`RollReady signup started: ${name}`, [
+    `${name}, ${yards} ${yards === 1 ? "yard" : "yards"} (${monthly(yards)}).`,
+    `${fullName || "No name"}, ${user.email ?? "no email"}, ${phone}.`,
+    ref ? `Came from: ${ref}` : null,
+    "They're on their way to Stripe now. If no payment email follows, give them a call.",
+  ]);
 
   if (!stripe) redirect("/onboarding/billing");
   let url: string | null = null;
