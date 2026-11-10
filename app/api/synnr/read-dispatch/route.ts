@@ -4,16 +4,16 @@ import { saasDb } from "@/lib/saas/db";
 import { aiReady, readDispatch } from "@/lib/saas/read-dispatch";
 
 /**
- * Read a dispatch: a photo of the dispatch screen, or the job in the hand's
+ * Read a dispatch: a photo or PDF of the dispatch screen, or the job in the hand's
  * own words. Returns job facts and what the dispatch itself says to bring.
- * The photo is read and thrown away; it is never stored.
+ * The file is read and thrown away; it is never stored.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
-type ImageType = (typeof TYPES)[number];
+const TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"] as const;
+type FileType = (typeof TYPES)[number];
 const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: Request) {
@@ -29,9 +29,9 @@ export async function POST(req: Request) {
   const text = String(form.get("text") ?? "").trim().slice(0, 4000);
   const photo = form.get("photo");
   const file = photo instanceof File && photo.size > 0 ? photo : null;
-  if (!file && !text) return no("Add a photo of the dispatch, or say what the job is.", 400);
-  if (file && !TYPES.includes(file.type as ImageType)) return no("That file isn't a photo SYNNR can read. Use a JPG or PNG.", 415);
-  if (file && file.size > MAX_BYTES) return no("That photo is too big. Take it again a little farther back.", 413);
+  if (!file && !text) return no("Add a photo or PDF of the dispatch, or say what the job is.", 400);
+  if (file && !TYPES.includes(file.type as FileType)) return no("That file isn't one SYNNR can read. Use a photo (JPG or PNG) or a PDF.", 415);
+  if (file && file.size > MAX_BYTES) return no("That file is too big. For a photo, take it a little farther back; for a PDF, send just the dispatch page.", 413);
 
   const db = await saasDb();
   const [{ data: lists }, { data: units }] = await Promise.all([
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   try {
     const read = await readDispatch({
-      image: file ? { data: Buffer.from(await file.arrayBuffer()).toString("base64"), mediaType: file.type as ImageType } : undefined,
+      file: file ? { data: Buffer.from(await file.arrayBuffer()).toString("base64"), mediaType: file.type as FileType } : undefined,
       text: text || undefined,
       jobLists: ((lists ?? []) as { name: string }[]).map((l) => l.name),
       trucks: ((units ?? []) as { name: string }[]).map((u) => u.name),

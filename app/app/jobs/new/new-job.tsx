@@ -62,8 +62,8 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
   async function onPhoto(file: File | undefined) {
     if (!file) return;
     const body = new FormData();
-    // A phone photo is several megabytes; shrink it so it sends on one bar.
-    body.set("photo", await shrinkPhoto(file).catch(() => file));
+    // A PDF goes as-is; a phone photo is several megabytes, so shrink it to send on one bar.
+    body.set("photo", file.type === "application/pdf" ? file : await shrinkPhoto(file).catch(() => file));
     await read(body);
   }
 
@@ -89,13 +89,13 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
       <div className="rounded-2xl border border-line-2 bg-[#0b0c0e] p-5 sm:p-6">
         {ai ? (
           <>
-            <input ref={photo} type="file" accept="image/*" className="sr-only" aria-label="Photo of the dispatch"
+            <input ref={photo} type="file" accept="image/*,application/pdf" className="sr-only" aria-label="Photo or PDF of the dispatch"
               onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ""; }} />
             <button type="button" onClick={() => photo.current?.click()} disabled={reading}
               className="flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-ink text-[16px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
-              <Camera className="h-5 w-5" /> {reading ? "Reading the dispatch…" : "Photo of the dispatch"}
+              <Camera className="h-5 w-5" /> {reading ? "Reading the dispatch…" : "Photo or PDF of the dispatch"}
             </button>
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-faint">A screenshot works too. SYNNR reads the job and what it says to bring. The photo isn&apos;t kept, and names and phone numbers are left out.</p>
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-faint">A screenshot or the Aradia PDF works. SYNNR reads the job and what it says to bring. The file isn&apos;t kept, and names and phone numbers are left out.</p>
           </>
         ) : (
           <p className="text-[14px] leading-relaxed text-ink-dim">
