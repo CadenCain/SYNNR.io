@@ -1,21 +1,15 @@
 import Link from "next/link";
-import { ThemeSync } from "@/components/theme";
+import { Wordmark } from "@/components/wordmark";
 
 // Centered shell for /login, /signup, and getting started (/onboarding).
-// Same theme as the app (light or dark). noindex.
+// The app's dark look. noindex.
 export const metadata = { robots: { index: false, follow: false } };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="saas flex min-h-dvh flex-col bg-coal text-ink antialiased">
-      <ThemeSync />
-      <header className="flex items-center justify-center px-4 py-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" className="fill-bone" />
-          </svg>
-          <span className="font-semibold tracking-tight">RollReady</span><span className="text-sm text-ink-faint">by SYNNR</span>
-        </Link>
+      <header className="flex items-center justify-center px-4 py-8">
+        <Link href="/" aria-label="SYNNR home"><Wordmark /></Link>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-4 sm:items-center sm:pt-0">
         <div className="w-full max-w-sm">{children}</div>

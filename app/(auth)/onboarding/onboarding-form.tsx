@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { clampYards, planLine, MAX_YARDS } from "@/lib/saas/plan";
 
-const field = "h-12 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
+const field = "h-11 w-full rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint";
 
 /** Getting started, step 2: the company and its yards. The price adds up as they go, then it's straight to Stripe. */
 export default function OnboardingForm({ action, defaults, error }: {
@@ -35,14 +35,14 @@ export default function OnboardingForm({ action, defaults, error }: {
           <div className="text-sm font-medium text-ink">Number of yards</div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => step(-1)} disabled={yards <= 1} aria-label="Fewer yards"
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line-2 text-ink transition-colors hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
             <input name="yards" value={typed} inputMode="numeric" aria-label="Number of yards" required
               onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 2); setTyped(v); if (v) setYards(clampYards(v)); }}
               onBlur={() => setTyped(String(yards))}
               onFocus={(e) => e.target.select()}
-              className="h-12 w-14 rounded-lg border border-line-2 bg-coal text-center text-xl font-semibold tabular-nums text-ink outline-none focus:border-bone" />
+              className="h-11 w-14 rounded-lg border border-line-2 bg-coal text-center text-lg font-semibold tabular-nums text-ink outline-none focus:border-ink-faint" />
             <button type="button" onClick={() => step(1)} disabled={yards >= MAX_YARDS} aria-label="More yards"
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line-2 text-ink transition-colors hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>
           </div>
         </div>
         <p className="rounded-lg bg-elevated px-3 py-2.5 text-center text-base font-semibold tabular-nums text-ink" aria-live="polite">
@@ -56,7 +56,7 @@ export default function OnboardingForm({ action, defaults, error }: {
       </label>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-bone text-base font-semibold text-on-bone hover:bg-bone-soft disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-11 w-full rounded-lg bg-ink text-sm font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
         {busy ? "Opening secure checkout…" : "Continue to payment"}
       </button>
       <p className="text-center text-xs text-ink-faint">You&apos;ll pay by card on Stripe&apos;s secure page, then you&apos;re in, with your yards already set up.</p>

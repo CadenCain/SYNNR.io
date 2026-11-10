@@ -12,7 +12,7 @@ import OnboardingForm from "./onboarding-form";
 import { tellOwner, monthly } from "@/lib/saas/tell-owner";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Your company · RollReady" };
+export const metadata = { title: "Your company · SYNNR" };
 
 const clip = (v: FormDataEntryValue | null, n: number) => String(v ?? "").trim().slice(0, n);
 
@@ -63,7 +63,7 @@ async function startCompany(formData: FormData) {
   const ref = (clip(formData.get("ref"), 60) || cookieRef).slice(0, 60) || null;
   if (ref) await admin!.from("saas_companies").update({ referred_by: ref }).eq("id", companyId!).is("referred_by", null);
   // Heads-up to call them back, whether or not they finish paying.
-  tellOwner(`RollReady signup started: ${name}`, [
+  tellOwner(`SYNNR signup started: ${name}`, [
     `${name}, ${yards} ${yards === 1 ? "yard" : "yards"} (${monthly(yards)}).`,
     `${fullName || "No name"}, ${user.email ?? "no email"}, ${phone}.`,
     ref ? `Came from: ${ref}` : null,
@@ -97,8 +97,8 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold tracking-tight">You&apos;re on {company.name}</h1>
-        <p className="text-sm text-ink-dim">This login is on {company.name}&apos;s crew. To start your own company in RollReady, sign up with a different email, or call or text 432-250-0715 and we&apos;ll set it up.</p>
-        <a href="/app" className="inline-flex h-12 items-center justify-center rounded-lg bg-bone px-4 text-base font-semibold text-on-bone">Go to {company.name}&apos;s trucks</a>
+        <p className="text-sm text-ink-dim">This login is on {company.name}&apos;s crew. To start your own company in SYNNR, sign up with a different email, or call or text 432-250-0715 and we&apos;ll set it up.</p>
+        <a href="/app" className="inline-flex h-11 items-center justify-center rounded-lg bg-ink px-4 text-sm font-medium text-coal transition-colors hover:bg-white">Go to {company.name}</a>
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         <div className="flex flex-col gap-4">
           <h1 className="text-xl font-semibold tracking-tight">You&apos;re not on a crew anymore</h1>
           <p className="text-sm text-ink-dim">A manager took this login off the crew. Ask them for a new invite, or start your own company with a different email.</p>
-          <a href="/logout" className="inline-flex h-12 items-center justify-center rounded-lg border border-line-2 px-4 text-base font-medium text-ink">Log out</a>
+          <a href="/logout" className="inline-flex h-11 items-center justify-center rounded-lg border border-line-2 px-4 text-sm font-medium text-ink transition-colors hover:bg-elevated">Log out</a>
         </div>
       );
     }
@@ -131,7 +131,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     <div className="flex flex-col gap-6">
       <div>
         <p className="text-sm text-ink-faint">Step 2 of 3</p>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">Your company and yards</h1>
+        <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Your company</h1>
         <p className="mt-1 text-sm text-ink-dim">Next is payment, then you&apos;re in.</p>
       </div>
       <OnboardingForm action={startCompany} error={err}

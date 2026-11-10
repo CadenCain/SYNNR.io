@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wordmark } from "@/components/wordmark";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -11,7 +12,7 @@ import JoinForm from "./join-form";
 import { logEventNow } from "@/lib/saas/notify";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Join your crew · RollReady", robots: { index: false, follow: false } };
+export const metadata = { title: "Join your crew · SYNNR", robots: { index: false, follow: false } };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,7 +33,7 @@ async function noteJoin(sb: SupabaseClient, companyId: unknown) {
   (await cookies()).set("synnr_co", companyId, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 }
 
-/** Signed in already: accept and go to the trucks. */
+/** Signed in already: accept and go in. */
 async function accept(formData: FormData) {
   "use server";
   const token = String(formData.get("token") ?? "");
@@ -45,8 +46,8 @@ async function accept(formData: FormData) {
 }
 
 /**
- * New to RollReady: make the login and join in one step, from a phone, so a
- * hand goes from the text message to their trucks with one form.
+ * New to SYNNR: make the login and join in one step, from a phone, so a
+ * hand goes from the text message to SYNNR with one form.
  */
 async function joinWithNewLogin(formData: FormData) {
   "use server";
@@ -96,35 +97,30 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
 
   return (
     <div className="saas flex min-h-dvh items-start justify-center bg-coal px-4 pt-10 text-ink antialiased sm:items-center sm:pt-0">
-      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-6">
-        <div className="mb-4 flex items-center gap-2.5">
-          <svg viewBox="0 0 32 32" fill="none" aria-hidden className="h-6 w-6">
-            <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" className="fill-bone" />
-          </svg>
-          <span className="font-semibold tracking-tight">RollReady</span>
-        </div>
+      <div className="w-full max-w-sm rounded-xl border border-line bg-surface p-7">
+        <div className="mb-6"><Wordmark /></div>
 
         {!preview || !preview.valid ? (
           <>
             <h1 className="text-lg font-semibold">This invite doesn&apos;t work anymore</h1>
             <p className="mt-1 text-sm text-ink-dim">It expired or was already used. Ask your manager for the crew link from Settings, Team.</p>
-            <p className="mt-3 text-sm text-ink-dim">Already on the crew? <Link href="/login" className="font-medium text-bone underline underline-offset-2">Log in</Link> to get to the trucks.</p>
+            <p className="mt-3 text-sm text-ink-dim">Already on the crew? <Link href="/login" className="font-medium text-ink underline underline-offset-4">Log in</Link> to get in.</p>
           </>
         ) : !user ? (
           <>
-            <h1 className="text-xl font-semibold">Join {preview.company_name}</h1>
-            <p className="mt-1 text-sm text-ink-dim">You&apos;re joining as {asWhat}. Make your login and you&apos;ll go straight to the trucks.</p>
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Join {preview.company_name}</h1>
+            <p className="mt-1 text-sm text-ink-dim">You&apos;re joining as {asWhat}. Make your login and you&apos;re in.</p>
             <JoinForm key={err ?? ""} action={joinWithNewLogin} token={token} error={err} />
-            <p className="mt-4 text-center text-sm text-ink-dim">Already have a RollReady login? <Link href={`/login?next=/invite/${token}`} className="font-medium text-bone hover:underline">Log in</Link></p>
+            <p className="mt-4 text-center text-sm text-ink-dim">Already have a SYNNR login? <Link href={`/login?next=/invite/${token}`} className="font-medium text-ink underline-offset-4 hover:underline">Log in</Link></p>
           </>
         ) : (
           <>
-            <h1 className="text-xl font-semibold">Join {preview.company_name}</h1>
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Join {preview.company_name}</h1>
             <p className="mt-1 text-sm text-ink-dim">You&apos;ll join as {asWhat}, as {(user.user_metadata?.full_name as string | undefined) ?? user.email}.</p>
             {err ? <p className="mt-2 text-sm text-red-400">{err}</p> : null}
             <form action={accept} className="mt-4">
               <input type="hidden" name="token" value={token} />
-              <Button type="submit" className="h-12 w-full text-base">Join the crew</Button>
+              <Button type="submit" className="h-11 w-full md:h-11 md:text-sm">Join the crew</Button>
             </form>
           </>
         )}

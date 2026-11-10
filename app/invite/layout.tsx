@@ -1,6 +1,5 @@
-import { ThemeSync } from "@/components/theme";
 
-/** Joining a crew: same light or dark as the app. */
+/** Joining a crew: the app's own look. */
 export default function InviteLayout({ children }: { children: React.ReactNode }) {
-  return <><ThemeSync />{children}</>;
+  return <>{children}</>;
 }

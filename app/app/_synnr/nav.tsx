@@ -6,16 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Plus, Brain, Settings, LogOut, Menu, X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-
-/** The SYNNR mark: a solid orange block, then the name. */
-export function Wordmark({ className }: { className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      <span aria-hidden className="h-2.5 w-2.5 rounded-[1px] bg-bone" />
-      <span className="text-[15px] font-semibold tracking-[0.14em] text-ink">SYNNR</span>
-    </span>
-  );
-}
+import { Wordmark } from "@/components/wordmark";
 
 type Chat = { id: string; title: string };
 

@@ -6,7 +6,7 @@ import { isDemoUser } from "@/lib/saas/plan";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Get started · RollReady" };
+export const metadata = { title: "Get started · SYNNR" };
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ next?: string; invite?: string }> }) {
   const { next, invite } = await searchParams;
@@ -20,13 +20,13 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     <div className="flex flex-col gap-6">
       <div>
         {invite || next?.startsWith("/invite/") ? null : <p className="text-sm text-ink-faint">Step 1 of 3</p>}
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">Create your login</h1>
-        <p className="mt-1 text-sm text-ink-dim">Your own login, with your name on every truck you clear. $500 a yard a month after setup. Cancel anytime.</p>
+        <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Create your login</h1>
+        <p className="mt-1.5 text-sm text-ink-dim">Yours alone. Everyone you bring in later gets their own.</p>
       </div>
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-bone hover:underline">
+        <Link href="/login" className="font-medium text-ink underline-offset-4 hover:underline">
           Log in
         </Link>
       </p>

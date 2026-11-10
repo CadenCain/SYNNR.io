@@ -12,7 +12,7 @@ import { provisionPaidYards } from "@/lib/saas/onboarding";
 import SubscribeCard from "./subscribe-card";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Payment · RollReady" };
+export const metadata = { title: "Payment · SYNNR" };
 
 async function switchCompanyFromWall(formData: FormData) {
   "use server";
@@ -82,7 +82,7 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
       <div>
         <CompanySwitcherWall />
         <p className="text-sm text-ink-faint">Step 3 of 3</p>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">Start {company.name} on RollReady</h1>
+        <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Start {company.name} on SYNNR</h1>
         <p className="mt-1 text-sm text-ink-dim">Pay by card on Stripe&apos;s secure page, and you&apos;re in.</p>
       </div>
       {pending ? (

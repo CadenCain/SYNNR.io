@@ -23,7 +23,7 @@ export default function SignupForm() {
     const email = String(fd.get("email") ?? "").trim();
     const password = String(fd.get("password") ?? "");
     const fullName = String(fd.get("fullName") ?? "").trim();
-    // Every scan and load-out carries this name, so it isn't optional.
+    // SYNNR and the crew know you by this name, so it isn't optional.
     if (!fullName) { setErr("Add your name. It goes on everything you scan."); return; }
 
     setBusy(true);
@@ -71,7 +71,7 @@ export default function SignupForm() {
           required
           maxLength={120}
           autoComplete="name"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="John Smith"
         />
       </label>
@@ -82,7 +82,7 @@ export default function SignupForm() {
           type="email"
           required
           autoComplete="email"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="you@shop.com"
         />
       </label>
@@ -94,7 +94,7 @@ export default function SignupForm() {
           required
           minLength={8}
           autoComplete="new-password"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="At least 8 characters"
         />
       </label>
@@ -107,7 +107,7 @@ export default function SignupForm() {
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-xs text-ink-dim">Joining your shop&apos;s crew? Tap the link your manager texted you instead. Starting a new account? Payment is step 3, $500 a yard a month, cancel anytime.</p>
+      <p className="text-center text-xs text-ink-dim">Joining your shop&apos;s crew? Tap the link your manager texted you instead. Starting a new company? You set it up and pay next.</p>
     </form>
   );
 }

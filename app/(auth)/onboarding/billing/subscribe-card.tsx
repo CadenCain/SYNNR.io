@@ -9,9 +9,7 @@ import { clampYards, planLine, monthlyDollars, money, MAX_YARDS, PER_YARD_DOLLAR
  * still adjustable. Stripe's page charges exactly this.
  */
 const INCLUDED = [
-  "The quick check at the truck: tap what's on, one photo, Ready, with a hard NOT READY on anything missing",
-  "Truck lists and job lists, and a locked record with a proof link for every check",
-  "Every truck on one screen, Tools out for setting tools, and every check with a name on it",
+  "SYNNR for your whole company, on the phone and at the desk",
   "Your whole crew, each with their own login. Never per-seat.",
 ];
 
@@ -40,9 +38,9 @@ export default function SubscribeCard({ initialYards, canPay, minYards = 1 }: { 
   const step = (d: number) => setYards((y) => clampYards(y + d));
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <div className="border-b border-line bg-elevated/60 p-5">
-        <div className="text-sm text-ink-dim">RollReady Yard</div>
+    <div className="overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="border-b border-line p-5">
+        <div className="text-sm text-ink-dim">SYNNR</div>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-3xl font-semibold tracking-tight text-ink">{money(monthlyDollars(yards))}</span>
           <span className="text-sm text-ink-dim">a month</span>
@@ -58,22 +56,22 @@ export default function SubscribeCard({ initialYards, canPay, minYards = 1 }: { 
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => step(-1)} disabled={yards <= Math.max(1, minYards)} aria-label="Fewer yards"
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line-2 text-ink transition-colors hover:bg-elevated disabled:opacity-30"><Minus className="h-5 w-5" /></button>
             <span className="w-8 text-center text-xl font-semibold tabular-nums">{yards}</span>
             <button type="button" onClick={() => step(1)} disabled={yards >= MAX_YARDS} aria-label="More yards"
-              className="flex h-12 w-12 items-center justify-center rounded-lg border border-line-2 text-ink hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-line-2 text-ink transition-colors hover:bg-elevated disabled:opacity-30"><Plus className="h-5 w-5" /></button>
           </div>
         </div>
 
         <ul className="flex flex-col gap-2.5 text-sm text-ink-dim">
           {INCLUDED.map((f) => (
-            <li key={f} className="flex items-start gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> {f}</li>
+            <li key={f} className="flex items-start gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" /> {f}</li>
           ))}
         </ul>
 
         {canPay ? (
           <button onClick={pay} disabled={busy}
-            className="h-12 w-full rounded-lg bg-bone text-base font-semibold text-on-bone transition-colors hover:bg-bone-soft disabled:opacity-60">
+            className="h-11 w-full rounded-lg bg-ink text-sm font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
             {busy ? "Opening Stripe…" : `Pay ${money(monthlyDollars(yards))}/month by card`}
           </button>
         ) : (
@@ -81,7 +79,7 @@ export default function SubscribeCard({ initialYards, canPay, minYards = 1 }: { 
         )}
         {err ? <p className="text-center text-sm text-amber-400">{err}</p> : null}
         <p className="text-center text-xs text-ink-faint">
-          Charged today, then every month. No contract, cancel anytime, and your records stay yours to export.
+          Charged today, then every month. No contract, cancel anytime, and what you put in stays yours.
         </p>
       </div>
     </div>

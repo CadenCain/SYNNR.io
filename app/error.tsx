@@ -30,7 +30,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           ) : null}
           <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
             <button className="btn btn-primary" onClick={() => reset()}>Try again</button>
-            <a className="btn btn-ghost" href="/app">Back to RollReady</a>
+            <a className="btn btn-ghost" href="/app">Back to SYNNR</a>
           </div>
         </div>
       </main>

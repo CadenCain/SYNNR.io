@@ -27,9 +27,9 @@ export default function ForgotForm({ next = "" }: { next?: string }) {
   if (sent) {
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4 text-sm text-ink-dim">
-        <p>If <span className="font-medium text-ink">{sent}</span> has a RollReady login, a reset link is on its way. Open it on any phone or computer.</p>
+        <p>If <span className="font-medium text-ink">{sent}</span> has a SYNNR login, a reset link is on its way. Open it on any phone or computer.</p>
         <p>Nothing after a few minutes? Check spam, or ask your manager to send one from Settings, Team.</p>
-        <button type="button" onClick={() => setSent("")} className="self-start text-sm font-medium text-bone underline underline-offset-2">Try a different email</button>
+        <button type="button" onClick={() => setSent("")} className="self-start text-sm font-medium text-ink underline underline-offset-4">Try a different email</button>
       </div>
     );
   }
@@ -39,11 +39,11 @@ export default function ForgotForm({ next = "" }: { next?: string }) {
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-ink">Email</span>
         <input name="email" type="email" required autoComplete="email" inputMode="email" autoCapitalize="none"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="you@email.com" />
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
-      <Button type="submit" disabled={busy} className="h-12 w-full text-base">{busy ? "Sending…" : "Send reset link"}</Button>
+      <Button type="submit" disabled={busy} className="h-11 w-full md:h-11 md:text-sm">{busy ? "Sending…" : "Send reset link"}</Button>
     </form>
   );
 }

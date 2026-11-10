@@ -3,7 +3,7 @@ import ForgotForm from "./forgot-form";
 import { safeNext } from "@/lib/saas/password-reset";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Reset password · RollReady" };
+export const metadata = { title: "Reset password · SYNNR" };
 
 export default async function ForgotPage({ searchParams }: { searchParams: Promise<{ expired?: string; next?: string }> }) {
   const { expired, next } = await searchParams;
@@ -18,7 +18,7 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
       ) : null}
       <ForgotForm next={safeNext(next)} />
       <p className="text-center text-sm text-ink-dim">
-        <Link href={safeNext(next) ? `/login?next=${encodeURIComponent(safeNext(next))}` : "/login"} className="font-medium text-bone hover:underline">← Back to log in</Link>
+        <Link href={safeNext(next) ? `/login?next=${encodeURIComponent(safeNext(next))}` : "/login"} className="font-medium text-ink underline-offset-4 hover:underline">← Back to log in</Link>
       </p>
     </div>
   );

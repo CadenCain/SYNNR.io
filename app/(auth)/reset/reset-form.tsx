@@ -35,14 +35,14 @@ export default function ResetForm({ next = "" }: { next?: string }) {
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-ink">New password</span>
         <input name="password" type={show ? "text" : "password"} required minLength={8} autoComplete="new-password"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="At least 8 characters" />
       </label>
       <label className="-mt-2 flex items-center gap-2 text-sm text-ink-dim">
         <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
-      <Button type="submit" disabled={busy} className="h-12 w-full text-base">{busy ? "Saving…" : "Set password and go to the trucks"}</Button>
+      <Button type="submit" disabled={busy} className="h-11 w-full md:h-11 md:text-sm">{busy ? "Saving…" : "Set password and go in"}</Button>
     </form>
   );
 }

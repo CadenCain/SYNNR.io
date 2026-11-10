@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const field = "h-12 w-full rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone";
+const field = "h-11 w-full rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint";
 
 /** One form on the phone: your name, email, a password, and you're on the crew. */
 export default function JoinForm({ action, token, error }: { action: (fd: FormData) => void; token: string; error?: string }) {
@@ -28,7 +28,7 @@ export default function JoinForm({ action, token, error }: { action: (fd: FormDa
         <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
       </label>
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
-      <button type="submit" disabled={busy} className="h-12 w-full rounded-lg bg-bone text-base font-semibold text-on-bone hover:bg-bone-soft disabled:opacity-60">
+      <button type="submit" disabled={busy} className="h-11 w-full rounded-lg bg-ink text-sm font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
         {busy ? "Joining…" : "Join the crew"}
       </button>
       <p className="text-xs text-ink-faint">Your name goes on every scan you make. By joining you agree to the <a href="/legal/terms" className="underline">Terms</a> and <a href="/legal/privacy" className="underline">Privacy Policy</a>.</p>

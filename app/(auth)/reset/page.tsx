@@ -4,7 +4,7 @@ import ResetForm from "./reset-form";
 import { safeNext } from "@/lib/saas/password-reset";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Set new password · RollReady" };
+export const metadata = { title: "Set new password · SYNNR" };
 
 // The reset link (/auth/confirm) signs them in before this page loads.
 export default async function ResetPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
@@ -15,7 +15,7 @@ export default async function ResetPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-4">
         <h1 className="text-xl font-semibold tracking-tight">That link didn&apos;t work</h1>
         <p className="text-sm text-ink-dim">It was already used or ran out. Send yourself a new one.</p>
-        <Link href="/forgot" className="inline-flex h-12 items-center justify-center rounded-lg bg-bone px-4 text-base font-semibold text-on-bone">Send a new reset link</Link>
+        <Link href="/forgot" className="inline-flex h-11 items-center justify-center rounded-lg bg-ink px-4 text-sm font-medium text-coal transition-colors hover:bg-white">Send a new reset link</Link>
       </div>
     );
   }

@@ -1,17 +1,15 @@
 import type { MetadataRoute } from "next";
 
-/** PWA manifest: installs RollReady to the home screen. */
+/** PWA manifest: puts SYNNR on the home screen. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "RollReady by SYNNR",
-    short_name: "RollReady",
-    description:
-      "Load-out checks for oilfield service yards. Tap what's on the truck, take one photo, tap Ready. Anything missing reads NOT READY.",
+    name: "SYNNR",
+    short_name: "SYNNR",
+    description: "Ask anything about your company: prices, tickets, trucks, tools, and jobs.",
     start_url: "/app",
     display: "standalone",
-    background_color: "#090c11",
-    theme_color: "#090c11",
-    orientation: "portrait",
+    background_color: "#08090a",
+    theme_color: "#08090a",
     icons: [
       { src: "/icon", sizes: "64x64", type: "image/png", purpose: "any" },
       { src: "/apple-icon", sizes: "180x180", type: "image/png", purpose: "any" },

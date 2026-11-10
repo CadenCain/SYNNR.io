@@ -14,16 +14,15 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0a1633",
+          background: "#08090a",
         }}
       >
         <div
           style={{
-            width: 86,
-            height: 86,
-            background: "#6f95ff",
-            transform: "rotate(45deg)",
-            borderRadius: 20,
+            width: 64,
+            height: 64,
+            background: "#ff5a1f",
+            borderRadius: 5,
           }}
         />
       </div>

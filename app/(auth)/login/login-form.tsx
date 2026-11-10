@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  // Forgot password keeps where they were headed (an invite, a truck) through the reset.
+  // Forgot password keeps where they were headed (an invite, a page) through the reset.
   const headed = (() => { const inv = params.get("invite"); const n = params.get("next") ?? (inv ? `/invite/${inv}` : ""); return safeNext(n); })();
   const forgotHref = headed ? `/forgot?next=${encodeURIComponent(headed)}` : "/forgot";
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export default function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="you@shop.com"
         />
       </label>
@@ -59,15 +59,15 @@ export default function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone"
+          className="h-11 rounded-lg border border-line-2 bg-surface px-3 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint"
           placeholder="••••••••"
         />
       </label>
       {err ? <p className="text-sm text-red-400">{err}</p> : null}
-      <Button type="submit" disabled={busy} className="h-12 w-full text-base">
+      <Button type="submit" disabled={busy} className="h-11 w-full md:h-11 md:text-sm">
         {busy ? "Logging in…" : "Log in"}
       </Button>
-      <a href={forgotHref} className="inline-flex min-h-12 items-center justify-center text-sm text-ink-dim hover:text-ink">Forgot password?</a>
+      <a href={forgotHref} className="inline-flex min-h-10 items-center justify-center text-[13px] text-ink-faint transition-colors hover:text-ink">Forgot password?</a>
     </form>
   );
 }
