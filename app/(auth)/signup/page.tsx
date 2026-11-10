@@ -2,7 +2,7 @@ import Link from "next/link";
 import { safeNext } from "@/lib/saas/safe-next";
 import { redirect } from "next/navigation";
 import { getSaasUser } from "@/lib/saas/auth";
-import { isDemoUser } from "@/lib/saas/plan";
+import { isDemoUser, SELF_SERVE_OPEN } from "@/lib/saas/plan";
 import SignupForm from "./signup-form";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +12,9 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   const { next, invite } = await searchParams;
   const raw = next || (invite ? `/invite/${invite}` : "");
   const nextPath = safeNext(raw, "/app");
+  // Early access: a new company starts with a call, not a form. (A crew
+  // invite makes its login on the invite page, so nobody needs this one.)
+  if (!SELF_SERVE_OPEN) redirect("/#access");
   const user = await getSaasUser();
   // Still signed into the live demo? Leave it and come back here to sign up.
   if (user && isDemoUser(user)) redirect("/demo/exit?to=signup");

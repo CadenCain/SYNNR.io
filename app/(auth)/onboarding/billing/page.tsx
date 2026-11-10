@@ -5,7 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { canPerform } from "@/lib/saas/entitlements";
 import { saasAdmin } from "@/lib/saas/db";
-import { hasFullAccess } from "@/lib/saas/plan";
+import { hasFullAccess, SELF_SERVE_OPEN } from "@/lib/saas/plan";
 import { subscriptionFields } from "@/lib/saas/stripe-events";
 import { billableYardCount } from "@/lib/saas/billing";
 import { provisionPaidYards } from "@/lib/saas/onboarding";
@@ -81,9 +81,9 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
     <div className="flex flex-col gap-6">
       <div>
         <CompanySwitcherWall />
-        <p className="text-sm text-ink-faint">Step 3 of 3</p>
+        {SELF_SERVE_OPEN ? <p className="text-sm text-ink-faint">Step 3 of 3</p> : null}
         <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.02em]">Start {company.name} on SYNNR</h1>
-        <p className="mt-1 text-sm text-ink-dim">Pay by card on Stripe&apos;s secure page, and you&apos;re in.</p>
+        {SELF_SERVE_OPEN ? <p className="mt-1 text-sm text-ink-dim">Pay by card on Stripe&apos;s secure page, and you&apos;re in.</p> : null}
       </div>
       {pending ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
@@ -98,12 +98,21 @@ export default async function OnboardingBilling({ searchParams }: { searchParams
       {sp.canceled ? (
         <p className="rounded-lg border border-line-2 bg-elevated px-4 py-3 text-sm text-ink-dim">No charge was made. Pick up where you left off whenever you&apos;re ready.</p>
       ) : null}
-      <SubscribeCard initialYards={startYards} minYards={inUse} canPay={canPerform(company.role, "billing")} />
-      {company.subscription_status === "none" ? (
-        <p className="text-center text-sm"><Link href="/onboarding" className="text-ink-dim underline underline-offset-2">Change the company name, phone, or yards</Link></p>
-      ) : null}
+      {SELF_SERVE_OPEN ? (
+        <>
+          <SubscribeCard initialYards={startYards} minYards={inUse} canPay={canPerform(company.role, "billing")} />
+          {company.subscription_status === "none" ? (
+            <p className="text-center text-sm"><Link href="/onboarding" className="text-ink-dim underline underline-offset-2">Change the company name, phone, or yards</Link></p>
+          ) : null}
+        </>
+      ) : (
+        <p className="rounded-lg border border-line-2 bg-surface px-4 py-4 text-sm leading-relaxed text-ink-dim">
+          Paying online is off while SYNNR is in early access. Nothing has been charged. Call or text Caden and
+          he&apos;ll get {company.name} set up.
+        </p>
+      )}
       <p className="text-center text-sm text-ink-dim">
-        Questions first? Call or text Caden at 432-250-0715. <Link href="/demo" className="underline underline-offset-2">Or try the demo.</Link>
+        Call or text Caden at <a href="tel:+14322500715" className="text-ink underline underline-offset-4">432-250-0715</a>.
       </p>
       <p className="text-center text-xs text-ink-faint"><a href="/logout" className="underline underline-offset-2">Sign out</a></p>
     </div>

@@ -58,7 +58,18 @@ export function isYardPrice(p: { unit_amount: number | null; currency: string; r
 
 export interface PlanCompany { subscription_status: string; comped: boolean; is_demo: boolean }
 
-/** Paid up (or comped, or the demo): the full product, load-outs included. */
+/**
+ * Whether a stranger can make a company and pay for it online. Off while
+ * SYNNR is in early access: accounts are opened by hand after a call, and
+ * nobody is charged the old per-yard price for a product that has changed
+ * under it. Crew invites are not affected. Turn this on only once the new
+ * price exists in Stripe and checkout sells it.
+ */
+export const SELF_SERVE_OPEN = false;
+/** What every closed door says. */
+export const BY_INVITE = "SYNNR is in early access, and accounts are opened by invitation. Request access at synnr.io, or call or text 432-250-0715.";
+
+/** Paid up (or comped, or the demo): the full product. */
 export function hasFullAccess(c: PlanCompany): boolean {
   return c.comped || c.is_demo || c.subscription_status === "active" || c.subscription_status === "past_due" || c.subscription_status === "trialing";
 }

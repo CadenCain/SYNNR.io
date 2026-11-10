@@ -4,19 +4,21 @@ import { getStripe } from "@/lib/stripe";
 import { requireCompany } from "@/lib/saas/auth";
 import { canPerform } from "@/lib/saas/entitlements";
 import { saasAdmin } from "@/lib/saas/db";
-import { clampYards } from "@/lib/saas/plan";
+import { clampYards, SELF_SERVE_OPEN } from "@/lib/saas/plan";
 import { createYardCheckout, siteOrigin } from "@/lib/saas/onboarding";
 
 /**
  * Start (or restart) the subscription from the payment page: Stripe Checkout
- * for "RollReady Yard" at $500 a yard a month. The owner only; the demo yard
+ * at the per-yard price (closed while SELF_SERVE_OPEN is off). The owner only; the demo yard
  * never; never a second subscription on top of a live one. First-time
  * onboarding goes straight to Stripe from the company step instead.
  */
 export async function POST(req: Request) {
   const { user, company } = await requireCompany();
   const no = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
-  if (company.is_demo) return no("This is the demo yard, so nothing here can be billed. Get started with your own yard from synnr.io.", 403);
+  // Early access: nobody pays online until the new price is in Stripe.
+  if (!SELF_SERVE_OPEN) return no("Paying online is off while SYNNR is in early access. Call or text 432-250-0715 and we'll get you set up.", 403);
+  if (company.is_demo) return no("This is the demo company, so nothing here can be billed.", 403);
   if (!canPerform(company.role, "billing")) return no("Only the account owner can start the subscription.", 403);
   if (company.subscription_status === "active" || company.subscription_status === "past_due") {
     return no("You're already subscribed. Add or remove yards under Settings, Billing.", 409);

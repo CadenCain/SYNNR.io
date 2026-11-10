@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const viewport: Viewport = {
-  themeColor: "#07090c",
+  themeColor: "#08090a",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -21,33 +21,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  // www is the primary host in Vercel (apex 308s to it) — canonical URLs must
+  // www is the primary host in Vercel (apex 308s to it): canonical URLs must
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "RollReady | Every Truck Leaves the Yard With the Right Gear",
+    default: "SYNNR | Ask your company anything",
     template: "%s",
   },
   description:
-    "A load-out check a tired hand can do in under a minute. Tap what's on the truck, take one photo, tap Ready. Anything missing reads NOT READY, and you keep a locked record of who cleared the truck. Built for Permian service yards.",
-  keywords: [
-    "oilfield load out checklist", "truck load out app", "oilfield truck checklist", "prevent hotshots oilfield",
-    "who loaded the truck", "load-out record", "setting tool tracking", "RollReady",
-    "wireline", "coil tubing", "Permian Basin", "Midland", "Odessa",
-  ],
+    "SYNNR is an AI that learns your service company: what you charge, what your contracts say, how your crews do the job, what's on every truck. Then anybody on the crew can ask it. Built for oilfield service companies, wireline first. Early access.",
   openGraph: {
     type: "website",
-    siteName: "RollReady by SYNNR",
-    title: "RollReady | Make sure the right stuff goes out",
+    siteName: "SYNNR",
+    title: "SYNNR | Ask your company anything",
     description:
-      "A check at the truck in under a minute. Anything missing reads NOT READY and says what, and you always know who cleared the truck.",
+      "An AI that learns your service company, then answers your crew from the office or the truck. Wireline first. Early access.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RollReady | Make sure the right stuff goes out",
+    title: "SYNNR | Ask your company anything",
     description:
-      "A check at the truck in under a minute. Anything missing reads NOT READY and says what, and you always know who cleared the truck.",
+      "An AI that learns your service company, then answers your crew from the office or the truck. Wireline first. Early access.",
   },
 };
 
@@ -59,26 +54,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
-        {/* Structured data for a "RollReady" / "SYNNR" brand search. */}
+        {/* Structured data for a "SYNNR" brand search. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "RollReady",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Web",
+              "@type": "Organization",
+              name: "SYNNR",
               url: "https://www.synnr.io",
               description:
-                "A load-out check for oilfield service yards. The hand taps what's on the truck, takes one photo, and taps Ready in under a minute. Anything missing reads NOT READY, with a locked record of who cleared the truck.",
-              offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
-              publisher: {
-                "@type": "Organization",
-                name: "RollReady",
-                url: "https://www.synnr.io",
-                areaServed: "Permian Basin, West Texas",
-              },
+                "An AI that learns an oilfield service company's prices, contracts, procedures, trucks and tools, and answers the crew's questions. Wireline first.",
+              areaServed: "Permian Basin, West Texas",
             }),
           }}
         />

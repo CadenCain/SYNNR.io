@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isReservedYardName } from "@/lib/saas/billing-rules";
 import { cookies, headers } from "next/headers";
@@ -6,7 +7,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { getSaasUser, getFirstActiveCompany } from "@/lib/saas/auth";
 import { saasAdmin } from "@/lib/saas/db";
 import { getStripe } from "@/lib/stripe";
-import { clampYards, isDemoUser, mustSubscribe } from "@/lib/saas/plan";
+import { clampYards, isDemoUser, mustSubscribe, SELF_SERVE_OPEN } from "@/lib/saas/plan";
 import { createYardCheckout, siteOrigin } from "@/lib/saas/onboarding";
 import OnboardingForm from "./onboarding-form";
 import { tellOwner, monthly } from "@/lib/saas/tell-owner";
@@ -26,6 +27,8 @@ async function startCompany(formData: FormData) {
   const user = await getSaasUser();
   if (!user) redirect("/signup");
   if (isDemoUser(user)) redirect("/demo/exit?to=signup");
+  // Early access: no new companies and no checkout from here.
+  if (!SELF_SERVE_OPEN) redirect("/onboarding");
   const name = clip(formData.get("name"), 120);
   const phone = clip(formData.get("contact_phone"), 40);
   const yards = clampYards(formData.get("yards"));
@@ -117,6 +120,21 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         </div>
       );
     }
+  }
+  // Early access: a login with no company (or one that never paid) can't
+  // start one here. They ask for access and Caden opens the account.
+  if (!SELF_SERVE_OPEN) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em]">SYNNR is by invitation right now</h1>
+        <p className="text-sm leading-relaxed text-ink-dim">
+          We&apos;re in early access and open each company&apos;s account by hand, after a call. If your shop is
+          already on SYNNR, ask your manager for the crew link. Otherwise, ask for access and Caden will call you.
+        </p>
+        <Link href="/#access" className="inline-flex h-11 items-center justify-center rounded-lg bg-ink px-4 text-sm font-medium text-coal transition-colors hover:bg-white">Request access</Link>
+        <a href="/logout" className="inline-flex h-11 items-center justify-center rounded-lg border border-line-2 px-4 text-sm font-medium text-ink transition-colors hover:bg-elevated">Log out</a>
+      </div>
+    );
   }
   const { ref, err } = await searchParams;
 

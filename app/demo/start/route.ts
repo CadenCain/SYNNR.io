@@ -20,7 +20,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const back = (q: string) => NextResponse.redirect(new URL(`/demo?${q}`, req.url), 303);
+  // The demo page is gone (nothing links here for now), so a failure just lands on home.
+  const back = (q: string) => { console.error("[demo] start refused:", q); return NextResponse.redirect(new URL("/", req.url), 303); };
   const admin = saasAdmin();
   const sb = await getServerSupabase();
   if (!admin || !sb) return back("err=unavailable");

@@ -1,260 +1,170 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import "./home.css";
+import { SiteNav, SiteFooter } from "./_site/chrome";
+import HeroAsk from "./_site/hero-ask";
+import AccessForm from "./_site/access-form";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
-import HomeGate from "./home-gate";
-import HomeMotion from "./home-motion";
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
-// RollReady homepage (2026-11, the quick check). The pitch: make sure the
-// right stuff goes out. A check at the truck in under a minute, NOT READY
-// that says what's missing, and a locked record of who cleared the truck.
-// The hero is the check itself and the board is drawn in code, not a
-// screenshot. No customer names, logos, or counts anywhere.
+/**
+ * synnr.io. One page: what SYNNR is, what a crew asks it, how it learns a
+ * company, and how to get in. It's in early access, so the only thing to do
+ * here is ask for it. Nothing on this page is a made-up number or customer.
+ */
 
-const Mark = ({ className = "rr-mark" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path d="M16 1.6 19.2 12.8 30.4 16 19.2 19.2 16 30.4 12.8 19.2 1.6 16 12.8 12.8Z" fill="currentColor" />
-  </svg>
-);
-
-const STEPS = [
-  { n: "1", h: "Set each truck’s list once", p: "A manager picks the 5 to 8 things that cause a hotshot when they get left behind. Add a job list like Plug set if you want one. No iron to enter, no serials, no cert dates." },
-  { n: "2", h: "Check it at the truck", p: "The hand taps the truck, taps On truck on each line, taps checks like BOP rams closed for travel, takes one photo, and taps Ready." },
-  { n: "3", h: "Missing means NOT READY", p: "Anything not tapped makes the truck NOT READY, and the screen says what’s missing, like “Not on the truck: Sinker bars.” You find out in the yard, not on location." },
-  { n: "4", h: "The record locks", p: "Who cleared the truck, what they said was on it, the photo, and the time. Nobody can edit it. The operator gets a proof link that shows the same." },
+const ASKS: { who: string; lines: string[] }[] = [
+  {
+    who: "In the truck",
+    lines: [
+      "What do I need to take on this job?",
+      "Make me a checklist for a plug and perf.",
+      "Make me a perf run sheet for 3 stages.",
+    ],
+  },
+  {
+    who: "In the office",
+    lines: [
+      "What do we charge for this?",
+      "Read this signed ticket and tell me what to bill.",
+      "What does the MSA say about standby time?",
+    ],
+  },
+  {
+    who: "Running the company",
+    lines: [
+      "Who got that job?",
+      "Which truck is set up for bond logs?",
+      "Who has the setting tools out right now?",
+    ],
+  },
 ];
 
-const VERSUS = [
-  { a: "“Truck’s loaded” at 4:50 AM.", b: "Every line tapped On truck, one photo, and Ready, with a name and the time." },
-  { a: "Something got left behind. You find out on location.", b: "Anything not tapped reads NOT READY in the yard, and says what’s missing." },
-  { a: "Who loaded it? Scroll back and guess.", b: "The record shows who cleared the truck and what they said was on it." },
-  { a: "The operator takes your word for it.", b: "The operator gets a proof link with the same record and the photo." },
+const HOW: { n: string; title: string; body: string }[] = [
+  {
+    n: "1",
+    title: "It learns your company",
+    body: "Your price book, MSAs, procedures, job lists, trucks and tools. PDFs, spreadsheets, Word files, or a phone photo of paper. It picks up the words your crew already uses.",
+  },
+  {
+    n: "2",
+    title: "Everybody asks the same brain",
+    body: "Each person gets their own login and their own chats. What the company knows is shared, so a new hand gets the same answer the owner would give.",
+  },
+  {
+    n: "3",
+    title: "It tells you where it got it",
+    body: "Answers come from what your company gave it, with the page they came from. If it doesn't know, it says so. It doesn't guess at a price or a procedure.",
+  },
 ];
 
-const BOARD = [
-  { truck: "WL-07", tone: "go", status: "Ready", line: "Cleared by Dale Wooten, 5:02 AM", act: null },
-  { truck: "WL-03", tone: "stop", status: "Not ready", line: "Not on the truck: Crossover subs", act: "Check it again" },
-  { truck: "WL-05", tone: "out", status: "Out on a job", line: "Left yesterday, 6:15 AM", act: "It’s back" },
-  { truck: "WL-09", tone: "idle", status: "Not checked yet", line: "Nobody has checked it today", act: "Check it" },
-];
-
-const TOOLS = [
-  { name: "Silver Fox", ready: 4, out: 2, used: 3 },
-  { name: "Baker 20", ready: 6, out: 1, used: 2 },
-];
+const wrap = "mx-auto w-full max-w-6xl px-5 md:px-10";
+const h2 = "text-[28px] font-semibold leading-[1.1] tracking-[-0.03em] text-ink md:text-[40px]";
 
 export default function Home() {
   return (
-    <div className="rr">
-      <HomeMotion />
-      <header className="rr-nav" id="rr-nav">
-        <div className="rr-wrap rr-nav-in">
-          <Link className="rr-brand" href="/" aria-label="RollReady by SYNNR">
-            <Mark /><span className="rr-word">RollReady</span><span className="rr-by">by SYNNR</span>
-          </Link>
-          <nav className="rr-links" aria-label="Main">
-            <a href="#trip">How it works</a>
-            <a href="#board">For managers</a>
-            <a href="#pricing">Pricing</a>
-            <Link href="/demo">Live demo</Link>
-          </nav>
-          <div className="rr-nav-cta">
-            <Link href="/login" className="rr-login">Log in</Link>
-            <Link href="/signup" className="rr-btn rr-btn-sm">Get started</Link>
-            <label htmlFor="rr-menu" className="rr-burger" aria-label="Open menu">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-            </label>
-          </div>
-        </div>
-        <input type="checkbox" id="rr-menu" className="rr-menu-toggle" aria-hidden="true" />
-        <nav className="rr-mobile" aria-label="Menu">
-          <a href="#trip">How it works</a>
-          <a href="#board">For managers</a>
-          <a href="#pricing">Pricing</a>
-          <Link href="/demo">Live demo</Link>
-          <Link href="/signup">Get started</Link>
-          <Link href="/login">Log in</Link>
-          <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
-        </nav>
-      </header>
+    <div className="saas min-h-dvh bg-coal text-ink antialiased">
+      <SiteNav />
 
       <main>
-        <section className="rr-hero" aria-labelledby="rr-hero-h">
-          <div className="rr-wrap rr-hero-grid">
-            <div className="rr-hero-copy">
-              <p className="rr-kicker">Load-out checks for oilfield service yards</p>
-              <h1 id="rr-hero-h">Make sure the right stuff goes out.</h1>
-              <p className="rr-lede">
-                RollReady is a check at the truck that takes under a minute. The hand taps what’s on it, takes one photo,
-                and taps Ready. If anything’s missing, it reads NOT READY and says what. And you always know who cleared the truck.
-              </p>
-              <div className="rr-cta">
-                <Link href="/demo" className="rr-btn">Open the live demo</Link>
-                <a href={OWNER_PHONE_TEL} className="rr-btn rr-btn-ghost">Call or text {OWNER_PHONE}</a>
-              </div>
-              <p className="rr-note">The demo is the real app with a made-up yard. No signup, no card.</p>
-            </div>
-            <HomeGate />
+        {/* What it is */}
+        <section className={`${wrap} pb-16 pt-16 md:pb-24 md:pt-28`}>
+          <p className="flex items-center gap-2.5 text-[13px] text-ink-dim">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-[1px] bg-bone" />
+            Early access. Wireline first.
+          </p>
+          <h1 className="mt-6 max-w-4xl text-[46px] font-semibold leading-[0.98] tracking-[-0.045em] text-ink sm:text-[72px] md:text-[92px]">
+            Ask your company anything.
+          </h1>
+          <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
+            SYNNR is an AI that learns your service company: what you charge, what your contracts say, how your crews
+            do the job, what&apos;s on every truck. Then anybody on the payroll can ask it, from the office or the
+            truck.
+          </p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link href="#access" className="flex h-12 items-center justify-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">
+              Request access
+            </Link>
+            <a href={OWNER_PHONE_TEL} className="flex h-12 items-center justify-center rounded-lg border border-line-2 px-6 text-[15px] text-ink transition-colors hover:bg-elevated">
+              Call or text {OWNER_PHONE}
+            </a>
+          </div>
+
+          <div className="mt-16 md:mt-24">
+            <HeroAsk />
+            <p className="mt-4 text-[14px] text-ink-faint">That bar is the whole product. No dashboards to learn.</p>
           </div>
         </section>
 
-        <section className="rr-sec rr-band" id="trip" aria-labelledby="rr-trip-h">
-          <div className="rr-wrap">
-            <div className="rr-head rv">
-              <p className="rr-kicker">How it works</p>
-              <h2 className="rr-h2" id="rr-trip-h">Under a minute at the truck</h2>
-              <p className="rr-sub">Made for a tired hand at 5 AM. Big buttons, plain words, and nothing to type.</p>
-            </div>
-            <ol className="rr-trip">
-              {STEPS.map((t) => (
-                <li key={t.n} className="rv">
-                  <span className="rr-num">{t.n}</span>
-                  <h3>{t.h}</h3>
-                  <p>{t.p}</p>
-                </li>
-              ))}
-            </ol>
-            <p className="rr-fine rr-trip-fine rv">
-              Works on the phones your crew already has. If there’s no signal, the taps stay on the phone until there is.
-              A yard that wants more can switch on the full check in Settings: every piece scanned, with its tests and cert paper checked.
-            </p>
-          </div>
-        </section>
-
-        <section className="rr-sec" aria-labelledby="rr-vs-h">
-          <div className="rr-wrap">
-            <div className="rr-head rv">
-              <p className="rr-kicker">Better than a group text</p>
-              <h2 className="rr-h2" id="rr-vs-h">When something’s missing, you know who cleared the truck.</h2>
-              <p className="rr-sub">No digging through group chats. Every check saves one record that nobody can edit.</p>
-            </div>
-            <div className="rr-vs rv" role="table" aria-label="A group text compared with RollReady">
-              <div className="rr-vs-row rr-vs-headrow" role="row">
-                <span role="columnheader">A group text</span>
-                <span role="columnheader">RollReady</span>
-              </div>
-              {VERSUS.map((v) => (
-                <div className="rr-vs-row" role="row" key={v.a}>
-                  <span role="cell" className="rr-vs-a">{v.a}</span>
-                  <span role="cell" className="rr-vs-b">{v.b}</span>
+        {/* What people ask it */}
+        <section className="border-t border-line">
+          <div className={`${wrap} py-16 md:py-24`}>
+            <h2 className={h2}>Everybody asks it something different.</h2>
+            <div className="mt-10 border-t border-line md:mt-14">
+              {ASKS.map((a) => (
+                <div key={a.who} className="grid gap-3 border-b border-line py-7 md:grid-cols-[220px_1fr] md:gap-10 md:py-9">
+                  <div className="text-[14px] text-ink-faint md:pt-1">{a.who}</div>
+                  <ul className="flex flex-col gap-2.5">
+                    {a.lines.map((l) => (
+                      <li key={l} className="text-[19px] leading-snug tracking-[-0.01em] text-ink md:text-[24px]">{l}</li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="rr-sec rr-band" id="board" aria-labelledby="rr-board-h">
-          <div className="rr-wrap rr-split">
-            <div className="rv">
-              <p className="rr-kicker">For the yard manager</p>
-              <h2 className="rr-h2" id="rr-board-h">Every truck on one screen</h2>
-              <p className="rr-sub">
-                Ready, not ready, out on a job, or not checked yet. A truck that isn’t ready shows what’s missing.
-                When one gets back from a job, tap It’s back.
+        {/* How it works */}
+        <section className="border-t border-line">
+          <div className={`${wrap} py-16 md:py-24`}>
+            <h2 className={h2}>It knows your company, not the internet.</h2>
+            <div className="mt-10 grid border-t border-line md:mt-14 md:grid-cols-3">
+              {HOW.map((s, i) => (
+                <div key={s.n} className={`border-b border-line py-8 md:py-10 ${i > 0 ? "md:border-l md:pl-8" : ""} ${i < HOW.length - 1 ? "md:pr-8" : ""}`}>
+                  <div className="font-mono text-[13px] tabular-nums text-bone">{s.n}</div>
+                  <h3 className="mt-4 text-[19px] font-medium tracking-[-0.01em] text-ink">{s.title}</h3>
+                  <p className="mt-2.5 text-[15px] leading-[1.6] text-ink-dim">{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Who's behind it */}
+        <section className="border-t border-line">
+          <div className={`${wrap} grid gap-8 py-16 md:grid-cols-[220px_1fr] md:gap-10 md:py-24`}>
+            <div className="text-[14px] text-ink-faint md:pt-2">Who built it</div>
+            <div className="max-w-2xl">
+              <p className="text-[22px] leading-[1.35] tracking-[-0.015em] text-ink md:text-[28px]">
+                What a service company knows lives in a price book nobody can find, a binder in the shop, and the head
+                of whoever&apos;s been there longest. SYNNR puts it where the whole crew can ask.
               </p>
-              <p className="rr-sub">
-                <b>Tools out</b> counts the setting tools in each yard, like Silver Fox and Baker 20: how many are ready,
-                how many are out with someone, and how many are used and waiting on the vendor’s pickup.
+              <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
+                Built by Caden Cain, who ran wireline in the Permian for five years.
               </p>
             </div>
-            <figure className="rr-board rv" aria-label="Example of the manager’s board and Tools out">
-              <div className="rr-board-top"><b>Trucks</b><span>Example yard</span></div>
-              <ul className="rr-board-rows">
-                {BOARD.map((r) => (
-                  <li key={r.truck} className={r.tone}>
-                    <span className="rr-board-truck">{r.truck}</span>
-                    <span className="rr-board-mid">
-                      <span className={`rr-chip ${r.tone}`}>{r.status}</span>
-                      <span className="rr-board-line">{r.line}</span>
-                    </span>
-                    {r.act ? <span className="rr-board-act" aria-hidden="true">{r.act}</span> : null}
-                  </li>
-                ))}
-              </ul>
-              <div className="rr-tools">
-                <div className="rr-tools-h">Tools out</div>
-                <table>
-                  <thead>
-                    <tr><th scope="col">Setting tools</th><th scope="col">Ready</th><th scope="col">Out</th><th scope="col">Used</th></tr>
-                  </thead>
-                  <tbody>
-                    {TOOLS.map((t) => (
-                      <tr key={t.name}><th scope="row">{t.name}</th><td>{t.ready}</td><td>{t.out}</td><td>{t.used}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="rr-tools-fine">Used ones wait on the shelf for the vendor’s pickup.</p>
-              </div>
-            </figure>
           </div>
         </section>
 
-        <section className="rr-sec" id="pricing" aria-labelledby="rr-price-h">
-          <div className="rr-wrap rr-split">
-            <div className="rv">
-              <p className="rr-kicker">Pricing</p>
-              <h2 className="rr-h2" id="rr-price-h">One price per yard. Your whole crew.</h2>
-              <p className="rr-sub"><b>One bad load-out costs more than a year of RollReady.</b> A year is $6,000. The lubricator miss that started this cost $8,000 in one day.</p>
-              <p className="rr-sub">Running a lot of yards? <a href={OWNER_PHONE_TEL}>Call or text me.</a></p>
+        {/* Get in */}
+        <section id="access" className="scroll-mt-14 border-t border-line">
+          <div className={`${wrap} grid gap-10 py-16 md:grid-cols-2 md:gap-16 md:py-24`}>
+            <div>
+              <h2 className={h2}>Request access.</h2>
+              <p className="mt-5 max-w-md text-[16px] leading-[1.6] text-ink-dim">
+                SYNNR is in early access and built for wireline companies first. Leave a number and Caden will
+                call you, look at what you run on, and tell you straight whether it&apos;s ready for your shop.
+              </p>
             </div>
-            <div className="rr-card rr-price rv">
-              <div className="rr-price-big">$500<span>per yard, per month</span></div>
-              <ul className="rr-checks">
-                <li>Your whole crew, each with their own login. Never per seat.</li>
-                <li>No contract. Cancel anytime.</li>
-                <li>Set up your truck lists yourself, free. Or I’ll set them up with you: $1,000 a yard, one time, and free for the first 10 yards I set up.</li>
-                <li>Your data is yours. Export it as a spreadsheet anytime.</li>
-              </ul>
-              <Link href="/signup" className="rr-btn rr-block">Get started</Link>
-              <Link href="/demo" className="rr-btn rr-btn-ghost rr-block">Open the live demo first</Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="rr-sec rr-band" aria-labelledby="rr-about-h">
-          <div className="rr-wrap">
-            <div className="rr-founder rv">
-              <h2 className="rr-h3" id="rr-about-h">Built by someone who’s been turned around at the gate</h2>
-              <p>I ran wireline in the Permian for five years. I was on the crew that got sent home over an expired lubricator cert, and it cost us $8,000. RollReady is the check I wish we’d had in the yard that morning.</p>
-              <p>What yards have told me since is that the everyday miss is the wrong gear on the truck, a hotshot to fix it, and nobody knowing who cleared the truck.</p>
-              <p>If you want to see it with your own trucks in it, call or text me at <a href={OWNER_PHONE_TEL}>{OWNER_PHONE}</a>.</p>
-              <p className="rr-sign">Caden Cain</p>
-              <p className="rr-fine">You won’t find fake logos or customer counts on this site. RollReady is new, and I’d rather say so.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rr-close" aria-labelledby="rr-close-h">
-          <div className="rr-wrap rr-center">
-            <Mark className="rr-close-mark" />
-            <h2 className="rr-h2" id="rr-close-h">Every truck leaves with the right gear.</h2>
-            <p className="rr-sub">Check a truck in the demo on your phone. It takes under a minute. Or call, and I’ll set up your trucks with you.</p>
-            <div className="rr-cta rr-center">
-              <Link href="/demo" className="rr-btn">Open the live demo</Link>
-              <Link href="/signup" className="rr-btn rr-btn-ghost">Get started</Link>
-              <a href={OWNER_PHONE_TEL} className="rr-btn rr-btn-ghost">Call or text {OWNER_PHONE}</a>
-            </div>
+            <AccessForm />
           </div>
         </section>
       </main>
 
-      <footer className="rr-foot">
-        <div className="rr-wrap rr-foot-in">
-          <span className="rr-foot-brand"><Mark /> RollReady by SYNNR</span>
-          <nav aria-label="Footer">
-            <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
-            <Link href="/demo">Live demo</Link>
-            <Link href="/readiness-audit">Send your truck lists</Link>
-            <Link href="/glossary">Glossary</Link>
-            <Link href="/login">Log in</Link>
-            <Link href="/legal/terms">Terms</Link>
-            <Link href="/legal/privacy">Privacy</Link>
-          </nav>
-          <span className="rr-copy">© 2026 SYNNR · Darkstar Dynamics LLC</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

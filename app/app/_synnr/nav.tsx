@@ -120,7 +120,7 @@ export default function SynnrNav({ companyName, userName, companies = [], active
     <>
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-line bg-coal md:block">{body}</aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-coal/90 px-4 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-coal px-4 md:hidden">
         <Link href="/app" onClick={fresh} aria-label="SYNNR home"><Wordmark /></Link>
         <button type="button" onClick={() => setOpen(true)} aria-label="Menu"
           className="flex h-10 w-10 items-center justify-center rounded-md text-ink-dim hover:bg-elevated hover:text-ink">

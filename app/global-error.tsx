@@ -11,16 +11,16 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="en">
-      <body style={{ background: "#0c0d0e", color: "#e9e4d8", fontFamily: "ui-sans-serif, system-ui, sans-serif", margin: 0 }}>
+      <body style={{ background: "#08090a", color: "#ededef", fontFamily: "ui-sans-serif, system-ui, sans-serif", margin: 0 }}>
         <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", textAlign: "center", padding: 24 }}>
           <div style={{ maxWidth: 440 }}>
             <h1 style={{ fontSize: 22, fontWeight: 600 }}>Something broke.</h1>
-            <p style={{ color: "#9b958a", lineHeight: 1.6 }}>
-              Something broke on our end. Your data is safe. Try again, or email cadencain@synnr.io.
+            <p style={{ color: "#a1a4aa", lineHeight: 1.6 }}>
+              Something broke on our end. Nothing you put in was lost. Try again, or email cadencain@synnr.io.
             </p>
             <button
               onClick={() => reset()}
-              style={{ marginTop: 18, background: "#c9b88a", color: "#0b0b0b", border: 0, borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              style={{ marginTop: 18, background: "#ededef", color: "#08090a", border: 0, borderRadius: 8, padding: "11px 20px", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
             >
               Try again
             </button>

@@ -56,8 +56,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {company.is_demo ? (
           <div className={bar}>
             <span className="font-medium text-ink">Demo company.</span> Everything in it is made up.{" "}
-            {/* Leaves the demo and goes straight to creating a real account. */}
-            <a href="/demo/exit?to=signup" className="font-medium text-ink underline underline-offset-4 hover:text-bone">Set up your company</a>
+            {/* Leaves the demo and goes to the request form. */}
+            <a href="/demo/exit?to=access" className="font-medium text-ink underline underline-offset-4 hover:text-bone">Request access for your company</a>
           </div>
         ) : !writable ? (
           <div className={bar}>

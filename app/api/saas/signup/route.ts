@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { SELF_SERVE_OPEN, BY_INVITE } from "@/lib/saas/plan";
 
 /**
  * Self-serve signup. Creates the auth user pre-confirmed via the admin API so
@@ -12,6 +13,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 export async function POST(req: Request) {
+  if (!SELF_SERVE_OPEN) return NextResponse.json({ ok: false, error: BY_INVITE }, { status: 403 });
   let body: { email?: string; password?: string; fullName?: string };
   try {
     body = await req.json();

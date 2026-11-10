@@ -139,3 +139,8 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* The typing caret on the homepage's ask bar. Still for anyone who asked for less motion. */
+@keyframes synnr-caret { 50% { opacity: 0; } }
+.synnr-caret { animation: synnr-caret 1.1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) { .synnr-caret { animation: none; } }
