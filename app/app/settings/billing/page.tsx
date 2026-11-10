@@ -1,170 +1,66 @@
 import Link from "next/link";
 import { fmtDay } from "@/lib/saas/format";
-import PendingButton from "@/components/ui/pending-button";
-import { revalidatePath } from "next/cache";
-import { requireCompany , assertCan } from "@/lib/saas/auth";
+import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { Card } from "@/components/ui/card";
-import { Button, buttonClass } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { buttonClass } from "@/components/ui/button";
 import BillingActions from "./billing-actions";
-import { redirect } from "next/navigation";
-import { setYardAllowance, billableYardCount } from "@/lib/saas/billing";
-import { canLowerAllowance } from "@/lib/saas/entitlements";
-import { STATUS_LABEL, PER_YARD_DOLLARS, monthlyDollars, money, planLine } from "@/lib/saas/plan";
-import { caughtLately, NPT_WINDOW_DAYS } from "./npt";
+import { STATUS_LABEL } from "@/lib/saas/plan";
 
 export const metadata = { title: "Billing" };
-
 export const dynamic = "force-dynamic";
 
-async function saveNptRate(formData: FormData) {
-  "use server";
-  const { company } = await requireCompany();
-  // The database only lets a manager change it: say so instead of a save that does nothing.
-  if (company.role !== "owner" && company.role !== "admin") throw new Error("Only a manager can change the NPT day-rate.");
-  const n = Math.max(0, Math.min(1_000_000, parseInt(String(formData.get("npt") ?? ""), 10) || 0));
-  const db = await saasDb();
-  await db.from("saas_companies").update({ npt_day_estimate: n }).eq("id", company.id);
-  revalidatePath("/app/settings/billing");
-  revalidatePath("/app");
-}
-
-async function changeAllowance(formData: FormData) {
-  "use server";
-  const { requireCompany } = await import("@/lib/saas/auth");
-  const { company } = await requireCompany();
-  assertCan(company, "billing"); // owner only: this moves money
-  if (!["active", "past_due", "trialing"].includes(company.subscription_status)) {
-    redirect(`/app/settings/billing?err=${encodeURIComponent("Restart the subscription first, then change yards.")}`);
-  }
-  const dir = String(formData.get("dir"));
-  // The plan the page showed when the owner tapped. A second tap that lands
-  // after the first one already changed it is an echo, not a new yard.
-  if (formData.has("from") && Number(formData.get("from")) !== company.yard_quantity) redirect("/app/settings/billing?changed=1");
-  const inUse = await billableYardCount(company.id);
-  const target = company.yard_quantity + (dir === "up" ? 1 : -1);
-  if (dir === "down") {
-    const check = canLowerAllowance(target, inUse);
-    if (!check.ok) redirect(`/app/settings/billing?err=${encodeURIComponent(check.reason ?? "Can't lower below yards in use.")}`);
-  }
-  const res = await setYardAllowance(company.id, target);
-  if (!res.ok) redirect(`/app/settings/billing?err=${encodeURIComponent(res.error)}`);
-  redirect("/app/settings/billing?changed=1");
-}
-
+/**
+ * Where the subscription stands and the one door to change it: Stripe's
+ * portal for the card, invoices, receipts, or canceling. The owner runs it;
+ * everyone else just sees it's handled.
+ */
 export default async function BillingSettings({ searchParams }: { searchParams: Promise<{ err?: string; locked?: string; changed?: string }> }) {
   const { company } = await requireCompany();
-  const { err, locked, changed } = await searchParams;
-  const inUse = await billableYardCount(company.id);
+  const { err, locked } = await searchParams;
   const db = await saasDb();
-  const { data: comp } = await db.from("saas_companies").select("subscription_status, stripe_customer_id, npt_day_estimate, cancel_at").eq("id", company.id).maybeSingle();
-  const c = comp as { subscription_status: string; stripe_customer_id: string | null; npt_day_estimate: number; cancel_at: string | null } | null;
+  const { data: comp } = await db.from("saas_companies").select("subscription_status, stripe_customer_id, cancel_at").eq("id", company.id).maybeSingle();
+  const c = comp as { subscription_status: string; stripe_customer_id: string | null; cancel_at: string | null } | null;
   const status = c?.subscription_status ?? "none";
-  const nptDay = c?.npt_day_estimate ?? 10000;
   const subscribed = status === "active" || status === "past_due" || status === "trialing";
   const owner = company.role === "owner";
-  const manager = owner || company.role === "admin";
-  const plan = company.yard_quantity;
-  // The day-rate's estimate: trucks stopped NOT READY at load-out lately that didn't roll anyway.
-  const caught = manager ? await caughtLately(db, company.id) : 0;
+  const ends = c?.cancel_at && subscribed ? fmtDay(c.cancel_at) : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/app/settings" className="text-sm text-ink-dim hover:text-ink">← Settings</Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Billing</h1>
-        <p className="mt-1 text-sm text-ink-dim">{money(PER_YARD_DOLLARS)} per yard, per month. Your whole crew, never per-seat.</p>
-      </div>
+    <>
+      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Billing" description="Your subscription and how you pay." />
 
       {locked ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-          That needs an active subscription. Your records are safe, readable, and exportable meanwhile.
+          That needs an active subscription. Everything you put in is safe, and you can still read it.
         </p>
       ) : null}
-      {changed ? <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">Done. Stripe has the new yard count.</p> : null}
       {err ? <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{err}</p> : null}
 
-      {company.comped ? (
-        <Card className="p-5">
-          <h2 className="font-semibold">Comped account</h2>
-          <p className="mt-1 text-sm text-ink-dim">Unlimited yards, nothing billed.</p>
-        </Card>
-      ) : (
-        <Card className="flex flex-col gap-4 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-sm text-ink-dim">Subscription</div>
-              <div className="text-lg font-semibold">{STATUS_LABEL[status] ?? status}{c?.cancel_at && subscribed ? `, ends ${fmtDay(c.cancel_at)}` : ""}</div>
-              {c?.cancel_at && subscribed ? <p className="mt-0.5 text-sm text-ink-dim">Canceled. After that your records stay readable and exportable. Changed your mind? Turn it back on under Card, invoices, or cancel.</p> : null}
-            </div>
-            {owner ? (
-              // Anyone who ever paid can reach the portal: card, invoices and receipts, or cancel.
-              c?.stripe_customer_id && status !== "none"
-                ? <div className="flex flex-col items-end gap-2"><BillingActions mode="portal" />{subscribed ? null : <Link href="/onboarding/billing" className={buttonClass("default", "lg")}>Restart the subscription</Link>}</div>
-                : <Link href="/onboarding/billing" className={buttonClass("default", "lg")}>{status === "none" ? "Start the subscription" : "Restart the subscription"}</Link>
-            ) : <span className="text-sm text-ink-faint">The account owner manages billing.</span>}
-          </div>
-
-          {subscribed ? (
-            <>
-              <div className="grid grid-cols-1 gap-3 border-t border-line pt-4 sm:grid-cols-3">
-                <div><div className="text-sm text-ink-dim">Yards you pay for</div><div className="text-2xl font-semibold tabular-nums">{plan}</div></div>
-                <div><div className="text-sm text-ink-dim">Yards set up</div><div className="text-2xl font-semibold tabular-nums">{inUse}</div></div>
-                <div><div className="text-sm text-ink-dim">Monthly</div><div className="text-2xl font-semibold tabular-nums">{money(monthlyDollars(plan))}</div></div>
-              </div>
-              <p className="text-sm tabular-nums text-ink-dim">{planLine(plan)}</p>
-
-              {owner ? (
-                <div className="flex flex-col gap-3 border-t border-line pt-4">
-                  <h2 className="font-semibold">Add or remove a yard</h2>
-                  <div className="flex flex-wrap gap-2">
-                    <form action={changeAllowance}>
-                      <input type="hidden" name="dir" value="up" />
-                      <input type="hidden" name="from" value={plan} />
-                      <PendingButton pendingText="Adding a yard…">Add a yard: {money(monthlyDollars(plan + 1))}/month</PendingButton>
-                    </form>
-                    {plan > 1 ? (
-                      <form action={changeAllowance}>
-                        <input type="hidden" name="dir" value="down" />
-                        <input type="hidden" name="from" value={plan} />
-                        <PendingButton pendingText="Removing a yard…" disabled={plan - 1 < inUse}>Remove a yard: {money(monthlyDollars(plan - 1))}/month</PendingButton>
-                      </form>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-ink-faint">
-                    Changes go to Stripe right away and are prorated: adding a yard charges for the rest of this month on your next bill, removing one credits it.
-                    {plan - 1 < inUse && plan > 1 ? ` To remove a yard, delete one of your ${inUse} yards first, under Yards. Nothing gets deleted for you.` : ""}
-                  </p>
-                </div>
-              ) : null}
-            </>
-          ) : null}
-        </Card>
-      )}
-
-      {manager ? (
-        <Card className="flex flex-col gap-3 p-5">
+      <div className="rounded-xl border border-line bg-surface">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-5">
           <div>
-            <h2 className="text-sm font-medium text-ink">Your NPT day-rate</h2>
-            <p className="mt-0.5 text-sm text-ink-dim">
-              Set it to what a day of non-productive time actually costs your shop. It turns the trucks stopped at load-out into <span className="text-ink">your estimate</span> of downtime avoided, not a measured figure.
-            </p>
+            <div className="text-[13px] text-ink-faint">Subscription</div>
+            <div className="mt-1 flex items-center gap-2 text-[15px] font-medium text-ink">
+              <span aria-hidden className={company.comped || status === "active" || status === "trialing" ? "h-1.5 w-1.5 rounded-full bg-emerald-400" : status === "past_due" ? "h-1.5 w-1.5 rounded-full bg-amber-400" : "h-1.5 w-1.5 rounded-full bg-ink-faint"} />
+              {company.comped ? "Comped" : STATUS_LABEL[status] ?? status}{ends ? `, ends ${ends}` : ""}
+            </div>
           </div>
-          <p className="text-sm text-ink">
-            {caught === 0
-              ? `No truck was stopped NOT READY at load-out in the last ${NPT_WINDOW_DAYS} days.`
-              : `In the last ${NPT_WINDOW_DAYS} days a truck was stopped NOT READY at load-out and didn't roll on an override ${caught} ${caught === 1 ? "time" : "times"} (once per truck per day).${nptDay > 0 ? ` At ${money(nptDay)} a day, that's your estimate of up to ${money(caught * nptDay)} in downtime avoided, if each one would have cost a day.` : ""}`}
-          </p>
-          <form action={saveNptRate} className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-ink-faint">
-              NPT cost per day ($)
-              <input name="npt" type="number" min={0} max={1000000} defaultValue={nptDay}
-                className="h-11 w-40 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
-            </label>
-            <Button type="submit" size="sm">Save</Button>
-          </form>
-        </Card>
-      ) : null}
-    </div>
+          {company.comped ? null : owner ? (
+            // Anyone who ever paid can reach the portal: card, invoices and receipts, or cancel.
+            c?.stripe_customer_id && status !== "none"
+              ? <div className="flex flex-col items-end gap-2"><BillingActions mode="portal" />{subscribed ? null : <Link href="/onboarding/billing" className={buttonClass("default")}>Restart the subscription</Link>}</div>
+              : <Link href="/onboarding/billing" className={buttonClass("default")}>{status === "none" ? "Start the subscription" : "Restart the subscription"}</Link>
+          ) : <span className="text-[13px] text-ink-faint">The account owner handles billing.</span>}
+        </div>
+        <div className="border-t border-line px-5 py-4 text-[13px] leading-relaxed text-ink-dim">
+          {company.comped
+            ? "Nothing is billed on this account."
+            : ends
+              ? "Canceled. Changed your mind? Turn it back on under Card, invoices, or cancel."
+              : "One price for the whole company. Everyone you bring in gets their own login, never billed per seat."}
+        </div>
+      </div>
+    </>
   );
 }

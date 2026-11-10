@@ -1,5 +1,4 @@
 import { fmtDay, fmtWhen } from "@/lib/saas/format";
-import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCompany, requireBillableCompany, type ActiveCompany } from "@/lib/saas/auth";
@@ -8,6 +7,7 @@ import { logEvent } from "@/lib/saas/notify";
 import { sendPasswordReset } from "@/lib/saas/password-reset";
 import { Card } from "@/components/ui/card";
 import { Button, buttonClass } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
@@ -25,8 +25,8 @@ const actorOf = (u: { user_metadata?: { full_name?: string }; email?: string | n
 export const dynamic = "force-dynamic";
 
 /**
- * Who's on the crew. Everybody has their own login, so every scan, load-out,
- * and check-in has a name on it. A manager gets people on with one crew link
+ * Who's on the crew. Everybody has their own login, so SYNNR knows who's
+ * asking and every change has a name on it. A manager gets people on with one crew link
  * (texted to the whole crew, good for 30 days, anyone who taps it joins as a
  * hand) or a one-person invite (for a manager), and can make someone a
  * manager or a hand, send them a password reset, fix their login email, or
@@ -179,7 +179,7 @@ async function transferOwnership(formData: FormData) {
 /** The time now, read outside render (the page renders once per request). */
 const clock = () => Date.now();
 
-const small = "inline-flex min-h-10 items-center rounded-lg border border-line-2 px-3 text-sm text-ink hover:bg-elevated";
+const small = "inline-flex min-h-10 items-center rounded-lg border border-line-2 px-3 text-sm text-ink transition-colors hover:bg-elevated md:min-h-8 md:text-[13px]";
 
 export default async function TeamSettings({ searchParams }: { searchParams: Promise<{ off?: string; link?: string; alerts?: string; links?: string; email?: string; err?: string }> }) {
   const { company, user } = await requireCompany();
@@ -230,23 +230,19 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/app/settings" className="text-sm text-ink-dim hover:text-ink">← Settings</Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Team</h1>
-        <p className="mt-1 text-sm text-ink-dim">Everybody on {company.name} has their own login, so every scan has a name on it.</p>
-      </div>
+    <>
+      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Team" description={`Everybody at ${company.name} gets their own login.`} />
       {notice ? <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{notice}</p> : null}
       {sp.err ? <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{sp.err.slice(0, 200)}</p> : null}
 
       {manager ? (
         <Card className="flex flex-col gap-3 p-5">
           <div>
-            <h2 className="font-semibold">Crew link</h2>
-            <p className="mt-0.5 text-sm text-ink-dim">Text one link to the whole crew. Each hand taps it, types their name, email, and a password, and lands on the trucks. Anyone with the link joins as a hand, so send it to your crew only.</p>
+            <h2 className="text-[14px] font-medium text-ink">Crew link</h2>
+            <p className="mt-0.5 text-sm text-ink-dim">Text one link to the whole crew. Each hand taps it, types their name, email, and a password, and they&apos;re in. Anyone with the link joins as a hand, so send it to your crew only.</p>
           </div>
           {company.is_demo ? (
-            <p className="text-sm text-ink-dim">Off in the demo yard: it&apos;s made up and deletes itself after a day, so real people can&apos;t join it. In your own account, this is where you make the link.</p>
+            <p className="text-sm text-ink-dim">Off in the demo company: it&apos;s made up and deletes itself after a day, so real people can&apos;t join it. In your own account, this is where you make the link.</p>
           ) : crewLink ? (
             <>
               <InviteLink url={`${origin}/invite/${crewLink.token}`} company={company.name} />
@@ -260,13 +256,13 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
               <p className="text-xs text-ink-faint">A new link turns this one off. Anyone who already joined stays on. Taking someone off the crew makes a new link by itself.</p>
             </>
           ) : (
-            <form action={makeCrewLink}><Button type="submit" className="h-12 w-full text-base sm:w-auto">Make the crew link</Button></form>
+            <form action={makeCrewLink}><Button type="submit" className="w-full sm:w-auto">Make the crew link</Button></form>
           )}
         </Card>
       ) : null}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-ink">On the crew ({members.length})</h2>
+        <h2 className="text-[14px] font-medium text-ink">On the crew <span className="text-ink-faint">{members.length}</span></h2>
         {members.map((m) => {
           const i = info.get(m.user_id) ?? {};
           const me = m.user_id === user.id;
@@ -277,7 +273,7 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
             <Card key={m.user_id} className="flex flex-col gap-2 p-4">
               <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
-                  <span className="block font-medium">{i.name ?? "No name yet"}{me ? " (you)" : ""}</span>
+                  <span className="block text-[14px] font-medium text-ink">{i.name ?? "No name yet"}{me ? " (you)" : ""}</span>
                   <span className="block break-all text-sm text-ink-dim">{i.email ?? ""}</span>
                   <span className="block text-[13px] text-ink-faint">{lastInText(i.lastIn)}</span>
                 </span>
@@ -285,7 +281,7 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
               </div>
               {canManage || (company.role === "owner" && m.role === "admin" && !me) ? (
                 <details className="group">
-                  <summary className="cursor-pointer list-none text-sm font-medium text-bone">Manage {first}</summary>
+                  <summary className="cursor-pointer list-none text-[13px] font-medium text-ink-dim transition-colors hover:text-ink">Manage {first}</summary>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {canManage ? (
                       <form action={setRole}>
@@ -325,7 +321,7 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Take {i.name ?? "them"} off the crew?</AlertDialogTitle>
-                            <AlertDialogDescription>They lose access right away and come off the alert emails. The crew link turns over, so the one they have stops working. Their name stays on everything they did.</AlertDialogDescription>
+                            <AlertDialogDescription>They lose access right away. The crew link turns over, so the one they have stops working. Their name stays on everything they did.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Keep them on</AlertDialogCancel>
@@ -342,7 +338,7 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
                     <form action={changeEmail} className="mt-2 flex flex-col gap-2 sm:flex-row">
                       <input type="hidden" name="user_id" value={m.user_id} />
                       <input name="email" type="email" required defaultValue={i.email ?? ""} aria-label={`${first}'s login email`} autoCapitalize="none"
-                        className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
+                        className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none focus:border-ink-faint md:h-10 md:text-sm" />
                       <button type="submit" className={small}>Fix their login email</button>
                     </form>
                   ) : null}
@@ -357,18 +353,18 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
       {manager && !company.is_demo ? (
         <Card className="flex flex-col gap-3 p-5">
           <div>
-            <h2 className="font-semibold">Invite one person</h2>
-            <p className="mt-0.5 text-sm text-ink-dim">A link for one person, good for 7 days. Use it to bring back someone who was taken off the crew, or pick Manager for a manager. Managers also roll a NOT READY truck on an override, approve uploads, and set the rules.</p>
+            <h2 className="text-[14px] font-medium text-ink">Invite one person</h2>
+            <p className="mt-0.5 text-sm text-ink-dim">A link for one person, good for 7 days. Use it to bring back someone who was taken off the crew, or pick Manager for a manager. Managers can bring people in and run the team.</p>
           </div>
           <form action={createInvite} className="flex flex-col gap-3 sm:flex-row">
             <select name="role" defaultValue="member" aria-label="Joins as"
-              className="h-12 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone sm:w-40">
+              className="h-11 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none focus:border-ink-faint sm:w-40 md:h-10 md:text-sm">
               <option value="member">Hand</option>
               <option value="admin">Manager</option>
             </select>
             <input name="email" type="email" placeholder="Their email (optional, for your list)" aria-label="Their email"
-              className="h-12 min-w-0 flex-1 rounded-lg border border-line-2 bg-surface px-3 text-base text-ink outline-none focus:border-bone" />
-            <Button type="submit" className="h-12">Make the link</Button>
+              className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint md:h-10 md:text-sm" />
+            <Button type="submit">Make the link</Button>
           </form>
           {personal.length ? (
             <div className="flex flex-col gap-3 border-t border-line pt-3">
@@ -390,6 +386,6 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
       ) : (
         <p className="text-sm text-ink-faint">Only a manager can add people. Ask whoever runs your account for the crew link.</p>
       )}
-    </div>
+    </>
   );
 }

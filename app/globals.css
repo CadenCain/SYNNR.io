@@ -1,138 +1,88 @@
 @import "tailwindcss";
 
 /*
-  SYNNR — global base.
-  Each page (marketing / dashboard / audit / checkout) carries its own
-  own design system, scoped under a wrapper class so the four
-  CSS systems never collide when bundled globally by Next.
+  SYNNR global base. The app and the sign-in pages use the tokens below;
+  the marketing pages carry their own CSS, scoped under a wrapper class.
 */
 
 @theme {
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
 
-  /* SYNNR app palette: light, one deep-blue accent (2026-09). Names are
-     historical: "coal" is the page ground, "surface" a card, "bone" the
-     brand blue. Generates bg-coal, bg-surface, text-ink/-dim/-faint,
-     border-line/-2, bg-bone, etc. Light because the app gets read on a
-     phone in direct sun, and a white card with dark text wins out there. */
-  --color-coal:      #f4f6f9;
-  --color-surface:   #ffffff;
-  --color-elevated:  #eef2f7;
-  --color-ink:       #0f172a;
-  --color-ink-dim:   #475569;
-  /* 4.8:1 on white: readable sub-text, labels, and timestamps. */
-  --color-ink-faint: #64748b;
-  --color-line:      #e3e8ef;
-  --color-line-2:    #cfd7e2;
-  --color-bone:      #1d4ed8;
-  --color-bone-soft: #1e40af;
-  /* Text on a blue button. */
-  --color-on-bone:   #ffffff;
+  /* SYNNR (2026-11). Dark only: near-black ground, white type, and one
+     sharp accent, safety orange, the color of everything that matters on
+     location. Token names are historical and kept so every screen picks
+     the palette up: "coal" is the page ground, "surface" a panel,
+     "elevated" a raised panel or hover, "ink" text, "line" hairlines,
+     "bone" the accent. */
+  --color-coal:      #08090a;
+  --color-surface:   #0e0f11;
+  --color-elevated:  #15171a;
+  --color-ink:       #ededef;
+  --color-ink-dim:   #a1a4aa;
+  /* 4.7:1 on the ground: timestamps, hints, labels. */
+  --color-ink-faint: #71757d;
+  --color-line:      #1d1f23;
+  --color-line-2:    #2a2d32;
+  --color-bone:      #ff5a1f;
+  --color-bone-soft: #ff7a47;
+  /* Black text on the orange: it reads in the sun and looks like a tag. */
+  --color-on-bone:   #0a0a0a;
 
   /* shadcn semantic tokens, mapped onto the palette above. */
-  --color-background: #f4f6f9;
-  --color-foreground: #0f172a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0f172a;
-  --color-primary: #1d4ed8;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #eef2f7;
-  --color-secondary-foreground: #0f172a;
-  --color-muted: #eef2f7;
-  --color-muted-foreground: #475569;
-  --color-accent: #eef2f7;
-  --color-accent-foreground: #0f172a;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-border: #e3e8ef;
-  --color-input: #cfd7e2;
-  --color-ring: #1d4ed8;
+  --color-background: #08090a;
+  --color-foreground: #ededef;
+  --color-card: #0e0f11;
+  --color-card-foreground: #ededef;
+  --color-popover: #121316;
+  --color-popover-foreground: #ededef;
+  --color-primary: #ff5a1f;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #15171a;
+  --color-secondary-foreground: #ededef;
+  --color-muted: #15171a;
+  --color-muted-foreground: #a1a4aa;
+  --color-accent: #15171a;
+  --color-accent-foreground: #ededef;
+  --color-destructive: #f2555a;
+  --color-destructive-foreground: #0a0a0a;
+  --color-border: #1d1f23;
+  --color-input: #2a2d32;
+  --color-ring: #ff5a1f;
 
-  /* Status colors for a white ground: dark enough to read as text, and the
-     500s tint well at /10 for chip backgrounds. Same utilities everywhere
-     (text-emerald-400, bg-red-500/10, ...); only the values change. */
-  --color-emerald-300: #166534;
-  --color-emerald-400: #15803d;
-  --color-emerald-500: #16a34a;
-  --color-amber-300:   #92400e;
-  --color-amber-400:   #b45309;
-  --color-amber-500:   #d97706;
-  --color-red-300:     #b91c1c;
-  --color-red-400:     #dc2626;
-  --color-red-500:     #dc2626;
+  /* Status colors that read on black. */
+  --color-emerald-300: #8de8b6;
+  --color-emerald-400: #3dd68c;
+  --color-emerald-500: #22b573;
+  --color-amber-300:   #ffd27a;
+  --color-amber-400:   #f5b83d;
+  --color-amber-500:   #e09a1a;
+  --color-red-300:     #ff9a9d;
+  --color-red-400:     #f2555a;
+  --color-red-500:     #e5484d;
 
-  /* Softer corners than the old square look; rounded-full is untouched. */
+  /* Tight corners: machined, not bubbly. rounded-full is untouched. */
   --radius-xs:  2px;
-  --radius-sm:  4px;
-  --radius-md:  6px;
-  --radius-lg:  8px;
-  --radius-xl:  10px;
-  --radius-2xl: 12px;
-  --radius-3xl: 16px;
+  --radius-sm:  3px;
+  --radius-md:  4px;
+  --radius-lg:  6px;
+  --radius-xl:  8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 14px;
+
+  /* Motion: quick and settled, never bouncy. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Dark: the same names with night values, for the app and sign-in pages
-   (data-theme="dark" on <html>, set by the theme switch; Auto follows the
-   phone). Screen only, so a record printed from dark mode still prints
-   black on white. Unlayered, so it wins over the @theme defaults. */
-@media screen {
-  html[data-theme="dark"] {
-    color-scheme: dark;
-    --color-coal:      #090c11;
-    --color-surface:   #10151c;
-    --color-elevated:  #171d26;
-    --color-ink:       #e6ebf2;
-    --color-ink-dim:   #a9b3c4;
-    --color-ink-faint: #8a95a8;
-    --color-line:      #212a35;
-    --color-line-2:    #303b48;
-    --color-bone:      #3b82f6;
-    --color-bone-soft: #60a5fa;
-    --color-on-bone:   #06101f;
+/* The orange carries black text wherever it's a fill. */
+.bg-bone {
+  color: var(--color-on-bone);
+}
 
-    --color-background: #090c11;
-    --color-foreground: #e6ebf2;
-    --color-card: #10151c;
-    --color-card-foreground: #e6ebf2;
-    --color-popover: #10151c;
-    --color-popover-foreground: #e6ebf2;
-    --color-primary: #3b82f6;
-    --color-primary-foreground: #06101f;
-    --color-secondary: #171d26;
-    --color-secondary-foreground: #e6ebf2;
-    --color-muted: #171d26;
-    --color-muted-foreground: #a9b3c4;
-    --color-accent: #171d26;
-    --color-accent-foreground: #e6ebf2;
-    --color-destructive: #ef4444;
-    --color-destructive-foreground: #ffffff;
-    --color-border: #212a35;
-    --color-input: #303b48;
-    --color-ring: #3b82f6;
-
-    /* Status colors bright enough to read on a dark card. */
-    --color-emerald-300: #6ee7b7;
-    --color-emerald-400: #34d399;
-    --color-emerald-500: #10b981;
-    --color-amber-300:   #fcd34d;
-    --color-amber-400:   #fbbf24;
-    --color-amber-500:   #f59e0b;
-    --color-red-300:     #fca5a5;
-    --color-red-400:     #f87171;
-    --color-red-500:     #ef4444;
-  }
-  html[data-theme="dark"] body {
-    background: var(--color-coal);
-    color: var(--color-ink);
-  }
-  /* A blue that reads as a link on a dark card is too light for white text,
-     so blue buttons carry dark text at night. */
-  html[data-theme="dark"] .bg-bone {
-    color: var(--color-on-bone);
-  }
+/* Selection in the accent, quietly. */
+::selection {
+  background: rgb(255 90 31 / 0.28);
+  color: #ffffff;
 }
 
 *,
@@ -158,15 +108,15 @@
    cream (invisible), same bug class as the old unlayered `* { padding: 0 }`. */
 @layer base {
   html {
-    color-scheme: light;
+    color-scheme: dark;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
     min-height: 100dvh;
-    background: #f4f6f9;
-    color: #0f172a;
+    background: #08090a;
+    color: #ededef;
     font-family: var(--font-geist), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;

@@ -172,8 +172,7 @@ describe("taking someone off the crew", () => {
   it("tells the manager in plain words what happened", () => {
     const text = offCrewNotice({ link: "new", alerts: 1, links: 2 });
     expect(text).toMatch(/crew link turned over/);
-    expect(text).toMatch(/off the alert emails/);
-    expect(text).toMatch(/2 proof links that still work/);
+    expect(text).not.toMatch(/alert emails|proof link/);
     expect(text).not.toMatch(/—/);
     expect(offCrewNotice({ link: null, alerts: 0, links: 0 })).toBe("Taken off the crew.");
   });

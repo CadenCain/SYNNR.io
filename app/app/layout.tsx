@@ -2,24 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import AppNav from "./_components/app-nav";
-import ReviewBanner from "./_components/review-banner";
-import OfflineSupport from "./_components/offline-support";
-import { ThemeSync } from "@/components/theme";
+import SynnrNav from "./_synnr/nav";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { mustSubscribe } from "@/lib/saas/plan";
-import { saasDb } from "@/lib/saas/db";
-import { getYardRules } from "@/lib/saas/yard-rules";
 
-// The signed-in app. A company that never finished paying is sent to the
-// payment step. A shop that paid and then lapsed is READ-ONLY, never locked
-// out: every page renders, export works, the load-out and every change are
-// gated (requireBillableCompany in the actions, a wall on the scan page),
-// and this layout wears the banner. Locking a lapsed shop out entirely
-// would break "cancel anytime, your data stays exportable."
+// The signed-in app: SYNNR. A company that never finished paying is sent to
+// the payment step. One that paid and then lapsed is read-only, never locked
+// out: every page renders and its data stays exportable, every change is
+// gated (requireBillableCompany in the actions), and this layout says so.
 export const metadata: Metadata = {
-  title: { default: "RollReady", template: "%s · RollReady" },
+  title: { default: "SYNNR", template: "%s · SYNNR" },
   robots: { index: false, follow: false },
 };
 
@@ -47,65 +40,46 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user.email?.split("@")[0] ||
     "Operator";
 
-  // Everything the frame needs, in one round of parallel calls: every tap
-  // waits on this layout, so nothing here runs one after another.
-  const db = await saasDb();
-  // Managers see how many uploads are waiting on them, everywhere.
-  const manager = company.role === "owner" || company.role === "admin";
-  // Uploads the software couldn't confirm.
-  const none = Promise.resolve({ count: null as number | null });
-  const [companies, { count: waitingCount }, rules] = await Promise.all([
-    getUserCompanies(user.id),
-    manager
-      ? db.from("saas_cert_uploads").select("id", { count: "exact", head: true })
-          .eq("company_id", company.id).eq("status", "waiting")
-      : none,
-    getYardRules(db, company.id),
-  ]);
-  const reviewCount = manager ? (waitingCount ?? 0) : null;
+  const companies = await getUserCompanies(user.id);
+  const bar = "border-b border-line bg-surface px-4 py-2.5 text-[13px] text-ink-dim md:px-8";
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
-      <ThemeSync />
-      <AppNav companyName={company.name} userName={userName}
+      <SynnrNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
-        switchAction={switchCompany} reviewCount={rules.quickCheck ? null : reviewCount} quick={rules.quickCheck} manager={manager} />
-      <div className="relative z-10 min-w-0 flex-1">
-        <OfflineSupport companyId={company.id} />
+        switchAction={switchCompany} />
+      <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
         {/* Never-subscribed, lapsed, and payment-failed are three different
             situations — telling a brand-new signup their subscription "paused"
             describes something that never happened and points at the wrong
             door. */}
         {company.is_demo ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            <span className="font-semibold">Demo yard.</span> The data is made up, so click anything.{" "}
+          <div className={bar}>
+            <span className="font-medium text-ink">Demo company.</span> Everything in it is made up.{" "}
             {/* Leaves the demo and goes straight to creating a real account. */}
-            <a href="/demo/exit?to=signup" className="font-semibold underline underline-offset-2">Get started with your yard</a>
+            <a href="/demo/exit?to=signup" className="font-medium text-ink underline underline-offset-4 hover:text-bone">Set up your company</a>
           </div>
         ) : !writable ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
-            Your subscription has ended, so load-outs and changes are locked. Your records are safe and you can still export them.{" "}
+          <div className={bar}>
+            Your subscription has ended, so changes are locked. Everything you put in is safe, and you can still export it.{" "}
             {company.role === "owner" ? (
-              <Link href="/onboarding/billing" className="font-medium underline underline-offset-2">Restart your subscription</Link>
+              <Link href="/onboarding/billing" className="font-medium text-ink underline underline-offset-4 hover:text-bone">Restart your subscription</Link>
             ) : (
               <span className="font-medium">Ask your account owner to restart the subscription.</span>
             )}
           </div>
         ) : company.subscription_status === "past_due" ? (
-          <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-300">
+          <div className={bar}>
             Your payment failed. Everything still works while the card retries.{" "}
             {company.role === "owner" ? (
-              <Link href="/app/settings/billing" className="font-medium underline underline-offset-2">Update your card</Link>
+              <Link href="/app/settings/billing" className="font-medium text-ink underline underline-offset-4 hover:text-bone">Update your card</Link>
             ) : (
               <span className="font-medium">Ask your account owner to update the card</span>
             )}{" "}
             before editing pauses.
           </div>
         ) : null}
-        <ReviewBanner count={rules.quickCheck ? 0 : reviewCount ?? 0} />
-        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
-          {children}
-        </main>
+        <main className="flex min-w-0 flex-1 flex-col">{children}</main>
       </div>
     </div>
   );

@@ -1,83 +1,39 @@
 import Link from "next/link";
-import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
-import { Card } from "@/components/ui/card";
-import { saasDb } from "@/lib/saas/db";
-import { getYardRules } from "@/lib/saas/yard-rules";
 
 export const metadata = { title: "Settings" };
-
 export const dynamic = "force-dynamic";
 
+/** Three things: you, your people, and the bill. A hand only sees their own account. */
 export default async function SettingsHub() {
   const { company } = await requireCompany();
-  const quick = (await getYardRules(await saasDb(), company.id)).quickCheck;
   const manager = company.role === "owner" || company.role === "admin";
-  const allRows = [
-    { href: "/app/settings/account", icon: UserRound, title: "Your account", desc: "Your name on every scan, your password, the company name", live: true },
-    { href: "/app/settings/rules", icon: ShieldCheck, title: quick ? "How trucks get checked" : "Rules", desc: quick ? "Quick check or full check, the truck photo, and how long out is too long" : "How tests get cleared, and who can change what", live: true },
-    { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
-    { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
-    { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
-    { href: "/app/settings/proofs", icon: Share2, title: "Proof links", desc: "Links you've sent operators. See them or shut them off.", live: true },
+  const rows = [
+    { href: "/app/settings/account", title: "Your account", desc: "Your name, your password, the company name" },
+    ...(manager ? [
+      { href: "/app/settings/team", title: "Team", desc: "Who's in, what they can do, invite your people" },
+      { href: "/app/settings/billing", title: "Billing", desc: "Your plan and how you pay" },
+    ] : []),
   ];
-  // A hand needs their own account. The rest is the managers'.
-  const rows = manager ? allRows : allRows.filter((r) => r.href === "/app/settings/account");
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-ink-dim">{company.name}</p>
+        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-ink">Settings</h1>
+        <p className="mt-1.5 text-sm text-ink-dim">{company.name}</p>
       </div>
-      <div className="flex flex-col gap-2">
-        {rows.map((r) => {
-          const Icon = r.icon;
-          return (
-            <Link key={r.href} href={r.href}>
-              <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
-                  <Icon className="h-5 w-5 text-ink-dim" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{r.title}</div>
-                  <div className="text-sm text-ink-dim">{r.desc}</div>
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Everything out, in one place: what an auditor, an operator, or a new
-          system would ask for. Plain <a> so the browser downloads the file. */}
-      {manager ? <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-ink-dim">Download your data</h2>
-        {(quick ? [
-          { href: "/app/loadouts/export", title: "Truck checks", desc: "Every check: truck, job or well, who, READY or NOT, what was on it" },
-          { href: "/api/saas/export/tools-out", title: "Tools out", desc: "Setting tools taken and how many ran, and vendor visits" },
-        ] : [
-          { href: "/api/saas/export", title: "Tests and certs", desc: "The test or cert on file now for every piece and truck, with serials and dates" },
-          { href: "/app/equipment/export", title: "Equipment list", desc: "Every piece: where it is, what truck, its next test" },
-          { href: "/app/loadouts/export", title: "Load-out records", desc: "Every load-out: truck, job or well, who, READY or NOT, overrides, roll checks" },
-          { href: "/api/saas/export/checkins", title: "Check-ins", desc: "Every check-in: who brought what back, when, where it went, red tags and why" },
-          { href: "/api/saas/export/tools-out", title: "Tools out", desc: "Every sign-out and hand-off, setting tools taken and how many ran, vendor visits, redress" },
-          { href: "/api/saas/export/tests", title: "Test history", desc: "Every cert sent in, old tests too, with who checked it and a link to the photo" },
-        ]).map((d) => (
-          <a key={d.href} href={d.href} download>
-            <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
-                <Download className="h-5 w-5 text-ink-dim" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">{d.title}</div>
-                <div className="text-sm text-ink-dim">{d.desc}</div>
-              </div>
-              <span className="shrink-0 text-sm text-ink-faint">Spreadsheet</span>
-            </Card>
-          </a>
+      <div className="overflow-hidden rounded-xl border border-line">
+        {rows.map((r) => (
+          <Link key={r.href} href={r.href}
+            className="group flex items-center gap-4 border-b border-line bg-surface px-5 py-4 transition-colors last:border-b-0 hover:bg-elevated">
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-medium text-ink">{r.title}</div>
+              <div className="mt-0.5 text-[13px] text-ink-dim">{r.desc}</div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
+          </Link>
         ))}
-      </div> : null}
-    </div>
+      </div>
+    </>
   );
 }

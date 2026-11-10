@@ -86,7 +86,5 @@ export function offCrewNotice(n: { link: "new" | "off" | null; alerts: number; l
   const parts = ["Taken off the crew."];
   if (n.link === "new") parts.push("The crew link turned over: the old one stopped working. Send the new one below to anyone who hasn't joined yet.");
   if (n.link === "off") parts.push("The crew link they had stopped working.");
-  if (n.alerts) parts.push("They're off the alert emails too.");
-  if (n.links) parts.push(`They made ${n.links} ${n.links === 1 ? "proof link that still works" : "proof links that still work"}. Shut ${n.links === 1 ? "it" : "them"} off under Settings, Proof links, if you don't want ${n.links === 1 ? "it" : "them"} open.`);
   return parts.join(" ");
 }
