@@ -10,6 +10,7 @@ import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { mustSubscribe } from "@/lib/saas/plan";
 import { saasDb } from "@/lib/saas/db";
+import { getYardRules } from "@/lib/saas/yard-rules";
 
 // The signed-in app. A company that never finished paying is sent to the
 // payment step. A shop that paid and then lapsed is READ-ONLY, never locked
@@ -53,12 +54,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const manager = company.role === "owner" || company.role === "admin";
   // Uploads the software couldn't confirm.
   const none = Promise.resolve({ count: null as number | null });
-  const [companies, { count: waitingCount }] = await Promise.all([
+  const [companies, { count: waitingCount }, rules] = await Promise.all([
     getUserCompanies(user.id),
     manager
       ? db.from("saas_cert_uploads").select("id", { count: "exact", head: true })
           .eq("company_id", company.id).eq("status", "waiting")
       : none,
+    getYardRules(db, company.id),
   ]);
   const reviewCount = manager ? (waitingCount ?? 0) : null;
 
@@ -67,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ThemeSync />
       <AppNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
-        switchAction={switchCompany} reviewCount={reviewCount} />
+        switchAction={switchCompany} reviewCount={rules.quickCheck ? null : reviewCount} quick={rules.quickCheck} manager={manager} />
       <div className="relative z-10 min-w-0 flex-1">
         <OfflineSupport companyId={company.id} />
         {/* Never-subscribed, lapsed, and payment-failed are three different
@@ -100,7 +102,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             before editing pauses.
           </div>
         ) : null}
-        <ReviewBanner count={reviewCount ?? 0} />
+        <ReviewBanner count={rules.quickCheck ? 0 : reviewCount ?? 0} />
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
           {children}
         </main>

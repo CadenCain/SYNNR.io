@@ -51,6 +51,8 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
   const byHand = rec.pieces.filter((p) => p.how === "hand").length;
+  // A quick check: the hand said each line is on. No pieces were scanned one by one.
+  const quick = rec.pieces.length === 0 && rec.lines.some((l) => l.confirmed);
   const tagOff = rec.pieces.filter((p) => p.red_tag_off).length;
   // Saved with no signal and sent later: the record says when the hand saved it.
   const savedMs = rec.phone_saved_at ? Date.parse(rec.phone_saved_at) : NaN;
@@ -74,8 +76,10 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           {outcome === "ready" ? "READY" : outcome === "override" ? "Rolled NOT READY on a manager's override" : "NOT READY"}
         </div>
         <p className="mt-1 text-sm text-ink-dim">
-          {rec.unit_name} load-out, {when(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
-          {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} went on.
+          {rec.unit_name} {quick ? "checked" : "load-out"}, {when(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
+          {" "}{quick
+            ? `${rec.scanned_by ?? "The hand"} said ${rec.lines.filter((l) => (l.confirmed?.n ?? 0) >= l.qty).length} of ${rec.lines.length} on the list ${rec.lines.length === 1 ? "is" : "are"} on the truck.`
+            : `${rec.pieces.length} ${rec.pieces.length === 1 ? "piece" : "pieces"} went on.`}
         </p>
         {sentLate ? <p className="mt-1 text-sm text-ink-dim">Saved on the phone {when(rec.phone_saved_at!)}, sent {when(rec.finished_at)}.</p> : null}
         {rec.job ? <p className="mt-1 text-sm font-medium text-ink">For: {rec.job}</p> : null}
@@ -168,7 +172,9 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           <div className="flex flex-col gap-2">
             {rec.lines.map((l, i) => {
               const red = new Set(rec.pieces.filter((p) => p.red).map((p) => p.asset_id));
-              const short = l.filled.length < l.qty || l.filled.some((f) => red.has(f.asset_id));
+              // A quick check counts what the hand said is on; a full one counts the pieces scanned.
+              const n = l.confirmed ? l.confirmed.n : l.filled.length;
+              const short = n < l.qty || l.filled.some((f) => red.has(f.asset_id));
               return (
                 <div key={`${l.label}-${i}`} className={cn("flex flex-wrap items-start justify-between gap-x-3 gap-y-1 rounded-xl border p-3",
                   short ? "border-red-500/40 bg-red-500/[0.06]" : "border-line bg-surface")}>
@@ -177,11 +183,12 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
                     <div className="text-[13px] text-ink-faint">
                       {lineSourceLabel(l)}
                       {l.filled.length ? ` · ${l.filled.map((f) => `${f.serial ?? f.name}${red.has(f.asset_id) ? " (bad)" : ""}`).join(", ")}` : ""}
+                      {l.confirmed?.n ? ` · on the truck, said ${l.confirmed.by ?? rec.scanned_by ?? "the hand"}${l.confirmed.at ? ` ${time(l.confirmed.at)}` : ""}` : ""}
                     </div>
                   </div>
                   <span className={cn("shrink-0 rounded-md border px-2 py-0.5 text-sm font-semibold tabular-nums",
                     short ? "border-red-500/40 text-red-400" : "border-emerald-500/40 text-emerald-400")}>
-                    {l.filled.length} of {l.qty}
+                    {n} of {l.qty}
                   </span>
                 </div>
               );
@@ -190,7 +197,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         </section>
       ) : null}
 
-      <section className="flex flex-col gap-2">
+      {quick ? null : <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold">What went on the truck</h2>
         {rec.pieces.length === 0 ? <p className="text-sm text-ink-faint">Nothing went on.</p> : null}
         <div className="flex flex-col gap-2 lg:hidden">
@@ -237,7 +244,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
             </table>
           </div>
         ) : null}
-      </section>
+      </section>}
 
       {rec.not_scanned.length > 0 ? (
         <section className="flex flex-col gap-2">

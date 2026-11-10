@@ -101,6 +101,10 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
   });
   if (sheet.length) await admin.from("saas_signouts").insert(sheet);
 
+  // The demo shows the full check (every piece, its tests and its paper) for
+  // now; a visitor can switch it to the quick check under Settings, Rules.
+  await admin.from("saas_enforcement_settings").upsert({ company_id: companyId, quick_check: false }, { onConflict: "company_id" });
+
   // Setting tools the vendor stocks, by count: the shelf, who has some out,
   // what came back from jobs, and the vendor's last swap.
   for (const t of DEMO_TOOL_STOCKS) {

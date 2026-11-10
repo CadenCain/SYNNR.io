@@ -139,7 +139,12 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   for (const [id, line] of planShortByTruck(openPlans, packages, kits, list.rows, rd.units, nowMs, lastBack)) {
     kitShort.set(id, kitShort.has(id) ? `${kitShort.get(id)} ${line}` : line);
   }
-  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, kitShort,
+  // The quick check goes by what the crew checked, not by the iron's tests and
+  // paper: a truck reads by its last check (READY, NOT READY, out), nothing else.
+  const quick = rules.quickCheck;
+  const { trucks, counts, summary } = buildLoadOutTrucks(
+    quick ? units.map((u) => ({ ...u, state: "ready" as const, why: "" })) : units,
+    quick ? [] : list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, quick ? new Map() : kitShort,
     { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member", zones });
 
   // The iron, for the manager: what's out, what's out too long, what's out of test.
@@ -252,7 +257,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
         plans={plans} manager={company.role === "owner" || company.role === "admin"}
         hand={hand} picking={pick === "1"} pickAction={pickMyTruck}
         tips={hand && (joined === "1" || !myTruckId) ? <HandTips name={(user.user_metadata?.full_name as string | undefined)?.trim() || "there"} company={company.name} /> : null}
-        iron={iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} companyId={company.id} />
+        iron={quick ? undefined : iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} companyId={company.id} quick={quick} />
       <WarmOffline companyId={company.id} urls={["/app/return", ...rd.units.flatMap((u) => [`/app/units/${u.id}/scan`, `/app/units/${u.id}/return`])]} />
     </>
   );

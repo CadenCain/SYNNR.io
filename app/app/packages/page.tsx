@@ -6,9 +6,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import { createPackage, fillEmptyKits } from "./actions";
+import { getYardRules } from "@/lib/saas/yard-rules";
 import { Wand2 } from "lucide-react";
 
-export const metadata = { title: "Packages & kits" };
+export const metadata = { title: "Truck lists" };
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,12 @@ type Pkg = { id: string; name: string; unit_id: string | null; saas_package_line
 export default async function PackagesPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
-  const [{ data: pkgRows }, { data: unitRows }] = await Promise.all([
+  const [{ data: pkgRows }, { data: unitRows }, rules] = await Promise.all([
     db.from("saas_packages").select("id, name, unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).order("name"),
     db.from("saas_units").select("id, name").eq("company_id", company.id).order("name"),
+    getYardRules(db, company.id),
   ]);
+  const quick = rules.quickCheck;
   const all = (pkgRows ?? []) as Pkg[];
   const packages = all.filter((p) => !p.unit_id);
   const kitOf = new Map(all.filter((p) => p.unit_id).map((p) => [p.unit_id as string, p]));
@@ -32,14 +35,40 @@ export default async function PackagesPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        back={{ href: "/app", label: "Load out" }}
-        title="Packages & kits"
-        description="What a load-out checks against. Every truck has its own kit. Packages get added for a kind of job. A hand can add quick lines for today at the truck. Anything short when the hand hits Done makes the truck NOT READY."
+        back={{ href: "/app", label: quick ? "Trucks" : "Load out" }}
+        title={quick ? "Truck lists" : "Packages & kits"}
+        description={quick
+          ? "What each truck can't leave without, set once. Keep each list short: the 5 to 8 things that cause a hotshot when they're forgotten. Job lists add what a kind of job needs. The hand taps each one \"On truck\" before it rolls, and anything not tapped makes it NOT READY."
+          : "What a load-out checks against. Every truck has its own kit. Packages get added for a kind of job. A hand can add quick lines for today at the truck. Anything short when the hand hits Done makes the truck NOT READY."}
       />
 
+      {quick ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold">Each truck&apos;s list</h2>
+          {units.length === 0 ? <Card className="p-4 text-sm text-ink-dim">No trucks yet. Add them under Yards &amp; trucks.</Card> : null}
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            {units.map((u) => {
+              const kit = kitOf.get(u.id);
+              const text = kit ? preview(kit) : "";
+              return (
+                <Link key={u.id} href={`/app/units/${u.id}/kit`}>
+                  <Card className="flex h-full items-center gap-3 p-4 hover:border-bone/50">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold">{u.name}</div>
+                      <div className={text ? "break-words text-sm text-ink-dim" : "text-sm text-amber-400"}>{text || "No list yet. Tap to set it."}</div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-ink-faint" />
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">Packages</h2>
-        {packages.length === 0 ? <Card className="p-4 text-sm text-ink-dim">No packages yet. Make one for each kind of job you run, like Standard Coil Package.</Card> : null}
+        <h2 className="text-base font-semibold">{quick ? "Job lists" : "Packages"}</h2>
+        {packages.length === 0 ? <Card className="p-4 text-sm text-ink-dim">{quick ? "No job lists yet. Make one for a kind of job that needs more than the truck's list, like Plug set or Packer set." : "No packages yet. Make one for each kind of job you run, like Standard Coil Package."}</Card> : null}
         {packages.map((p) => (
           <Link key={p.id} href={`/app/packages/${p.id}`}>
             <Card className="flex items-center gap-3 p-4 hover:border-bone/50">
@@ -53,14 +82,14 @@ export default async function PackagesPage() {
         ))}
         {manager ? (
           <form action={createPackage} className="flex flex-col gap-2 sm:flex-row">
-            <input name="name" required maxLength={80} placeholder="New package, like Standard Coil Package" aria-label="Package name"
+            <input name="name" required maxLength={80} placeholder={quick ? "New job list, like Plug set" : "New package, like Standard Coil Package"} aria-label={quick ? "Job list name" : "Package name"}
               className="h-12 w-full min-w-0 grow rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
-            <button type="submit" className={buttonClass("default", "lg")}><Plus className="h-5 w-5" /> Make package</button>
+            <button type="submit" className={buttonClass("default", "lg")}><Plus className="h-5 w-5" /> {quick ? "Make job list" : "Make package"}</button>
           </form>
         ) : <p className="text-sm text-ink-faint">A manager keeps packages and kits.</p>}
       </section>
 
-      <section className="flex flex-col gap-3">
+      {quick ? null : <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">Truck kits</h2>
         {manager && units.some((u) => !kitOf.get(u.id)?.saas_package_lines?.length) ? (
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -88,7 +117,7 @@ export default async function PackagesPage() {
             );
           })}
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

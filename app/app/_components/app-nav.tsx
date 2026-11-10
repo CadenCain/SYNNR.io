@@ -34,6 +34,19 @@ const TABS_RIGHT: NavItem[] = [
   { href: "/app/compliance", label: "Due", icon: CalendarClock },
 ];
 
+// The quick check: a hand needs the trucks and Tools out. A manager also gets
+// the records, the trucks' lists, and the yards. The iron, its tests and
+// tags, the map, and uploads are for the full check (Settings, Rules).
+const QUICK_MAIN = (manager: boolean): NavItem[] => [
+  { href: "/app", label: "Trucks", icon: ScanLine, exact: true, also: TRUCK_PAGES },
+  { href: "/app/signout", label: "Tools out", icon: Wrench },
+  ...(manager ? [
+    { href: "/app/loadouts", label: "Records", icon: History },
+    { href: "/app/packages", label: "Truck lists", icon: Package },
+    { href: "/app/yards", label: "Yards & trucks", icon: Warehouse },
+  ] : []),
+];
+
 function isActive(path: string, href: string, exact?: boolean, also: string[] = []) {
   const hit = (h: string) => path === h || path.startsWith(h + "/");
   return (exact ? path === href : hit(href)) || also.some(hit);
@@ -45,8 +58,11 @@ const MARK = (
   </svg>
 );
 
-export default function AppNav({ companyName, userName, companies = [], activeCompanyId, switchAction, reviewCount = null }: {
+export default function AppNav({ companyName, userName, companies = [], activeCompanyId, switchAction, reviewCount = null, quick = false, manager = false }: {
   companyName?: string; userName?: string;
+  /** The yard runs the quick check: only what the quick check uses. */
+  quick?: boolean;
+  manager?: boolean;
   /** Uploads waiting on a manager. null = not a manager, no Review link. */
   reviewCount?: number | null;
   companies?: { id: string; name: string }[];
@@ -63,7 +79,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
     // A shared phone: the next hand mustn't pick up this one's unsaved
     // load-outs or check-ins and send them under their own name.
     try {
-      for (const k of Object.keys(localStorage)) if (/^rr-(loadout|return)-/.test(k)) localStorage.removeItem(k);
+      for (const k of Object.keys(localStorage)) if (/^rr-(loadout|return|quick)-/.test(k)) localStorage.removeItem(k);
     } catch { /* storage off */ }
     const sb = getBrowserSupabase();
     if (sb) await sb.auth.signOut();
@@ -114,7 +130,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
         </form>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-          {[...MAIN, ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck } as NavItem])].map((item) => {
+          {(quick ? QUICK_MAIN(manager) : [...MAIN, ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck } as NavItem])]).map((item) => {
             const active = isActive(path, item.href, item.exact, item.also);
             const Icon = item.icon;
             return (
@@ -149,12 +165,14 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
           })()}
         </nav>
 
-        <Link
-          href="/app/quick"
-          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-bone px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-bone-soft"
-        >
-          <Plus className="h-[18px] w-[18px]" /> Add or renew
-        </Link>
+        {quick ? null : (
+          <Link
+            href="/app/quick"
+            className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-bone px-3 py-2.5 text-sm font-medium text-coal transition-colors hover:bg-bone-soft"
+          >
+            <Plus className="h-[18px] w-[18px]" /> Add or renew
+          </Link>
+        )}
 
         <ThemePicker className="mt-3" />
 
@@ -193,14 +211,18 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-line bg-surface/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
-        {TABS_LEFT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
-        <Link href="/app" className="flex flex-col items-center gap-1" aria-label="Load out" aria-current={loadOutActive ? "page" : undefined}>
+        {(quick ? [{ href: "/app/signout", label: "Tools out", icon: Wrench }, ...(manager ? [{ href: "/app/loadouts", label: "Records", icon: History }] : [])] as NavItem[] : TABS_LEFT)
+          .map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
+        {quick && !manager ? <span aria-hidden /> : null}
+        <Link href="/app" className="flex flex-col items-center gap-1" aria-label={quick ? "Trucks" : "Load out"} aria-current={loadOutActive ? "page" : undefined}>
           <span className={cn("-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-bone text-white shadow-lg shadow-slate-900/20", loadOutActive ? "ring-4 ring-bone/20" : "")}>
             <ScanLine className="h-6 w-6" />
           </span>
-          <span className={cn("text-[11px]", loadOutActive ? "font-medium text-bone" : "text-ink-faint")}>Load out</span>
+          <span className={cn("text-[11px]", loadOutActive ? "font-medium text-bone" : "text-ink-faint")}>{quick ? "Trucks" : "Load out"}</span>
         </Link>
-        {TABS_RIGHT.map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
+        {(quick ? (manager ? [{ href: "/app/packages", label: "Lists", icon: Package }] : []) as NavItem[] : TABS_RIGHT)
+          .map((t) => <Tab key={t.href} {...t} active={isActive(path, t.href, t.exact, t.also)} />)}
+        {quick && !manager ? <span aria-hidden /> : null}
         <button type="button" onClick={() => setMore(true)} aria-label="More"
           className={cn("relative flex flex-col items-center gap-1 py-1 text-[11px]", moreActive ? "font-medium text-bone" : "text-ink-faint")}>
           <Menu className="h-5 w-5" />
@@ -220,7 +242,15 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {[
+            {(quick ? [
+              ...(manager ? [
+                { href: "/app/loadouts", label: "Records", icon: History },
+                { href: "/app/packages", label: "Truck lists", icon: Package },
+                { href: "/app/yards", label: "Yards & trucks", icon: Warehouse },
+              ] : []),
+              { href: "/app/signout", label: "Tools out", icon: Wrench },
+              { href: "/app/settings", label: "Settings", icon: Settings },
+            ] : [
               { href: "/app/loadouts", label: "Load-out records", icon: History },
               { href: "/app/signout", label: "Tools out", icon: Wrench },
               { href: "/app/packages", label: "Packages & kits", icon: Package },
@@ -231,7 +261,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
               ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck }]),
               { href: "/app/search", label: "Search", icon: Search },
               { href: "/app/settings", label: "Settings", icon: Settings },
-            ].map((item) => {
+            ]).map((item) => {
               const Icon = item.icon;
               return (
                 <Link key={item.href} href={item.href} onClick={() => setMore(false)}

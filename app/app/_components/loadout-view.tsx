@@ -3,6 +3,7 @@ import { ScanLine, ClipboardCheck, ChevronRight, Warehouse, Boxes, History, Pack
 import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import UnsentDrafts from "./unsent-drafts";
 import NeverSentDrafts from "./never-sent-drafts";
+import TruckBackButton from "./truck-back-button";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { LoadOutTruckRow, LoadOutCounts, LoadOutWeek, TruckStatus } from "@/lib/saas/loadout-board";
@@ -31,8 +32,10 @@ export interface PersonWeek {
 }
 export interface IronCounts { out: number; outTooLong: number; outOfTest: number; dueSoon: number; down: number }
 
-export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false, hand = false, picking = false, pickAction, tips, companyId = "" }: {
+export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false, hand = false, picking = false, pickAction, tips, companyId = "", quick = false }: {
   trucks: LoadOutTruckRow[];
+  /** The yard runs the quick check: trucks read by their last check, and the buttons say so. */
+  quick?: boolean;
   /** This company: a yard check-in draft from another company on this phone isn't listed here. */
   companyId?: string;
   counts: LoadOutCounts;
@@ -62,7 +65,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
   const mine = myTruckId ? allTrucks.find((x) => x.t.id === myTruckId) ?? null : null;
   const trucks = mine ? [mine, ...allTrucks.filter((x) => x !== mine)] : allTrucks;
   const card = (row: LoadOutTruckRow, isMine = false) => (
-    <TruckCard key={row.t.id} row={row} isMine={isMine} plan={plans[row.t.id]} manager={manager} hand={hand}
+    <TruckCard key={row.t.id} row={row} isMine={isMine} plan={plans[row.t.id]} manager={manager} hand={hand} quick={quick}
       showYard={yards.length > 1 && !yardId} />
   );
 
@@ -310,9 +313,9 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
 }
 
 /** One truck on the board: what state it's in, why, and the one thing to do next. */
-function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
+function TruckCard({ row, isMine, plan, manager, hand, showYard, quick = false }: {
   row: LoadOutTruckRow; isMine: boolean; plan?: { text: string; by: string | null; note: string | null; late?: string | null };
-  manager: boolean; hand: boolean; showYard: boolean;
+  manager: boolean; hand: boolean; showYard: boolean; quick?: boolean;
 }) {
   const { t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong, stillOut } = row;
   return (
@@ -328,7 +331,7 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
                 </span>
               </div>
               <div className="text-[13px] text-ink-faint">
-                {unitTypeLabel(t.type)} · {pieces} {pieces === 1 ? "piece" : "pieces"} of iron{showYard ? ` · ${t.yardName}` : ""}
+                {unitTypeLabel(t.type)}{quick ? "" : ` · ${pieces} ${pieces === 1 ? "piece" : "pieces"} of iron`}{showYard ? ` · ${t.yardName}` : ""}
               </div>
             </div>
             <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-ink-faint" />
@@ -347,12 +350,18 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
               {loadoutLine} · See the record
             </Link>
           ) : (
-            <div className="text-[13px] text-ink-faint">{loadoutLine ?? "No load-out scanned yet"}</div>
+            <div className="text-[13px] text-ink-faint">{loadoutLine ?? (quick ? "Not checked yet" : "No load-out scanned yet")}</div>
           )}
           <div className="flex gap-2">
-            {status === "out" ? (
+            {status === "out" && quick ? (
+              <TruckBackButton unitId={t.id} name={t.name} />
+            ) : status === "out" ? (
               <Link href={`/app/units/${t.id}/return`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
                 <PackageCheck className="h-5 w-5" /> Check in
+              </Link>
+            ) : quick ? (
+              <Link href={`/app/units/${t.id}/scan`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
+                <ScanLine className="h-5 w-5" /> {doneToday ? "Check it again" : "Check it"}
               </Link>
             ) : (
               <Link href={`/app/units/${t.id}/scan`} className={buttonClass("default", "lg", "h-14 min-w-0 flex-1 text-base")}>
@@ -364,7 +373,7 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
                 <ListTodo className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
               </Link>
             ) : null}
-            {hand ? null : (
+            {hand || quick ? null : (
               <Link href={`/app/units/${t.id}/dispatch`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Check ${t.name}'s paper for a job date`}>
                 <ClipboardCheck className="h-5 w-5" /> <span className="hidden sm:inline">Paper check</span>
               </Link>
@@ -374,7 +383,7 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard }: {
               signal: it's saved on the phone, the truck page isn't. */}
           {status === "out" ? (
             <Link href={`/app/units/${t.id}/scan`} className="-mt-1 inline-flex min-h-12 items-center gap-1.5 self-start px-1 text-sm text-ink-dim underline underline-offset-2">
-              <ScanLine className="h-4 w-4" /> Start a new load-out
+              <ScanLine className="h-4 w-4" /> {quick ? "Check it for its next job" : "Start a new load-out"}
             </Link>
           ) : null}
         </Card>

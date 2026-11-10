@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import LinesEditor from "../../../_components/lines-editor";
 import RollChecksEditor from "../../../_components/roll-checks-editor";
-import { kitFromTruck } from "../../../packages/actions";
+import { kitFromTruck, copyKitToSameKind } from "../../../packages/actions";
+import { getYardRules } from "@/lib/saas/yard-rules";
+import { unitTypeLabel } from "@/lib/saas/taxonomy";
 import { titled } from "@/lib/saas/page-title";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +24,16 @@ export default async function TruckKitPage({ params }: { params: Promise<{ unitI
   const { company } = await requireCompany();
   const { unitId } = await params;
   const db = await saasDb();
-  const [{ data: unit }, { data: kit }, { data: names }, { count: onTruck }] = await Promise.all([
-    db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
+  const [{ data: unit }, { data: kit }, { data: names }, { count: onTruck }, rules] = await Promise.all([
+    db.from("saas_units").select("id, name, type").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
     db.from("saas_packages").select("id, roll_checks, saas_package_lines(id, label, qty, sort)").eq("company_id", company.id).eq("unit_id", unitId).maybeSingle(),
     db.from("saas_assets").select("name").eq("company_id", company.id).neq("status", "retired").limit(2000),
     db.from("saas_assets").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("unit_id", unitId).neq("status", "retired"),
+    getYardRules(db, company.id),
   ]);
   if (!unit) notFound();
-  const u = unit as { id: string; name: string };
+  const u = unit as { id: string; name: string; type: string };
+  const { count: sameKind } = await db.from("saas_units").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("type", u.type).neq("id", u.id);
   const k = kit as { roll_checks: string[] | null; saas_package_lines: { id: string; label: string; qty: number; sort: number }[] } | null;
   const lines = [...(k?.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort);
   const manager = company.role === "owner" || company.role === "admin";
@@ -37,9 +41,11 @@ export default async function TruckKitPage({ params }: { params: Promise<{ unitI
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader back={{ href: `/app/units/${u.id}`, label: u.name }} title={`${u.name} kit`}
-        description={`What ${u.name} always leaves with. Every load-out on ${u.name} checks against it, plus any package picked for the job. Short means NOT READY.`} />
-      {manager && (onTruck ?? 0) > 0 ? (
+      <PageHeader back={{ href: rules.quickCheck ? "/app/packages" : `/app/units/${u.id}`, label: rules.quickCheck ? "Truck lists" : u.name }} title={rules.quickCheck ? `${u.name}'s list` : `${u.name} kit`}
+        description={rules.quickCheck
+          ? `What ${u.name} can't leave without. Keep it short: the 5 to 8 things that cause a hotshot when they're forgotten. The hand taps each one "On truck" before it rolls.`
+          : `What ${u.name} always leaves with. Every load-out on ${u.name} checks against it, plus any package picked for the job. Short means NOT READY.`} />
+      {manager && !rules.quickCheck && (onTruck ?? 0) > 0 ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <p className="text-sm text-ink-dim">{lines.length ? "Start over from" : "Start from"} the {onTruck} {onTruck === 1 ? "piece" : "pieces"} logged on {u.name} now: one line per kind of piece.</p>
           <form action={kitFromTruck}>
@@ -50,6 +56,19 @@ export default async function TruckKitPage({ params }: { params: Promise<{ unitI
       ) : null}
       <LinesEditor lines={lines} editable={manager} unitId={u.id} pieceNames={pieceNames} />
       <RollChecksEditor checks={k?.roll_checks ?? []} editable={manager} unitId={u.id} />
+      {manager && lines.length && (sameKind ?? 0) > 0 ? (
+        <Card className="p-4">
+          <form action={copyKitToSameKind} className="flex flex-col gap-3">
+            <input type="hidden" name="unit_id" value={u.id} />
+            <p className="text-sm text-ink-dim">Every {unitTypeLabel(u.type).toLowerCase()} leaves with the same things? Use this list on the other {sameKind} of them.</p>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" name="confirm" required className="h-5 w-5 accent-bone" />
+              Yes, replace their lists with this one
+            </label>
+            <button type="submit" className={buttonClass("outline", "lg", "self-start")}>Use this list on every {unitTypeLabel(u.type).toLowerCase()}</button>
+          </form>
+        </Card>
+      ) : null}
       {!manager ? <p className="text-sm text-ink-faint">A manager keeps the kit. Ask one if something should be on it.</p> : null}
     </div>
   );

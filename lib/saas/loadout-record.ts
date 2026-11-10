@@ -26,6 +26,8 @@ export interface RecordLine {
   source: "kit" | "package" | "plan" | "quick";
   package?: string;
   filled: { asset_id: string; name: string; serial: string | null }[];
+  /** Quick check: how many the hand said are on the truck, who, and when (no pieces scanned). */
+  confirmed?: { n: number; by: string | null; at: string | null } | null;
 }
 export interface LoadoutRecord {
   id: string;

@@ -190,3 +190,36 @@ export async function fillEmptyKits() {
   refreshRouter();
 }
 
+
+/**
+ * Set every truck of the same kind from this one: a yard with eight coil
+ * units writes the list once. Their lists (and the checks before they roll)
+ * are replaced with this one's. Logged with a name.
+ */
+export async function copyKitToSameKind(fd: FormData) {
+  const { company, user, db } = await manager();
+  const actor = actorOf(user);
+  const unitId = str(fd, "unit_id");
+  if (fd.get("confirm") !== "on") return;
+  const { data: unitRow } = await db.from("saas_units").select("id, name, type").eq("id", unitId).eq("company_id", company.id).maybeSingle();
+  const unit = unitRow as { id: string; name: string; type: string } | null;
+  if (!unit) return;
+  const { data: kitRow } = await db.from("saas_packages").select("id, roll_checks, saas_package_lines(label, qty, sort)").eq("company_id", company.id).eq("unit_id", unit.id).maybeSingle();
+  const kit = kitRow as { id: string; roll_checks: string[] | null; saas_package_lines: { label: string; qty: number; sort: number }[] | null } | null;
+  const lines = [...(kit?.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort);
+  if (!kit || !lines.length) return;
+  const { data: others } = await db.from("saas_units").select("id, name").eq("company_id", company.id).eq("type", unit.type).neq("id", unit.id).limit(200);
+  let done = 0;
+  for (const o of (others ?? []) as { id: string; name: string }[]) {
+    const pkg = await kitFor(db, company.id, o.id, actor);
+    if (!pkg) continue;
+    await db.from("saas_package_lines").delete().eq("package_id", pkg.id);
+    await db.from("saas_package_lines").insert(lines.map((l, i) => ({ package_id: pkg.id, company_id: company.id, label: l.label, qty: l.qty, sort: i + 1 })));
+    await db.from("saas_packages").update({ roll_checks: kit.roll_checks ?? [] }).eq("id", pkg.id).eq("company_id", company.id);
+    revalidatePath(`/app/units/${o.id}/kit`);
+    done++;
+  }
+  if (done) void logEvent({ companyId: company.id, kind: "package_changed", unitId: unit.id, actor, message: `${actor} set ${done} more ${done === 1 ? "truck's list" : "trucks' lists"} from ${unit.name}'s` });
+  revalidatePath("/app/packages");
+  refreshRouter();
+}

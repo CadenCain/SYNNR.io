@@ -11,6 +11,7 @@ import { readAll } from "@/lib/saas/read-all";
 import { verdictOf, yardZones, type LoadoutRecord } from "@/lib/saas/loadout-record";
 import { PageHeader } from "@/components/ui/page-header";
 import LoadoutScanner, { type KitLine, type PackageOption } from "./scanner";
+import QuickCheck from "./quick-check";
 import LockedCard from "../../../_components/locked-card";
 import { isWritable } from "@/lib/saas/entitlements";
 import { titled } from "@/lib/saas/page-title";
@@ -108,6 +109,21 @@ export default async function LoadoutScanPage({ params }: { params: Promise<{ un
   const all = (pkgRows ?? []) as Pkg[];
   const kitRow = all.find((x) => x.unit_id === unit.id);
   const packages: PackageOption[] = all.filter((x) => !x.unit_id).map((x) => ({ id: x.id, name: x.name, lines: linesOf(x), checks: x.roll_checks ?? [] }));
+
+  // The quick check: the short list, "On truck" taps, one photo, Ready.
+  if (rules.quickCheck) {
+    return (
+      <div className="flex flex-col gap-5">
+        <PageHeader back={{ href: "/app", label: "Trucks" }} title={`Check ${unit.name}`}
+          description={last ? `Last checked ${fmtWhen(last.finished_at, zoned)}${last.scanned_by ? ` by ${last.scanned_by}` : ""}${last.verdict ? `, ${last.verdict === "ready" ? "READY" : "NOT READY"}` : ""}.` : "Tap what's on the truck, take one photo, and tap Ready."} />
+        <QuickCheck truck={{ id: unit.id, name: unit.name }} companyId={company.id}
+          kit={kitRow ? linesOf(kitRow) : []} kitChecks={kitRow?.roll_checks ?? []} packages={packages}
+          plan={plan ? { by: plan.by, job: plan.job, packageIds: plan.packageIds.filter((id) => packages.some((x) => x.id === id)), lines: plan.lines } : null}
+          photoRule={rules.requireLoadoutPhoto ? (company.is_demo ? "optional" : "required") : "off"}
+          outNote={truckOut && !truckOut.recent ? `${unit.name} went out ${truckOut.ready ? "READY" : "on a manager's OK"} ${truckOut.sinceText}${truckOut.by ? ` (${truckOut.by})` : ""}. Checking it now starts its next trip.` : null} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

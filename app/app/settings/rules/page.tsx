@@ -20,13 +20,17 @@ async function saveRules(fd: FormData) {
   const db = await saasDb();
   const before = await getYardRules(db, company.id);
   const days = Math.min(90, Math.max(1, Math.floor(Number(fd.get("out_alert_days"))) || before.outAlertDays));
+  // The full check's switches are only on the form in the full check; in the
+  // quick check they keep what they were, for the day the yard turns it on.
+  const full = fd.get("full_fields") === "1";
   const next = {
-    hand_uploads_need_ok: fd.get("hand_uploads_need_ok") === "on",
-    allow_cert_on_the_way: fd.get("allow_cert_on_the_way") === "on",
+    hand_uploads_need_ok: full ? fd.get("hand_uploads_need_ok") === "on" : before.handUploadsNeedOk,
+    allow_cert_on_the_way: full ? fd.get("allow_cert_on_the_way") === "on" : before.allowCertOnTheWay,
     out_alert_days: days,
-    require_tag_scan: fd.get("require_tag_scan") === "on",
+    require_tag_scan: full ? fd.get("require_tag_scan") === "on" : before.requireTagScan,
     require_loadout_photo: fd.get("require_loadout_photo") === "on",
-    require_last4: fd.get("require_last4") === "on",
+    require_last4: full ? fd.get("require_last4") === "on" : before.requireLast4,
+    quick_check: fd.get("check_mode") !== "full",
   };
   const { error } = await db.from("saas_enforcement_settings")
     .upsert({ company_id: company.id, ...next, updated_at: new Date().toISOString() }, { onConflict: "company_id" });
@@ -37,6 +41,7 @@ async function saveRules(fd: FormData) {
   if (before.outAlertDays !== next.out_alert_days) changes.push(`iron out more than ${next.out_alert_days} days gets flagged`);
   if (before.requireTagScan !== next.require_tag_scan) changes.push(next.require_tag_scan ? "pressure iron and anything on the list has to be scanned off its tag at load-out" : "pieces can be checked by hand at load-out again");
   if (before.requireLoadoutPhoto !== next.require_loadout_photo) changes.push(next.require_loadout_photo ? "every load-out needs a photo of the loaded truck" : "a load-out can roll without a photo of the loaded truck");
+  if (before.quickCheck !== next.quick_check) changes.push(next.quick_check ? "trucks get the quick check (the list, one photo, Ready)" : "trucks get the full check (every piece scanned, its tests and paper checked)");
   if (before.requireLast4 !== next.require_last4) changes.push(next.require_last4 ? "checking a piece by hand means typing the last 4 of its serial" : "checking a piece by hand is one tap again");
   if (changes.length) {
     const actor = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || null;
@@ -71,35 +76,59 @@ export default async function RulesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Rules" description="How a test gets cleared, and who can change what." />
+      <PageHeader back={{ href: "/app/settings", label: "Settings" }} title="Rules" description={rules.quickCheck ? "How a truck gets checked before it rolls." : "How a test gets cleared, and who can change what."} />
 
-      <Card className="flex flex-col gap-3 p-5">
-        <h2 className="font-semibold">Always on</h2>
-        <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-ink-dim marker:text-ink-faint">
-          {FIXED.map((r) => <li key={r}>{r}</li>)}
-        </ol>
-      </Card>
+      {rules.quickCheck ? null : (
+        <Card className="flex flex-col gap-3 p-5">
+          <h2 className="font-semibold">Always on</h2>
+          <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm text-ink-dim marker:text-ink-faint">
+            {FIXED.map((r) => <li key={r}>{r}</li>)}
+          </ol>
+        </Card>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold">Manager switches</h2>
         {!manager && <p className="mt-1 text-sm text-ink-dim">A manager sets these.</p>}
         <form action={saveRules} className="mt-4 flex flex-col gap-5">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" name="hand_uploads_need_ok" defaultChecked={rules.handUploadsNeedOk} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
-            <span>
-              <span className="block text-sm font-medium">Every upload from a hand waits for a manager</span>
-              <span className="block text-sm text-ink-dim">Off: a clean match goes green on its own, and anything that doesn&apos;t match waits for you. On: you OK every upload a hand sends, even clean ones.</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" name="allow_cert_on_the_way" defaultChecked={rules.allowCertOnTheWay} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
-            <span>
-              <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
-              <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>
-            </span>
-          </label>
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-2 text-sm font-medium">How trucks get checked</legend>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="radio" name="check_mode" value="quick" defaultChecked={rules.quickCheck} disabled={!manager} className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Quick check</span>
+                <span className="block text-sm text-ink-dim">The hand taps &quot;On truck&quot; on the truck&apos;s short list (and the job&apos;s, if there is one), takes one photo, and taps Ready. Under a minute. Anything not tapped makes it NOT READY. The record locks with their name and the time.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="radio" name="check_mode" value="full" defaultChecked={!rules.quickCheck} disabled={!manager} className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Full check: every piece and its paper</span>
+                <span className="block text-sm text-ink-dim">Every piece of iron is entered with its serial and its tests. The hand checks each piece on, and a truck can&apos;t go READY with iron that&apos;s out of test, has no cert, or is red-tagged. Adds Equipment, Tests due, QR tags, and Review uploads.</span>
+              </span>
+            </label>
+          </fieldset>
+          {rules.quickCheck ? null : <input type="hidden" name="full_fields" value="1" />}
+          {rules.quickCheck ? null : (
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" name="hand_uploads_need_ok" defaultChecked={rules.handUploadsNeedOk} disabled={!manager}
+                className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Every upload from a hand waits for a manager</span>
+                <span className="block text-sm text-ink-dim">Off: a clean match goes green on its own, and anything that doesn&apos;t match waits for you. On: you OK every upload a hand sends, even clean ones.</span>
+              </span>
+            </label>
+          )}
+          {rules.quickCheck ? null : (
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" name="allow_cert_on_the_way" defaultChecked={rules.allowCertOnTheWay} disabled={!manager}
+                className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Allow &quot;cert on the way&quot; after a retest</span>
+                <span className="block text-sm text-ink-dim">A hand can upload the retest invoice or the new tag. Once a manager OKs it, the item shows yellow for 7 days and the truck can roll, then it goes red again unless the real cert is uploaded. Off: only the real cert clears it.</span>
+              </span>
+            </label>
+          )}
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" name="require_loadout_photo" defaultChecked={rules.requireLoadoutPhoto} disabled={!manager}
               className="mt-1 h-5 w-5 shrink-0 accent-bone" />
@@ -108,14 +137,16 @@ export default async function RulesPage() {
               <span className="block text-sm text-ink-dim">The hand takes one photo before saving. It goes on the record and the operator&apos;s proof link with their name and the time. No photo makes the truck NOT READY. This is the proof on phones that can&apos;t read tags, like iPhones. Off: a load-out can roll without one.</span>
             </span>
           </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" name="require_last4" defaultChecked={rules.requireLast4} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
-            <span>
-              <span className="block text-sm font-medium">Checking a piece by hand means typing the last 4 of its serial</span>
-              <span className="block text-sm text-ink-dim">The screen hides the last 4 until the hand reads them off the band or the stamp, so a check proves someone looked at the iron. Off: one tap on &quot;It&apos;s on the truck,&quot; and the photo is the proof.</span>
-            </span>
-          </label>
+          {rules.quickCheck ? null : (
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" name="require_last4" defaultChecked={rules.requireLast4} disabled={!manager}
+                className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Checking a piece by hand means typing the last 4 of its serial</span>
+                <span className="block text-sm text-ink-dim">The screen hides the last 4 until the hand reads them off the band or the stamp, so a check proves someone looked at the iron. Off: one tap on &quot;It&apos;s on the truck,&quot; and the photo is the proof.</span>
+              </span>
+            </label>
+          )}
           <label className="flex flex-col gap-1.5">
             <span className="block text-sm font-medium">Flag iron that&apos;s been out on a job longer than</span>
             <span className="flex items-center gap-2">
@@ -125,21 +156,23 @@ export default async function RulesPage() {
             </span>
             <span className="block text-sm text-ink-dim">Past this, a truck or piece that hasn&apos;t been checked back in shows red on Load out, and managers get one email a day listing what&apos;s new. Not one email per piece.</span>
           </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" name="require_tag_scan" defaultChecked={rules.requireTagScan} disabled={!manager}
-              className="mt-1 h-5 w-5 shrink-0 accent-bone" />
-            <span>
-              <span className="block text-sm font-medium">Scan tags only at load-out. No checking by hand.</span>
-              <span className="block text-sm text-ink-dim">Pressure iron and anything on the truck&apos;s list has to be scanned off its tag (a QR code with any phone, or an NFC tag on Android). Typing a serial won&apos;t count. A tag that won&apos;t scan makes the truck NOT READY until a manager rolls it with a reason. Only managers can print tags, write NFC tags, or link a new tag while this is on.</span>
-              {(pressureIron ?? 0) > 0 ? (
-                <span className={`mt-1.5 block text-sm font-medium ${(neverScanned ?? 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                  {(neverScanned ?? 0) > 0
-                    ? <>{neverScanned} of {pressureIron} pieces of pressure iron have never been scanned off a tag. Tag them first, or those trucks will block. <Link href="/app/tags" className="underline underline-offset-2">Print QR tags</Link></>
-                    : <>Every piece of pressure iron has been scanned off its tag at least once.</>}
-                </span>
-              ) : null}
-            </span>
-          </label>
+          {rules.quickCheck ? null : (
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" name="require_tag_scan" defaultChecked={rules.requireTagScan} disabled={!manager}
+                className="mt-1 h-5 w-5 shrink-0 accent-bone" />
+              <span>
+                <span className="block text-sm font-medium">Scan tags only at load-out. No checking by hand.</span>
+                <span className="block text-sm text-ink-dim">Pressure iron and anything on the truck&apos;s list has to be scanned off its tag (a QR code with any phone, or an NFC tag on Android). Typing a serial won&apos;t count. A tag that won&apos;t scan makes the truck NOT READY until a manager rolls it with a reason. Only managers can print tags, write NFC tags, or link a new tag while this is on.</span>
+                {(pressureIron ?? 0) > 0 ? (
+                  <span className={`mt-1.5 block text-sm font-medium ${(neverScanned ?? 0) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                    {(neverScanned ?? 0) > 0
+                      ? <>{neverScanned} of {pressureIron} pieces of pressure iron have never been scanned off a tag. Tag them first, or those trucks will block. <Link href="/app/tags" className="underline underline-offset-2">Print QR tags</Link></>
+                      : <>Every piece of pressure iron has been scanned off its tag at least once.</>}
+                  </span>
+                ) : null}
+              </span>
+            </label>
+          )}
           {manager && <Button type="submit" className="w-full sm:w-fit">Save the rules</Button>}
         </form>
       </Card>
