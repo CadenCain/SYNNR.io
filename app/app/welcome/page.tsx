@@ -12,6 +12,7 @@ import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getYardRules } from "@/lib/saas/yard-rules";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Getting set up" };
@@ -54,6 +55,7 @@ export default async function Welcome() {
     db.from("saas_compliance_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("parent_type", "crew"),
     db.from("saas_compliance_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).neq("parent_type", "crew").is("last_upload_id", null),
   ]);
+  const quick = (await getYardRules(db, company.id)).quickCheck;
   const yards = ((yardRows ?? []) as { id: string; name: string }[]).filter((y) => isBillableYard(y.name));
   const paidFor = company.comped ? yards.length : company.yard_quantity;
   const toName = Math.max(0, paidFor - yards.length);
@@ -127,18 +129,36 @@ export default async function Welcome() {
       action: <Link href="/app" className={buttonClass("default", "lg")}>Go to Load out <ArrowRight className="h-4 w-4" /></Link>,
     },
   ];
-  const done = steps.filter((s) => s.done).length;
+  // The quick check needs yards, trucks, each truck's list, the crew, and a
+  // first check. No iron, no paper, no tags.
+  const quickSteps = quick ? [
+    steps[0], steps[1],
+    {
+      done: (kits ?? 0) > 0,
+      title: "Set each truck's list",
+      body: <>The 5 to 8 things each truck can&apos;t leave without, the ones that cause a hotshot when they&apos;re forgotten. Set one, then copy it to every truck of the same kind. Add a job list for a kind of job that needs more.</>,
+      action: <Link href="/app/packages" className={buttonClass("outline", "lg")}>Truck lists <ArrowRight className="h-4 w-4" /></Link>,
+    },
+    steps.find((s) => s.title === "Invite your crew")!,
+    {
+      done: (loadouts ?? 0) > 0,
+      title: "Check your first truck",
+      body: <>Tap the truck, tap each thing &quot;On truck&quot;, take one photo, tap Ready. You get READY or NOT READY and a link for the operator.</>,
+      action: <Link href="/app" className={buttonClass("default", "lg")}>Go to Trucks <ArrowRight className="h-4 w-4" /></Link>,
+    },
+  ] : steps;
+  const done = quickSteps.filter((s) => s.done).length;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-[26px] font-semibold tracking-tight">Welcome to RollReady</h1>
         <p className="mt-1 text-sm text-ink-dim">
-          {company.subscription_status === "active" ? "You're paid up and in. " : ""}Here&apos;s the fastest way to your first load-out. {done} of {steps.length} done.
+          {company.subscription_status === "active" ? "You're paid up and in. " : ""}Here&apos;s the fastest way to your first {quick ? "check" : "load-out"}. {done} of {quickSteps.length} done.
         </p>
       </div>
       <ol className="flex flex-col gap-3">
-        {steps.map((s, i) => (
+        {quickSteps.map((s, i) => (
           <li key={s.title}>
             <Card className={cn("flex gap-4 p-4", s.done && "border-emerald-500/40")}>
               <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",

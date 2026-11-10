@@ -6,6 +6,7 @@ import {
   DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_TOOL_STOCKS, type DemoAsset,
 } from "./demo-data";
 import { demoLoadoutRecord, demoKitLines, demoKitChecks } from "./demo-loadouts";
+import { quickLines, quickVerdict } from "./quick-check";
 import { verifyUpload } from "./cert-verify";
 import { computeDispatchCheck } from "./dispatch-check";
 import { localToday, addDaysIso } from "./status";
@@ -101,9 +102,9 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
   });
   if (sheet.length) await admin.from("saas_signouts").insert(sheet);
 
-  // The demo shows the full check (every piece, its tests and its paper) for
-  // now; a visitor can switch it to the quick check under Settings, Rules.
-  await admin.from("saas_enforcement_settings").upsert({ company_id: companyId, quick_check: false }, { onConflict: "company_id" });
+  // The demo runs the quick check, like a new yard. A visitor can switch it
+  // to the full check (every piece, its tests and its paper) under Settings, Rules.
+  await admin.from("saas_enforcement_settings").upsert({ company_id: companyId, quick_check: true }, { onConflict: "company_id" });
 
   // Setting tools the vendor stocks, by count: the shelf, who has some out,
   // what came back from jobs, and the vendor's last swap.
@@ -225,27 +226,34 @@ async function seedDemoYard(admin: SupabaseClient, companyId: string, yardId: st
     // be in the past.
     (async () => {
       for (const lo of DEMO_LOADOUTS) {
-        const rec = demoLoadoutRecord(lo, localToday());
+        const full = demoLoadoutRecord(lo, localToday());
+        // The record is a quick check: the truck's list (and the job's), each
+        // line the hand said is on, the rams check, and the verdict from that.
+        const qLines = quickLines({ kit: demoKitLines(full.unit), packages: DEMO_PACKAGES.filter((p) => (lo.packages ?? []).includes(p.name)) });
+        const missing = new Set((lo.missing ?? []).map((m) => m.toLowerCase()));
+        const qv = quickVerdict({ lines: qLines.map((l) => ({ label: l.label, qty: l.qty, n: missing.has(l.label.toLowerCase()) ? 0 : l.qty })), notTapped: [], needPhoto: false, empty: !qLines.length });
+        const rec = { ...full, verdict: qv.verdict, reasons: qv.reasons };
         const ids = rec.onTruck.map((a) => assetIdByKey.get(keyOf(a))!).filter(Boolean);
         const at = tsAgo(lo.daysAgo, lo.hour, lo.minute);
         const atMs = Date.parse(at);
         const day = new Date(at).toLocaleDateString("en-US", { timeZone: "America/Chicago", month: "short", day: "numeric" });
+        const onCount = qLines.reduce((n, l) => n + (missing.has(l.label.toLowerCase()) ? 0 : l.qty), 0);
         const summary = rec.verdict === "ready"
-          ? `${rec.unit.name} loaded out READY by ${lo.by}: ${rec.pieces.length} pieces scanned`
-          : `${rec.unit.name} blocked at load-out (NOT READY) by ${lo.by}: ${rec.reasons.slice(0, 3).join("; ")}`;
+          ? `${rec.unit.name} checked READY by ${lo.by}: ${onCount} ${onCount === 1 ? "thing" : "things"} on the truck`
+          : `${rec.unit.name} NOT READY at its check by ${lo.by}: ${rec.reasons.slice(0, 3).join("; ")}`;
         const { data: saved, error: loErr } = await admin.from("saas_loadout_scans").insert({
           company_id: companyId, unit_id: unitId(lo.unitKey), unit_name: rec.unit.name, yard_id: yardId, scanned_by: lo.by,
-          started_at: new Date(atMs - rec.pieces.length * 70e3).toISOString(), finished_at: at,
-          expected: rec.pieces.length, scanned: rec.pieces.length,
-          verdict: rec.verdict, reasons: rec.reasons, packages: rec.packages,
-          // The checks the kit and packages ask for, tapped by the loader after the last piece went on.
-          roll_checks: rec.checks.length ? rec.checks.map((label) => ({ label, ok: true, by: lo.by, at: new Date(atMs - 30e3).toISOString() })) : null,
-          lines: rec.lines.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}),
-            filled: l.filled.map((f) => ({ asset_id: assetIdByKey.get(f.id), name: f.name, serial: f.serial })) })),
-          pieces: rec.pieces.map((x, i) => ({
-            asset_id: assetIdByKey.get(x.key), name: x.name, serial: x.serial, how: lo.how, by: lo.by, added: false, red: x.red, tests: x.tests,
-            at: new Date(atMs - (rec.pieces.length - i) * 60e3).toISOString(),
-          })),
+          started_at: new Date(atMs - 55e3).toISOString(), finished_at: at,
+          expected: qLines.reduce((n, l) => n + l.qty, 0), scanned: onCount,
+          verdict: rec.verdict, reasons: rec.reasons, packages: rec.packages, check_mode: "quick", phone_saved_at: at,
+          // The checks the kit and packages ask for, tapped with the list.
+          roll_checks: rec.checks.length ? rec.checks.map((label) => ({ label, ok: true, by: lo.by, at: new Date(atMs - 10e3).toISOString() })) : null,
+          lines: qLines.map((l) => {
+            const n = missing.has(l.label.toLowerCase()) ? 0 : l.qty;
+            return { label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: [],
+              confirmed: { n, by: n ? lo.by : null, at: n ? new Date(atMs - 15e3).toISOString() : null } };
+          }),
+          pieces: [],
           not_scanned: [],
         }).select("id").single();
         if (loErr) throw new Error(`load-out: ${loErr.message}`);

@@ -247,10 +247,10 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     <>
       {!isWritable(company.subscription_status, company.comped) ? <div className="mb-6"><LockedCard owner={company.role === "owner"} /></div> : null}
 
-      {company.role !== "member" && !company.is_demo && isWritable(company.subscription_status, company.comped) && (welcome === "1" || list.rows.length === 0) ? (
+      {company.role !== "member" && !company.is_demo && isWritable(company.subscription_status, company.comped) && (welcome === "1" || (quick ? ![...kits.values()].some((l) => l.length) : list.rows.length === 0)) ? (
         <div className="mb-6">
           <WelcomeCard justPaid={welcome === "1"} yards={yards.map((y) => y.name).filter(isBillableYard)}
-            manager={company.role === "owner" || company.role === "admin"} />
+            manager={company.role === "owner" || company.role === "admin"} quick={quick} />
         </div>
       ) : null}
       <LoadOutView trucks={trucks} counts={counts} summary={summary} week={week} yards={yards} yardId={yardId} activity={activity}

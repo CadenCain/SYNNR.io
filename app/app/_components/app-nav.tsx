@@ -115,8 +115,8 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
           </form>
         ) : null}
 
-        {/* Search (jump to compliance list) */}
-        <form
+        {/* Search (jump to compliance list). The quick check has no serials to search. */}
+        {quick ? null : <form
           action="/app/search"
           className="mb-4 flex items-center gap-2 rounded-lg border border-line bg-coal px-3 py-2 text-sm text-ink-faint focus-within:border-bone"
         >
@@ -127,7 +127,7 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
             className="w-full bg-transparent text-ink placeholder:text-ink-faint outline-none"
           />
           <kbd className="hidden rounded border border-line px-1.5 text-[10px] text-ink-faint lg:inline">⌘K</kbd>
-        </form>
+        </form>}
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
           {(quick ? QUICK_MAIN(manager) : [...MAIN, ...(reviewCount === null ? [] : [{ href: "/app/review", label: "Review uploads", icon: FileCheck } as NavItem])]).map((item) => {
@@ -196,9 +196,11 @@ export default function AppNav({ companyName, userName, companies = [], activeCo
       <header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-surface/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
         {MARK}
         <span className="font-semibold tracking-tight">RollReady</span>
-        <Link href="/app/search" aria-label="Search" className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
-          <Search className="h-[18px] w-[18px]" />
-        </Link>
+        {quick ? <span className="ml-auto" /> : (
+          <Link href="/app/search" aria-label="Search" className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-ink-dim hover:text-ink">
+            <Search className="h-[18px] w-[18px]" />
+          </Link>
+        )}
         {userName ? (
           <Link href="/app/settings" aria-label="Settings" title={userName}
             className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-elevated">

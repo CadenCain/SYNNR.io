@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Bell, Users, CreditCard, ChevronRight, Download, Share2, ShieldCheck, UserRound } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { Card } from "@/components/ui/card";
+import { saasDb } from "@/lib/saas/db";
+import { getYardRules } from "@/lib/saas/yard-rules";
 
 export const metadata = { title: "Settings" };
 
@@ -9,14 +11,18 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsHub() {
   const { company } = await requireCompany();
-  const rows = [
+  const quick = (await getYardRules(await saasDb(), company.id)).quickCheck;
+  const manager = company.role === "owner" || company.role === "admin";
+  const allRows = [
     { href: "/app/settings/account", icon: UserRound, title: "Your account", desc: "Your name on every scan, your password, the company name", live: true },
-    { href: "/app/settings/rules", icon: ShieldCheck, title: "Rules", desc: "How tests get cleared, and who can change what", live: true },
+    { href: "/app/settings/rules", icon: ShieldCheck, title: quick ? "How trucks get checked" : "Rules", desc: quick ? "Quick check or full check, the truck photo, and how long out is too long" : "How tests get cleared, and who can change what", live: true },
     { href: "/app/settings/notifications", icon: Bell, title: "Notifications", desc: "Lead time, recipients, email alerts", live: true },
     { href: "/app/settings/team", icon: Users, title: "Team", desc: "Invite members, manage roles", live: true },
     { href: "/app/settings/billing", icon: CreditCard, title: "Billing", desc: "Plan, yards, payment", live: true },
     { href: "/app/settings/proofs", icon: Share2, title: "Proof links", desc: "Links you've sent operators. See them or shut them off.", live: true },
   ];
+  // A hand needs their own account. The rest is the managers'.
+  const rows = manager ? allRows : allRows.filter((r) => r.href === "/app/settings/account");
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -45,16 +51,19 @@ export default async function SettingsHub() {
 
       {/* Everything out, in one place: what an auditor, an operator, or a new
           system would ask for. Plain <a> so the browser downloads the file. */}
-      <div className="flex flex-col gap-2">
+      {manager ? <div className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-ink-dim">Download your data</h2>
-        {[
+        {(quick ? [
+          { href: "/app/loadouts/export", title: "Truck checks", desc: "Every check: truck, job or well, who, READY or NOT, what was on it" },
+          { href: "/api/saas/export/tools-out", title: "Tools out", desc: "Setting tools taken and how many ran, and vendor visits" },
+        ] : [
           { href: "/api/saas/export", title: "Tests and certs", desc: "The test or cert on file now for every piece and truck, with serials and dates" },
           { href: "/app/equipment/export", title: "Equipment list", desc: "Every piece: where it is, what truck, its next test" },
           { href: "/app/loadouts/export", title: "Load-out records", desc: "Every load-out: truck, job or well, who, READY or NOT, overrides, roll checks" },
           { href: "/api/saas/export/checkins", title: "Check-ins", desc: "Every check-in: who brought what back, when, where it went, red tags and why" },
           { href: "/api/saas/export/tools-out", title: "Tools out", desc: "Every sign-out and hand-off, setting tools taken and how many ran, vendor visits, redress" },
           { href: "/api/saas/export/tests", title: "Test history", desc: "Every cert sent in, old tests too, with who checked it and a link to the photo" },
-        ].map((d) => (
+        ]).map((d) => (
           <a key={d.href} href={d.href} download>
             <Card className="flex items-center gap-4 p-4 transition-colors hover:border-line-2 hover:bg-surface">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface">
@@ -68,7 +77,7 @@ export default async function SettingsHub() {
             </Card>
           </a>
         ))}
-      </div>
+      </div> : null}
     </div>
   );
 }

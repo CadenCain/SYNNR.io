@@ -116,6 +116,18 @@ export default async function ToolsOutPage() {
     outs: st.outs.map((o) => ({ id: o.id, userId: o.userId, name: o.name, qty: o.qty, note: o.note, days: daysOut(o.outAt, now) })),
   }));
 
+  // The quick check: setting tools by count, and nothing else.
+  if (rules.quickCheck) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Tools out" description="Setting tools: how many are ready, who has some out, and how many are used and waiting on the vendor's pickup." />
+        {stockViews.map((st) => <StockCard key={st.id} stock={st} me={user.id} manager={manager} crew={crew} alertDays={rules.outAlertDays} month={month} />)}
+        {!stockViews.length && !manager ? <Card className="p-4 text-sm text-ink-dim">Nothing to sign out yet. A manager sets up the setting tools.</Card> : null}
+        {manager ? <AddStock yards={list.yards} /> : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Tools out" description="Who has what and since when, what's ready on the shelf, and what's used and waiting on pickup. This replaces the sign-out sheet." />

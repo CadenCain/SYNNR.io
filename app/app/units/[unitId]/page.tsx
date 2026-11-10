@@ -31,6 +31,7 @@ import { worstStatus } from "@/lib/saas/status";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
 import { titled } from "@/lib/saas/page-title";
+import QuickTruck from "./quick-truck";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,10 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   const yardName = Array.isArray(u.saas_yards) ? u.saas_yards[0]?.name : u.saas_yards?.name;
   const { data: yardRows } = await db.from("saas_yards").select("id, name").eq("company_id", company.id).order("name");
   const allYards = (yardRows ?? []) as { id: string; name: string }[];
+  // The quick check: the truck's last check, its list, and one button.
+  if ((await getYardRules(db, company.id)).quickCheck) {
+    return <QuickTruck db={db} companyId={company.id} unit={u} yardName={yardName ?? null} yards={allYards} manager={isManagerRole(company.role)} />;
+  }
   // A shop is a BUILDING: it doesn't roll out, no crew is assigned to it, no
   // gear rides on it. Its whole reason to be on the books is its paper (fire
   // extinguishers, overhead crane, compressor), so its page is the cert book
