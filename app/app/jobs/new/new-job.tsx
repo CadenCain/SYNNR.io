@@ -111,7 +111,7 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
           <datalist id="synnr-job-lists">{lists.map((l) => <option key={l.id} value={l.name} />)}</datalist>
         </label>
         <label className={label}>Truck
-          <input value={truck} onChange={(e) => setTruck(e.target.value)} list="synnr-trucks" maxLength={40} placeholder="HU044" className={field} />
+          <input value={truck} onChange={(e) => setTruck(e.target.value)} list="synnr-trucks" maxLength={40} placeholder="WL-07" className={field} />
           <datalist id="synnr-trucks">{trucks.map((t) => <option key={t} value={t} />)}</datalist>
         </label>
       </div>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" width="1080" height="360">
+  <rect width="360" height="120" fill="#08090a"/>
+  <path transform="translate(40 36) scale(1.5)" d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f"/>
+  <text x="108" y="75" fill="#ededef" font-family="Geist, Inter, 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="600" letter-spacing="7">SYNNR</text>
+</svg>

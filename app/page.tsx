@@ -4,6 +4,7 @@ import { SiteNav, SiteFooter } from "./_site/chrome";
 import Console from "./_site/console";
 import Toolstring from "./_site/toolstring";
 import AccessForm from "./_site/access-form";
+import { BoardShot } from "./_site/shots";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
 export const metadata: Metadata = {
@@ -116,14 +117,32 @@ export default function Home() {
           </div>
         </section>
 
+        {/* The manager's view */}
+        <section className="border-t border-line">
+          <div className={`${wrap} py-16 md:py-28`}>
+            <div className="synnr-reveal">
+              <h2 className={h2}>Every truck, before it rolls.</h2>
+              <p className={lede}>
+                One screen for the manager: every job the yard is loading for, how much is on, and how many critical
+                pieces are still off. No walking the yard and no calling around at 5 AM.
+              </p>
+            </div>
+            <div className="synnr-reveal mt-10 md:mt-14"><BoardShot /></div>
+            <Link href="/product" className="mt-6 inline-flex items-center gap-1.5 text-[15px] text-ink underline-offset-4 hover:underline">
+              See how it works, step by step
+            </Link>
+          </div>
+        </section>
+
         {/* Ask it */}
         <section className="border-t border-line">
           <div className={`${wrap} py-16 md:py-28`}>
             <div className="synnr-reveal">
-              <h2 className={h2}>Then ask it anything.</h2>
+              <p className="text-[13px] text-ink-faint">Being built now</p>
+              <h2 className={`${h2} mt-3`}>Then ask it anything.</h2>
               <p className={lede}>
-                The same SYNNR that preps the job knows the rest of the company. Everybody gets their own login,
-                and everybody asks the same brain.
+                The same SYNNR that preps the job will answer for the rest of the company. Everybody gets their own
+                login, and everybody asks the same brain.
               </p>
             </div>
             <ul className="mt-10 grid border-t border-line md:mt-16 md:grid-cols-2 md:gap-x-16">

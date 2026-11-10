@@ -5,9 +5,6 @@ import type { MetadataRoute } from "next";
 const BASE = "https://www.synnr.io";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ["/", "/legal/terms", "/legal/privacy"].map((p) => ({
-    url: BASE + p,
-    changeFrequency: p === "/" ? ("weekly" as const) : ("monthly" as const),
-    priority: p === "/" ? 1 : 0.3,
-  }));
+  const pages: [string, number][] = [["/", 1], ["/product", 0.8], ["/security", 0.6], ["/legal/terms", 0.3], ["/legal/privacy", 0.3]];
+  return pages.map(([p, priority]) => ({ url: BASE + p, changeFrequency: p.startsWith("/legal") ? ("monthly" as const) : ("weekly" as const), priority }));
 }

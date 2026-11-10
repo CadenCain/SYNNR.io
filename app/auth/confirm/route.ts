@@ -31,10 +31,10 @@ export async function GET(req: Request) {
 :root{color-scheme:dark;--bg:#08090a;--card:#0e0f11;--ink:#ededef;--dim:#a1a4aa;--line:#1d1f23}
 body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,Segoe UI,sans-serif;padding:16px}
 .card{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:28px}
-h1{font-size:15px;font-weight:600;letter-spacing:.14em;margin:0 0 14px}h1:before{content:"";display:inline-block;width:10px;height:10px;border-radius:1px;background:#ff5a1f;margin-right:8px}p{color:var(--dim);margin:0 0 18px;font-size:15px}
+h1{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:.16em;margin:0 0 14px}h1 svg{width:18px;height:18px;fill:#ff5a1f}p{color:var(--dim);margin:0 0 18px;font-size:15px}
 button{width:100%;min-height:44px;border:0;border-radius:8px;background:#ededef;color:#08090a;font:500 15px -apple-system,Segoe UI,sans-serif;cursor:pointer}button:hover{background:#fff}
 </style></head><body><form class="card" method="post" action="/auth/confirm">
-<h1>SYNNR</h1><p>Tap the button to ${type === "recovery" ? "set a new password for your login" : "keep going"}. The link works once.</p>
+<h1><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z"/></svg>SYNNR</h1><p>Tap the button to ${type === "recovery" ? "set a new password for your login" : "keep going"}. The link works once.</p>
 <input type="hidden" name="token_hash" value="${esc(tokenHash)}"><input type="hidden" name="type" value="${esc(type)}"><input type="hidden" name="next" value="${esc(next)}">
 <button type="submit">${label}</button></form></body></html>`;
   return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
