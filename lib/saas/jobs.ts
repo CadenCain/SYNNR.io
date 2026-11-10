@@ -16,6 +16,8 @@ export type JobLine = {
   sort: number;
   on_by: string | null;
   on_at: string | null;
+  /** Where the proof photo is kept. A critical piece can't go on without one. */
+  photo_path: string | null;
 };
 
 /** The job facts SYNNR keeps from a dispatch. Never people or phone numbers. */
@@ -44,6 +46,9 @@ export type Job = {
   created_at: string;
 };
 
+/** A line as it goes onto a new job: nothing on the truck yet. */
+export type NewLine = Omit<JobLine, "id" | "on_by" | "on_at" | "photo_path">;
+
 /** Something the dispatch itself says to bring, with its reason in the dispatch's words. */
 export type Callout = { item: string; qty: number; why: string };
 
@@ -71,8 +76,8 @@ export function jobState(lines: Pick<JobLine, "label" | "qty" | "critical" | "on
  * whatever the dispatch itself called out. A callout the shop's list already
  * has isn't added twice; it marks that line critical and carries the reason.
  */
-export function buildLines(input: { list: { label: string; qty: number; critical: boolean }[]; callouts: Callout[] }): Omit<JobLine, "id" | "on_by" | "on_at">[] {
-  const out: Omit<JobLine, "id" | "on_by" | "on_at">[] = [];
+export function buildLines(input: { list: { label: string; qty: number; critical: boolean }[]; callouts: Callout[] }): NewLine[] {
+  const out: NewLine[] = [];
   const at = new Map<string, number>();
   for (const l of input.list) {
     const label = l.label.trim().slice(0, 120);

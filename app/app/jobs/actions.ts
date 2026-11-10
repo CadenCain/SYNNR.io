@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { requireWritableCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasAdmin, saasDb } from "@/lib/saas/db";
+import { removeJobPhotos, removePhotos } from "@/lib/saas/job-photos";
 import { buildLines, clampQty, matchList, type Callout, type JobDetails } from "@/lib/saas/jobs";
 
 /**
@@ -68,15 +69,24 @@ export async function createJob(input: {
   return { ok: true, id };
 }
 
-/** Tap a piece on, or back off. Off takes a READY job back to loading (the database does that). */
+/**
+ * Tap a piece on, or back off. A critical piece only goes on with its photo
+ * (the photo route does that), so here it can only come off. Off throws its
+ * photo away and takes a READY job back to loading (the database does that).
+ */
 export async function setLine(lineId: string, on: boolean): Promise<{ ok: true; on_at: string | null; on_by: string | null } | Fail> {
   if (!isId(lineId)) return fail("That line isn't there anymore.");
   const got = await requireWritableCompany();
   if (!got.ok) return fail(got.error);
   const db = await saasDb();
+  const { data: before } = await db.from("synnr_job_lines").select("critical, photo_path").eq("id", lineId).eq("company_id", got.company.id).maybeSingle();
+  const was = before as { critical: boolean; photo_path: string | null } | null;
+  if (!was) return fail("That line isn't there anymore.");
+  if (on && was.critical) return fail("That one's critical. Take its photo to put it on.");
   const patch = on ? { on_at: new Date().toISOString(), on_by: nameOf(got.user) } : { on_at: null, on_by: null };
   const { data, error } = await db.from("synnr_job_lines").update(patch).eq("id", lineId).eq("company_id", got.company.id).select("job_id, on_at, on_by").maybeSingle();
-  if (error || !data) return fail("That didn't save. Try again.");
+  if (error || !data) return fail(/NEEDS_PHOTO/.test(error?.message ?? "") ? "That one's critical. Take its photo to put it on." : "That didn't save. Try again.");
+  if (!on) await removePhotos(saasAdmin(), [was.photo_path]);
   const row = data as { job_id: string; on_at: string | null; on_by: string | null };
   revalidatePath(`/app/jobs/${row.job_id}`);
   revalidatePath("/app");
@@ -109,8 +119,9 @@ export async function removeLine(lineId: string): Promise<{ ok: true } | Fail> {
   if (!got.ok) return fail(got.error);
   if (got.company.role === "member") return fail("Only a manager can take a line off the list.");
   const db = await saasDb();
-  const { data, error } = await db.from("synnr_job_lines").delete().eq("id", lineId).eq("company_id", got.company.id).select("job_id").maybeSingle();
+  const { data, error } = await db.from("synnr_job_lines").delete().eq("id", lineId).eq("company_id", got.company.id).select("job_id, photo_path").maybeSingle();
   if (error || !data) return fail("Couldn't take it off. Try again.");
+  await removePhotos(saasAdmin(), [(data as { photo_path: string | null }).photo_path]);
   revalidatePath(`/app/jobs/${(data as { job_id: string }).job_id}`);
   revalidatePath("/app");
   return { ok: true };
@@ -140,6 +151,7 @@ export async function deleteJob(jobId: string): Promise<{ ok: true } | Fail> {
   const db = await saasDb();
   const { data, error } = await db.from("synnr_jobs").delete().eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
   if (error || !data) return fail("Couldn't delete it. Try again.");
+  await removeJobPhotos(saasAdmin(), got.company.id, jobId);
   revalidatePath("/app");
   return { ok: true };
 }

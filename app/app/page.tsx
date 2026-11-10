@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 type Row = {
   id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; created_at: string;
-  synnr_job_lines: { label: string; qty: number; critical: boolean; on_at: string | null }[] | null;
+  synnr_job_lines: { label: string; qty: number; critical: boolean; on_at: string | null; photo_path: string | null }[] | null;
 };
 
 const clock = () => Date.now();
@@ -28,11 +28,11 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   const db = await saasDb();
   const since = new Date(clock() - 14 * 86400e3).toISOString();
   const [{ data }, { count: listCount }] = await Promise.all([
-    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, on_at)")
+    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, on_at, photo_path)")
       .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(80),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
   ]);
-  const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []) }));
+  const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
   const loading = jobs.filter((j) => j.status !== "ready");
   const ready = jobs.filter((j) => j.status === "ready");
   const criticalOff = loading.reduce((n, j) => n + j.s.criticalMissing, 0);
@@ -120,7 +120,7 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                           : j.s.criticalMissing ? `${j.s.criticalMissing} critical still off`
                             : j.s.ready ? "Everything's on. Not called ready yet." : `${j.s.missing.length} still off`}
                     </span>
-                    <span className="shrink-0 text-ink-faint">{day(j.created_at)}</span>
+                    <span className="shrink-0 text-ink-faint">{j.photos ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}, ` : ""}{day(j.created_at)}</span>
                   </div>
                 </Link>
               );
