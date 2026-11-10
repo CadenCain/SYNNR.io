@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "RollReady by SYNNR",
     short_name: "RollReady",
     description:
-      "Load-out checks for oilfield service yards. Nothing rolls without proof: every piece on the list, in test, and backed by its cert.",
+      "Load-out checks for oilfield service yards. Tap what's on the truck, take one photo, tap Ready. Anything missing reads NOT READY.",
     start_url: "/app",
     display: "standalone",
     background_color: "#090c11",

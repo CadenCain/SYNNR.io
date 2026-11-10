@@ -2,7 +2,7 @@ import Link from "next/link";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
 /**
- * Shared marketing nav + footer for the subpages (send your iron list,
+ * Shared marketing nav + footer for the subpages (send your truck lists,
  * glossary, legal-adjacent). Same shape as the homepage: RollReady by SYNNR,
  * demo and phone as the two ways in, no card-first signup button.
  */
@@ -53,7 +53,7 @@ export function SiteFooter() {
           <span className="brand-sm">RollReady by SYNNR</span>
           <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
           <a href="/demo">Live demo</a>
-          <a href="/readiness-audit">Send your iron list</a>
+          <a href="/readiness-audit">Send your truck lists</a>
           <Link href="/glossary">Glossary</Link>
           <a href="/login">Log in</a>
           <a href="/legal/terms">Terms</a>

@@ -26,30 +26,29 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
+    default: "RollReady | Every Truck Leaves the Yard With the Right Gear",
     template: "%s",
   },
   description:
-    "Make sure the right iron, in date, leaves your yard every time. Scan at load-out, block expired or missing equipment, and keep a locked record of who loaded what. Built for Permian service companies.",
+    "A load-out check a tired hand can do in under a minute. Tap what's on the truck, take one photo, tap Ready. Anything missing reads NOT READY, and you keep a locked record of who cleared the truck. Built for Permian service yards.",
   keywords: [
-    "oilfield load out software", "equipment readiness oilfield", "prevent gate turnaround oilfield",
-    "oilfield cert tracking loadout", "truck readiness software oilfield",
-    "RollReady", "load-out scan", "pressure iron recertification", "NFC iron tags",
-    "coil tubing", "wireline", "BOP test", "lubricator cert", "Permian Basin", "Midland", "Odessa",
+    "oilfield load out checklist", "truck load out app", "oilfield truck checklist", "prevent hotshots oilfield",
+    "who loaded the truck", "load-out record", "setting tool tracking", "RollReady",
+    "wireline", "coil tubing", "Permian Basin", "Midland", "Odessa",
   ],
   openGraph: {
     type: "website",
     siteName: "RollReady by SYNNR",
-    title: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
+    title: "RollReady | Make sure the right stuff goes out",
     description:
-      "Stop costly load-out mistakes. Scan iron as it goes on the truck, block anything missing, expired, or red-tagged, and keep a locked record of who loaded what.",
+      "A check at the truck in under a minute. Anything missing reads NOT READY and says what, and you always know who cleared the truck.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RollReady – Oilfield Load-Out Software | Stop Gate Turnarounds",
+    title: "RollReady | Make sure the right stuff goes out",
     description:
-      "Stop costly load-out mistakes. Scan iron as it goes on the truck, block anything missing, expired, or red-tagged, and keep a locked record of who loaded what.",
+      "A check at the truck in under a minute. Anything missing reads NOT READY and says what, and you always know who cleared the truck.",
   },
 };
 
@@ -77,7 +76,7 @@ export default function RootLayout({
               operatingSystem: "Web",
               url: "https://www.synnr.io",
               description:
-                "Oilfield load-out software. Hands scan each piece of iron as it goes on the truck; anything missing, expired, or red-tagged blocks the truck in the yard, with a locked record of who loaded what.",
+                "A load-out check for oilfield service yards. The hand taps what's on the truck, takes one photo, and taps Ready in under a minute. Anything missing reads NOT READY, with a locked record of who cleared the truck.",
               offers: { "@type": "Offer", price: "500", priceCurrency: "USD", description: "Per yard, per month" },
               publisher: {
                 "@type": "Organization",

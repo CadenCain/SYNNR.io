@@ -35,8 +35,8 @@ export default function ReadinessAuditForm() {
       <div className="ra-form-done">
         <b>Got it.</b>
         <p>
-          I&apos;ll call or text you this week. Send the list whenever it&apos;s handy, and I&apos;ll tell you what&apos;s expired, coming due, and missing.
-          If RollReady fits, I&apos;ll load your iron with you. If not, you still get the list back.
+          I&apos;ll call or text you this week. Send the lists whenever it&apos;s handy, and I&apos;ll turn them into a short list for each truck.
+          If RollReady fits, I&apos;ll set it up with you.
         </p>
       </div>
     );
@@ -59,7 +59,7 @@ export default function ReadinessAuditForm() {
       </div>
       <label>
         What goes wrong at load-out in your yard?
-        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Certs lapsing? Pieces left in the yard? Red tags that went anyway?" />
+        <textarea name="headache" required rows={4} placeholder="A line or two is plenty. Trucks leaving short? Hotshots? Nobody sure who loaded it?" />
       </label>
       <div className="svc-form-row">
         <label>Cell<input name="phone" type="tel" required autoComplete="tel" placeholder="(432) 555-0100" /></label>

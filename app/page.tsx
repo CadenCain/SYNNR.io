@@ -7,10 +7,11 @@ import HomeMotion from "./home-motion";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
-// RollReady homepage (2026-11). The product is the gate in the yard: nothing
-// rolls without proof. Dark, plain, and built around the real check. The hero
-// is the check itself; screenshots are of the real app (public/screens, shot
-// from /shot). No customer names or counts anywhere.
+// RollReady homepage (2026-11, the quick check). The pitch: make sure the
+// right stuff goes out. A check at the truck in under a minute, NOT READY
+// that says what's missing, and a locked record of who cleared the truck.
+// The hero is the check itself and the board is drawn in code, not a
+// screenshot. No customer names, logos, or counts anywhere.
 
 const Mark = ({ className = "rr-mark" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -18,35 +19,30 @@ const Mark = ({ className = "rr-mark" }: { className?: string }) => (
   </svg>
 );
 
-const TRIP = [
-  { n: "1", h: "Plan the job", p: "A manager sets what the job needs: the truck’s kit, a package, a few extras. The hand can add to it, never take anything off." },
-  { n: "2", h: "Load out", p: "Each piece gets checked on as it’s loaded. Out of test, no paper, red-tagged, or not on the list gets called out right then." },
-  { n: "3", h: "Prove it", p: "The record locks when it’s saved. The operator gets a link with every piece, its cert, who loaded it, and a photo of the truck." },
-  { n: "4", h: "Check it back in", p: "Iron comes back off the truck. Anything out too long gets flagged, and damaged iron gets red-tagged on the spot." },
-];
-
-const STOPS = [
-  "Out of test",
-  "A test date with no cert behind it",
-  "Red-tagged",
-  "Short a piece on the job’s list",
-  "Logged on the truck, nobody can find it",
-  "Pressure iron with no test on file",
-  "No photo of the loaded truck",
+const STEPS = [
+  { n: "1", h: "Set each truck’s list once", p: "A manager picks the 5 to 8 things that cause a hotshot when they get left behind. Add a job list like Plug set if you want one. No iron to enter, no serials, no cert dates." },
+  { n: "2", h: "Check it at the truck", p: "The hand taps the truck, taps On truck on each line, taps checks like BOP rams closed for travel, takes one photo, and taps Ready." },
+  { n: "3", h: "Missing means NOT READY", p: "Anything not tapped makes the truck NOT READY, and the screen says what’s missing, like “Not on the truck: Sinker bars.” You find out in the yard, not on location." },
+  { n: "4", h: "The record locks", p: "Who cleared the truck, what they said was on it, the photo, and the time. Nobody can edit it. The operator gets a proof link that shows the same." },
 ];
 
 const VERSUS = [
-  { a: "The hand taps done, and it’s done.", b: "Every piece is checked against its test, its cert, and the job’s list. The phone can’t talk it into READY." },
-  { a: "Expired iron gets found at the gate.", b: "Expired iron gets stopped in the yard." },
-  { a: "The operator gets a binder, or nothing.", b: "The operator gets a link: every piece, every cert, and a photo of the truck." },
-  { a: "Nobody knows when the app wasn’t used.", b: "The morning email names every truck that left without a scan." },
+  { a: "“Truck’s loaded” at 4:50 AM.", b: "Every line tapped On truck, one photo, and Ready, with a name and the time." },
+  { a: "Something got left behind. You find out on location.", b: "Anything not tapped reads NOT READY in the yard, and says what’s missing." },
+  { a: "Who loaded it? Scroll back and guess.", b: "The record shows who cleared the truck and what they said was on it." },
+  { a: "The operator takes your word for it.", b: "The operator gets a proof link with the same record and the photo." },
 ];
 
-const MISSES = [
-  { h: "Expired lubricator cert on a major’s location", p: "The company man checked the paper and turned the crew around at the gate. $8,000 in NPT." },
-  { h: "BOP test lapsed, found on location", p: "A $10,000+ NPT day, and an operator who remembers it the next time work gets handed out." },
-  { h: "Right truck, missing a piece", p: "The plug valve the job needed is still on the rack. The crew waits on location for a hotshot." },
-  { h: "Red-tagged iron that went anyway", p: "Somebody tagged it out. It still got loaded, because nothing on the way to the truck stopped it." },
+const BOARD = [
+  { truck: "WL-07", tone: "go", status: "Ready", line: "Cleared by Dale Wooten, 5:02 AM", act: null },
+  { truck: "WL-03", tone: "stop", status: "Not ready", line: "Not on the truck: Crossover subs", act: "Check it again" },
+  { truck: "WL-05", tone: "out", status: "Out on a job", line: "Left yesterday, 6:15 AM", act: "It’s back" },
+  { truck: "WL-09", tone: "idle", status: "Not checked yet", line: "Nobody has checked it today", act: "Check it" },
+];
+
+const TOOLS = [
+  { name: "Silver Fox", ready: 4, out: 2, used: 3 },
+  { name: "Baker 20", ready: 6, out: 1, used: 2 },
 ];
 
 export default function Home() {
@@ -60,7 +56,7 @@ export default function Home() {
           </Link>
           <nav className="rr-links" aria-label="Main">
             <a href="#trip">How it works</a>
-            <a href="#stops">What stops a truck</a>
+            <a href="#board">For managers</a>
             <a href="#pricing">Pricing</a>
             <Link href="/demo">Live demo</Link>
           </nav>
@@ -75,7 +71,7 @@ export default function Home() {
         <input type="checkbox" id="rr-menu" className="rr-menu-toggle" aria-hidden="true" />
         <nav className="rr-mobile" aria-label="Menu">
           <a href="#trip">How it works</a>
-          <a href="#stops">What stops a truck</a>
+          <a href="#board">For managers</a>
           <a href="#pricing">Pricing</a>
           <Link href="/demo">Live demo</Link>
           <Link href="/signup">Get started</Link>
@@ -88,15 +84,15 @@ export default function Home() {
         <section className="rr-hero" aria-labelledby="rr-hero-h">
           <div className="rr-wrap rr-hero-grid">
             <div className="rr-hero-copy">
-              <p className="rr-kicker">Load-out software for oilfield service yards</p>
-              <h1 id="rr-hero-h">Nothing rolls without proof.</h1>
+              <p className="rr-kicker">Load-out checks for oilfield service yards</p>
+              <h1 id="rr-hero-h">Make sure the right stuff goes out.</h1>
               <p className="rr-lede">
-                RollReady checks every truck before it leaves the yard. Each piece has to be on the job’s list, in test,
-                and backed by its cert. If anything’s off, the truck reads NOT READY and stays put.
+                RollReady is a check at the truck that takes under a minute. The hand taps what’s on it, takes one photo,
+                and taps Ready. If anything’s missing, it reads NOT READY and says what. And you always know who cleared the truck.
               </p>
               <div className="rr-cta">
                 <Link href="/demo" className="rr-btn">Open the live demo</Link>
-                <Link href="/l/showcase" className="rr-btn rr-btn-ghost">See a load-out record</Link>
+                <a href={OWNER_PHONE_TEL} className="rr-btn rr-btn-ghost">Call or text {OWNER_PHONE}</a>
               </div>
               <p className="rr-note">The demo is the real app with a made-up yard. No signup, no card.</p>
             </div>
@@ -104,34 +100,39 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rr-band rr-phones" aria-labelledby="rr-phones-h">
+        <section className="rr-sec rr-band" id="trip" aria-labelledby="rr-trip-h">
           <div className="rr-wrap">
-            <h2 className="rr-h3" id="rr-phones-h">Works on the phones your crew already has</h2>
-            <div className="rr-grid3">
-              <article className="rr-card rv">
-                <h3>iPhone</h3>
-                <p>Tap <b>It’s on the truck</b> as each piece goes on, then take one photo of the loaded truck. No serials to punch in.</p>
-              </article>
-              <article className="rr-card rv">
-                <h3>Android</h3>
-                <p>Tap the testing company’s NFC tag on each piece. The tag proves the piece was there.</p>
-              </article>
-              <article className="rr-card rv">
-                <h3>No signal</h3>
-                <p>Scans and the photo stay on the phone and send by themselves when you’re back in range.</p>
-              </article>
+            <div className="rr-head rv">
+              <p className="rr-kicker">How it works</p>
+              <h2 className="rr-h2" id="rr-trip-h">Under a minute at the truck</h2>
+              <p className="rr-sub">Made for a tired hand at 5 AM. Big buttons, plain words, and nothing to type.</p>
             </div>
+            <ol className="rr-trip">
+              {STEPS.map((t) => (
+                <li key={t.n} className="rv">
+                  <span className="rr-num">{t.n}</span>
+                  <h3>{t.h}</h3>
+                  <p>{t.p}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="rr-fine rr-trip-fine rv">
+              Works on the phones your crew already has. If there’s no signal, the taps stay on the phone until there is.
+              A yard that wants more can switch on the full check in Settings: every piece scanned, with its tests and cert paper checked.
+            </p>
           </div>
         </section>
 
         <section className="rr-sec" aria-labelledby="rr-vs-h">
           <div className="rr-wrap">
             <div className="rr-head rv">
-              <h2 className="rr-h2" id="rr-vs-h">Most apps write down what the hand says. RollReady checks it.</h2>
+              <p className="rr-kicker">Better than a group text</p>
+              <h2 className="rr-h2" id="rr-vs-h">When something’s missing, you know who cleared the truck.</h2>
+              <p className="rr-sub">No digging through group chats. Every check saves one record that nobody can edit.</p>
             </div>
-            <div className="rr-vs rv" role="table" aria-label="A checklist compared with RollReady">
+            <div className="rr-vs rv" role="table" aria-label="A group text compared with RollReady">
               <div className="rr-vs-row rr-vs-headrow" role="row">
-                <span role="columnheader">A checklist</span>
+                <span role="columnheader">A group text</span>
                 <span role="columnheader">RollReady</span>
               </div>
               {VERSUS.map((v) => (
@@ -144,110 +145,49 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rr-sec rr-band" id="trip" aria-labelledby="rr-trip-h">
-          <div className="rr-wrap">
-            <div className="rr-head rv">
-              <p className="rr-kicker">How it works</p>
-              <h2 className="rr-h2" id="rr-trip-h">One trip, start to finish</h2>
-              <p className="rr-sub">Wireline, coil, rathole, pressure control: the truck goes out loaded and comes back. RollReady is the check at both ends.</p>
-            </div>
-            <ol className="rr-trip">
-              {TRIP.map((t) => (
-                <li key={t.n} className="rv">
-                  <span className="rr-num">{t.n}</span>
-                  <h3>{t.h}</h3>
-                  <p>{t.p}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section className="rr-sec" id="stops" aria-labelledby="rr-stops-h">
-          <div className="rr-wrap rr-split">
-            <div className="rv">
-              <p className="rr-kicker rr-kicker-red">The hard stop</p>
-              <h2 className="rr-h2" id="rr-stops-h">What stops a truck</h2>
-              <p className="rr-sub">Any one of these makes the truck NOT READY. A hand can’t wave it through.</p>
-              <p className="rr-fine">Only a manager can roll it anyway. Their name and reason go on the record and the proof link, and the office gets an email.</p>
-            </div>
-            <ul className="rr-stops rv">
-              {STOPS.map((s) => (
-                <li key={s}><span className="rr-x" aria-hidden="true">✕</span>{s}</li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className="rr-sec rr-band" aria-labelledby="rr-used-h">
+        <section className="rr-sec rr-band" id="board" aria-labelledby="rr-board-h">
           <div className="rr-wrap rr-split">
             <div className="rv">
               <p className="rr-kicker">For the yard manager</p>
-              <h2 className="rr-h2" id="rr-used-h">It tells you when it wasn’t used</h2>
+              <h2 className="rr-h2" id="rr-board-h">Every truck on one screen</h2>
               <p className="rr-sub">
-                Software only helps if people use it. RollReady watches for the trucks that left without it, the plans nobody
-                loaded, and the hands who haven’t opened it, and puts them in one email every morning. A quiet yard gets no email.
+                Ready, not ready, out on a job, or not checked yet. A truck that isn’t ready shows what’s missing.
+                When one gets back from a job, tap It’s back.
+              </p>
+              <p className="rr-sub">
+                <b>Tools out</b> counts the setting tools in each yard, like Silver Fox and Baker 20: how many are ready,
+                how many are out with someone, and how many are used and waiting on the vendor’s pickup.
               </p>
             </div>
-            <div className="rr-mail rv" aria-label="Example morning email">
-              <div className="rr-mail-top">
-                <span className="rr-mail-from">RollReady</span>
-                <span className="rr-mail-time">6:30 AM</span>
+            <figure className="rr-board rv" aria-label="Example of the manager’s board and Tools out">
+              <div className="rr-board-top"><b>Trucks</b><span>Example yard</span></div>
+              <ul className="rr-board-rows">
+                {BOARD.map((r) => (
+                  <li key={r.truck} className={r.tone}>
+                    <span className="rr-board-truck">{r.truck}</span>
+                    <span className="rr-board-mid">
+                      <span className={`rr-chip ${r.tone}`}>{r.status}</span>
+                      <span className="rr-board-line">{r.line}</span>
+                    </span>
+                    {r.act ? <span className="rr-board-act" aria-hidden="true">{r.act}</span> : null}
+                  </li>
+                ))}
+              </ul>
+              <div className="rr-tools">
+                <div className="rr-tools-h">Tools out</div>
+                <table>
+                  <thead>
+                    <tr><th scope="col">Setting tools</th><th scope="col">Ready</th><th scope="col">Out</th><th scope="col">Used</th></tr>
+                  </thead>
+                  <tbody>
+                    {TOOLS.map((t) => (
+                      <tr key={t.name}><th scope="row">{t.name}</th><td>{t.ready}</td><td>{t.out}</td><td>{t.used}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="rr-tools-fine">Used ones wait on the shelf for the vendor’s pickup.</p>
               </div>
-              <div className="rr-mail-subj">2 trucks not scanned out at your yard</div>
-              <div className="rr-mail-body">
-                <p className="rr-mail-sec">Not scanned out (the app wasn’t used):</p>
-                <p>CT-01: Was planned to leave 7:00 AM. Nobody has scanned it out.</p>
-                <p>CT-06 came back from a job it was never scanned out for.</p>
-                <p className="rr-mail-sec">Blocked at load-out:</p>
-                <p>CT-03: Out of test: Quad BOP stack #3 QB-4471</p>
-                <p className="rr-mail-sec">Out too long, not checked back in:</p>
-                <p>CT-08: 5 pieces, out 9 days</p>
-              </div>
-              <div className="rr-mail-foot">Example from the demo yard</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rr-sec" aria-labelledby="rr-real-h">
-          <div className="rr-wrap">
-            <div className="rr-head rv">
-              <h2 className="rr-h2" id="rr-real-h">The real app</h2>
-              <p className="rr-sub">Screenshots with the demo yard, not mockups. CT-03’s BOP stack is six days past its pressure test, so the load-out stops it in the yard.</p>
-            </div>
-            <div className="rr-shots rv">
-              <div className="rr-browser">
-                <div className="rr-browser-bar"><i /><i /><i /><span>synnr.io/app</span></div>
-                {/* eslint-disable-next-line @next/next/no-img-element -- static screenshot, sized */}
-                <img src="/screens/app-desktop-dark.webp" width={2000} height={1250} loading="lazy"
-                  alt="RollReady Load out screen: blocked trucks first with the reason in red, then trucks ready to load, each with a button to start its load-out" />
-              </div>
-              <div className="rr-phone">
-                {/* eslint-disable-next-line @next/next/no-img-element -- static screenshot, sized */}
-                <img src="/screens/app-phone-dark.webp" width={750} height={1624} loading="lazy"
-                  alt="A load-out on an iPhone: the BOP stack on CT-03 was just checked on, RollReady says it's out of test and not to load it, and the truck's list shows which lines are filled" />
-              </div>
-            </div>
-            <div className="rr-cta rr-center">
-              <Link href="/demo" className="rr-btn">Run a load-out in the demo</Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="rr-sec rr-band" aria-labelledby="rr-miss-h">
-          <div className="rr-wrap">
-            <div className="rr-head rv">
-              <h2 className="rr-h2" id="rr-miss-h">What a miss costs</h2>
-              <p className="rr-sub">The first one happened to my crew. The rest are misses every shop out here has seen. They get caught at the gate because nobody checked in the yard.</p>
-            </div>
-            <div className="rr-grid2">
-              {MISSES.map((m) => (
-                <article className="rr-card rr-miss rv" key={m.h}>
-                  <h3>{m.h}</h3>
-                  <p>{m.p}</p>
-                </article>
-              ))}
-            </div>
+            </figure>
           </div>
         </section>
 
@@ -264,7 +204,7 @@ export default function Home() {
               <ul className="rr-checks">
                 <li>Your whole crew, each with their own login. Never per seat.</li>
                 <li>No contract. Cancel anytime.</li>
-                <li>Load it yourself, free. Or I’ll load it for you: $1,000 a yard, one time, and free for the first 10 yards I set up.</li>
+                <li>Set up your truck lists yourself, free. Or I’ll set them up with you: $1,000 a yard, one time, and free for the first 10 yards I set up.</li>
                 <li>Your data is yours. Export it as a spreadsheet anytime.</li>
               </ul>
               <Link href="/signup" className="rr-btn rr-block">Get started</Link>
@@ -278,6 +218,7 @@ export default function Home() {
             <div className="rr-founder rv">
               <h2 className="rr-h3" id="rr-about-h">Built by someone who’s been turned around at the gate</h2>
               <p>I ran wireline in the Permian for five years. I was on the crew that got sent home over an expired lubricator cert, and it cost us $8,000. RollReady is the check I wish we’d had in the yard that morning.</p>
+              <p>What yards have told me since is that the everyday miss is the wrong gear on the truck, a hotshot to fix it, and nobody knowing who cleared the truck.</p>
               <p>If you want to see it with your own trucks in it, call or text me at <a href={OWNER_PHONE_TEL}>{OWNER_PHONE}</a>.</p>
               <p className="rr-sign">Caden Cain</p>
               <p className="rr-fine">You won’t find fake logos or customer counts on this site. RollReady is new, and I’d rather say so.</p>
@@ -288,8 +229,8 @@ export default function Home() {
         <section className="rr-close" aria-labelledby="rr-close-h">
           <div className="rr-wrap rr-center">
             <Mark className="rr-close-mark" />
-            <h2 className="rr-h2" id="rr-close-h">Nothing rolls without proof.</h2>
-            <p className="rr-sub">Run a load-out in the demo on your phone, start your own yard today, or call and I’ll set it up with you.</p>
+            <h2 className="rr-h2" id="rr-close-h">Every truck leaves with the right gear.</h2>
+            <p className="rr-sub">Check a truck in the demo on your phone. It takes under a minute. Or call, and I’ll set up your trucks with you.</p>
             <div className="rr-cta rr-center">
               <Link href="/demo" className="rr-btn">Open the live demo</Link>
               <Link href="/signup" className="rr-btn rr-btn-ghost">Get started</Link>
@@ -305,7 +246,7 @@ export default function Home() {
           <nav aria-label="Footer">
             <a href={OWNER_PHONE_TEL}>Call or text {OWNER_PHONE}</a>
             <Link href="/demo">Live demo</Link>
-            <Link href="/readiness-audit">Send your iron list</Link>
+            <Link href="/readiness-audit">Send your truck lists</Link>
             <Link href="/glossary">Glossary</Link>
             <Link href="/login">Log in</Link>
             <Link href="/legal/terms">Terms</Link>

@@ -69,8 +69,8 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
 
         <div className="cta">
           <div>
-            <b>Stop getting turned around at the gate.</b>
-            <span>RollReady by SYNNR checks every piece of iron as it goes on the truck, so a bad cert gets caught in the yard, not at the gate.</span>
+            <b>Make sure the right stuff goes out.</b>
+            <span>RollReady by SYNNR is a check at the truck that takes under a minute. Anything missing reads NOT READY in the yard, and you always know who cleared the truck.</span>
           </div>
           <Link className="go" href="/demo">Open the live demo</Link>
         </div>

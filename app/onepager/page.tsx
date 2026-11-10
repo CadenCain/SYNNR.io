@@ -4,7 +4,7 @@ import PrintButton from "./print-button";
 
 /**
  * The leave-behind. One sheet of letter paper, printed black on white and
- * handed across a desk — the 5am problem, the math, free setup, the cell
+ * handed across a desk: the right stuff going out, the math, free setup, the cell
  * number, and a QR straight into the live demo. Screen shows a preview with
  * a print button; @media print strips everything but the sheet.
  */
@@ -63,51 +63,52 @@ export default function OnePager() {
 
       <div className="op-sheet">
         <div className="op-head">
-          <div className="op-brand">RollReady<small>by SYNNR · Oilfield load-out software · Permian Basin</small></div>
+          <div className="op-brand">RollReady<small>by SYNNR · Load-out checks for oilfield yards · Permian Basin</small></div>
           <div className="op-contact">
             <b>Caden Cain</b>, founder<br />
             Call or text {OWNER_PHONE}
           </div>
         </div>
 
-        <h1 className="op-h">Stop costly load-out mistakes.</h1>
+        <h1 className="op-h">Make sure the right stuff goes out.</h1>
 
         <p className="op-p">
           An expired lubricator cert cost us $8,000 on a major&apos;s location. Nobody knew until the company man
-          checked the paper and turned the crew around at the gate. RollReady makes sure the right iron, in date,
-          leaves your yard every time. Hands scan each piece as it goes on the truck. Anything missing, expired, or
-          red-tagged stops the truck in the yard, and you keep a locked record of who loaded what.
+          checked the paper and turned the crew around at the gate. What yards have told me since is that the everyday
+          miss is the wrong gear on the truck, a hotshot to fix it, and nobody knowing who cleared the truck. RollReady
+          is a check at the truck that takes under a minute. The hand taps what&apos;s on it, takes one photo, and taps
+          Ready. Anything missing reads NOT READY and says what.
         </p>
 
         <div className="op-cols">
           <div className="op-box">
-            <h3>What it catches</h3>
+            <h3>What it does</h3>
             <ul>
-              <li>Packages, truck kits, and quick lists set what each truck needs</li>
-              <li>Scan each piece as it&apos;s loaded: bad iron gets called out on the spot</li>
-              <li>Missing, expired, or red-tagged means NOT READY. Hands can&apos;t override it.</li>
-              <li>A locked record of every load-out, with a proof link for the operator</li>
-              <li>Works with your testing company&apos;s NFC tags, or free QR tags</li>
-              <li>Every yard on one screen: ready, blocked, loaded out, and who did what</li>
+              <li>A manager sets each truck&apos;s short list once: the 5 to 8 things that cause a hotshot</li>
+              <li>The hand taps On truck on each line, takes one photo, and taps Ready</li>
+              <li>Anything not tapped reads NOT READY and says what&apos;s missing</li>
+              <li>A locked record of who cleared the truck and what they said was on it, with a proof link for the operator</li>
+              <li>Every truck on one screen: ready, not ready, out on a job, not checked yet</li>
+              <li>Tools out: setting tools counted per yard, ready, out, and used</li>
             </ul>
           </div>
           <div className="op-box">
             <h3>The math</h3>
             <div style={{ fontSize: "13.5px", lineHeight: 1.65 }}>
               One bad load-out costs more than a year of RollReady. It&apos;s a flat price per yard and never
-              per-seat, so adding people or iron costs nothing. No contract, cancel anytime, and your
+              per-seat, so adding people or trucks costs nothing. No contract, cancel anytime, and your
               data stays yours.
             </div>
           </div>
         </div>
 
         <div className="op-math">
-          <div><div className="n">$10,000+</div><div className="k">one missed cert, one NPT day</div></div>
+          <div><div className="n">$8,000</div><div className="k">one crew sent home, one day</div></div>
           <div><div className="n">$500</div><div className="k">per yard / month, flat</div></div>
           <div><div className="n">$6,000</div><div className="k">a full year of RollReady</div></div>
         </div>
 
-        <div className="op-free">Load it yourself, free. Or I&apos;ll load it with you in one afternoon: $1,000 a yard, one time, free for the first 10 yards I set up. Bring the binder.</div>
+        <div className="op-free">Set up your truck lists yourself, free. Or I&apos;ll set them up with you: $1,000 a yard, one time, free for the first 10 yards I set up. Bring your load-out sheets.</div>
 
         <div className="op-foot">
           <div className="who">

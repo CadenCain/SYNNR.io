@@ -21,7 +21,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <div>
         {invite || next?.startsWith("/invite/") ? null : <p className="text-sm text-ink-faint">Step 1 of 3</p>}
         <h1 className="mt-1 text-xl font-semibold tracking-tight">Create your login</h1>
-        <p className="mt-1 text-sm text-ink-dim">Your own login, with your name on everything you scan. $500 a yard a month after setup. Cancel anytime.</p>
+        <p className="mt-1 text-sm text-ink-dim">Your own login, with your name on every truck you clear. $500 a yard a month after setup. Cancel anytime.</p>
       </div>
       <SignupForm />
       <p className="text-center text-sm text-ink-dim">

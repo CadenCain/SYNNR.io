@@ -1,27 +1,32 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import Image from "next/image";
 import { ShieldCheck, Smartphone, Truck } from "lucide-react";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 import DemoLeadForm from "./lead-form";
-import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 
 /**
  * Public demo landing. One tap seeds a private copy of the Caprock demo yard
- * and signs the visitor into the real app (see /demo/start). The only preview
- * on this page is the showcase proof link, generated from the same seed, so
- * nothing here can drift from what the visitor is about to drive. Lead
- * capture posts to /api/demo-lead: name, company, cell. No card, no account.
+ * and signs the visitor into the real app (see /demo/start), where it opens
+ * on the quick check: the board of trucks, Check it, the truck's list. This
+ * page says what to try there. Lead capture posts to /api/demo-lead: name,
+ * company, cell. No card, no account.
  */
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "RollReady live demo",
-  description: "Try RollReady with a demo yard. Your own private copy of a working coil tubing yard, no signup, no card.",
+  description: "Check a truck in RollReady with a demo yard. Tap what's on it and tap Ready, in under a minute. Your own private copy, no signup, no card.",
 };
 
-const DEMO_PROOF = `/proof/${SHOWCASE_PROOF_TOKEN}`;
+const B = ({ children }: { children: React.ReactNode }) => <b className="font-semibold text-ink">{children}</b>;
+
+const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
+  <li className="flex gap-3 text-base leading-relaxed text-ink-dim">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line-2 text-sm font-semibold text-ink">{n}</span>
+    <span>{children}</span>
+  </li>
+);
 
 export default async function DemoPage({ searchParams }: { searchParams: Promise<{ busy?: string; err?: string }> }) {
   const { busy, err } = await searchParams;
@@ -33,12 +38,20 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div className="mt-8 flex flex-col gap-5">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Try RollReady with a demo yard</h1>
           <p className="text-base leading-relaxed text-ink-dim">
-            Tap the button and you get your own copy of a made-up Odessa coil tubing company: 16 trucks and
-            trailers and about 65 pieces of iron and tools, with a few problems already in the yard. Start a load-out on CT&#8209;03
-            and check its pieces off: when you get to the BOP stack that&apos;s six days past its pressure test,
-            RollReady tells you not to load it. Then open the yard map, and look under Review uploads at the cert
-            photo a hand sent with a date that isn&apos;t on the paper.
+            Tap the button and you get your own copy of a made-up Odessa coil tubing yard, with every truck&apos;s list
+            already set. It opens on the board: every truck, and whether it&apos;s ready. Here&apos;s what to try:
           </p>
+          <ol className="flex flex-col gap-3">
+            <Step n={1}>
+              Tap <B>Check it</B> on CT&#8209;04. Tap <B>On truck</B> on each line, then tap <B>Ready</B>. You&apos;ll see READY
+              and the proof link the operator gets. The photo is optional in the demo.
+            </Step>
+            <Step n={2}>Now check another truck and skip a line. It reads NOT READY and says exactly what&apos;s missing.</Step>
+            <Step n={3}>
+              Open <B>Tools out</B> to see the setting tools by count: how many are ready, out with someone, and used and
+              waiting on the vendor&apos;s pickup.
+            </Step>
+          </ol>
           <p className="text-base leading-relaxed text-ink-dim">
             Nobody else sees your copy, and it deletes itself after 24 hours.
           </p>
@@ -62,7 +75,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             </p>
           ) : err ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-              The demo yard didn&apos;t load. Try once more. If it keeps happening, the proof link below still shows the yard.
+              The demo yard didn&apos;t load. Try once more. If it keeps happening, call or text me at {OWNER_PHONE}.
             </p>
           ) : null}
         </div>
@@ -70,40 +83,27 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
         <div className="mt-12 grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><ShieldCheck className="h-5 w-5 text-emerald-400" /></span>
-            <h2 className="text-lg font-semibold">See a load-out record</h2>
+            <h2 className="text-lg font-semibold">A record nobody can edit</h2>
             <p className="text-sm leading-relaxed text-ink-dim">
-              Every load-out saves a record nobody can edit, with its own link for the operator: every piece,
-              who scanned it, when, and its test date. This one is CT‑03 this morning, stopped in the yard
-              because its BOP stack is out of test.
+              Every check saves who cleared the truck, what they said was on it, the photo, and the time. The operator
+              gets a link that shows the same. When something&apos;s missing, there&apos;s no digging through group chats.
             </p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <a href="/l/showcase" target="_blank" rel="noreferrer"
-                className="flex min-h-11 w-fit items-center rounded-lg bg-bone px-4 text-sm font-semibold text-white hover:bg-bone-soft">
-                Open the load-out record
-              </a>
-              <a href={DEMO_PROOF} target="_blank" rel="noreferrer"
-                className="flex min-h-11 w-fit items-center rounded-lg border border-line-2 px-4 text-sm text-ink hover:bg-elevated">
-                The whole yard&apos;s proof link
-              </a>
-            </div>
           </div>
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-coal"><Smartphone className="h-5 w-5 text-ink-dim" /></span>
-            <h2 className="text-lg font-semibold">Works on a phone</h2>
+            <h2 className="text-lg font-semibold">Made for a phone</h2>
             <p className="text-sm leading-relaxed text-ink-dim">
-              The load-out scan is built for a phone in a gloved hand: big buttons, a loud red warning,
-              and it keeps your scans if you lose signal. Open the demo on your phone and try it.
+              Big buttons for a gloved hand, plain words, and your taps stay on the phone if you lose signal.
+              Open the demo on your phone and check a truck. It takes under a minute.
             </p>
-            <Image src="/screens/app-phone.webp" alt="A load-out scan on a phone: the BOP stack on CT-03 is out of test, don't load it"
-              width={750} height={1624} className="mx-auto mt-2 w-40 rounded-[22px] border-[5px] border-slate-900 shadow-lg" />
           </div>
         </div>
 
         <div id="your-yard" className="mt-12 flex flex-col items-center gap-3 rounded-2xl border border-line bg-surface p-6 text-center sm:p-8">
-          <h2 className="text-xl font-semibold">Want this set up with your iron?</h2>
+          <h2 className="text-xl font-semibold">Want this set up with your trucks?</h2>
           <p className="max-w-md text-sm leading-relaxed text-ink-dim">
-            Load it yourself for free, or I&apos;ll load it with you: $1,000 a yard, one time, and free for the first 10 yards I set up.
-            Bring your binder or spreadsheets and we&apos;ll load your iron, serials, and test dates together in one afternoon.
+            Set up your truck lists yourself for free, or I&apos;ll set them up with you: $1,000 a yard, one time, and free for the first 10 yards I set up.
+            Tell me what each truck has to leave with, and we&apos;ll make its short list together.
             After that it&apos;s $500 a yard per month. No contract, and never per-seat.
           </p>
           <DemoLeadForm />

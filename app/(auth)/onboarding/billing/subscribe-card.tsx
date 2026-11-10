@@ -9,9 +9,9 @@ import { clampYards, planLine, monthlyDollars, money, MAX_YARDS, PER_YARD_DOLLAR
  * still adjustable. Stripe's page charges exactly this.
  */
 const INCLUDED = [
-  "Load-out scans with a hard NOT READY on anything missing, out of test, or red-tagged",
-  "Packages, truck kits, and a locked record with a proof link for every load-out",
-  "Every yard on one screen, and every scan with a name on it",
+  "The quick check at the truck: tap what's on, one photo, Ready, with a hard NOT READY on anything missing",
+  "Truck lists and job lists, and a locked record with a proof link for every check",
+  "Every truck on one screen, Tools out for setting tools, and every check with a name on it",
   "Your whole crew, each with their own login. Never per-seat.",
 ];
 

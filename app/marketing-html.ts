@@ -1,11 +1,10 @@
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
-// RollReady homepage (the product; SYNNR is the company). One job: stop
-// costly load-out mistakes, so the right iron, in date, leaves every time.
-// Order: hero, what still costs shops money, how a load-out works, what it
-// saves, what's in it, pricing, who built it. Navy top with the real app in a
-// laptop and phone, light sections below. Real screenshots only
-// (public/screens, shot from /shot). No customer names or counts anywhere.
+// An older static version of the RollReady homepage (not imported anywhere;
+// app/page.tsx is the live one). Kept on the quick check pitch: make sure the
+// right stuff goes out, a check at the truck in under a minute, and a locked
+// record of who cleared the truck. No screenshots of the old full-check flow,
+// and no customer names or counts anywhere.
 
 const ICON = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`,
@@ -68,28 +67,26 @@ export const MARKETING_HTML = `
 <section class="x-hero band-navy" aria-labelledby="hero-h">
   <div class="container x-hero-grid">
     <div class="x-hero-copy">
-      <p class="x-kicker">Oilfield load-out software for service yards</p>
-      <h1 id="hero-h">Stop costly load-out mistakes.</h1>
-      <p class="x-lede">Make sure the right iron, in date, leaves your yard every time. Your hands scan each piece as it goes on the truck. Anything missing, out of test, or red-tagged stops the truck in the yard, and you keep a locked record of who loaded what.</p>
-      <p class="x-punch">One bad load-out costs more than a year of RollReady.</p>
+      <p class="x-kicker">Load-out checks for oilfield service yards</p>
+      <h1 id="hero-h">Make sure the right stuff goes out.</h1>
+      <p class="x-lede">RollReady is a check at the truck that takes under a minute. The hand taps what's on it, takes one photo, and taps Ready. If anything's missing, it reads NOT READY and says what. And you always know who cleared the truck.</p>
       <div class="x-cta">
         <a href="/demo" class="btn btn-primary">Open the live demo</a>
-        <a href="/l/showcase" class="btn btn-ghost">See a load-out</a>
+        <a href="${OWNER_PHONE_TEL}" class="btn btn-ghost">Call or text ${OWNER_PHONE}</a>
       </div>
       <p class="x-note">The demo is the real app with a made-up yard. No signup, no card. Ready for your own yard? <a href="/signup">Get started</a>.</p>
     </div>
-    <div class="x-devices">
-      <div class="x-laptop">
-        <div class="x-laptop-screen">
-          <img src="/screens/app-desktop.webp" width="2000" height="1250"
-            alt="RollReady Load out screen: trucks counted as Blocked, Ready to load, and Loaded out today. CT-03 is blocked at load-out because its BOP stack is out of test." fetchpriority="high"/>
-        </div>
-        <div class="x-laptop-base"></div>
-      </div>
-      <div class="x-phone">
-        <img src="/screens/app-phone.webp" width="750" height="1624"
-          alt="A load-out scan on a phone: the BOP stack on CT-03 just got scanned, RollReady says it's out of test and not to load it, and the truck's kit list shows which lines are filled."/>
-      </div>
+    <div class="x-card x-proofcard">
+      <h3>WL-07 · Plug set</h3>
+      <ul class="x-checks">
+        <li>${ICON.check}<span>Sinker bars: on truck</span></li>
+        <li>${ICON.check}<span>Crossover subs: on truck</span></li>
+        <li>${ICON.check}<span>Baker 20 setting tool: on truck</span></li>
+        <li>${ICON.check}<span>Frac plugs × 3: all 3 on</span></li>
+        <li>${ICON.check}<span>BOP rams closed for travel: done</span></li>
+        <li>${ICON.check}<span>Photo of the loaded truck: taken 5:01 AM</span></li>
+      </ul>
+      <p class="x-body"><b>READY.</b> Cleared by Dale Wooten at 5:02 AM. The record is locked, and the proof link is ready for the operator.</p>
     </div>
   </div>
 </section>
@@ -98,13 +95,11 @@ export const MARKETING_HTML = `
   <div class="container">
     <div class="x-head">
       <h2 class="x-h2" id="problem-h">What still costs shops money</h2>
-      <p class="x-sub">The first one happened to my crew. The rest are misses every shop out here has seen. None of them are hard to catch. They get caught at the gate because nobody checked in the yard.</p>
+      <p class="x-sub">The everyday miss is the wrong gear on the truck, a hotshot to fix it, and nobody knowing who cleared the truck.</p>
     </div>
     <div class="x-grid x-grid-2">
-      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>Expired lubricator cert on a major's location</h3><p>The company man checked the paper and turned the crew around at the gate. $8,000 in NPT.</p></div></article>
-      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>BOP test lapsed, found on location</h3><p>A $10,000+ NPT day, and an operator who remembers it the next time work gets handed out.</p></div></article>
-      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>Right truck, missing a piece</h3><p>The plug valve the job needed is still on the rack. The crew waits on location for a hotshot.</p></div></article>
-      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>Red-tagged iron that went anyway</h3><p>Somebody tagged it out. It still got loaded, because nothing on the way to the truck stopped it.</p></div></article>
+      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>Right truck, missing a piece</h3><p>The sinker bars are still on the rack. The crew waits on location for a hotshot.</p></div></article>
+      <article class="x-card x-miss"><span class="x-ic x-ic-red">${ICON.alert}</span><div><h3>"Truck's loaded" in a group text</h3><p>Something's missing, and nobody can say who cleared the truck or what they said was on it.</p></div></article>
     </div>
   </div>
 </section>
@@ -112,22 +107,16 @@ export const MARKETING_HTML = `
 <section class="x-section" id="how" aria-labelledby="how-h">
   <div class="container">
     <div class="x-head">
-      <p class="x-kicker x-kicker-blue">How a load-out works</p>
-      <h2 class="x-h2" id="how-h">Three steps. Every truck, every time.</h2>
+      <p class="x-kicker x-kicker-blue">How it works</p>
+      <h2 class="x-h2" id="how-h">Under a minute at the truck</h2>
     </div>
     <ol class="x-grid x-grid-3 x-steps">
-      <li class="x-card x-step"><span class="x-num">1</span><h3>Set what goes on the truck</h3><p>Build your packages once, like a Standard Coil Package. Every truck keeps its own default kit. Need something different today? Add a quick list for that job.</p></li>
-      <li class="x-card x-step"><span class="x-num">2</span><h3>Scan it on</h3><p>The hand taps each piece's tag or scans its QR code as it's loaded. Out of test, red-tagged, or not on the list gets called out right then: <b>Don't load it.</b> If anything is still missing at the end, the truck reads NOT READY. A hand can't wave it through.</p></li>
-      <li class="x-card x-step"><span class="x-num">3</span><h3>Locked record and proof</h3><p>Every load-out saves what left, who scanned each piece, and when. Nobody can edit it. A proof link is made with it, so the operator gets the record instead of a binder.</p></li>
+      <li class="x-card x-step"><span class="x-num">1</span><h3>Set each truck's list once</h3><p>A manager picks the 5 to 8 things that cause a hotshot when they get left behind. Add a job list like Plug set if you want one. No iron to enter, no serials, no cert dates.</p></li>
+      <li class="x-card x-step"><span class="x-num">2</span><h3>Check it at the truck</h3><p>The hand taps the truck, taps On truck on each line, taps checks like BOP rams closed for travel, takes one photo, and taps Ready. Anything not tapped reads <b>NOT READY</b> and says what's missing.</p></li>
+      <li class="x-card x-step"><span class="x-num">3</span><h3>The record locks</h3><p>Who cleared the truck, what they said was on it, the photo, and the time. Nobody can edit it. The operator gets a proof link that shows the same.</p></li>
     </ol>
-    <div class="x-browser">
-      <div class="x-browser-bar"><i></i><i></i><i></i><span>synnr.io/app</span></div>
-      <img src="/screens/app-desktop.webp" width="2000" height="1250" loading="lazy"
-        alt="RollReady Load out screen: blocked trucks first with the reason in red, then trucks ready to load, each with a button to start its load-out scan"/>
-    </div>
-    <p class="x-fine x-center">Screenshots of the real app, not mockups. CT-03's BOP stack is six days past its pressure test, so the load-out stops it in the yard.</p>
     <div class="x-cta x-cta-center">
-      <a href="/demo" class="btn btn-primary">Run a load-out in the demo</a>
+      <a href="/demo" class="btn btn-primary">Check a truck in the demo</a>
     </div>
   </div>
 </section>
@@ -135,13 +124,13 @@ export const MARKETING_HTML = `
 <section class="x-section band-light" id="value" aria-labelledby="value-h">
   <div class="container">
     <div class="x-head">
-      <h2 class="x-h2" id="value-h">What one caught mistake is worth</h2>
+      <h2 class="x-h2" id="value-h">Why it beats a group text</h2>
     </div>
     <div class="x-grid x-grid-4">
-      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.dollar}</span><h3>Money</h3><p>One turnaround at the gate runs $8,000 to $10,000 or more. A full year of RollReady is $6,000.</p></article>
-      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.clock}</span><h3>Time</h3><p>No digging through binders or the testing company's portal at 4 AM. Hands scan as they load, and the yard manager sees every truck on one screen.</p></article>
-      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.shield}</span><h3>Reputation</h3><p>Operators remember the crew that got sent home. Show up with the paper right and the proof link already sent.</p></article>
-      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.stop}</span><h3>Mistakes</h3><p>Missing, expired, or red-tagged iron stops the truck in the yard. The check doesn't depend on who's loading that morning.</p></article>
+      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.clock}</span><h3>Fast</h3><p>Under a minute at the truck. Tap each line, one photo, Ready.</p></article>
+      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.stop}</span><h3>Says what's missing</h3><p>Anything not tapped reads NOT READY in the yard: Not on the truck: Sinker bars.</p></article>
+      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.user}</span><h3>A name on it</h3><p>When something's missing, the record shows who cleared the truck and what they said was on it. No digging through group chats.</p></article>
+      <article class="x-card x-val"><span class="x-ic x-ic-blue">${ICON.link}</span><h3>Proof for the operator</h3><p>The operator gets a link with the same record and the photo of the loaded truck.</p></article>
     </div>
   </div>
 </section>
@@ -151,34 +140,27 @@ export const MARKETING_HTML = `
     <div class="x-split">
       <div>
         <p class="x-kicker x-kicker-blue">What's in it</p>
-        <h2 class="x-h2" id="product-h">Built around the load-out, and nothing else</h2>
-        <p class="x-body">No dispatch, no invoicing, no ticketing. RollReady does one job: make sure what goes on the truck is right, and prove it.</p>
-        <p class="x-body">Your testing company's tag tells you about one piece. RollReady tells you whether the truck can leave.</p>
+        <h2 class="x-h2" id="product-h">Built around the truck, and nothing else</h2>
+        <p class="x-body">No dispatch, no invoicing, no ticketing. RollReady does one job: make sure the right stuff goes out, and show who cleared the truck.</p>
       </div>
       <div class="x-card x-proofcard">
-        <span class="x-ic x-ic-blue">${ICON.camera}</span>
-        <h3>A piece only turns green from a photo of the cert</h3>
-        <p>Nobody clears a test by typing a new date. Someone takes a photo of the new cert, and RollReady reads it first:</p>
+        <span class="x-ic x-ic-blue">${ICON.grid}</span>
+        <h3>Every truck on one screen</h3>
         <ul class="x-checks">
-          <li>${ICON.check}<span>The serial on the cert has to match the iron</span></li>
-          <li>${ICON.check}<span>The test date has to be printed on the paper</span></li>
-          <li>${ICON.check}<span>It has to be the right kind of test</span></li>
-          <li>${ICON.check}<span>One photo can only clear one piece</span></li>
+          <li>${ICON.check}<span>Ready, not ready, out on a job, or not checked yet</span></li>
+          <li>${ICON.check}<span>A truck that isn't ready shows what's missing</span></li>
+          <li>${ICON.check}<span>Tap It's back when a truck gets back from a job</span></li>
         </ul>
-        <p class="x-fine">If anything doesn't match, the piece stays red until a manager looks at the photo.</p>
       </div>
     </div>
 
     <div class="x-grid x-grid-3 x-features">
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.box}</span><h3>Packages and truck kits</h3><p>Reusable packages for each kind of job, a default kit for every truck, and quick one-off lists. The load-out checks against what the job calls for.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.qr}</span><h3>Works with the tags on your iron</h3><p>Scan the NFC tags your testing company already put on, from an Android phone. Write new tags yourself, or print QR tags that work on any phone.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>A hard stop, not a warning</h3><p>Missing, expired, or red-tagged means NOT READY. Only a manager can roll it anyway, with their name and reason on the record and an email to the office.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.user}</span><h3>Every scan has a name on it</h3><p>Each hand logs in as themselves. Every scan, load-out, move, and cert update is stamped with who did it and when.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.grid}</span><h3>Every yard on one screen</h3><p>Filter by yard. See which trucks are ready, blocked, or already loaded out, and who did what today.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.search}</span><h3>Find any piece</h3><p>Search by serial, type, truck, or yard, and see its status and when its next test is due.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.signal}</span><h3>Keeps working without signal</h3><p>In a dead spot at the back of the yard, scans save on the phone and send by themselves when you're back in range.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.hand}</span><h3>Made for gloves</h3><p>Big buttons and a plain red or green answer you can read in the sun.</p></article>
-      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.link}</span><h3>Proof for the operator</h3><p>Every load-out gets its own link: what's on the truck, each piece's serial and test date, and who loaded it.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.box}</span><h3>Truck lists and job lists</h3><p>A short list for each truck, set once, plus job lists like Plug set when a job needs more.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.truck}</span><h3>Tools out</h3><p>Setting tools like Silver Fox and Baker 20, counted per yard: ready, out with someone, and used waiting on the vendor's pickup.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.signal}</span><h3>Keeps working without signal</h3><p>In a dead spot at the back of the yard, the taps stay on the phone until there's signal.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.hand}</span><h3>Made for gloves</h3><p>Big buttons and a plain READY or NOT READY you can read in the sun.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.user}</span><h3>Every check has a name on it</h3><p>Each hand logs in as themselves. Every check is stamped with who did it and when.</p></article>
+      <article class="x-card"><span class="x-ic x-ic-blue">${ICON.shield}</span><h3>Want more?</h3><p>A yard can switch on the full check in Settings: every piece scanned, with its tests and cert paper checked.</p></article>
     </div>
   </div>
 </section>
@@ -197,7 +179,7 @@ export const MARKETING_HTML = `
         <ul class="x-checks">
           <li>${ICON.check}<span>Your whole crew, each with their own login. Never per-seat.</span></li>
           <li>${ICON.check}<span>No contract. Cancel anytime.</span></li>
-          <li>${ICON.check}<span>Load it yourself, free. Or I'll load it for you: free for the first 10 yards, then $1,000 a yard, one time.</span></li>
+          <li>${ICON.check}<span>Set up your truck lists yourself, free. Or I'll set them up with you: $1,000 a yard, one time, and free for the first 10 yards I set up.</span></li>
           <li>${ICON.check}<span>Your data is yours. Export it as a spreadsheet anytime.</span></li>
         </ul>
         <a href="/signup" class="btn btn-primary x-block">Get started</a>
@@ -214,6 +196,7 @@ export const MARKETING_HTML = `
       <span class="x-ic x-ic-blue">${ICON.shield}</span>
       <h2 class="x-h2 x-founder-h" id="about-h">Built by someone who's been turned around at the gate</h2>
       <p>I ran wireline in the Permian for five years. I was on the crew that got sent home over an expired lubricator cert, and it cost us $8,000. RollReady is the check I wish we'd had in the yard that morning.</p>
+      <p>What yards have told me since is that the everyday miss is the wrong gear on the truck, a hotshot to fix it, and nobody knowing who cleared the truck.</p>
       <p>If you want to see it with your own trucks in it, call or text me at <a href="${OWNER_PHONE_TEL}">${OWNER_PHONE}</a>.</p>
       <p class="x-sign">Caden Cain</p>
       <p class="x-fine">You won't find fake logos or customer counts on this site. RollReady is new, and I'd rather say so.</p>
@@ -223,8 +206,8 @@ export const MARKETING_HTML = `
 
 <section class="x-close band-navy" aria-labelledby="close-h">
   <div class="container">
-    <h2 class="x-h2" id="close-h">Catch it in the yard, not at the gate</h2>
-    <p class="x-lede">Open the demo on your phone and run a load-out, start your own yard today, or call and I'll set it up with you.</p>
+    <h2 class="x-h2" id="close-h">Every truck leaves with the right gear.</h2>
+    <p class="x-lede">Check a truck in the demo on your phone. It takes under a minute. Or call, and I'll set up your trucks with you.</p>
     <div class="x-cta x-cta-center">
       <a href="/demo" class="btn btn-primary">Open the live demo</a>
       <a href="/signup" class="btn btn-ghost">Get started</a>
@@ -241,7 +224,7 @@ export const MARKETING_HTML = `
       <span class="brand-sm">RollReady by SYNNR</span>
       <a href="${OWNER_PHONE_TEL}">Call or text ${OWNER_PHONE}</a>
       <a href="/demo">Live demo</a>
-      <a href="/readiness-audit">Send your iron list</a>
+      <a href="/readiness-audit">Send your truck lists</a>
       <a href="/glossary">Glossary</a>
       <a href="/login">Log in</a>
       <a href="/legal/terms">Terms</a>
