@@ -1,7 +1,8 @@
 import { requireCompany } from "@/lib/saas/auth";
 import Ask from "./_synnr/ask";
 
-export const metadata = { title: "Ask" };
+// The layout's "%s · SYNNR" doesn't reach a page in its own folder.
+export const metadata = { title: { absolute: "SYNNR" } };
 export const dynamic = "force-dynamic";
 
 /**

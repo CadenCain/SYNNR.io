@@ -383,9 +383,9 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
             </div>
           ) : null}
         </Card>
-      ) : (
+      ) : !manager ? (
         <p className="text-sm text-ink-faint">Only a manager can add people. Ask whoever runs your account for the crew link.</p>
-      )}
+      ) : null}
     </>
   );
 }
