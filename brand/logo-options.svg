@@ -2,37 +2,38 @@
   <rect width="1200" height="460" fill="#08090a"/>
   <g stroke="#1d1f23" stroke-width="1"><line x1="400" y1="40" x2="400" y2="420"/><line x1="800" y1="40" x2="800" y2="420"/></g>
 
-  <!-- A: the block cut into an S (on the site now) -->
+  <!-- D: leaned forward, cut by two wedges, sharp corners -->
   <g transform="translate(60 60)">
-    <text x="0" y="14" fill="#a1a4aa" font-size="15">A. On the site now</text>
+    <text x="0" y="14" fill="#a1a4aa" font-size="15">D. On the site now</text>
+    <path transform="translate(0 44) scale(4)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f"/>
+    <path transform="translate(0 216) scale(1.25)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f"/>
+    <text x="56" y="249" fill="#ededef" font-size="34" font-weight="600" letter-spacing="6">SYNNR</text>
+    <rect x="0" y="296" width="44" height="44" rx="9" fill="#15171a"/>
+    <path transform="translate(8 304) scale(0.875)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f"/>
+    <path transform="translate(64 310) scale(0.5)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f"/>
+    <path transform="translate(120 304) scale(0.875)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ededef"/>
+    <text x="160" y="323" fill="#71757d" font-size="13">also works in white</text>
+  </g>
+
+  <!-- E: the same mark with softened corners -->
+  <g transform="translate(460 60)">
+    <text x="0" y="14" fill="#a1a4aa" font-size="15">E. Soft corners</text>
+    <g transform="translate(0 44) scale(4)"><path transform="translate(1.2 1.2) scale(0.925)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f" stroke="#ff5a1f" stroke-width="2.2" stroke-linejoin="round"/></g>
+    <g transform="translate(0 216) scale(1.25)"><path transform="translate(1.2 1.2) scale(0.925)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f" stroke="#ff5a1f" stroke-width="2.2" stroke-linejoin="round"/></g>
+    <text x="56" y="249" fill="#ededef" font-size="34" font-weight="600" letter-spacing="6">SYNNR</text>
+    <rect x="0" y="296" width="44" height="44" rx="9" fill="#15171a"/>
+    <g transform="translate(8 304) scale(0.875)"><path transform="translate(1.2 1.2) scale(0.925)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f" stroke="#ff5a1f" stroke-width="2.2" stroke-linejoin="round"/></g>
+    <g transform="translate(64 310) scale(0.5)"><path transform="translate(1.2 1.2) scale(0.925)" d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f" stroke="#ff5a1f" stroke-width="2.2" stroke-linejoin="round"/></g>
+  </g>
+
+  <!-- A: the upright block S -->
+  <g transform="translate(860 60)">
+    <text x="0" y="14" fill="#a1a4aa" font-size="15">A. The one before</text>
     <path transform="translate(0 44) scale(4)" d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f"/>
     <path transform="translate(0 216) scale(1.25)" d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f"/>
     <text x="56" y="249" fill="#ededef" font-size="34" font-weight="600" letter-spacing="6">SYNNR</text>
     <rect x="0" y="296" width="44" height="44" rx="9" fill="#15171a"/>
     <path transform="translate(8 304) scale(0.875)" d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f"/>
     <path transform="translate(64 310) scale(0.5)" d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f"/>
-    <text x="96" y="323" fill="#71757d" font-size="13">app icon and browser tab size</text>
-  </g>
-
-  <!-- B: a stepped S drawn as one line -->
-  <g transform="translate(460 60)">
-    <text x="0" y="14" fill="#a1a4aa" font-size="15">B. One line</text>
-    <path transform="translate(0 44) scale(4)" d="M28 5H8.5V16H23.5V27H4" fill="none" stroke="#ff5a1f" stroke-width="5" stroke-linejoin="miter"/>
-    <path transform="translate(0 216) scale(1.25)" d="M28 5H8.5V16H23.5V27H4" fill="none" stroke="#ff5a1f" stroke-width="5" stroke-linejoin="miter"/>
-    <text x="56" y="249" fill="#ededef" font-size="34" font-weight="600" letter-spacing="6">SYNNR</text>
-    <rect x="0" y="296" width="44" height="44" rx="9" fill="#15171a"/>
-    <path transform="translate(8 304) scale(0.875)" d="M28 5H8.5V16H23.5V27H4" fill="none" stroke="#ff5a1f" stroke-width="5" stroke-linejoin="miter"/>
-    <path transform="translate(64 310) scale(0.5)" d="M28 5H8.5V16H23.5V27H4" fill="none" stroke="#ff5a1f" stroke-width="5" stroke-linejoin="miter"/>
-  </g>
-
-  <!-- C: the block split by one diagonal cut -->
-  <g transform="translate(860 60)">
-    <text x="0" y="14" fill="#a1a4aa" font-size="15">C. Split block</text>
-    <g transform="translate(0 44) scale(4)" fill="#ff5a1f"><path d="M2 2H22L2 22Z"/><path d="M30 10V30H10Z"/></g>
-    <g transform="translate(0 216) scale(1.25)" fill="#ff5a1f"><path d="M2 2H22L2 22Z"/><path d="M30 10V30H10Z"/></g>
-    <text x="56" y="249" fill="#ededef" font-size="34" font-weight="600" letter-spacing="6">SYNNR</text>
-    <rect x="0" y="296" width="44" height="44" rx="9" fill="#15171a"/>
-    <g transform="translate(8 304) scale(0.875)" fill="#ff5a1f"><path d="M2 2H22L2 22Z"/><path d="M30 10V30H10Z"/></g>
-    <g transform="translate(64 310) scale(0.5)" fill="#ff5a1f"><path d="M2 2H22L2 22Z"/><path d="M30 10V30H10Z"/></g>
   </g>
 </svg>

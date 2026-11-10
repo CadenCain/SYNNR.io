@@ -24,7 +24,7 @@ export default function OgImage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <svg width="34" height="34" viewBox="0 0 32 32">
-            <path d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z" fill="#ff5a1f" />
+            <path d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z" fill="#ff5a1f" />
           </svg>
           <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: 6 }}>SYNNR</span>
         </div>

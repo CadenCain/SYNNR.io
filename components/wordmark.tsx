@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The SYNNR mark: a solid block cut into an S by two slanted slots. One
- * shape, one color, readable at the size of a browser tab.
+ * The SYNNR mark: a block leaned forward and cut into an S by two wedges.
+ * One shape, one color, readable at the size of a browser tab.
  */
-export const MARK_PATH = "M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z";
+export const MARK_PATH = "M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z";
 
 export function Mark({ className }: { className?: string }) {
   return (

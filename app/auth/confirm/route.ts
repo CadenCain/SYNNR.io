@@ -34,7 +34,7 @@ body{margin:0;min-height:100dvh;display:flex;align-items:center;justify-content:
 h1{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:.16em;margin:0 0 14px}h1 svg{width:18px;height:18px;fill:#ff5a1f}p{color:var(--dim);margin:0 0 18px;font-size:15px}
 button{width:100%;min-height:44px;border:0;border-radius:8px;background:#ededef;color:#08090a;font:500 15px -apple-system,Segoe UI,sans-serif;cursor:pointer}button:hover{background:#fff}
 </style></head><body><form class="card" method="post" action="/auth/confirm">
-<h1><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 2H30V8H13L9 13H30V30H2V24H19L23 19H2Z"/></svg>SYNNR</h1><p>Tap the button to ${type === "recovery" ? "set a new password for your login" : "keep going"}. The link works once.</p>
+<h1><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 3H30L28.2 9H12L25.4 18L22 29H2L3.8 23H20L6.6 14Z"/></svg>SYNNR</h1><p>Tap the button to ${type === "recovery" ? "set a new password for your login" : "keep going"}. The link works once.</p>
 <input type="hidden" name="token_hash" value="${esc(tokenHash)}"><input type="hidden" name="type" value="${esc(type)}"><input type="hidden" name="next" value="${esc(next)}">
 <button type="submit">${label}</button></form></body></html>`;
   return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer" } });
