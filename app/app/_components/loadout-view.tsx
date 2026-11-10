@@ -21,6 +21,12 @@ const CHIP: Record<TruckStatus, { cls: string; label: string; edge: string }> = 
   ready: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Ready to load", edge: "border-l-emerald-500" },
   out: { cls: "border-bone/30 bg-bone/10 text-bone", label: "Out on job", edge: "border-l-bone" },
 };
+/** The quick check: a truck is NOT READY (checked, something missing), out (checked READY and gone), or in the yard waiting on its check. */
+const QUICK_CHIP: Record<TruckStatus, { cls: string; label: string; edge: string }> = {
+  blocked: { cls: "border-red-500/40 bg-red-500/10 text-red-400", label: "NOT READY", edge: "border-l-red-500" },
+  ready: { cls: "border-line-2 bg-elevated text-ink-dim", label: "In the yard", edge: "border-l-line-2" },
+  out: { cls: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400", label: "Out, READY", edge: "border-l-emerald-500" },
+};
 
 export interface ActivityLine { id: string; time: string; actor: string | null; message: string; tone: "red" | "amber" | "green" | null }
 export interface PersonWeek {
@@ -122,9 +128,10 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <h1 className="text-[26px] font-semibold tracking-tight">{quick ? "Trucks" : "Load out"}</h1>
-          <p className="mt-0.5 text-sm text-ink-dim">{summary}</p>
+          <p className="mt-0.5 text-sm text-ink-dim">{quick ? "Tap a truck to check it. A truck that's NOT READY says what's missing." : summary}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* The quick check's menu already has these: no second row of buttons. */}
+        <div className={quick ? "hidden" : "flex flex-wrap gap-2"}>
           {quick ? null : <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check in tools or loose iron</Link>}
           <Link href="/app/signout" className={buttonClass("outline", "sm")}><Wrench className="h-4 w-4" /> Tools out</Link>
           <Link href="/app/packages" className={buttonClass("outline", "sm")}><Boxes className="h-4 w-4" /> {quick ? "Truck lists" : "Packages & kits"}</Link>
@@ -173,11 +180,15 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
 
       {trucks.length > 0 ? (
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          {[
+          {(quick ? [
+            { n: counts.blocked, label: "NOT READY", tone: counts.blocked ? "text-red-400" : "text-ink", sub: null },
+            { n: counts.out, label: "Out, READY", tone: "text-emerald-400", sub: counts.outTooLong ? `${counts.outTooLong} out too long` : null },
+            { n: counts.ready, label: "In the yard", tone: "text-ink", sub: null },
+          ] : [
             { n: counts.blocked, label: "Trucks blocked", tone: counts.blocked ? "text-red-400" : "text-ink", sub: null },
             { n: counts.ready, label: "Ready to load", tone: "text-emerald-400", sub: null },
             { n: counts.out, label: "Out on jobs", tone: "text-bone", sub: counts.outTooLong ? `${counts.outTooLong} out too long` : null },
-          ].map((x) => (
+          ]).map((x) => (
             <div key={x.label} className="rounded-2xl border border-line bg-surface px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.05)] sm:px-4">
               <div className="text-[12px] font-medium leading-tight text-ink-dim sm:text-[13px]">{x.label}</div>
               <div className={cn("mt-1 text-3xl font-semibold tabular-nums", x.tone)}>{x.n}</div>
@@ -222,7 +233,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </div>
       )}
 
-      {week && trucks.length > 0 ? (
+      {week && trucks.length > 0 && !quick ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Last 7 days</h2>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -240,7 +251,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         </section>
       ) : null}
 
-      {byPerson.length > 0 ? (
+      {byPerson.length > 0 && !quick ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-ink-dim">Last 7 days, by person</h2>
           {/* Phones: one line per person, no sideways scrolling. */}
@@ -290,9 +301,9 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
 
       {trucks.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-ink-dim">Who did what today</h2>
+          <h2 className="text-sm font-semibold text-ink-dim">{quick ? "Today" : "Who did what today"}</h2>
           {activity.length === 0 ? (
-            <Card className="p-4 text-sm text-ink-faint">Nothing yet today. Load-outs, moves, cert uploads, and overrides show up here with a name and a time.</Card>
+            <Card className="p-4 text-sm text-ink-faint">{quick ? "Nothing yet today. Every truck checked shows up here with a name and a time." : "Nothing yet today. Load-outs, moves, cert uploads, and overrides show up here with a name and a time."}</Card>
           ) : (
             <Card className="divide-y divide-line">
               {activity.map((a) => (
@@ -319,15 +330,15 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard, quick = false }
 }) {
   const { t, pieces, status, why, whyTone, loadoutLine, doneToday, loadoutId, overridden, outTooLong, stillOut } = row;
   return (
-    <Card className={cn("flex flex-col gap-3 border-l-4 p-4", outTooLong ? "border-l-red-500" : CHIP[status].edge)}>
+    <Card className={cn("flex flex-col gap-3 border-l-4 p-4", outTooLong ? "border-l-red-500" : (quick ? QUICK_CHIP : CHIP)[status].edge)}>
           {isMine ? <div className="-mb-1 text-xs font-semibold text-bone">Your truck</div> : null}
           <Link href={`/app/units/${t.id}`} className="group flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="break-words text-lg font-semibold group-hover:text-bone">{t.name}</span>
                 <span className={cn("whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold",
-                  outTooLong ? "border-red-500/40 bg-red-500/10 text-red-400" : overridden ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : CHIP[status].cls)}>
-                  {outTooLong ? "Out too long" : overridden ? "Out on override" : CHIP[status].label}
+                  outTooLong ? "border-red-500/40 bg-red-500/10 text-red-400" : overridden ? "border-amber-500/40 bg-amber-500/10 text-amber-400" : (quick ? QUICK_CHIP : CHIP)[status].cls)}>
+                  {outTooLong ? "Out too long" : overridden ? "Out on a manager's OK" : (quick ? QUICK_CHIP : CHIP)[status].label}
                 </span>
               </div>
               <div className="text-[13px] text-ink-faint">
@@ -368,7 +379,7 @@ function TruckCard({ row, isMine, plan, manager, hand, showYard, quick = false }
                 <ScanLine className="h-5 w-5" /> {doneToday ? "Scan again" : "Start load-out"}
               </Link>
             )}
-            {manager ? (
+            {manager && !quick ? (
               <Link href={`/app/units/${t.id}/plan`} className={buttonClass("outline", "lg", "h-14 shrink-0 px-4")} aria-label={`Plan ${t.name}'s next job`}>
                 <ListTodo className="h-5 w-5" /> <span className="hidden sm:inline">Plan</span>
               </Link>

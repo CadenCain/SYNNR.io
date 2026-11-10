@@ -36,6 +36,8 @@ const weekAgoIso = () => new Date(Date.now() - 7 * 86400e3).toISOString();
 const sinceIso = () => new Date(Date.now() - 36 * 3600e3).toISOString();
 const clock = () => Date.now();
 
+const QUICK_FEED = new Set(["loadout_ready", "loadout_blocked", "rolled_override", "returned", "yard_check", "signed_out", "tools_back", "vendor_visit", "plan_set"]);
+
 const TONE: Record<string, ActivityLine["tone"]> = {
   loadout_blocked: "red", check_not_ready: "red", alert_failed: "red", asset_status: "red", unscanned_trip: "red",
   red_tagged: "red", bad_iron_out: "red",
@@ -235,6 +237,8 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const zoneOfEvent = (e: { unit_id: string | null }) => (e.unit_id ? zoneOfUnit.get(e.unit_id) : undefined) ?? homeZone;
   const activity: ActivityLine[] = ((eventRows ?? []) as { id: string; kind: string; actor: string | null; message: string; unit_id: string | null; created_at: string }[])
     .filter((e) => { const tz = zoneOfEvent(e); return dayIn(e.created_at, tz) === (tz === YARD_TZ ? today : dayIn(planNow, tz)) && inYard(e); })
+    // The quick check's feed: trucks checked, trucks back, overrides, and setting tools. No iron or paper.
+    .filter((e) => !quick || QUICK_FEED.has(e.kind))
     .slice(0, 15)
     .map((e) => ({
       id: e.id,

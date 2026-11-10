@@ -241,7 +241,7 @@ export function buildLoadOutTrucks(
     }
     const backBy = back?.returned_by ? ` by ${back.returned_by}` : "";
     const loadoutLine = isBack && back
-      ? `Checked in ${dayOf(back.finished_at) === today ? `today ${timeOf(back.finished_at)}` : shortDay(back.finished_at)}${backBy}`
+      ? `${opts.quick ? "Back in the yard" : "Checked in"} ${dayOf(back.finished_at) === today ? `today ${timeOf(back.finished_at)}` : shortDay(back.finished_at)}${backBy}`
       : s ? `${opts.quick ? "Last checked" : "Last load-out"} ${shortDay(s.finished_at)}${by}` : null;
     const left = isBack ? outNames.get(t.id) ?? [] : [];
     const stillOut = left.length ? `Still out on the job: ${left.slice(0, 3).join(", ")}${left.length > 3 ? ` and ${left.length - 3} more` : ""}` : null;
