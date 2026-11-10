@@ -15,10 +15,11 @@ type Row = { label: string; qty?: string; critical?: boolean; on?: boolean; why?
 
 const JOB: Row[] = [
   { label: "Free point tool", critical: true, on: true },
-  { label: "Undersized cutters", qty: "2", critical: true, why: "Restriction in the hole. Take undersized cutters." },
-  { label: "CCL", on: true },
-  { label: "Sinker bars", qty: "4", on: true },
-  { label: "Lubricator" },
+  { label: "Small jet cutters", qty: "2", critical: true, why: "Tight spot in the tubing. Bring the small jet cutters." },
+  { label: "Gauge cutter", critical: true, on: true },
+  { label: "Jars", on: true },
+  { label: "Weight bars", on: true },
+  { label: "CCL, 1-11/16" },
 ];
 
 function Dot({ on, critical }: { on?: boolean; critical?: boolean }) {
@@ -31,7 +32,7 @@ function Dot({ on, critical }: { on?: boolean; critical?: boolean }) {
 
 /** A plain dispatch, the kind a crew already gets, with the line that matters marked. */
 export function DispatchShot() {
-  const rows: [string, string][] = [["Job type", "Pipe recovery"], ["Truck", "WL-07"], ["Start", "7:00 AM"], ["Tubing", "2-3/8"], ["Pressure control", "Lubricator"]];
+  const rows: [string, string][] = [["Job type", "Pipe recovery, FP and cut"], ["Truck", "WL-07"], ["Start", "7:00 AM"], ["Tubing", "2-3/8"], ["Pressure control", "Lubricator"]];
   return (
     <div aria-hidden className="overflow-hidden rounded-2xl border border-line-2 bg-[#e9eaec] text-[#17191c]">
       <div className="border-b border-black/10 px-5 py-3 text-[12px] text-black/50">Your dispatch</div>
@@ -43,7 +44,7 @@ export function DispatchShot() {
         ))}
         <div className="py-3 text-[14px]">
           <dt className="text-black/50">Remarks</dt>
-          <dd className="mt-1 font-medium leading-snug"><span className="bg-[#ff5a1f]/25 px-0.5">Restriction in the hole. Take undersized cutters.</span></dd>
+          <dd className="mt-1 font-medium leading-snug"><span className="bg-[#ff5a1f]/25 px-0.5">Tight spot in the tubing. Bring the small jet cutters.</span></dd>
         </div>
       </dl>
     </div>
@@ -66,8 +67,8 @@ export function ReadShot() {
           <dt className="text-[14px] text-ink-faint">The dispatch says to bring</dt>
           <dd className="mt-2 flex items-start justify-between gap-3">
             <span>
-              <span className="block text-[15px] text-ink">Undersized cutters</span>
-              <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Restriction in the hole. Take undersized cutters.</span>
+              <span className="block text-[15px] text-ink">Small jet cutters</span>
+              <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Tight spot in the tubing. Bring the small jet cutters.</span>
             </span>
             <span className={`${tag} text-bone`}>Critical</span>
           </dd>
@@ -79,7 +80,7 @@ export function ReadShot() {
 
 /** A shop's own list for one kind of job. */
 export function ListShot() {
-  const rows: Row[] = [{ label: "Free point tool", critical: true }, { label: "Cutters", qty: "2", critical: true }, { label: "CCL" }, { label: "Sinker bars", qty: "4" }, { label: "Lubricator" }];
+  const rows: Row[] = [{ label: "Free point tool", critical: true }, { label: "Cutters, right size", critical: true }, { label: "Gauge cutter, right size", critical: true }, { label: "Jars" }, { label: "Weight bars" }, { label: "CCL, 1-11/16 or 1-3/8" }];
   return (
     <div aria-hidden className={panel}>
       <div className="flex items-baseline justify-between gap-3 border-b border-line px-5 py-3.5">
@@ -137,9 +138,9 @@ export function JobShot({ ready = false }: { ready?: boolean }) {
 /** The manager's board: every job, how much is on, what's still critical. */
 export function BoardShot() {
   const jobs = [
-    { truck: "WL-07", job: "Pipe recovery", on: 3, total: 5, note: "1 critical still off", tone: "text-bone", ready: false },
-    { truck: "WL-03", job: "Set a packer", on: 9, total: 9, note: "Cleared 5:10 AM", tone: "text-emerald-400", ready: true },
-    { truck: "WL-11", job: "Plug and cement", on: 2, total: 8, note: "2 critical still off", tone: "text-bone", ready: false },
+    { truck: "WL-07", job: "Pipe recovery", on: 4, total: 6, note: "1 critical still off", tone: "text-bone", ready: false },
+    { truck: "WL-03", job: "Set a packer", on: 3, total: 3, note: "Cleared 5:10 AM", tone: "text-emerald-400", ready: true },
+    { truck: "WL-11", job: "Plug and cement", on: 2, total: 11, note: "2 critical still off", tone: "text-bone", ready: false },
   ];
   const stat = (n: number, label: string, tone = "text-ink") => (
     <div className="flex items-baseline gap-2.5 px-5 py-4">

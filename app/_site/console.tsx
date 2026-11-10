@@ -10,21 +10,21 @@ import { Check, Paperclip } from "lucide-react";
 type Item = { label: string; qty?: string; critical?: boolean; on?: boolean };
 
 const TAKE: Item[] = [
-  { label: "Baker 20 setting tool", critical: true, on: true },
-  { label: "Adapter kit, 5-1/2", critical: true, on: true },
-  { label: "Power charges", qty: "2", critical: true },
-  { label: "Igniters", qty: "2", critical: true, on: true },
-  { label: "Gauge ring and junk basket", critical: true, on: true },
-  { label: "CCL", on: true },
-  { label: "Sinker bars", qty: "4", on: true },
-  { label: "Crossover subs" },
-  { label: "Pump-in sub" },
+  { label: "Setting tool", critical: true, on: true },
+  { label: "Setting sleeve", critical: true, on: true },
+  { label: "Firing head", critical: true, on: true },
+  { label: "Plug, 5-1/2", critical: true, on: true },
+  { label: "Dump bailer, 3-1/2", critical: true },
+  { label: "Bags of cement", critical: true, on: true },
+  { label: "Glass, 3-1/2", on: true },
+  { label: "CCL, 2-3/4", on: true },
+  { label: "Buckets and water" },
 ];
 
 const READ: [string, string][] = [
-  ["Job", "Set a packer"],
+  ["Job", "Plug and cement"],
   ["Casing", "5-1/2 in."],
-  ["Set depth", "9,400 ft"],
+  ["Bailer", "3-1/2"],
   ["Truck", "WL-07"],
 ];
 
@@ -51,7 +51,7 @@ export default function Console() {
         <div className="flex min-w-0 items-center gap-3 text-[13px]">
           <span className="h-2 w-2 shrink-0 rounded-[1px] bg-bone" />
           <span className="whitespace-nowrap font-medium text-ink">WL-07</span>
-          <span className="truncate text-ink-faint">Set a packer</span>
+          <span className="truncate text-ink-faint">Plug and cement</span>
         </div>
         <span className="flex shrink-0 items-center gap-2 rounded-full border border-line-2 px-3 py-1 text-[12px] text-ink-dim">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Loading out
@@ -61,7 +61,7 @@ export default function Console() {
       <div className="grid divide-y divide-line lg:grid-cols-[0.85fr_1.2fr_1.25fr] lg:divide-x lg:divide-y-0">
         <Step n="1" title="The job">
           <p className="synnr-rise mt-5 rounded-xl rounded-tl-sm bg-elevated px-4 py-3 text-[15px] leading-relaxed text-ink" style={{ ["--i" as string]: 0 }}>
-            Setting a packer tomorrow. <span className="whitespace-nowrap">5-1/2</span> casing, set at 9,400. Taking <span className="whitespace-nowrap">WL-07</span>.
+            Plug and cement tomorrow. <span className="whitespace-nowrap">5-1/2</span> casing. Taking <span className="whitespace-nowrap">WL-07</span>.
           </p>
           <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-faint"><Paperclip className="h-3.5 w-3.5" /> Or a photo of the dispatch</p>
           <dl className="mt-6 border-t border-line">

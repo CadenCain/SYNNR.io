@@ -1,7 +1,7 @@
 /**
- * A packer setting string, surface end on the left, drawn as a line
- * schematic: cable head, CCL, weight bars, firing head, setting tool, adapter
- * kit, and the packer. On a phone it scrolls sideways rather than shrinking
+ * A plug setting string, surface end on the left, drawn as a line
+ * schematic: cable head, CCL, weight bars, firing head, setting tool, sleeve,
+ * and the plug. On a phone it scrolls sideways rather than shrinking
  * until the labels can't be read.
  */
 
@@ -39,7 +39,7 @@ export default function Toolstring() {
   return (
     <div className="overflow-x-auto pb-1">
       <svg viewBox="0 0 1200 176" role="img" className="h-auto w-full min-w-[940px]"
-        aria-label="A packer setting tool string from the surface end down: cable head, CCL, two weight bars, firing head, setting tool, adapter kit, and the packer.">
+        aria-label="A plug setting tool string from the surface end down: cable head, CCL, two weight bars, firing head, setting tool, sleeve, and the plug.">
         {/* the line coming down from the truck */}
         <line x1={0} y1={Y} x2={72} y2={Y} stroke={stroke} strokeWidth={2} />
         <text x={0} y={Y - 22} fill="#8b8f97" fontSize={14}>To the truck</text>
@@ -57,7 +57,7 @@ export default function Toolstring() {
         <Body x={704} w={56} r={14} />
         <Body x={766} w={194} r={21} />
         <Body x={966} w={64} r={24} rx={2} />
-        {/* the packer: slips at each end, the element between them */}
+        {/* the plug: slips at each end, the element between them */}
         <path d={`M1036 ${Y - 24} H1162 Q1186 ${Y - 24} 1186 ${Y} Q1186 ${Y + 24} 1162 ${Y + 24} H1036 Z`} fill={fill} stroke="#ff5a1f" strokeWidth={1.5} />
         {[1050, 1060, 1070, 1140, 1150, 1160].map((x) => <line key={x} x1={x} y1={Y - 24} x2={x - 8} y2={Y + 24} stroke="#ff5a1f" strokeOpacity={0.6} strokeWidth={1.25} />)}
         <rect x={1082} y={Y - 24} width={40} height={48} fill="#ff5a1f" fillOpacity={0.12} stroke="#ff5a1f" strokeOpacity={0.6} strokeWidth={1} />
@@ -67,8 +67,8 @@ export default function Toolstring() {
         <Label x={473} r={17} text="Weight bars" span={[360, 586]} />
         <Label x={732} r={14} text="Firing head" above />
         <Label x={863} r={21} text="Setting tool" />
-        <Label x={998} r={24} text="Adapter kit" above />
-        <Label x={1111} r={24} text="Packer" />
+        <Label x={998} r={24} text="Sleeve" above />
+        <Label x={1111} r={24} text="Plug" />
       </svg>
     </div>
   );

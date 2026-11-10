@@ -166,7 +166,7 @@ export default function Home() {
             <div className="synnr-reveal mt-12 rounded-2xl border border-line bg-[#0b0c0e] px-5 py-9 md:mt-16 md:px-10 md:py-12">
               <Toolstring />
             </div>
-            <p className="mt-4 text-[14px] text-ink-faint">A packer setting string, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
+            <p className="mt-4 text-[14px] text-ink-faint">A plug setting string, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
           </div>
         </section>
 
