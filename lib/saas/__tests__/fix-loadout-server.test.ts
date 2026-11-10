@@ -232,7 +232,7 @@ describe("a piece out on another truck's job", () => {
     const res = await finishLoadout(base({ startedAt: ago(8 * 60e3), scans: [{ assetId: "pv1", how: "hand", at: Date.now() - 4 * 60e3 }, { assetId: "pv50", how: "hand", at: Date.now() - 3 * 60e3 }] }));
     expect(res.verdict).toBe("not_ready");
     expect(res.reasons).toHaveLength(1);
-    expect(res.reasons![0]).toMatch(/^Out on another truck's job: 2in 1502 plug valve PV-2250, went out on CT-05 .+, loaded by Manuel Ortega$/);
+    expect(res.reasons![0]).toMatch(/^Out on another truck's job: 2in 1502 plug valve PV-2250, went out on CT-05 .+, loaded by Manuel Ortega, and CT-05 hasn't been checked in\. If it's here, check CT-05 in or use Move it on the piece, then scan it again$/);
     expect(res.badIds).toEqual(["pv50"]);
     expect(res.notMoved).toEqual(["pv50"]);
     // Neither moved onto CT-01 nor taken off CT-05's trip.

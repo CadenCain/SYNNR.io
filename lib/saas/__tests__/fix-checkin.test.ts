@@ -55,6 +55,7 @@ function fakeDb(tables: Record<string, Row[]>) {
       in: (c: string, v: unknown[]) => { if (write) write.filters[c] = v; else rows = rows.filter((r) => v.includes(r[c])); return q; },
       is: (c: string, v: unknown) => { if (write) write.filters[c] = v; else rows = rows.filter((r) => (r[c] ?? null) === v); return q; },
       lt: (c: string, v: string) => { rows = rows.filter((r) => String(r[c] ?? "") < v); return q; },
+      gt: (c: string, v: string) => { rows = rows.filter((r) => String(r[c] ?? "") > v); return q; },
       order: (c: string, o?: { ascending?: boolean }) => { rows.sort((a, b) => String(a[c]).localeCompare(String(b[c])) * (o?.ascending === false ? -1 : 1)); return q; },
       limit: (n: number) => { rows = rows.slice(0, n); return q; },
       maybeSingle: () => { single = true; return q; },

@@ -6,37 +6,43 @@ import { Check, Plus, X } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { savePlan, clearPlan, movePlan } from "./actions";
+import { fromWallClock, wallClock } from "./leave-time";
 
 type Line = { label: string; qty: number };
 const lineSummary = (ls: Line[]) => ls.map((l) => `${l.label}${l.qty > 1 ? ` × ${l.qty}` : ""}`).join(", ");
 const count = (ls: Line[]) => ls.reduce((n, l) => n + l.qty, 0);
 
 /** A manager picks what the truck's next job needs. The hand sees it at the truck and can't take anything off. */
-export default function PlanForm({ truck, kit, packages, pieceNames, initial, seenAt, otherTrucks = [] }: {
+export default function PlanForm({ truck, kit, packages, pieceNames, initial, seenAt, otherTrucks = [], tz = "America/Chicago", zone = "CT" }: {
   truck: { id: string; name: string };
   kit: Line[];
   packages: { id: string; name: string; lines: Line[] }[];
   pieceNames: string[];
-  initial: { packageIds: string[]; lines: Line[]; note: string; job: string; leavesAt: string | null } | null;
+  /** The plan as saved (id: so the save knows if the truck rolled on it while this was open). */
+  initial: { id?: string; packageIds: string[]; lines: Line[]; note: string; job: string; leavesAt: string | null } | null;
   /** When the page was opened (server time): if the truck rolls before Save, the save says so once. */
   seenAt: string;
   /** The company's other trucks, for moving the plan when the job goes on one of them. */
   otherTrucks?: { id: string; name: string; hasPlan: boolean }[];
+  /** The truck's yard's time zone, and its short name ("MT"): the leave time is on the yard's clock, not the phone's. */
+  tz?: string;
+  zone?: string;
 }) {
   const router = useRouter();
   const [packageIds, setPackageIds] = useState<string[]>(initial?.packageIds ?? []);
   const [lines, setLines] = useState<Line[]>(initial?.lines ?? []);
   const [note, setNote] = useState(initial?.note ?? "");
   const [job, setJob] = useState(initial?.job ?? "");
-  // "2026-11-04T05:00" in this phone's time, for the time picker.
-  const local = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16); };
-  const [leaves, setLeaves] = useState(local(initial?.leavesAt ?? null));
+  // "2026-11-04T05:00" on the yard's clock, for the time picker.
+  const [leaves, setLeaves] = useState(wallClock(initial?.leavesAt ?? null, tz));
   const [label, setLabel] = useState("");
   const [qty, setQty] = useState("1");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [seen, setSeen] = useState(seenAt);
   const [moveTo, setMoveTo] = useState("");
+  // The truck rolled on this plan while the form was open: the next save is for its next job.
+  const [nextJob, setNextJob] = useState(false);
 
   const picked = packages.filter((x) => packageIds.includes(x.id));
   const total = count(kit) + picked.reduce((n, x) => n + count(x.lines), 0) + count(lines);
@@ -47,12 +53,17 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial, se
     setLines((ls) => [...ls, { label: l, qty: Math.min(99, Math.max(1, Math.floor(Number(qty)) || 1)) }]);
     setLabel(""); setQty("1");
   }
-  async function run(fn: () => Promise<{ ok: boolean; error?: string; seenAt?: string }>) {
+  async function run(fn: () => Promise<{ ok: boolean; error?: string; seenAt?: string; usedUp?: boolean }>) {
     setBusy(true); setErr("");
     try {
       const res = await fn();
       // The truck rolled since the page opened: told once, the next tap saves.
       if (res.seenAt) setSeen(res.seenAt);
+      // It rolled on this very plan: the leave time went with that job.
+      if (res.usedUp) {
+        setNextJob(true);
+        if (initial?.leavesAt && leaves === wallClock(initial.leavesAt, tz)) setLeaves("");
+      }
       if (!res.ok) { setErr(res.error ?? "Couldn't save. Try again."); setBusy(false); return; }
       router.push("/app");
       router.refresh();
@@ -127,7 +138,7 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial, se
       </section>
 
       <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
-        <label htmlFor="plan-leaves" className="font-semibold">When does it leave? <span className="font-normal text-ink-faint">(optional)</span></label>
+        <label htmlFor="plan-leaves" className="font-semibold">When does it leave? <span className="font-normal text-ink-faint">({zone}, optional)</span></label>
         <input id="plan-leaves" type="datetime-local" value={leaves} onChange={(e) => setLeaves(e.target.value)}
           className="h-12 w-full rounded-lg border border-line-2 bg-coal px-3 text-base text-ink outline-none focus:border-bone" />
         <p className="text-sm text-ink-dim">If that time passes and nobody has scanned it out, the truck shows red on Load out and it&apos;s in your morning email. If it leaves more than 18 hours from now, a load-out on {truck.name} before then doesn&apos;t use this plan.</p>
@@ -159,8 +170,9 @@ export default function PlanForm({ truck, kit, packages, pieceNames, initial, se
         <p className="text-sm"><span className="text-lg font-bold tabular-nums">{total}</span> {total === 1 ? "piece" : "pieces"} {truck.name} has to leave with</p>
         {err ? <p className="text-sm text-red-400">{err}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note, job, leavesAt: leaves ? new Date(leaves).toISOString() : null, seenAt: seen }))}
-            className={buttonClass("default", "lg", "h-14 grow text-base")}>{busy ? "Saving…" : "Save the plan"}</button>
+          <button type="button" disabled={busy}
+            onClick={() => run(() => savePlan({ unitId: truck.id, packageIds, lines, note, job, leavesAt: leaves ? fromWallClock(leaves, tz) : null, seenAt: seen, planId: initial?.id ?? null, nextJob }))}
+            className={buttonClass("default", "lg", "h-14 grow text-base")}>{busy ? "Saving…" : nextJob ? "Save it as the next job" : "Save the plan"}</button>
           {initial ? (
             <button type="button" disabled={busy} onClick={() => run(() => clearPlan(truck.id))} className={buttonClass("outline", "lg", "h-14 text-base")}>Clear the plan</button>
           ) : null}

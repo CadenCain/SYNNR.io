@@ -4,7 +4,7 @@ import { judgeUnit, FAILING_GEAR, plainDate, withSerial, type JItem } from "./ju
 import { fmtWhen } from "./format";
 import { verdictOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
 import { expectedLines, fillLines, shortLines, lineMatches, lineSourceLabel, pieceLabel, type ExpectedLine, type LinePiece } from "./loadout-lines";
-import { cleanPlanLines } from "./plans";
+import { cleanPlanLines, planTiming } from "./plans";
 import { readAll } from "./read-all";
 
 /**
@@ -51,6 +51,9 @@ export interface DispatchComputation {
   loadout: TruckLoadout | null;
   /** Lines of the manager's plan the yard can't fill with good iron (also in warnings). */
   planShort: string[];
+  /** The newest load-out is blocked only on the truck's own paper, and that
+   *  paper is good now: it takes a new scan to roll, not an override. */
+  paperFixed: boolean;
 }
 
 /** A manager can roll a NOT READY load-out only this long after it was saved:
@@ -287,11 +290,20 @@ export async function computeDispatchCheck(
   // board and the operator's truck proof already say so; green here would
   // have the office telling the yard "the app says it's ready".
   const lo = await truckLoadout(db, companyId, unitId);
+  let paperFixed = false;
   if (lo?.state === "blocked") {
     verdict = "not_ready";
+    // Blocked only on the truck's own paper, and nothing on the truck fails
+    // now: say so the way the board does, not the old reason. It still takes a
+    // new load-out to roll, and nobody needs an override for it. Iron that went
+    // bad since would block the new scan too, so then it's the old story.
+    paperFixed = lo.reasons.length > 0 && lo.reasons.every((r) => r.startsWith("Truck paper:")) && j.failures.length === 0;
     const why = lo.reasons.length ? `${lo.reasons[0]}${lo.reasons.length > 1 ? ` (and ${lo.reasons.length - 1} more)` : ""}` : "NOT READY";
-    lines.unshift({ source_type: "loadout_item", source_id: lo.id, label: `Load-out ${fmtWhen(lo.finishedAt)}${lo.scannedBy ? ` by ${lo.scannedBy}` : ""}`, result: "missing", detail: `NOT READY: ${why}` });
-    failures.unshift(`Blocked at load-out ${fmtWhen(lo.finishedAt)}: ${why}. ${lo.rollable ? "Fix it and scan again, or a manager rolls it from the load-out record." : "Scan it again."}`);
+    lines.unshift({ source_type: "loadout_item", source_id: lo.id, label: `Load-out ${fmtWhen(lo.finishedAt)}${lo.scannedBy ? ` by ${lo.scannedBy}` : ""}`, result: "missing",
+      detail: paperFixed ? "NOT READY on truck paper. That paper is good now. Scan it again to roll." : `NOT READY: ${why}` });
+    failures.unshift(paperFixed
+      ? `Blocked at load-out ${fmtWhen(lo.finishedAt)} on truck paper. That paper is good now. Scan it again to roll.`
+      : `Blocked at load-out ${fmtWhen(lo.finishedAt)}: ${why}. ${lo.rollable ? "Fix it and scan again, or a manager rolls it from the load-out record." : "Scan it again."}`);
   }
 
   // The manager's plan for the next job: what it takes from the yard on top
@@ -322,7 +334,7 @@ export async function computeDispatchCheck(
     if (!scannedToday) warnings.push("Nobody has scanned this truck's load-out today. Scan it as it's loaded so you know what's actually on it.");
   }
 
-  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked, loadout: lo, planShort };
+  return { unitName: unit.name, yardId: unit.yard_id, jobDate, isFutureJob, verdict, lines, failures, warnings, notChecked, loadout: lo, planShort, paperFixed };
 }
 
 /**
@@ -348,7 +360,9 @@ async function planWarnings(
     .find((p) => !p.used_at);
   const pkgIds = plan?.package_ids ?? [];
   const planned = cleanPlanLines(plan?.lines ?? []);
-  if (!plan || (!pkgIds.length && !planned.length)) return [];
+  // An old plan (more than a day past its leave time) no longer locks the
+  // load-out, so it doesn't warn about one either.
+  if (!plan || planTiming({ leavesAt: plan.leaves_at }, Date.now()) === "old" || (!pkgIds.length && !planned.length)) return [];
 
   const { data: pkgRows } = pkgIds.length
     ? await db.from("saas_packages").select("id, name, saas_package_lines(label, qty, sort)").eq("company_id", companyId).in("id", pkgIds)

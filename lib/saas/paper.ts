@@ -22,10 +22,19 @@ async function signPaper(client: SupabaseClient, ups: Upload[]): Promise<Map<str
   return out;
 }
 
-async function uploadsById(client: SupabaseClient, ids: string[]): Promise<Upload[]> {
+async function uploadsById(client: SupabaseClient, ids: string[], companyId?: string): Promise<Upload[]> {
   if (!ids.length) return [];
-  const { data } = await client.from("saas_cert_uploads").select("id, item_id, storage_path").in("id", [...new Set(ids)].slice(0, 500));
+  let q = client.from("saas_cert_uploads").select("id, item_id, storage_path").in("id", [...new Set(ids)].slice(0, 500));
+  if (companyId) q = q.eq("company_id", companyId);
+  const { data } = await q;
   return (data ?? []) as Upload[];
+}
+
+/** Upload id → link: signed in the app, or the public page's own address for each (a demo cert opens the sample). */
+async function linkUploads(client: SupabaseClient, ups: Upload[], hrefFor?: (uploadId: string) => string): Promise<Map<string, string>> {
+  return hrefFor
+    ? new Map(ups.map((u) => [u.id, u.storage_path.startsWith(DEMO_PAPER) ? `/demo-cert/${u.item_id}` : hrefFor(u.id)]))
+    : signPaper(client, ups);
 }
 
 /** Item id → link, for items' current papers. On a session client, RLS keeps it inside the company. */
@@ -79,14 +88,33 @@ export async function recordPaper(
   hrefFor?: (uploadId: string) => string,
 ): Promise<Record<string, { title: string; url: string }[]>> {
   const want = await recordPaperUploads(client, companyId, pieces);
-  const ups = await uploadsById(client, want.map((w) => w.upload));
-  const byUpload = hrefFor
-    ? new Map(ups.map((u) => [u.id, u.storage_path.startsWith(DEMO_PAPER) ? `/demo-cert/${u.item_id}` : hrefFor(u.id)]))
-    : await signPaper(client, ups);
+  const ups = await uploadsById(client, want.map((w) => w.upload), companyId);
+  const byUpload = await linkUploads(client, ups, hrefFor);
   const out: Record<string, { title: string; url: string }[]> = {};
   for (const w of want) {
     const url = byUpload.get(w.upload);
     if (url) (out[w.asset] ??= []).push({ title: w.title, url });
   }
   return out;
+}
+
+/** The certs behind the truck's own paper a load-out record kept (the DOT and the like), by upload id. */
+export function truckPaperUploads(truckPaper: { paper?: string | null }[] | null | undefined): string[] {
+  return (truckPaper ?? []).map((t) => t.paper).filter((x): x is string => typeof x === "string" && x.length > 0);
+}
+
+/**
+ * "See the cert" for the truck's own paper on a load-out record, upload id →
+ * link. Only the paper the record kept, never today's: a DOT that came in
+ * after the truck rolled isn't proof for that load-out. Signed in the app;
+ * a public page passes `hrefFor`, like recordPaper.
+ */
+export async function recordTruckPaper(
+  client: SupabaseClient,
+  companyId: string,
+  truckPaper: { paper?: string | null }[] | null | undefined,
+  hrefFor?: (uploadId: string) => string,
+): Promise<Record<string, string>> {
+  const ups = await uploadsById(client, truckPaperUploads(truckPaper), companyId);
+  return Object.fromEntries(await linkUploads(client, ups, hrefFor));
 }

@@ -4,7 +4,7 @@ import { ShieldCheck, TriangleAlert, FileImage, ArrowRight } from "lucide-react"
 import { saasAdmin } from "@/lib/saas/db";
 import { getSaasUser } from "@/lib/saas/auth";
 import { judgeItem, isNoPaper, type LineResult } from "@/lib/saas/judge";
-import { paperLinks, DEMO_PAPER } from "@/lib/saas/paper";
+import { DEMO_PAPER } from "@/lib/saas/paper";
 import { localToday } from "@/lib/saas/status";
 import { categoryLabel, TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { fmtDate, fmtWhen } from "@/lib/saas/format";
@@ -93,27 +93,30 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
     .map((i) => ({ i, j: judgeItem(i, today, today) }))
     .sort((x, y) => rank[x.j.result] - rank[y.j.result] || (x.i.expiration_date ?? "").localeCompare(y.i.expiration_date ?? ""));
 
-  // The photo behind each current date.
-  const paper = await paperLinks(admin, items.map((x) => x.i));
+  // The photo behind each current date. Each link goes through this tag
+  // (paper/[itemId]), which signs a fresh short link every tap: a signed
+  // link dies after an hour, and a company man on location doesn't reload.
+  const paperHref = (itemId: string, retest = false) => `/t/${token}/paper/${itemId}${retest ? "?retest=1" : ""}`;
+  const uploadIds = items.map((x) => x.i.last_upload_id).filter((x): x is string => Boolean(x));
+  const hasPaper = new Set<string>();
+  if (uploadIds.length) {
+    const { data: ups } = await admin.from("saas_cert_uploads").select("id, item_id")
+      .eq("company_id", a.company_id).in("id", uploadIds);
+    const onItem = new Map(items.map((x) => [x.i.id, x.i.last_upload_id]));
+    for (const u of (ups ?? []) as { id: string; item_id: string }[]) if (onItem.get(u.item_id) === u.id) hasPaper.add(u.item_id);
+  }
 
   // Retested, cert on the way: the paper a manager approved for it (the
   // retest invoice or tag). The cert on file is the old one that ran out.
   const pendingItems = items.filter((x) => x.j.result === "pending");
-  const retestPaper = new Map<string, string>();
+  const hasRetestPaper = new Set<string>();
   if (pendingItems.length) {
     const { data: retestData } = await admin.from("saas_cert_uploads")
-      .select("item_id, storage_path, applied_at")
+      .select("item_id, storage_path")
       .eq("company_id", a.company_id).eq("evidence", "temporary").eq("status", "applied")
-      .in("item_id", pendingItems.map((x) => x.i.id))
-      .order("applied_at", { ascending: false });
-    const latest = new Map<string, string>();
+      .in("item_id", pendingItems.map((x) => x.i.id));
     for (const r of (retestData ?? []) as { item_id: string; storage_path: string }[]) {
-      if (!latest.has(r.item_id) && !r.storage_path.startsWith(DEMO_PAPER)) latest.set(r.item_id, r.storage_path);
-    }
-    if (latest.size) {
-      const paths = [...latest.entries()];
-      const { data: signed } = await admin.storage.from("proofs").createSignedUrls(paths.map(([, p]) => p), 3600);
-      paths.forEach(([itemId], idx) => { const url = signed?.[idx]?.signedUrl; if (url) retestPaper.set(itemId, url); });
+      if (!r.storage_path.startsWith(DEMO_PAPER)) hasRetestPaper.add(r.item_id);
     }
   }
 
@@ -140,7 +143,7 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
       {isMember ? (
         <Link href={`/app/assets/${a.id}`}
           className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-bone px-5 py-3 font-semibold text-white hover:bg-bone-soft">
-          <span>Open it in RollReady to move it or upload a new cert</span>
+          <span>{a.status === "missing" ? "Found it? Open it in RollReady and say where it is" : "Open it in RollReady to move it or upload a new cert"}</span>
           <ArrowRight className="h-5 w-5 shrink-0" />
         </Link>
       ) : null}
@@ -175,13 +178,13 @@ export default async function TagPage({ params }: { params: Promise<{ token: str
                 <div><dt className="text-xs text-ink-faint">Last done</dt><dd className="whitespace-nowrap">{i.issued_date ? fmtDate(i.issued_date) : "Not on file"}</dd></div>
                 <div><dt className="text-xs text-ink-faint">Good until</dt><dd className="whitespace-nowrap">{i.expiration_date ? fmtDate(i.expiration_date) : "No date"}</dd></div>
               </dl>
-              {j.result === "pending" && retestPaper.get(i.id) ? (
-                <a href={retestPaper.get(i.id)} target="_blank" rel="noreferrer" className="mt-3 mr-4 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
+              {j.result === "pending" && hasRetestPaper.has(i.id) ? (
+                <a href={paperHref(i.id, true)} target="_blank" rel="noreferrer" className="mt-3 mr-4 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
                   <FileImage className="h-4 w-4" /> See the retest paper
                 </a>
               ) : null}
-              {paper.get(i.id) ? (
-                <a href={paper.get(i.id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
+              {hasPaper.has(i.id) ? (
+                <a href={paperHref(i.id)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-bone underline underline-offset-2">
                   <FileImage className="h-4 w-4" /> {j.result === "pending" ? "See the old cert (ran out)" : "See the cert"}
                 </a>
               ) : null}

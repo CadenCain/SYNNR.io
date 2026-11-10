@@ -25,28 +25,31 @@ export const CHECKIN_HEADER = ["Checked in", "Truck", "Yard", "Checked in by", "
 const atIso = (at: number | string | null | undefined) =>
   typeof at === "number" ? new Date(at).toISOString() : at || null;
 
-/** Where it had been: "Signed out to Dale 11/02/2026, 6:10 AM" or "On CT-03 11/02/2026, 5:40 AM, loaded by Dale". */
-export function wentOutText(w: WentOut | null | undefined): string {
+/** Where it had been: "Signed out to Dale 11/02/2026, 6:10 AM" or "On CT-03 11/02/2026, 5:40 AM, loaded by Dale".
+ *  With the yard's zone passed, the time carries it ("5:40 AM MT"). */
+export function wentOutText(w: WentOut | null | undefined, tz?: string | null): string {
   if (!w) return "";
-  if (w.with) return `Signed out to ${w.with}${w.at ? ` ${when(w.at)}` : ""}`;
-  if (w.truck) return `On ${w.truck}${w.at ? ` ${when(w.at)}` : ""}${w.by ? `, loaded by ${w.by}` : ""}`;
+  if (w.with) return `Signed out to ${w.with}${w.at ? ` ${when(w.at, tz)}` : ""}`;
+  if (w.truck) return `On ${w.truck}${w.at ? ` ${when(w.at, tz)}` : ""}${w.by ? `, loaded by ${w.by}` : ""}`;
   return "";
 }
 
-/** One row per piece checked in, and one per piece that didn't come back. */
-export function checkinRows(recs: ReturnRec[], yardName: Map<string, string>): unknown[][] {
+/** One row per piece checked in, and one per piece that didn't come back.
+ *  Times read on the yard's clock, with its zone on each one. */
+export function checkinRows(recs: ReturnRec[], yardName: Map<string, string>, zones: Map<string, string> = new Map()): unknown[][] {
   const out: unknown[][] = [];
   for (const r of recs) {
-    const base = [when(r.finished_at), r.unit_name ?? "No truck (iron into the yard)", r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.returned_by ?? ""];
+    const tz = r.yard_id ? zones.get(r.yard_id) ?? null : null;
+    const base = [when(r.finished_at, tz), r.unit_name ?? "No truck (iron into the yard)", r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.returned_by ?? ""];
     const pieces = r.pieces ?? [];
     const notBack = r.not_returned ?? [];
     for (const p of pieces) {
       const to = p.to === "truck" ? `Back on ${r.unit_name ?? "the truck"}` : p.to === "yard" ? `Into the yard${p.rack ? `: ${p.rack}` : ""}` : "";
-      out.push([...base, p.name, p.serial ?? "", p.how ? HOW[p.how] ?? p.how : "", when(atIso(p.at)), to,
-        p.from_unit ?? "", wentOutText(p.went_out), p.out_days ?? "", p.red_tag ?? "", p.red ? "yes" : "", p.needs_redress ? "yes" : "", ""]);
+      out.push([...base, p.name, p.serial ?? "", p.how ? HOW[p.how] ?? p.how : "", when(atIso(p.at), tz), to,
+        p.from_unit ?? "", wentOutText(p.went_out, tz), p.out_days ?? "", p.red_tag ?? "", p.red ? "yes" : "", p.needs_redress ? "yes" : "", ""]);
     }
     for (const n of notBack) {
-      out.push([...base, n.name, n.serial ?? "", "", "", "", "", wentOutText(n.went_out), "", "", "", "",
+      out.push([...base, n.name, n.serial ?? "", "", "", "", "", wentOutText(n.went_out, tz), "", "", "", "",
         n.outcome === "missing" ? "Can't find" : "Still out"]);
     }
     if (!pieces.length && !notBack.length) out.push([...base, "", "", "", "", "", "", "", "", "", "", "", ""]);
@@ -108,6 +111,21 @@ export interface ItemRec { id: string; title: string; parent_type: string; paren
 
 export const TESTS_HEADER = ["Sent in", "Piece or truck", "Serial", "Test or cert", "Paper", "Tested", "Good until (as sent in)",
   "Good until (on file now)", "Where it stands", "Sent in by", "Checked by", "Checked at", "Note", "Cert photo"];
+
+/** A photo a hand sent through his crew card update link (the crew book's
+ *  paper, never a piece's or a truck's). */
+export const isCrewCardPhoto = (path: string | null | undefined) => /^[^/]+\/docreq\//.test(path ?? "");
+
+/**
+ * Equipment and truck paper only, the same as every other export and the
+ * proof pages: a crew card and its photos stay out. An upload whose test was
+ * deleted since stays in (it shows as "Test deleted"), unless its photo came
+ * in through a crew card link.
+ */
+export function equipmentUploads<U extends { item_id: string | null; storage_path?: string | null }>(uploads: U[], items: ItemRec[]): U[] {
+  const ours = new Set(items.filter((i) => i.parent_type !== "crew").map((i) => i.id));
+  return uploads.filter((u) => (u.item_id ? ours.has(u.item_id) : !isCrewCardPhoto(u.storage_path)));
+}
 
 /** Where an upload stands, in plain words. */
 export function standing(u: Pick<UploadRec, "status" | "applied_at">): string {

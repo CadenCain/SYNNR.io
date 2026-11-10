@@ -7,7 +7,8 @@ import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOutcome } from "@
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { loadoutFilters, isFiltering, filterQuery, rangeOf, jobPattern } from "./export/filters";
+import { companyYardZones } from "@/app/api/saas/export/csv";
+import { loadoutFilters, isFiltering, filterQuery, rangeOf, rangeZone, jobPattern } from "./export/filters";
 
 export const metadata = { title: "Load-out records" };
 
@@ -30,7 +31,10 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
     .eq("company_id", company.id);
   if (sp.yard) q = q.eq("yard_id", sp.yard);
   if (sp.by) q = q.eq("scanned_by", sp.by);
-  const range = rangeOf(f);
+  // Each yard's clock, the same as a record and the spreadsheet: the days a
+  // date range covers, and the time on each row.
+  const zones = await companyYardZones(db, company.id);
+  const range = rangeOf(f, rangeZone(f, zones));
   if (range.gte) q = q.gte("finished_at", range.gte);
   if (range.lt) q = q.lt("finished_at", range.lt);
   if (f.job) q = q.ilike("job", jobPattern(f.job));
@@ -119,7 +123,7 @@ export default async function LoadoutsPage({ searchParams }: { searchParams: Pro
                       <span className="font-semibold">{r.unit_name}</span>
                       <span className={cn("text-sm font-semibold", TONE[o])}>{LABEL[o]}</span>
                     </div>
-                    <div className="text-sm text-ink-dim">{fmtWhen(r.finished_at)}{r.scanned_by ? ` by ${r.scanned_by}` : ""}{o === "override" ? `, override by ${overrides.get(r.id)}` : ""}</div>
+                    <div className="text-sm text-ink-dim">{fmtWhen(r.finished_at, (r.yard_id && zones.get(r.yard_id)) || null)}{r.scanned_by ? ` by ${r.scanned_by}` : ""}{o === "override" ? `, override by ${overrides.get(r.id)}` : ""}</div>
                     {r.job ? <div className="truncate text-sm text-ink-dim">For {r.job}</div> : null}
                     {why ? <div className="truncate text-sm text-ink-faint">{why}</div> : null}
                     {byHand ? <div className="text-sm text-amber-400">{byHand} of {r.pieces.length} checked by hand</div> : null}

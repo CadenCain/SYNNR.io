@@ -281,7 +281,7 @@ export default async function AssetDetail({ params, searchParams }: { params: Pr
       {a.needs_redress_since && a.status !== "retired" ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 border-amber-500/40 bg-amber-500/[0.06] p-4 text-sm">
           <p className="min-w-0 text-amber-300">Needs redress. Came back from a run {fmtWhen(a.needs_redress_since)}, and it can&apos;t go out again until it&apos;s redressed.</p>
-          <RedressedButton assetId={a.id} />
+          <RedressedButton assetId={a.id} since={a.needs_redress_since} />
         </Card>
       ) : null}
       {a.out_with_name ? (

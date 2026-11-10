@@ -141,7 +141,8 @@ export function pieceKind(name: string, strip: (string | null | undefined)[] = [
   }
   s = s.replace(/(?<![\d,.])(?:\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?\s*(?:ft|feet|foot|')(?![a-z])\.?/gi, " ")
     .replace(/\(\s*\)/g, " ");
-  const kind = s.split(",").map((p) => p.replace(/\s+/g, " ").replace(/^[\s\-:;]+|[\s\-:;]+$/g, "")).filter(Boolean).join(", ").slice(0, 80);
+  // Split on the commas between parts, never one inside a number: "15,000 psi" stays as typed.
+  const kind = s.split(/(?<!\d),|,(?!\d{3}(?!\d))/).map((p) => p.replace(/\s+/g, " ").replace(/^[\s\-:;]+|[\s\-:;]+$/g, "")).filter(Boolean).join(", ").slice(0, 80);
   // Nothing that names a kind is left (a piece named just "P-01"): keep the name.
   return /[a-z]/i.test(kind) ? kind : plain;
 }
@@ -163,7 +164,13 @@ export function kitLinesFrom(pieces: (string | { name: string; serial?: string |
 
 export const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
 
-export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file" | "no_paper" | "needs_redress" | "out_on_job"; detail?: string }
+/**
+ * Why a piece on the load-out blocks it. out_on_job: on another truck's job
+ * that hasn't been checked in. signed_out: signed out to someone for more
+ * than a shift and only checked on by hand. scanned_since: scanned onto
+ * another truck after this phone scanned it.
+ */
+export interface BadPiece { name: string; serial: string | null; why: "red_tagged" | "out_of_test" | "no_test_date" | "no_test_on_file" | "no_paper" | "needs_redress" | "out_on_job" | "signed_out" | "scanned_since"; detail?: string }
 
 /**
  * Pieces with no test on file that can't go on: pressure iron always, and any
@@ -210,7 +217,8 @@ export function loadoutVerdict(input: {
   for (const p of input.bad) {
     const what = p.why === "red_tagged" ? "Red-tagged" : p.why === "no_test_date" ? "No test date on file"
       : p.why === "no_test_on_file" ? "No test on file" : p.why === "no_paper" ? "No paper on file"
-      : p.why === "needs_redress" ? "Needs redress" : p.why === "out_on_job" ? "Out on another truck's job" : "Out of test";
+      : p.why === "needs_redress" ? "Needs redress" : p.why === "out_on_job" ? "Out on another truck's job"
+      : p.why === "signed_out" ? "Signed out" : p.why === "scanned_since" ? "Scanned onto another truck after you" : "Out of test";
     reasons.push(`${what}: ${pieceLabel(p)}${p.detail ? `, ${p.detail}` : ""}`);
   }
   for (const t of input.truckPaper) reasons.push(`Truck paper: ${t.title} ${t.detail}`);

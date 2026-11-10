@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent, notifyEvent } from "@/lib/saas/notify";
-import { YARD_TZ } from "@/lib/saas/format";
+import { YARD_TZ, fmtWhen } from "@/lib/saas/format";
 import { judgeItem, withSerial } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { daysOut } from "@/lib/saas/whereabouts";
 import type { ScanHow } from "@/lib/saas/loadout";
 import { provenHow } from "@/lib/saas/scan-proof";
+import { verdictOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
 
 export type ReturnDest = "truck" | "yard";
 type Outcome = "still_out" | "missing";
@@ -24,9 +25,10 @@ type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
  * Was this truck out without a load-out that cleared it? "never": no load-out
  * since it was last checked in (and that wasn't just now: a second check-in of
  * the same trip isn't a new trip). "not_ready": its newest load-out was NOT
- * READY and nobody rolled it on an override.
+ * READY and nobody rolled it on an override. lastBack: its last check-in
+ * before this one, if any.
  */
-async function tripNotScanned(admin: Admin, companyId: string, unitId: string, now: string): Promise<"never" | "not_ready" | null> {
+async function tripNotScanned(admin: Admin, companyId: string, unitId: string, now: string): Promise<{ flag: "never" | "not_ready" | null; lastBack: string | null }> {
   const [{ data: lo }, { data: ret }] = await Promise.all([
     admin.from("saas_loadout_scans").select("id, finished_at, verdict").eq("company_id", companyId).eq("unit_id", unitId)
       .order("finished_at", { ascending: false }).limit(1).maybeSingle(),
@@ -37,12 +39,33 @@ async function tripNotScanned(admin: Admin, companyId: string, unitId: string, n
   const lastBack = (ret as { finished_at: string } | null)?.finished_at ?? null;
   if (!last || (lastBack && lastBack > last.finished_at)) {
     // Checked in twice in a row the same day is one trip, not two.
-    if (lastBack && Date.parse(now) - Date.parse(lastBack) < 12 * 3600e3) return null;
-    return "never";
+    if (lastBack && Date.parse(now) - Date.parse(lastBack) < 12 * 3600e3) return { flag: null, lastBack };
+    return { flag: "never", lastBack };
   }
-  if (last.verdict === "ready") return null;
+  if (last.verdict === "ready") return { flag: null, lastBack };
   const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", last.id).maybeSingle();
-  return ov ? null : "not_ready";
+  return { flag: ov ? null : "not_ready", lastBack };
+}
+
+/**
+ * A load-out of this truck that rolled (READY, or NOT READY on a manager's
+ * override) after this check-in started, if any. The truck went out again
+ * since, so the check-in is a stale one: saving it would call iron that's
+ * on the new job back in the yard. A NOT READY try nobody overrode never
+ * left, so it doesn't count. Another hand's check-in since doesn't either:
+ * two phones can check one truck in together.
+ */
+async function rolledSince(admin: Admin, companyId: string, unitId: string, startedIso: string) {
+  const { data } = await admin.from("saas_loadout_scans").select("id, scanned_by, scanned_by_user, finished_at, verdict, pieces, not_scanned")
+    .eq("company_id", companyId).eq("unit_id", unitId).gt("finished_at", startedIso).order("finished_at", { ascending: false }).limit(20);
+  const rows = (data ?? []) as (Pick<LoadoutRecord, "id" | "finished_at" | "verdict" | "pieces" | "not_scanned"> & { scanned_by: string | null; scanned_by_user: string | null })[];
+  const ready = rows.find((r) => verdictOf(r) === "ready");
+  if (ready) return ready;
+  const blocked = rows.map((r) => r.id);
+  if (!blocked.length) return null;
+  const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id").eq("company_id", companyId).in("loadout_id", blocked).limit(1);
+  const rolledId = ((ov ?? []) as { loadout_id: string }[])[0]?.loadout_id;
+  return rows.find((r) => r.id === rolledId) ?? null;
 }
 
 /** This hand's check-in (of this truck, or of everything out) that started at this moment, if it already saved. */
@@ -77,7 +100,7 @@ export async function finishReturn(input: {
   notReturned: { assetId: string; outcome: Outcome }[];
   /** The hand says the truck never left the yard since its last check-in (a yard check, not a trip). */
   yardCheck?: boolean;
-}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string }> {
+}): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; stale?: boolean }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
@@ -99,12 +122,28 @@ export async function finishReturn(input: {
   const startedIso = new Date(startedMs).toISOString();
   const already = await savedReturn(admin, company.id, user.id, unit?.id ?? null, startedIso);
   if (already) return already;
+  // A check-in is one shift's work, like a load-out. One that says it started
+  // a day ago (or tomorrow) is an old draft off a phone or a clock gone wrong.
+  // It can never save, so the phone drops it instead of trying forever.
+  if (startedMs < Date.now() - 20 * 3600e3 || startedMs > Date.now() + 10 * 60e3) {
+    return { ok: false, stale: true, error: `This check-in was started too long ago to save. Start it again${unit ? ` from ${unit.name}` : ""}.` };
+  }
+  // Picked back up off a phone after the truck already loaded out again:
+  // that iron is on the new job, not back in the yard.
+  if (unit) {
+    const newer = await rolledSince(admin, company.id, unit.id, startedIso);
+    if (newer) {
+      const who = newer.scanned_by_user === user.id ? "You" : newer.scanned_by || "Someone";
+      return { ok: false, stale: true,
+        error: `${who} loaded ${unit.name} out again ${fmtWhen(newer.finished_at)}, after this check-in was started. It can't be saved. Start a new check-in when ${unit.name} is back.` };
+    }
+  }
 
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notReturned.map((n) => n.assetId)])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since, tag_token, nfc_uid, out_loadout_id, out_with_name, redress_each_run").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, out_since, tag_token, nfc_uid, out_loadout_id, out_with_name, redress_each_run, returned_at").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null; tag_token: string | null; nfc_uid: string | null; out_loadout_id: string | null; out_with_name: string | null; redress_each_run: boolean };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; out_since: string | null; tag_token: string | null; nfc_uid: string | null; out_loadout_id: string | null; out_with_name: string | null; redress_each_run: boolean; returned_at: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const unitNames = new Map<string, string>();
   const otherUnitIds = [...new Set(((assetRows ?? []) as A[]).map((a) => a.unit_id).filter((x): x is string => Boolean(x)))];
@@ -153,7 +192,13 @@ export async function finishReturn(input: {
 
   // Loose iron or a tool with nothing tapped: nothing came back, so there's
   // nothing to save (a truck's check-in can still say what didn't come back).
-  if (!unit && !scans.length) return { ok: false, error: "Nothing was checked in. Tap It's back on each piece that came back." };
+  // Pieces tapped that aren't this company's at all: the phone was switched
+  // to another company with this check-in still on it.
+  if (!unit && !scans.length) {
+    return { ok: false, error: input.scans.length && input.scans.every((s) => !byId.has(s.assetId))
+      ? "None of these pieces are in this company. Switch back to the company you checked them in for, then save."
+      : "Nothing was checked in. Tap It's back on each piece that came back." };
+  }
 
   // Was this trip cleared to roll? Decided before anything moves. A truck with
   // no load-out since its last check-in either never left the yard (a hand
@@ -161,7 +206,8 @@ export async function finishReturn(input: {
   // knows which. Said it never left: a yard check, so no "never scanned out"
   // flag and nothing on it is "still out". A truck that loaded out since did
   // leave, so its word isn't asked for or taken.
-  const unscanned = unit ? await tripNotScanned(admin, company.id, unit.id, now) : null;
+  const trip = unit ? await tripNotScanned(admin, company.id, unit.id, now) : null;
+  const unscanned = trip?.flag ?? null;
   const yardCheck = Boolean(input.yardCheck) && unscanned === "never";
   if (yardCheck && !scans.length) return { ok: false, error: "Nothing was checked in. Tap It's back on each piece you checked." };
 
@@ -224,10 +270,29 @@ export async function finishReturn(input: {
   // Didn't come back: still out (clock keeps running), or can't be found. Only
   // iron that's on this truck now counts (a piece moved to another truck since
   // this screen opened isn't this truck's to flag). A yard check has none.
+  // A piece another check-in (another phone, or an earlier check-in of this
+  // trip) already brought back after this one started isn't "not back" either.
   const notReturned = (yardCheck ? [] : input.notReturned).filter((n) => {
     const a = byId.get(n.assetId);
-    return Boolean(a && unit && a.unit_id === unit.id && a.status !== "retired" && !seen.has(n.assetId));
+    return Boolean(a && unit && a.unit_id === unit.id && a.status !== "retired" && !seen.has(n.assetId)
+      && !(a.returned_at && a.returned_at >= startedIso));
   }).map((n) => ({ ...n, outcome: (n.outcome === "missing" ? "missing" : "still_out") as Outcome }));
+  // Still out on the job: it stays logged on the truck and its out clock keeps
+  // running, but the piece says where it really is: left on location.
+  if (unit) {
+    const leftOn = new Map<string, string[]>();
+    for (const n of notReturned.filter((x) => x.outcome === "still_out")) {
+      const a = byId.get(n.assetId)!;
+      // No out clock: it isn't out on any job (it came back already, or never
+      // left), so it can't have been left on location.
+      if (!a.out_since) continue;
+      const where = `left on location from ${unit.name}'s ${a.out_since ? `${dayLabel(a.out_since)} ` : ""}job, per ${actor}, ${day}`;
+      leftOn.set(where, [...(leftOn.get(where) ?? []), a.id]);
+    }
+    for (const [where, ids] of leftOn) {
+      await db.from("saas_assets").update({ last_seen_where: where, last_seen_by: actor, last_seen_at: now }).eq("company_id", company.id).in("id", ids);
+    }
+  }
   for (const n of notReturned.filter((x) => x.outcome === "missing")) {
     const a = byId.get(n.assetId)!;
     // Known not to be on the truck: it comes off it, so it stops blocking the
@@ -317,9 +382,13 @@ export async function finishReturn(input: {
   }
   // A truck that comes back without having been cleared to roll: nobody
   // scanned it out, or it left NOT READY with no override. That's the app not
-  // being used, and a manager needs to hear about it. (Not a yard check: the
-  // hand said it never left.)
-  if (unit && scans.length && unscanned && !yardCheck) {
+  // being used, and a manager needs to hear about it. A yard check is the
+  // hand's word that it never left, which only the crew that would have
+  // skipped the scan can give, so the managers still hear it, softer.
+  if (unit && yardCheck) {
+    void logEvent({ companyId: company.id, kind: "yard_check", unitId: unit.id, actor,
+      message: `${unit.name} checked in by ${actor}, who said it didn't leave the yard${trip?.lastBack ? ` since it was checked in ${fmtWhen(trip.lastBack)}. No load-out since then.` : ". It has no load-out on record."}` });
+  } else if (unit && scans.length && unscanned) {
     void logEvent({ companyId: company.id, kind: "unscanned_trip", unitId: unit.id, actor,
       message: unscanned === "never" ? `${unit.name} came back from a job it was never scanned out for. Checked in by ${actor}.`
         : `${unit.name} came back, but its last load-out was NOT READY and nobody rolled it. It left without being cleared. Checked in by ${actor}.` });

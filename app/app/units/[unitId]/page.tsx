@@ -141,10 +141,13 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
   // the piece of gear, or the hand. The cert that turned CT-03 red is often
   // on its BOP stack, not the truck.
   const bad = (st: ComplianceStatus | null | undefined) => st === "expired" || st === "none" || st === "no_paper";
-  // A tool waiting on redress, or pressure iron with no test, is fixed on the
-  // piece's own page, and the button says what to do there.
+  // A piece flagged missing or red-tagged, a tool waiting on redress, or
+  // pressure iron with no test, is fixed on the piece's own page, and the
+  // button says what to do there. A down piece comes first: its tests can
+  // be good and the truck still can't roll.
+  const isDown = (x: { status: string }) => x.status === "missing" || x.status === "out_of_service";
   const heldPiece = failingCerts.length > 0 ? null
-    : assets.find((x) => x.needs_redress_since) ?? assets.find((x) => TESTED_CATEGORIES.has(x.category) && !certsByAsset.has(x.id)) ?? null;
+    : assets.find(isDown) ?? assets.find((x) => x.needs_redress_since) ?? assets.find((x) => TESTED_CATEGORIES.has(x.category) && !certsByAsset.has(x.id)) ?? null;
   const fixHref = failingCerts.length > 0 ? "#book"
     : (() => {
         const a = assets.find((x) => bad(worstByAsset.get(x.id)));
@@ -153,7 +156,7 @@ export default async function UnitDetail({ params }: { params: Promise<{ unitId:
         return "#book";
       })();
   const fixLabel = failingCerts.length === 0 && !assets.some((x) => bad(worstByAsset.get(x.id))) && heldPiece
-    ? (heldPiece.needs_redress_since ? "Mark it redressed" : "Add its test")
+    ? (isDown(heldPiece) ? "Open the piece" : heldPiece.needs_redress_since ? "Mark it redressed" : "Add its test")
     : "Upload the new cert";
   const dueHref = (() => {
     const a = assets.find((x) => worstByAsset.get(x.id) === "expiring");

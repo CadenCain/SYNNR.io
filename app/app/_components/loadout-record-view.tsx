@@ -1,7 +1,7 @@
 import { ShieldCheck, TriangleAlert, OctagonX, Lock } from "lucide-react";
 import { fmtWhen, fmtTime } from "@/lib/saas/format";
 import { testText as sharedTestText } from "@/lib/saas/judge";
-import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride, type LoadoutOutcome } from "@/lib/saas/loadout-record";
+import { outcomeOf, reasonsOf, type LoadoutRecord, type LoadoutOverride, type LoadoutOutcome, type RecordPiece } from "@/lib/saas/loadout-record";
 import { cn } from "@/lib/utils";
 import { lineSourceLabel } from "@/lib/saas/loadout-lines";
 
@@ -22,13 +22,15 @@ const pieceLabel = (p: { name: string; serial: string | null }) => `${p.name}${p
 /** How a test stood when the piece went on: "good to May 12, 2027", "expired Oct 8, 2026", or "no date". */
 const testText = sharedTestText;
 
-export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, photo = null, forOperator = false, tz, later = null }: {
+export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, truckPaper = {}, photo = null, forOperator = false, tz, later = null }: {
   rec: LoadoutRecord;
   override: LoadoutOverride | null;
   /** Link to a piece's public tag page (tests and the cert), when known. */
   tagHref?: (assetId: string) => string | null;
   /** The cert behind each piece's tests, by asset id: what the operator wants to see. */
   paper?: Record<string, { title: string; url: string }[]>;
+  /** The cert behind the truck's own paper the record kept, by upload id. */
+  truckPaper?: Record<string, string>;
   /** The photo of the loaded truck: what was actually on it when it rolled. */
   photo?: { url: string; at: string } | null;
   /** The operator's proof link: the manager's note to the crew stays inside the shop. */
@@ -38,14 +40,21 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
    * it with the zone on it ("5:10 AM MT"). Left out, Central with no zone.
    */
   tz?: string | null;
-  /** The truck was loaded out again on this trip: where the newest record is. */
-  later?: { unit_name: string; finished_at: string; outcome: LoadoutOutcome; href: string; tz?: string | null } | null;
+  /**
+   * This NOT READY load-out was loaded out again for the same job on the same
+   * shift. One line: when, and the answer. Never a link to that record.
+   */
+  later?: { unit_name: string; finished_at: string; outcome: LoadoutOutcome; tz?: string | null } | null;
 }) {
   const time = (iso: string | undefined) => fmtTime(iso, tz);
   const when = (iso: string | undefined) => fmtWhen(iso, tz);
   const outcome = outcomeOf(rec, override);
   const reasons = reasonsOf(rec);
   const byHand = rec.pieces.filter((p) => p.how === "hand").length;
+  const tagOff = rec.pieces.filter((p) => p.red_tag_off).length;
+  // Saved with no signal and sent later: the record says when the hand saved it.
+  const savedMs = rec.phone_saved_at ? Date.parse(rec.phone_saved_at) : NaN;
+  const sentLate = Number.isFinite(savedMs) && Date.parse(rec.finished_at) - savedMs > 5 * 60e3;
   const listNames = [
     rec.lines.some((l) => l.source === "kit") ? `${rec.unit_name} kit` : null,
     ...(rec.packages ?? []),
@@ -68,6 +77,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           {rec.unit_name} load-out, {when(rec.finished_at)}{rec.scanned_by ? `, by ${rec.scanned_by}` : ""}.
           {" "}{rec.pieces.length} {rec.pieces.length === 1 ? "piece" : "pieces"} went on.
         </p>
+        {sentLate ? <p className="mt-1 text-sm text-ink-dim">Saved on the phone {when(rec.phone_saved_at!)}, sent {when(rec.finished_at)}.</p> : null}
         {rec.job ? <p className="mt-1 text-sm font-medium text-ink">For: {rec.job}</p> : null}
         {rec.plan ? (
           <p className="mt-1 text-sm text-ink-dim">
@@ -77,6 +87,11 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
         {byHand > 0 ? (
           <p className={cn("mt-1 text-sm font-medium", photo ? "text-ink-dim" : "text-amber-400")}>
             {byHand} of {rec.pieces.length} checked by hand, not scanned off a tag{photo ? ", with a photo of the loaded truck" : ""}.
+          </p>
+        ) : null}
+        {tagOff > 0 ? (
+          <p className="mt-1 text-sm font-medium text-amber-400">
+            {tagOff === 1 ? "1 piece had its red tag taken off before it went on." : `${tagOff} pieces had their red tag taken off before they went on.`}
           </p>
         ) : null}
         {override ? (
@@ -93,18 +108,35 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
           </ul>
         ) : null}
         {later ? (
-          <div className={cn("mt-3 rounded-xl border bg-surface p-3 text-sm",
+          <p className={cn("mt-3 rounded-xl border bg-surface p-3 text-sm",
             later.outcome === "ready" ? "border-emerald-500/40" : later.outcome === "override" ? "border-amber-500/40" : "border-red-500/40")}>
             <span className="font-semibold text-ink">
-              {later.unit_name} was loaded out again {fmtWhen(later.finished_at, later.tz === undefined ? tz : later.tz)}:{" "}
+              {later.unit_name} was loaded out again for this job {fmtWhen(later.finished_at, later.tz === undefined ? tz : later.tz)}:{" "}
               <span className={later.outcome === "ready" ? "text-emerald-400" : later.outcome === "override" ? "text-amber-400" : "text-red-400"}>
                 {later.outcome === "ready" ? "READY" : later.outcome === "override" ? "rolled NOT READY on a manager's override" : "NOT READY"}
               </span>.
             </span>{" "}
-            <a href={later.href} className="font-medium text-bone underline underline-offset-2">See the newest record</a>
-          </div>
+            <span className="text-ink-dim">Ask the shop for that record.</span>
+          </p>
         ) : null}
       </section>
+
+      {rec.truck_paper?.length ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold">Truck paper</h2>
+          {rec.truck_paper.map((t, i) => {
+            const bad = !t.good_until || t.result === "expired" || t.result === "missing" || t.result === "no_paper";
+            const url = t.paper ? truckPaper[t.paper] : undefined;
+            return (
+              <div key={`${t.title}-${i}`} className={cn("rounded-xl border p-3 text-sm",
+                bad ? "border-red-500/40 bg-red-500/[0.06]" : t.result === "pending" ? "border-amber-500/40 bg-amber-500/[0.06]" : "border-line bg-surface")}>
+                <div className={cn("break-words font-medium", bad ? "text-red-400" : t.result === "pending" ? "text-amber-400" : "text-ink")}>{testText(t)}</div>
+                <PaperLinks list={url ? [{ title: t.title, url }] : undefined} />
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
 
       {rec.roll_checks?.length ? (
         <section className="flex flex-col gap-2">
@@ -171,6 +203,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
                   {(p.tests ?? []).length ? (p.tests ?? []).map(testText).join(" · ") : "No test on file"}
                 </div>
                 <div className="mt-0.5 text-[13px] text-ink-faint">{HOW[p.how] ?? p.how}{p.at ? ` ${time(p.at)}` : ""}{p.by ? ` by ${p.by}` : ""}{p.added ? " · brought over from elsewhere" : ""}</div>
+                {p.red_tag_off ? <div className="mt-0.5 break-words text-[13px] font-medium text-amber-400">{tagOffText(p.red_tag_off, when)}</div> : null}
                 <PaperLinks list={paper[p.asset_id]} />
               </div>
             );
@@ -191,6 +224,7 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
                       <td className="px-3 py-2 tabular-nums text-ink-dim">{p.serial ?? ""}</td>
                       <td className={cn("px-3 py-2", p.red ? "text-red-400" : "text-ink-dim")}>
                         {(p.tests ?? []).length ? (p.tests ?? []).map((t) => <div key={t.title}>{testText(t)}</div>) : "No test on file"}
+                        {p.red_tag_off ? <div className="mt-0.5 break-words font-medium text-amber-400">{tagOffText(p.red_tag_off, when)}</div> : null}
                         <PaperLinks list={paper[p.asset_id]} />
                       </td>
                       <td className="px-3 py-2 text-ink-dim">{HOW[p.how] ?? p.how}</td>
@@ -223,6 +257,12 @@ export default function LoadoutRecordView({ rec, override, tagHref, paper = {}, 
       </p>
     </div>
   );
+}
+
+/** 'Red tag taken off by Kevin Odom Nov 12, 5:15 AM: "new seals, retested"' */
+function tagOffText(t: NonNullable<RecordPiece["red_tag_off"]>, when: (iso: string | undefined) => string): string {
+  const note = t.note?.trim();
+  return `Red tag taken off${t.by ? ` by ${t.by}` : ""}${t.at ? ` ${when(t.at)}` : ""}${note ? `: \u201c${note}\u201d` : ""}`;
 }
 
 /** "See the cert" for each test behind a piece. */

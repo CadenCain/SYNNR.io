@@ -2,7 +2,7 @@ import { fmtDay } from "@/lib/saas/format";
 import Link from "next/link";
 import { Ban } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
-import { saasDb } from "@/lib/saas/db";
+import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Th, Td, Tr } from "@/components/ui/table";
@@ -32,13 +32,35 @@ export default async function ProofsSettings() {
 
   const { data } = await db
     .from("saas_readiness_proofs")
-    .select("id, token, scope, created_at, revoked_at, saas_yards(name), saas_units(name)")
+    .select("id, token, scope, created_at, created_by, revoked_at, saas_yards(name), saas_units(name)")
     .eq("company_id", company.id)
     .order("created_at", { ascending: false })
     .limit(100);
-  type Row = { id: string; token: string; scope: string; created_at: string; revoked_at: string | null; saas_yards: { name: string } | { name: string }[] | null; saas_units: { name: string } | { name: string }[] | null };
-  const proofs = ((data ?? []) as Row[]).map((p) => ({
+  type Row = { id: string; token: string; scope: string; created_at: string; created_by: string | null; revoked_at: string | null; saas_yards: { name: string } | { name: string }[] | null; saas_units: { name: string } | { name: string }[] | null };
+  const rows = (data ?? []) as Row[];
+  // Who made each link, so a manager can find and shut off the ones made by
+  // someone who's off the crew now. Names come from the sign-in accounts,
+  // once per person, and only for people who made one of this company's links.
+  const makerIds = [...new Set(rows.map((p) => p.created_by).filter((x): x is string => Boolean(x)))].slice(0, 50);
+  const admin = makerIds.length ? saasAdmin() : null;
+  const makers = new Map<string, { name: string; off: boolean }>();
+  if (admin) {
+    const { data: mem, error: memErr } = await admin.from("saas_memberships").select("user_id").eq("company_id", company.id).eq("status", "active").in("user_id", makerIds);
+    // Couldn't read the crew: nobody gets called off it.
+    const onCrew = memErr ? null : new Set(((mem ?? []) as { user_id: string }[]).map((m) => m.user_id));
+    await Promise.all(makerIds.map(async (id) => {
+      const { data: who } = await admin.auth.admin.getUserById(id);
+      const name = (who?.user?.user_metadata?.full_name as string | undefined)?.trim() || who?.user?.email?.split("@")[0];
+      if (name) makers.set(id, { name, off: Boolean(onCrew && !onCrew.has(id)) });
+    }));
+  }
+  const madeBy = (id: string | null) => {
+    const m = id ? makers.get(id) : undefined;
+    return m ? `${m.name}${m.off ? " (off the crew)" : ""}` : null;
+  };
+  const proofs = rows.map((p) => ({
     ...p,
+    madeBy: madeBy(p.created_by),
     scopeLabel:
       p.scope === "unit" ? `Truck: ${(Array.isArray(p.saas_units) ? p.saas_units[0]?.name : p.saas_units?.name) ?? ""}`
       : p.scope === "yard" ? `Yard: ${(Array.isArray(p.saas_yards) ? p.saas_yards[0]?.name : p.saas_yards?.name) ?? ""}`
@@ -98,11 +120,14 @@ export default async function ProofsSettings() {
                 <Td className="font-medium">
                   {p.scopeLabel}
                   <div className="text-xs font-normal text-ink-faint sm:hidden">
-                    Made {fmtDay(p.created_at)}
+                    Made {fmtDay(p.created_at)}{p.madeBy ? ` by ${p.madeBy}` : ""}
                     {!p.revoked_at ? <> · <Link href={`/proof/${p.token}`} target="_blank" className="text-bone">open it</Link></> : null}
                   </div>
                 </Td>
-                <Td className="hidden tabular-nums text-ink-dim sm:table-cell">{fmtDay(p.created_at)}</Td>
+                <Td className="hidden text-ink-dim sm:table-cell">
+                  <span className="tabular-nums">{fmtDay(p.created_at)}</span>
+                  {p.madeBy ? <div className="text-xs text-ink-faint">Made by {p.madeBy}</div> : null}
+                </Td>
                 <Td className="hidden sm:table-cell">
                   {p.revoked_at ? <span className="text-ink-faint">Shut off</span> : (
                     <Link href={`/proof/${p.token}`} target="_blank" className="text-bone hover:underline">

@@ -2,9 +2,9 @@ import { requireCompany } from "@/lib/saas/auth";
 import { testText } from "@/lib/saas/judge";
 import { readAll } from "@/lib/saas/read-all";
 import { saasDb } from "@/lib/saas/db";
-import { YARD_TZ } from "@/lib/saas/format";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
-import { loadoutFilters, rangeOf, jobPattern } from "./filters";
+import { esc, when, HOW, companyYardZones } from "@/app/api/saas/export/csv";
+import { loadoutFilters, rangeOf, rangeZone, jobPattern } from "./filters";
 
 /**
  * Every load-out record as a spreadsheet: one row per piece that went on, so
@@ -12,28 +12,21 @@ import { loadoutFilters, rangeOf, jobPattern } from "./filters";
  * stay locked in RollReady; this is a copy. The records page's filters carry
  * over (a yard, an answer, who, a date range, a job or well), so one
  * operator's auditor gets that operator's load-outs and nobody else's.
+ * Every time reads on the record's yard clock, with the zone on it.
  */
 export const dynamic = "force-dynamic";
 
-const esc = (v: unknown) => {
-  // Names are typed by people: one starting =, +, -, or @ would run as a
-  // formula when the sheet opens in Excel, so it goes in as plain text.
-  const raw = String(v ?? "");
-  const s = /^[=+\-@\t\r]/.test(raw) && !/^-?\d+(\.\d+)?$/.test(raw) ? `'${raw}` : raw;
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-const when = (iso: string | undefined | null) =>
-  iso ? new Date(iso).toLocaleString("en-US", { timeZone: YARD_TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", minute: "2-digit" }) : "";
-const HOW: Record<string, string> = { nfc: "NFC tap", qr: "QR scan", hand: "Checked by hand" };
-/** "BOP rams closed for travel: done by Dale 11/10/2026, 5:02 AM; Tools tied down: not done" */
-const rollChecksText = (checks: LoadoutRecord["roll_checks"]) => (checks ?? [])
-  .map((c) => `${c.label}: ${c.ok ? `done${c.by ? ` by ${c.by}` : ""}${c.at ? ` ${when(c.at)}` : ""}` : "not done"}`).join("; ");
+/** "BOP rams closed for travel: done by Dale 11/10/2026, 5:02 AM CT; Tools tied down: not done" */
+const rollChecksText = (checks: LoadoutRecord["roll_checks"], tz: string | null) => (checks ?? [])
+  .map((c) => `${c.label}: ${c.ok ? `done${c.by ? ` by ${c.by}` : ""}${c.at ? ` ${when(c.at, tz)}` : ""}` : "not done"}`).join("; ");
 
 export async function GET(request: Request) {
   const { company } = await requireCompany();
   const db = await saasDb();
   const f = loadoutFilters(new URL(request.url).searchParams);
-  const range = rangeOf(f);
+  // Each yard's clock: the days in the date range and every time in the file.
+  const zones = await companyYardZones(db, company.id);
+  const range = rangeOf(f, rangeZone(f, zones));
   // Every load-out that matches, however many: "every load-out" means every one.
   const page = (a: number, b: number) => {
     let q = db.from("saas_loadout_scans").select("id, unit_name, yard_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned, proof_token, job, roll_checks, photo_path", { count: "exact" })
@@ -72,13 +65,14 @@ export async function GET(request: Request) {
     const outcome = outcomeOf(r, o ? { ...o } : null);
     if (f.show && outcome !== f.show) continue;
     const answer = { ready: "READY", override: "Rolled on override", blocked: "NOT READY" }[outcome];
-    const base = [when(r.finished_at), r.unit_name, r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.job ?? "", answer, reasonsOf(r).join("; "),
-      r.scanned_by ?? "", o?.by_name ?? "", o?.reason ?? "", rollChecksText(r.roll_checks), r.photo_path ? "yes" : ""];
+    const tz = r.yard_id ? zones.get(r.yard_id) ?? null : null;
+    const base = [when(r.finished_at, tz), r.unit_name, r.yard_id ? yardName.get(r.yard_id) ?? "" : "", r.job ?? "", answer, reasonsOf(r).join("; "),
+      r.scanned_by ?? "", o?.by_name ?? "", o?.reason ?? "", rollChecksText(r.roll_checks, tz), r.photo_path ? "yes" : ""];
     // A link the shop shut off is dead: say so instead of handing it out again.
     const tail = [linkOff.has(r.id) ? "shut off" : `https://www.synnr.io/l/${r.proof_token}`];
     if (!r.pieces.length) lines.push([...base, "", "", "", "", "", "", "", ...tail].map(esc).join(","));
     for (const p of r.pieces) {
-      lines.push([...base, p.name, p.serial ?? "", HOW[p.how] ?? p.how, when(p.at), p.by ?? r.scanned_by ?? "", p.red ? "yes" : "",
+      lines.push([...base, p.name, p.serial ?? "", HOW[p.how] ?? p.how, when(p.at, tz), p.by ?? r.scanned_by ?? "", p.red ? "yes" : "",
         (p.tests ?? []).map((t) => testText(t)).join("; "), ...tail].map(esc).join(","));
     }
   }

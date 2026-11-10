@@ -1,5 +1,5 @@
 import type { saasAdmin } from "@/lib/saas/db";
-import { getLoadout, RECORD_COLS, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { getLoadout, selectRecord, type LoadoutRecord, type LoadoutOverride } from "@/lib/saas/loadout-record";
 import { SHOWCASE_PROOF_TOKEN } from "@/lib/saas/demo-seed";
 
 type Admin = NonNullable<ReturnType<typeof saasAdmin>>;
@@ -32,10 +32,9 @@ async function showcaseLoadout(admin: Admin): Promise<PublicRecord | null> {
   const { data: proof } = await admin.from("saas_readiness_proofs").select("company_id").eq("token", SHOWCASE_PROOF_TOKEN).maybeSingle();
   const companyId = (proof as { company_id: string } | null)?.company_id;
   if (!companyId) return null;
-  const { data } = await admin.from("saas_loadout_scans").select(RECORD_COLS)
-    .eq("company_id", companyId).eq("unit_name", "CT-03").order("finished_at", { ascending: false }).limit(1).maybeSingle();
-  if (!data) return null;
-  const rec = data as LoadoutRecord;
+  const rec: LoadoutRecord | null = await selectRecord((cols) => admin.from("saas_loadout_scans").select(cols)
+    .eq("company_id", companyId).eq("unit_name", "CT-03").order("finished_at", { ascending: false }).limit(1).maybeSingle());
+  if (!rec) return null;
   const { data: ov } = await admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", rec.id).maybeSingle();
   return { rec: { ...rec, reasons: rec.reasons ?? [], lines: rec.lines ?? [], packages: rec.packages ?? [] }, override: (ov as LoadoutOverride | null) ?? null };
 }

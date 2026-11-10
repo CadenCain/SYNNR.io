@@ -145,8 +145,14 @@ export async function kitFromTruck(fd: FormData) {
   const unitId = str(fd, "unit_id");
   const pkg = await kitFor(db, company.id, unitId, actorOf(user));
   if (!pkg) return;
-  const { data: assets } = await db.from("saas_assets").select("name").eq("company_id", company.id).eq("unit_id", unitId).neq("status", "retired").order("name");
-  const lines = kitLinesFrom(((assets ?? []) as { name: string }[]).map((a) => a.name));
+  // By kind: the line names the kind of piece, not the one piece's serial or
+  // the truck it's on, so any good one of that kind fills it.
+  const [{ data: assets }, { data: unitRow }] = await Promise.all([
+    db.from("saas_assets").select("name, identifier").eq("company_id", company.id).eq("unit_id", unitId).neq("status", "retired").order("name"),
+    db.from("saas_units").select("name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
+  ]);
+  const unitName = (unitRow as { name: string } | null)?.name;
+  const lines = kitLinesFrom(((assets ?? []) as { name: string; identifier: string | null }[]).map((a) => ({ name: a.name, serial: a.identifier })), unitName ? [unitName] : []);
   await db.from("saas_package_lines").delete().eq("package_id", pkg.id);
   if (lines.length) {
     await db.from("saas_package_lines").insert(lines.map((l, i) => ({ package_id: pkg.id, company_id: company.id, label: l.label, qty: l.qty, sort: i + 1 })));
@@ -162,18 +168,20 @@ export async function fillEmptyKits() {
   const [{ data: units }, { data: kits }, { data: assets }] = await Promise.all([
     db.from("saas_units").select("id, name").eq("company_id", company.id),
     db.from("saas_packages").select("id, unit_id, saas_package_lines(id)").eq("company_id", company.id).not("unit_id", "is", null),
-    db.from("saas_assets").select("name, unit_id").eq("company_id", company.id).not("unit_id", "is", null).neq("status", "retired"),
+    db.from("saas_assets").select("name, identifier, unit_id").eq("company_id", company.id).not("unit_id", "is", null).neq("status", "retired"),
   ]);
   const hasLines = new Set(((kits ?? []) as { unit_id: string; saas_package_lines: { id: string }[] | null }[])
     .filter((k) => (k.saas_package_lines ?? []).length > 0).map((k) => k.unit_id));
-  const namesOn = new Map<string, string[]>();
-  for (const a of (assets ?? []) as { name: string; unit_id: string }[]) namesOn.set(a.unit_id, [...(namesOn.get(a.unit_id) ?? []), a.name]);
+  // By kind, the same as kitFromTruck: each piece's serial and every truck's name come out of the line.
+  const piecesOn = new Map<string, { name: string; serial: string | null }[]>();
+  for (const a of (assets ?? []) as { name: string; identifier: string | null; unit_id: string }[]) piecesOn.set(a.unit_id, [...(piecesOn.get(a.unit_id) ?? []), { name: a.name, serial: a.identifier }]);
+  const truckNames = ((units ?? []) as { name: string }[]).map((x) => x.name);
   let made = 0;
   for (const u of (units ?? []) as { id: string; name: string }[]) {
-    if (hasLines.has(u.id) || !(namesOn.get(u.id) ?? []).length) continue;
+    if (hasLines.has(u.id) || !(piecesOn.get(u.id) ?? []).length) continue;
     const pkg = await kitFor(db, company.id, u.id, actor);
     if (!pkg) continue;
-    const lines = kitLinesFrom(namesOn.get(u.id)!);
+    const lines = kitLinesFrom(piecesOn.get(u.id)!, truckNames);
     await db.from("saas_package_lines").insert(lines.map((l, i) => ({ package_id: pkg.id, company_id: company.id, label: l.label, qty: l.qty, sort: i + 1 })));
     made++;
   }

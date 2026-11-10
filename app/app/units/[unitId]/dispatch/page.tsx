@@ -41,8 +41,9 @@ export async function generateMetadata({ params }: { params: Promise<{ unitId: s
 }
 
 /** Why there's no override form, and what to do instead. */
-function noRollNote(name: string, unitId: string, lo: TruckLoadout | null): { text: string; href: string; link: string } {
+function noRollNote(name: string, unitId: string, lo: TruckLoadout | null, paperFixed: boolean): { text: string; href: string; link: string } {
   const scan = `/app/units/${unitId}/scan`;
+  if (lo?.state === "blocked" && paperFixed) return { text: `${name}'s load-out ${fmtWhen(lo.finishedAt)} was blocked only on truck paper, and that paper is good now. No override needed: scan ${name} again to roll. If it comes back NOT READY, a manager can roll that one.`, href: scan, link: `Scan ${name} again` };
   if (lo?.state === "blocked") return { text: `${name}'s last load-out is from ${fmtWhen(lo.finishedAt)}, too long ago to roll: what's on the truck now may not be what was scanned then. Scan ${name} again. If it comes back NOT READY, a manager can roll that one.`, href: scan, link: `Scan ${name} again` };
   if (lo?.state === "out") return { text: `${name} is already out on a job from its load-out ${fmtWhen(lo.finishedAt)}. There's nothing to roll. Check it in when it's back.`, href: `/app/loadouts/${lo.id}`, link: "See that load-out" };
   return { text: `A NOT READY truck rolls only from its load-out. Scan ${name} as it's loaded. If the load-out comes back NOT READY, a manager can roll it from there, on the record.`, href: scan, link: `Scan ${name}` };
@@ -64,7 +65,7 @@ export default async function DispatchPage({ params, searchParams }: { params: P
   const gear = comp.lines.filter((l) => (l.source_type === "loadout_item" || l.source_type === "asset") && l !== loLine);
   const paper = comp.lines.filter((l) => l.source_type === "cert");
   const manager = company.role === "owner" || company.role === "admin";
-  const note = noRollNote(comp.unitName, unitId, lo);
+  const note = noRollNote(comp.unitName, unitId, lo, comp.paperFixed);
 
   // Verdict banner groups failures by kind — eight identical red bullets read
   // as noise; three labeled clusters read as a fix-list.
@@ -179,7 +180,8 @@ export default async function DispatchPage({ params, searchParams }: { params: P
       ) : null}
 
       {comp.verdict === "not_ready" && (
-        manager && lo?.rollable ? (
+        // Blocked only on truck paper that's good now: a new scan rolls it, so no override form.
+        manager && lo?.rollable && !comp.paperFixed ? (
           <details className="rounded-2xl border border-line bg-surface p-4">
             <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold text-ink">Roll anyway (manager override)</summary>
             <form action={rollAnyway} className="mt-3 flex flex-col gap-2">

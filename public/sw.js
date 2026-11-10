@@ -9,6 +9,10 @@
  *   Pages (/app, /app/return, /app/units/<id>/scan and /return): network
  *   first, the saved copy when there's no signal, or when one bar hasn't
  *   answered in 5 seconds (the network answer still saves for next time).
+ *   A saved copy is marked (<meta name="rr-saved">) so the page always says
+ *   it's the copy on this phone and when it was saved, and gets the latest
+ *   once it can (app/app/_components/offline-support.tsx). An old board or
+ *   scan page never passes for the live one.
  *   The Load out board asks for every truck's pages to be saved ahead of
  *   time ("warm").
  *   Built files (/_next/static): saved the first time, they never change.
@@ -72,11 +76,35 @@ async function page(event, req, url) {
   const slow = new Promise((resolve) => { timer = setTimeout(resolve, SLOW_MS); });
   try {
     // Nothing saved for this page: wait on the network as long as it takes.
-    return await Promise.race([net, slow.then(() => saved).then((hit) => hit || net)]);
+    // A saved copy that can't be marked isn't shown with signal: wait instead.
+    return await Promise.race([net, slow.then(() => saved).then(async (hit) => (hit && (await marked(hit, url))) || net)]);
   } catch {
-    return (await saved) || offline();
+    const hit = await saved;
+    return hit ? (await marked(hit, url)) || hit : offline();
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * The saved copy, marked as one: when the server made it (its Date header)
+ * and for which page. The page reads the mark and says so on screen, even
+ * with signal, so last night's board never passes for this morning's.
+ */
+async function marked(hit, url) {
+  try {
+    const at = Date.parse(hit.headers.get("date") || "");
+    const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const mark = `<meta name="rr-saved" content="${Number.isFinite(at) ? at : ""}" data-path="${esc(url.pathname)}">`;
+    const html = await hit.clone().text();
+    const head = /<head(\s[^>]*)?>/i;
+    const body = head.test(html) ? html.replace(head, (m) => m + mark) : html + mark;
+    const headers = new Headers(hit.headers);
+    headers.delete("content-length");
+    headers.delete("content-encoding");
+    return new Response(body, { status: hit.status, statusText: hit.statusText, headers });
+  } catch {
+    return null;
   }
 }
 

@@ -6,6 +6,7 @@ import { saasDb } from "@/lib/saas/db";
 import { logEvent } from "@/lib/saas/notify";
 import { cleanPlanLines, getTruckPlan, planSummary, rolledSince } from "@/lib/saas/plans";
 import { fmtWhen } from "@/lib/saas/format";
+import { yardZones } from "@/lib/saas/loadout-record";
 
 const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string | null }) =>
   user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || "a manager";
@@ -17,17 +18,23 @@ const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string 
  * sends. seenAt: when the manager opened the page. If the truck rolled since,
  * the save stops once to say so (the plan would be for its next job), and
  * hands back a new seenAt so tapping Save again keeps it.
+ * planId: the plan the form opened with. If the truck rolled on it while the
+ * form was open, the save stops (usedUp) and asks; it starts a new plan only
+ * when the form sends nextJob, and then without the leave time of the job
+ * that already went.
  */
-export async function savePlan(input: { unitId: string; packageIds: string[]; lines: { label: string; qty: number }[]; note: string; job?: string; leavesAt?: string | null; seenAt?: string | null }): Promise<{ ok: boolean; error?: string; seenAt?: string }> {
+export async function savePlan(input: { unitId: string; packageIds: string[]; lines: { label: string; qty: number }[]; note: string; job?: string; leavesAt?: string | null; seenAt?: string | null; planId?: string | null; nextJob?: boolean }): Promise<{ ok: boolean; error?: string; seenAt?: string; usedUp?: boolean }> {
   const { company, user } = await requireBillableCompany();
   if (company.role !== "owner" && company.role !== "admin") return { ok: false, error: "Only a manager can plan a load-out." };
   const db = await saasDb();
   const [{ data: unitRow }, { data: pkgRows }] = await Promise.all([
-    db.from("saas_units").select("id, name").eq("id", input.unitId).eq("company_id", company.id).maybeSingle(),
+    db.from("saas_units").select("id, name, yard_id").eq("id", input.unitId).eq("company_id", company.id).maybeSingle(),
     db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null),
   ]);
-  const unit = unitRow as { id: string; name: string } | null;
+  const unit = unitRow as { id: string; name: string; yard_id?: string | null } | null;
   if (!unit) return { ok: false, error: "That truck isn't in your account." };
+  // Times in the truck's yard's zone, with the zone on them.
+  const tz = (unit.yard_id && (await yardZones(db, [unit.yard_id])).get(unit.yard_id)) || null;
   const pkgs = (pkgRows ?? []) as { id: string; name: string }[];
   const packageIds = [...new Set((input.packageIds ?? []).filter((id) => pkgs.some((x) => x.id === id)))].slice(0, 10);
   const lines = cleanPlanLines(input.lines ?? []);
@@ -35,15 +42,44 @@ export async function savePlan(input: { unitId: string; packageIds: string[]; li
   const job = String(input.job ?? "").replace(/\s+/g, " ").trim().slice(0, 120) || null;
   // When it leaves: from a day ago to a month out, or not set.
   const leavesMs = input.leavesAt ? Date.parse(input.leavesAt) : NaN;
-  const leaves_at = Number.isFinite(leavesMs) && leavesMs > Date.now() - 864e5 && leavesMs < Date.now() + 31 * 864e5 ? new Date(leavesMs).toISOString() : null;
+  let leaves_at = Number.isFinite(leavesMs) && leavesMs > Date.now() - 864e5 && leavesMs < Date.now() + 31 * 864e5 ? new Date(leavesMs).toISOString() : null;
+
+  // The plan this form opened with, as it is now (this company's only).
+  const { data: openedRow } = input.planId
+    ? await db.from("saas_loadout_plans").select("id, unit_id, used_at, used_loadout_id, leaves_at").eq("id", String(input.planId)).eq("company_id", company.id).maybeSingle()
+    : { data: null };
+  const opened = openedRow as { id: string; unit_id: string; used_at: string | null; used_loadout_id: string | null; leaves_at: string | null } | null;
+  if (opened && opened.unit_id !== unit.id) {
+    // Another manager moved it to the truck the job went on: saving here would
+    // put the same job on two trucks.
+    const { data: toRow } = await db.from("saas_units").select("name").eq("id", opened.unit_id).eq("company_id", company.id).maybeSingle();
+    const to = (toRow as { name: string } | null)?.name ?? "another truck";
+    return { ok: false, error: `This plan moved to ${to}. Change it on ${to}'s plan.` };
+  } else if (opened?.used_at) {
+    // The truck rolled on it while the form was open. Saving now would start a
+    // new plan with that job's leave time, and at that time the board and the
+    // morning email would say nobody scanned it out. Ask first.
+    if (!input.nextJob) {
+      const { data: lo } = opened.used_loadout_id
+        ? await db.from("saas_loadout_scans").select("scanned_by").eq("id", opened.used_loadout_id).eq("company_id", company.id).maybeSingle()
+        : { data: null };
+      const by = (lo as { scanned_by: string | null } | null)?.scanned_by;
+      return { ok: false, usedUp: true, seenAt: new Date().toISOString(),
+        error: `${unit.name} already rolled on this plan, loaded out${by ? ` by ${by}` : ""} ${fmtWhen(opened.used_at, tz)}. Save it as the next job instead? Set when that job leaves, then tap Save it as the next job.` };
+    }
+    // For the next job: the leave time of the job that already went isn't its time.
+    if (leaves_at && opened.leaves_at && Date.parse(opened.leaves_at) === Date.parse(leaves_at)) leaves_at = null;
+  }
   if (!packageIds.length && !lines.length && !note && !leaves_at && !job) return clearPlan(unit.id);
 
   // The truck rolled while the manager had the page open: this plan isn't for
-  // the job that just left, it's for the next one. Say so once.
-  const rolled = input.seenAt ? await rolledSince(db, company.id, unit.id, String(input.seenAt)) : null;
+  // the job that just left, it's for the next one. Say so once. (Already said,
+  // and answered, when he's saving it as the next job.)
+  const asNextJob = Boolean(input.nextJob && opened?.used_at);
+  const rolled = input.seenAt && !asNextJob ? await rolledSince(db, company.id, unit.id, String(input.seenAt)) : null;
   if (rolled) {
     return { ok: false, seenAt: new Date().toISOString(),
-      error: `${unit.name} already rolled, loaded out${rolled.by ? ` by ${rolled.by}` : ""} ${fmtWhen(rolled.at)}. This plan would be for its next job. Check when that job leaves, then tap Save the plan again.` };
+      error: `${unit.name} already rolled, loaded out${rolled.by ? ` by ${rolled.by}` : ""} ${fmtWhen(rolled.at, tz)}. This plan would be for its next job. Check when that job leaves, then tap Save the plan again.` };
   }
 
   const actor = actorOf(user);
@@ -57,7 +93,7 @@ export async function savePlan(input: { unitId: string; packageIds: string[]; li
 
   const what = planSummary({ packageIds, lines }, new Map(pkgs.map((x) => [x.id, x.name])));
   void logEvent({ companyId: company.id, kind: "plan_set", unitId: unit.id, actor,
-    message: `${actor} planned ${unit.name}'s next job: ${what}${note ? `. "${note}"` : ""}${leaves_at ? `. Leaves ${new Date(leaves_at).toLocaleString("en-US", { timeZone: "America/Chicago", weekday: "short", hour: "numeric", minute: "2-digit" })}` : ""}` });
+    message: `${actor} planned ${unit.name}'s next job: ${what}${note ? `. "${note}"` : ""}${leaves_at ? `. Leaves ${fmtWhen(leaves_at, tz)}` : ""}` });
   revalidatePath("/app");
   revalidatePath(`/app/units/${unit.id}`);
   revalidatePath(`/app/units/${unit.id}/scan`);

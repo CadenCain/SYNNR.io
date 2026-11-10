@@ -1,4 +1,4 @@
-import { YARD_TZ } from "@/lib/saas/format";
+import { YARD_TZ, yardZone } from "@/lib/saas/format";
 import { addDaysIso } from "@/lib/saas/status";
 
 /**
@@ -63,9 +63,20 @@ export function dayStartIso(day: string, tz: string = YARD_TZ): string {
   return new Date(t).toISOString();
 }
 
+/**
+ * The clock a date range is counted on, the same one the times are shown in:
+ * the picked yard's, or the one zone all the yards share. Central when the
+ * yards are in different zones (or none has one yet).
+ */
+export function rangeZone(f: Pick<LoadoutFilters, "yard">, zones: Map<string, string>): string {
+  if (f.yard) return yardZone(zones.get(f.yard));
+  const all = new Set([...zones.values()].map((z) => yardZone(z)));
+  return all.size === 1 ? [...all][0] : YARD_TZ;
+}
+
 /** The moments a from/to pair covers: from the start of `from` up to (not including) the day after `to`. */
-export function rangeOf(f: Pick<LoadoutFilters, "from" | "to">): { gte: string | null; lt: string | null } {
-  return { gte: f.from ? dayStartIso(f.from) : null, lt: f.to ? dayStartIso(addDaysIso(f.to, 1)) : null };
+export function rangeOf(f: Pick<LoadoutFilters, "from" | "to">, tz: string = YARD_TZ): { gte: string | null; lt: string | null } {
+  return { gte: f.from ? dayStartIso(f.from, tz) : null, lt: f.to ? dayStartIso(addDaysIso(f.to, 1), tz) : null };
 }
 
 /** Words in the job or well, as a case-blind "contains" match: what was typed is taken as plain text. */

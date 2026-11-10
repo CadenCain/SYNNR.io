@@ -18,11 +18,13 @@ import type { LoadOutTruckRow } from "@/lib/saas/loadout-board";
 const ORIGIN = "https://www.synnr.io";
 const SW = readFileSync(path.resolve(__dirname, "../../../public/sw.js"), "utf8");
 
-type Res = { ok: boolean; redirected: boolean; type: string; url: string; status: number; clone(): Res; text(): Promise<string> };
+type Res = { ok: boolean; redirected: boolean; type: string; url: string; status: number; statusText?: string; headers: Headers; clone(): Res; text(): Promise<string> };
 const res = (body: string, over: Partial<Res> = {}): Res => {
-  const r: Res = { ok: true, redirected: false, type: "basic", url: `${ORIGIN}/app`, status: 200, clone: () => res(body, over), text: async () => body, ...over };
+  const r: Res = { ok: true, redirected: false, type: "basic", url: `${ORIGIN}/app`, status: 200, headers: new Headers({ "content-type": "text/html; charset=utf-8" }), clone: () => res(body, over), text: async () => body, ...over };
   return r;
 };
+/** A saved copy comes back marked as one (fix2-offline checks the mark). */
+const unmark = (html: string) => html.replace(/<meta name="rr-saved"[^>]*>/, "");
 
 /** Load sw.js into a fake service worker scope. */
 function boot(fetchImpl: (req: unknown) => Promise<Res>) {
@@ -48,7 +50,7 @@ function boot(fetchImpl: (req: unknown) => Promise<Res>) {
     skipWaiting: () => {},
     clients: { claim: async () => {} },
   };
-  const ctx = vm.createContext({ self, caches, fetch: fetchImpl, URL, Response, setTimeout, clearTimeout, Promise, console });
+  const ctx = vm.createContext({ self, caches, fetch: fetchImpl, URL, Response, Headers, setTimeout, clearTimeout, Promise, console });
   vm.runInContext(SW, ctx);
 
   function go(pathname: string, method = "GET", mode = "navigate") {
@@ -88,7 +90,7 @@ describe("sw.js: one bar of signal", () => {
     await vi.advanceTimersByTimeAsync(4900);
     expect(got).toBeNull();
     await vi.advanceTimersByTimeAsync(200);
-    expect(await got!.text()).toBe("saved board");
+    expect(unmark(await got!.text())).toBe("saved board");
 
     net.resolve(res("fresh board"));
     await Promise.all(waits);
@@ -123,7 +125,7 @@ describe("sw.js: one bar of signal", () => {
     const sw = boot(async () => { throw new TypeError("Failed to fetch"); });
     await sw.save("/app/return", res("saved check-in"));
     const { responded } = sw.go("/app/return");
-    expect(await (await responded!).text()).toBe("saved check-in");
+    expect(unmark(await (await responded!).text())).toBe("saved check-in");
   });
 
   it("the no-signal page says what does work and links to Load out, no loop", async () => {
@@ -146,7 +148,7 @@ describe("sw.js: one bar of signal", () => {
     await sw.save("/app/units/u1/scan", res("saved scan"));
     const { responded, waits } = sw.go("/app");
     await vi.advanceTimersByTimeAsync(5000);
-    expect(await (await responded!).text()).toBe("saved board");
+    expect(unmark(await (await responded!).text())).toBe("saved board");
     net.resolve(res("", { ok: false, status: 0, type: "opaqueredirect" }));
     await Promise.all(waits);
     expect(sw.store.has("rr-pages-v1")).toBe(false);

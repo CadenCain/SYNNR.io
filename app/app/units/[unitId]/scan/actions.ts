@@ -6,13 +6,13 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent, notifyEvent } from "@/lib/saas/notify";
 import { YARD_TZ, fmtWhen } from "@/lib/saas/format";
 import { verdictOf, type LoadoutRecord } from "@/lib/saas/loadout-record";
-import type { ScanHow } from "@/lib/saas/loadout";
+import { RUN_MS, type ScanHow } from "@/lib/saas/loadout";
 import { judgeItem, isNoPaper } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
 import { expectedLines, fillLines, loadoutVerdict, untestedPieces, lineTokens, lineMatches, needsTagScan, type BadPiece } from "@/lib/saas/loadout-lines";
 import { TESTED_CATEGORIES } from "@/lib/saas/taxonomy";
 import { provenHow } from "@/lib/saas/scan-proof";
-import { getOpenPlan } from "@/lib/saas/plans";
+import { getOpenPlan, getTruckPlan, planTiming } from "@/lib/saas/plans";
 import { getYardRules } from "@/lib/saas/yard-rules";
 import { photoPathOk } from "@/lib/saas/loadout-photo";
 import { requiredChecks, missingChecks } from "@/lib/saas/roll-checks";
@@ -21,8 +21,6 @@ type Outcome = "yard" | "missing";
 
 const actorOf = (user: { user_metadata?: { full_name?: string }; email?: string | null }) =>
   user.user_metadata?.full_name?.trim() || user.email?.split("@")[0] || "someone";
-/** Out longer than a shift: it went on a job. */
-const RUN_MS = 12 * 3600e3;
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
 
 /**
@@ -137,6 +135,8 @@ export async function finishLoadout(input: {
   backInYard?: boolean;
   /** When the hand tapped Save on the phone (ms). An offline save can land hours later. */
   savedAt?: number;
+  /** The yard the truck was in when the load-out started: a piece taken off stays in it, even if a manager moved the truck to another yard meanwhile. */
+  yardId?: string;
 }): Promise<{ ok: boolean; error?: string; summary?: string; id?: string; verdict?: "ready" | "not_ready"; reasons?: string[]; proofToken?: string; backOn?: string[]; badIds?: string[]; stale?: boolean;
   left?: { id: string; name: string; serial: string | null; category: string }[]; packageIds?: string[];
   /** Refused: by the records the truck is out on a job. Resend with backInYard once the hand says it's back. */
@@ -145,8 +145,20 @@ export async function finishLoadout(input: {
   plan?: { id: string; at: string; atText: string; by: string | null; job: string | null; packageIds: string[]; lines: { label: string; qty: number }[] } | null;
   kit?: { label: string; qty: number }[];
   checks?: string[];
-  /** Scanned, but out on another truck's job: not moved onto this truck. */
-  notMoved?: string[] }> {
+  /** Scanned, but not moved onto this truck: out on another truck's job, signed out to someone, or scanned onto another truck since. */
+  notMoved?: string[];
+  /**
+   * Why each of notMoved didn't go on. out_on_job: another truck's trip
+   * holds it until that truck is checked in (or someone uses Move it).
+   * signed_out: signed out for more than a shift and only checked on by
+   * hand: it's checked in (or moved) first. scanned_since: scanned onto
+   * another truck after this phone scanned it: a fresh scan clears it.
+   * signed_out_until_ready: not blocked; a tool signed out to someone only
+   * comes off their sign-out and onto the truck when it rolls READY.
+   */
+  notMovedWhy?: Record<string, "out_on_job" | "signed_out" | "scanned_since" | "signed_out_until_ready">;
+  /** Each package the server checked, with its lines and checks as they are now (one made or changed after the screen opened, too). */
+  packageLists?: { id: string; name: string; lines: { label: string; qty: number }[]; checks: string[] }[] }> {
   const { company, user } = await requireBillableCompany();
   const actor = actorOf(user);
   const db = await saasDb();
@@ -264,9 +276,10 @@ export async function finishLoadout(input: {
   const onTruckIds = ((onTruckRows ?? []) as { id: string }[]).map((r) => r.id).filter((id) => !stillOut.has(id));
   const ids = [...new Set([...input.scans.map((s) => s.assetId), ...input.notScanned.map((n) => n.assetId), ...onTruckIds])];
   const { data: assetRows } = ids.length
-    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user, redress_each_run, out_since, out_loadout_id").eq("company_id", company.id).in("id", ids)
+    ? await db.from("saas_assets").select("id, name, identifier, unit_id, status, category, tag_token, nfc_uid, needs_redress_since, out_with_user, out_with_name, redress_each_run, out_since, out_loadout_id, scanned_at, scanned_by, scanned_unit_id, last_seen_where, last_seen_by, last_seen_at").eq("company_id", company.id).in("id", ids)
     : { data: [] };
-  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null; needs_redress_since: string | null; out_with_user: string | null; redress_each_run: boolean | null; out_since: string | null; out_loadout_id: string | null };
+  type A = { id: string; name: string; identifier: string | null; unit_id: string | null; status: string; category: string; tag_token: string | null; nfc_uid: string | null; needs_redress_since: string | null; out_with_user: string | null; out_with_name: string | null; redress_each_run: boolean | null; out_since: string | null; out_loadout_id: string | null;
+    scanned_at: string | null; scanned_by: string | null; scanned_unit_id: string | null; last_seen_where: string | null; last_seen_by: string | null; last_seen_at: string | null };
   const byId = new Map(((assetRows ?? []) as A[]).map((a) => [a.id, a]));
   const label = (a: A) => `${a.name}${a.identifier ? ` ${a.identifier}` : ""}`;
 
@@ -290,11 +303,13 @@ export async function finishLoadout(input: {
     return { assetId: s.assetId, how, at };
   });
   const scannedIds = scans.map((s) => s.assetId);
+  // Scanned, but it can't go on this truck as things stand. It blocks this
+  // truck, isn't moved onto it, and stays where it's logged until someone
+  // sorts out where it really is. Each reason says how.
+  const held = new Map<string, { why: "out_on_job" | "signed_out" | "scanned_since"; detail: string }>();
   // Out on another truck's job that hasn't been checked back in: a tap on the
-  // wrong row, or that truck's record is wrong. It can't ride on this one too
-  // (two proof links would claim it). It blocks this truck and stays on that
-  // trip until someone sorts out where it really is.
-  const elsewhere = new Map<string, string>();
+  // wrong row, or that truck came back without a check-in. It can't ride on
+  // this one too (two proof links would claim it).
   const tripIds = [...new Set(scannedIds.map((id) => byId.get(id)!).filter((a) => a.out_since && a.out_loadout_id && a.unit_id && a.unit_id !== unit.id)
     .map((a) => a.out_loadout_id as string))].slice(0, 100);
   if (tripIds.length) {
@@ -316,11 +331,37 @@ export async function finishLoadout(input: {
     for (const id of scannedIds) {
       const a = byId.get(id)!;
       const t = open.get(a.out_loadout_id ?? "");
-      if (t && a.unit_id === t.unit_id) elsewhere.set(id, `went out on ${t.unit_name} ${fmtWhen(a.out_since ?? t.finished_at)}${t.scanned_by ? `, loaded by ${t.scanned_by}` : ""}`);
+      if (t && a.unit_id === t.unit_id) {
+        held.set(id, { why: "out_on_job", detail: `went out on ${t.unit_name} ${fmtWhen(a.out_since ?? t.finished_at)}${t.scanned_by ? `, loaded by ${t.scanned_by}` : ""}, and ${t.unit_name} hasn't been checked in. If it's here, check ${t.unit_name} in or use Move it on the piece, then scan it again` });
+      }
+    }
+  }
+  // Signed out to someone for longer than a shift (it went on a job with
+  // them) and only checked on by hand: a tap on the list isn't proof it's
+  // back. Scanned off its tag, it's back from its run (see backFromRun).
+  for (const x of scans) {
+    const a = byId.get(x.assetId)!;
+    if (held.has(a.id) || !a.out_with_user || x.how !== "hand" || !a.out_since || nowMs - Date.parse(a.out_since) <= RUN_MS) continue;
+    held.set(a.id, { why: "signed_out", detail: `with ${a.out_with_name ?? "someone"} since ${fmtWhen(a.out_since)}. If it's here, check it in or use Move it on the piece, then scan it again` });
+  }
+  // Scanned onto another truck after this phone scanned it (an old draft, or
+  // a fix-it try that kept it, while someone else loaded it): it's on that
+  // truck now, by the newer scan. A fresh scan here says otherwise.
+  const later = scans.filter((x) => {
+    const a = byId.get(x.assetId)!;
+    return !held.has(a.id) && a.scanned_unit_id && a.scanned_unit_id !== unit.id && a.unit_id === a.scanned_unit_id
+      && a.scanned_at && Date.parse(a.scanned_at) > Date.parse(x.at) + 2 * 60e3;
+  });
+  if (later.length) {
+    const { data: laterUnits } = await db.from("saas_units").select("id, name").eq("company_id", company.id).in("id", [...new Set(later.map((x) => byId.get(x.assetId)!.scanned_unit_id as string))]);
+    const nameOf = new Map(((laterUnits ?? []) as { id: string; name: string }[]).map((u) => [u.id, u.name]));
+    for (const x of later) {
+      const a = byId.get(x.assetId)!;
+      held.set(a.id, { why: "scanned_since", detail: `onto ${nameOf.get(a.scanned_unit_id as string) ?? "another truck"} ${fmtWhen(a.scanned_at as string)}${a.scanned_by ? ` by ${a.scanned_by}` : ""}. If it's really on ${unit.name}, scan it again` });
     }
   }
   // What this save moves onto the truck: everything scanned but that.
-  const moveIds = scannedIds.filter((id) => !elsewhere.has(id));
+  const moveIds = scannedIds.filter((id) => !held.has(id));
   // A tool redressed after every run that shows up here off an earlier job
   // (it rolled on a truck, or went out with someone, more than a shift ago,
   // or it was lost and turned up) never came back through a check-in. It's
@@ -341,13 +382,13 @@ export async function finishLoadout(input: {
   for (const id of scannedIds) {
     const a = byId.get(id)!;
     if (a.status === "out_of_service") bad.push({ id, name: a.name, serial: a.identifier, why: "red_tagged" });
-    else if (elsewhere.has(id)) bad.push({ id, name: a.name, serial: a.identifier, why: "out_on_job", detail: elsewhere.get(id) });
+    else if (held.has(id)) bad.push({ id, name: a.name, serial: a.identifier, why: held.get(id)!.why, detail: held.get(id)!.detail });
     // Back from its last run and not redressed yet.
     else if (a.needs_redress_since) bad.push({ id, name: a.name, serial: a.identifier, why: "needs_redress" });
   }
   for (const it of (itemRows ?? []) as Item[]) {
     const a = byId.get(it.parent_id)!;
-    if (a.status === "out_of_service" || a.needs_redress_since || elsewhere.has(a.id)) continue;
+    if (a.status === "out_of_service" || a.needs_redress_since || held.has(a.id)) continue;
     const r = judgeItem(it, today, today);
     if (r.result === "expired") bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "out_of_test", detail: `${it.title} ${r.detail}` });
     else if (isNoPaper(r)) bad.push({ id: a.id, name: a.name, serial: a.identifier, why: "no_paper", detail: it.title });
@@ -394,7 +435,7 @@ export async function finishLoadout(input: {
   bad.push(...untestedPieces({
     scanned: scannedIds.map((id) => { const a = byId.get(id)!; return { id, name: a.name, serial: a.identifier, category: a.category }; }),
     hasTest, filled, testedCategories: TESTED_CATEGORIES, lineIsTested: (label) => testedLabels.has(label),
-  }).filter((p) => byId.get(p.id)!.status !== "out_of_service" && !byId.get(p.id)!.needs_redress_since && !elsewhere.has(p.id)));
+  }).filter((p) => byId.get(p.id)!.status !== "out_of_service" && !byId.get(p.id)!.needs_redress_since && !held.has(p.id)));
   const redIds = new Set(bad.map((b) => b.id));
   // Each piece's tests as they stood when it went on, kept on the record.
   const testsOf = new Map<string, { title: string; good_until: string | null; result: string; paper: string | null }[]>();
@@ -467,26 +508,41 @@ export async function finishLoadout(input: {
 
   // Move the iron. Scanned pieces are on this truck now; a piece flagged
   // missing that got scanned has been found. A red tag only comes off by a
-  // manager, so red-tagged iron keeps it. (A piece out on another truck's
-  // job stays where it's logged.)
-  if (moveIds.length) {
+  // manager, so red-tagged iron keeps it. (A piece held above stays where
+  // it's logged.) A tool signed out to someone only lands on the truck when
+  // it rolls READY: a NOT READY try that touched it leaves it with them, so a
+  // later "Not going this trip" can't take it off their sign-out.
+  const holdIds = verdict === "ready" ? [] : moveIds.filter((id) => byId.get(id)!.out_with_user && !ranIds.includes(id));
+  const goIds = moveIds.filter((id) => !holdIds.includes(id));
+  if (goIds.length) {
     const { error } = await db.from("saas_assets").update({
       unit_id: unit.id, yard_id: unit.yard_id,
       scanned_at: now, scanned_by: actor, scanned_unit_id: unit.id,
       last_seen_where: `scanned at load-out ${day}`, last_seen_by: actor, last_seen_at: now,
-    }).eq("company_id", company.id).in("id", moveIds);
+    }).eq("company_id", company.id).in("id", goIds);
     if (error) return { ok: false, error: `Couldn't save the scans: ${error.message}` };
-    const found = moveIds.filter((id) => byId.get(id)!.status === "missing");
+    const found = goIds.filter((id) => byId.get(id)!.status === "missing");
     if (found.length) await db.from("saas_assets").update({ status: "in_service" }).eq("company_id", company.id).in("id", found);
   }
+  // Taken off: it stays in the yard the truck was in when the load-out
+  // started (a manager can move the truck to another yard meanwhile; the
+  // iron on its rack didn't go with it).
+  const startYard = typeof input.yardId === "string" && input.yardId && input.yardId !== unit.yard_id
+    ? ((await db.from("saas_yards").select("id").eq("company_id", company.id).eq("id", input.yardId).maybeSingle()).data as { id: string } | null)?.id ?? null
+    : null;
+  const offYard = startYard ?? unit.yard_id;
   for (const n of notScanned) {
     const a = byId.get(n.assetId)!;
     if (n.known) {
       // Already flagged missing: off the truck, and where it was last stays as it was.
       await db.from("saas_assets").update({ unit_id: null }).eq("id", a.id).eq("company_id", company.id);
+    } else if (n.outcome === "yard" && a.out_with_user) {
+      // Signed out to someone: not on this truck, and still theirs. Off the
+      // truck; the sign-out and its clock stay as they are.
+      await db.from("saas_assets").update({ unit_id: null }).eq("id", a.id).eq("company_id", company.id);
     } else if (n.outcome === "yard") {
       await db.from("saas_assets").update({
-        unit_id: null, yard_id: unit.yard_id,
+        unit_id: null, yard_id: offYard,
         last_seen_where: `taken off ${unit.name} at load-out ${day}`, last_seen_by: actor, last_seen_at: now,
       }).eq("id", a.id).eq("company_id", company.id);
     } else if (n.outcome === "missing") {
@@ -508,6 +564,28 @@ export async function finishLoadout(input: {
     ? Math.min(input.savedAt, nowMs) : null;
   const rolledAt = new Date(Math.max(phoneSavedMs ?? nowMs, lastBack ? Date.parse(lastBack) + 1 : -Infinity)).toISOString();
 
+  // A red tag that came off a piece in the last day goes on the record with
+  // who took it off, when and why, so a READY right after a manager cleared
+  // a tag doesn't read like the piece was never tagged. From the feed line
+  // the red-tag form writes.
+  const dayAgoMs = nowMs - 24 * 3600e3;
+  const { data: tagOffRows } = scannedIds.length
+    ? await db.from("saas_events").select("message, actor, created_at").eq("company_id", company.id).eq("kind", "asset_status")
+        .gt("created_at", new Date(dayAgoMs).toISOString()).ilike("message", "% took the red tag off %").order("created_at", { ascending: false }).limit(200)
+    : { data: [] };
+  const tagOff = new Map<string, { by: string | null; note: string | null; at: string | null }>();
+  for (const id of scannedIds) {
+    const a = byId.get(id)!;
+    if (a.status === "out_of_service") continue;
+    // Only the feed line the server writes when a manager takes a red tag off
+    // counts (a piece's own note can be typed by anyone), and only for a
+    // piece with a serial: "Sinker bar" alone could be any of four.
+    if (!a.identifier) continue;
+    const key = ` took the red tag off ${label(a)}: "`;
+    const ev = ((tagOffRows ?? []) as { message: string; actor: string | null; created_at: string }[]).find((e) => e.message.includes(key));
+    if (ev) tagOff.set(id, { by: ev.actor, note: ev.message.slice(ev.message.indexOf(key) + key.length).replace(/"$/, "") || null, at: ev.created_at });
+  }
+
   const onList = scans.filter((s) => byId.get(s.assetId)!.unit_id === unit.id).length;
   // Added by migration 0040. Until it's in, the record saves without them.
   const newCols = { truck_paper: truckPaperRec.length ? truckPaperRec : null, phone_saved_at: phoneSavedMs === null ? null : new Date(phoneSavedMs).toISOString() };
@@ -521,7 +599,7 @@ export async function finishLoadout(input: {
     packages: pkgs.map((x) => x.name),
     plan: plan ? { id: plan.id, by: plan.by, at: plan.at, note: plan.note, packages: pkgs.filter((x) => plan.packageIds.includes(x.id)).map((x) => x.name), lines: plan.lines } : null,
     lines: filled.map((l) => ({ label: l.label, qty: l.qty, source: l.source, ...(l.package ? { package: l.package } : {}), filled: l.filled.map((f) => ({ asset_id: f.id, name: f.name, serial: f.serial })) })),
-    pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, added: a.unit_id !== unit.id, red: redIds.has(a.id), tests: testsOf.get(a.id) ?? [] }; }),
+    pieces: scans.map((s) => { const a = byId.get(s.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, how: s.how, at: s.at, by: actor, added: a.unit_id !== unit.id, red: redIds.has(a.id), tests: testsOf.get(a.id) ?? [], ...(tagOff.has(a.id) ? { red_tag_off: tagOff.get(a.id) } : {}) }; }),
     not_scanned: notScanned.map((n) => { const a = byId.get(n.assetId)!; return { asset_id: a.id, name: a.name, serial: a.identifier, outcome: n.outcome }; }),
   };
   let ins = await admin.from("saas_loadout_scans").insert({ ...record, ...newCols }).select("id, proof_token").single();
@@ -542,10 +620,10 @@ export async function finishLoadout(input: {
   // starts the clock then). Anything taken off is back in the yard.
   // Pieces a NOT READY save took off the last job and back onto this truck.
   let backOn: string[] = [];
-  if (moveIds.length) {
+  if (goIds.length) {
     // NOT READY: nothing left. A tool still signed out to someone stays out
     // with them (their clock keeps running) until the truck really rolls.
-    const resetIds = verdict === "ready" ? moveIds : moveIds.filter((id) => !byId.get(id)!.out_with_user);
+    const resetIds = verdict === "ready" ? goIds : goIds.filter((id) => !byId.get(id)!.out_with_user);
     if (resetIds.length) await admin.from("saas_assets").update(verdict === "ready"
       ? { out_since: rolledAt, out_loadout_id: saved.id, out_alerted_at: null, out_with_user: null, out_with_name: null }
       : { out_since: null, out_loadout_id: null, out_alerted_at: null })
@@ -553,7 +631,7 @@ export async function finishLoadout(input: {
     if (verdict !== "ready") backOn = resetIds.filter((id) => stillOut.has(id));
     // A tool signed out to someone that went on a truck that rolled: it's on
     // the truck now, so the sign-out closes.
-    const handed = moveIds.filter((id) => byId.get(id)!.out_with_user);
+    const handed = goIds.filter((id) => byId.get(id)!.out_with_user);
     if (verdict === "ready" && handed.length) {
       await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `went out on ${unit.name}` })
         .eq("company_id", company.id).in("asset_id", handed).is("back_at", null);
@@ -567,29 +645,35 @@ export async function finishLoadout(input: {
     await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `came back on ${unit.name} load-out` })
       .eq("company_id", company.id).in("asset_id", ranIds).is("back_at", null);
   }
-  // Taken off and back in the yard: off the job, and off whoever signed it
-  // out (a tool back off a run gets its redress flag, the same as a check-in).
-  const offIds = notScanned.filter((n) => n.outcome === "yard").map((n) => n.assetId);
+  // Taken off and back in the yard: off the job (a tool back off a run gets
+  // its redress flag, the same as a check-in). Not a tool signed out to
+  // someone: that's with them, and stays theirs.
+  const offIds = notScanned.filter((n) => n.outcome === "yard" && !byId.get(n.assetId)!.out_with_user).map((n) => n.assetId);
   if (offIds.length) {
     const offRan = offIds.filter((id) => backFromRun(byId.get(id)!));
     if (offRan.length) await admin.from("saas_assets").update({ needs_redress_since: now }).eq("company_id", company.id).in("id", offRan).is("needs_redress_since", null);
-    await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null, out_with_user: null, out_with_name: null }).eq("company_id", company.id).in("id", offIds);
-    const offWith = offIds.filter((id) => byId.get(id)!.out_with_user);
-    if (offWith.length) await admin.from("saas_signouts").update({ back_at: now, back_by: actor, back_note: `taken off ${unit.name} at load-out` })
-      .eq("company_id", company.id).in("asset_id", offWith).is("back_at", null);
+    await admin.from("saas_assets").update({ out_since: null, out_loadout_id: null, out_alerted_at: null }).eq("company_id", company.id).in("id", offIds);
   }
   // Pieces proven scanned off their tag: the tag works.
   const tagged = scans.filter((x) => x.how !== "hand").map((x) => x.assetId);
   if (tagged.length) await admin.from("saas_assets").update({ tag_seen_at: now }).eq("company_id", company.id).in("id", tagged);
-  // The truck rolled: the manager's plan for this job is used up.
-  if (plan && verdict === "ready") {
-    await admin.from("saas_loadout_plans").update({ used_at: now, used_loadout_id: saved.id }).eq("id", plan.id).eq("company_id", company.id).is("used_at", null);
+  // The truck rolled: the manager's plan for this job is used up. So is an
+  // old plan nobody cleared (more than a day past its leave time): that job
+  // is done or went another way, so it isn't the truck's next job. A plan
+  // for a later job stays open for it, and the feed says so.
+  const truckPlan = plan ? null : await getTruckPlan(db, company.id, unit.id);
+  const truckPlanWhen = truckPlan ? planTiming(truckPlan, nowMs) : null;
+  const usedPlans = [...(plan ? [plan.id] : []), ...(truckPlan && truckPlanWhen === "old" ? [truckPlan.id] : [])];
+  if (verdict === "ready" && usedPlans.length) {
+    await admin.from("saas_loadout_plans").update({ used_at: now, used_loadout_id: saved.id }).in("id", usedPlans).eq("company_id", company.id).is("used_at", null);
   }
+  const laterPlan = truckPlan && truckPlanWhen === "later" && truckPlan.leavesAt
+    ? `. The plan for ${fmtWhen(truckPlan.leavesAt)} wasn't part of it and stays open` : "";
 
   const summary = verdict === "ready"
     ? `${unit.name} loaded out READY by ${actor}: ${scans.length} ${scans.length === 1 ? "piece" : "pieces"} scanned`
     : `${unit.name} blocked at load-out (NOT READY) by ${actor}: ${reasons.slice(0, 3).join("; ")}${reasons.length > 3 ? `; and ${reasons.length - 3} more` : ""}`;
-  void logEvent({ companyId: company.id, kind: verdict === "ready" ? "loadout_ready" : "loadout_blocked", unitId: unit.id, actor, message: summary });
+  void logEvent({ companyId: company.id, kind: verdict === "ready" ? "loadout_ready" : "loadout_blocked", unitId: unit.id, actor, message: `${summary}${laterPlan}` });
   if (verdict === "not_ready") void notifyEvent({ companyId: company.id, companyName: company.name, yardId: unit.yard_id, message: summary, href: `/app/loadouts/${saved.id}` });
 
   revalidatePath(`/app/units/${unit.id}`);
@@ -605,5 +689,8 @@ export async function finishLoadout(input: {
   return { ok: true, summary, id: saved.id, verdict, reasons, proofToken: saved.proof_token, backOn, badIds: [...redIds],
     left: unaccounted.map((a) => ({ id: a.id, name: a.name, serial: a.identifier, category: a.category })), packageIds,
     plan: plan ? { id: plan.id, at: plan.at, atText: fmtWhen(plan.at), by: plan.by, job: plan.job, packageIds: plan.packageIds, lines: plan.lines } : null,
-    kit: kit ? linesOf(kit.id) : [], checks: asked, notMoved: [...elsewhere.keys()] };
+    kit: kit ? linesOf(kit.id) : [], checks: asked,
+    notMoved: [...held.keys(), ...holdIds],
+    notMovedWhy: Object.fromEntries([...[...held].map(([id, h]) => [id, h.why] as const), ...holdIds.map((id) => [id, "signed_out_until_ready"] as const)]),
+    packageLists: pkgs.map((x) => ({ id: x.id, name: x.name, lines: linesOf(x.id), checks: x.roll_checks ?? [] })) };
 }

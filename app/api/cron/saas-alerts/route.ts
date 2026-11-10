@@ -6,7 +6,7 @@ import { escHtml } from "@/lib/saas/html";
 import { snapshotAllCompanies } from "@/lib/saas/readiness";
 import { logCronRun } from "@/lib/saas/cron-log";
 import { sendMorningSummaries } from "@/lib/saas/morning-summary";
-import { isMorningRunHour } from "@/lib/saas/alert-window";
+import { isMorningRunHour, morningRunWindowStart } from "@/lib/saas/alert-window";
 
 // Daily SaaS expiration-alert sweep. Vercel Cron sends Bearer CRON_SECRET.
 // vercel.json fires it at 09:00 and 10:00 UTC; only the one that is 4 AM in
@@ -30,9 +30,10 @@ export async function GET(req: Request) {
     // cover for the real run.
     if (!isMorningRunHour()) return NextResponse.json({ ok: true, skipped: "not the morning run hour in the yard" });
     // Already ran today (a repeat delivery of the same cron): never send the
-    // morning email twice.
+    // morning email twice. "Today" starts at 08:00 UTC, the watchdog's window,
+    // so a ?force=1 re-run yesterday afternoon can't stop this morning's run.
     const { data: ran } = await admin.from("saas_cron_runs").select("ran_at").eq("job", "saas-alerts")
-      .gte("ran_at", new Date(Date.now() - 20 * 3600e3).toISOString()).limit(1);
+      .gte("ran_at", morningRunWindowStart().toISOString()).limit(1);
     if ((ran ?? []).length) return NextResponse.json({ ok: true, skipped: "already ran today" });
   }
   // Operator alarm: at 1 company Caden reads the cron logs; at 30 nobody

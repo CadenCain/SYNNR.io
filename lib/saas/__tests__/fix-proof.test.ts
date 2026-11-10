@@ -13,8 +13,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *    with the zone on every time ("5:10 AM MT"). Other screens unchanged.
  *  - A truck link made for one job doesn't show the next job's load-out
  *    after the truck was checked in.
- *  - An old NOT READY load-out link points to the newer READY one from the
- *    same trip.
+ *  - An old NOT READY load-out link says, in one line, that the truck was
+ *    loaded out again for the same job (fix2-proof.test.ts has the bounds).
  *  - Cert and truck photo links on the proof pages don't die after an hour:
  *    they go through the link, which signs a fresh one and honors shut-off.
  *  - "said to be on the truck" is gone; the proof links list says what it
@@ -194,17 +194,17 @@ const rec = (over: Partial<LoadoutRecord> = {}): LoadoutRecord => ({
 });
 const scanRow = (r: LoadoutRecord) => r as unknown as Row;
 
-describe("an old NOT READY link points to the newer load-out on the same trip", () => {
+describe("an old NOT READY link says the truck was loaded out again for the same job", () => {
   const old = rec();
   const fixed = rec({ id: "lo-2", finished_at: "2026-11-09T12:05:00.000Z", verdict: "ready", reasons: [], proof_token: "b".repeat(32) });
-  it("loaded out again READY: the old link says so, with the new link", async () => {
+  it("loaded out again READY: the old link says so, with no way to the other record", async () => {
     const { db } = fakeDb({ saas_loadout_scans: [scanRow(old), scanRow(fixed)] });
-    const later = await laterLoadout(db, old);
-    expect(later).toMatchObject({ unit_name: "CT-03", outcome: "ready", proof_token: "b".repeat(32), finished_at: fixed.finished_at });
+    const later = await laterLoadout(db, old, null);
+    expect(later).toEqual({ unit_name: "CT-03", outcome: "ready", finished_at: fixed.finished_at, yard_id: "hobbs" });
   });
   it("nothing newer: nothing to point at", async () => {
     const { db } = fakeDb({ saas_loadout_scans: [scanRow(old)] });
-    expect(await laterLoadout(db, old)).toBeNull();
+    expect(await laterLoadout(db, old, null)).toBeNull();
   });
   it("a load-out after the truck was checked back in is the next trip: not pointed at", async () => {
     const nextJob = rec({ id: "lo-3", finished_at: "2026-11-13T11:00:00.000Z", verdict: "ready", reasons: [], proof_token: "c".repeat(32), job: null });
@@ -212,7 +212,7 @@ describe("an old NOT READY link points to the newer load-out on the same trip", 
       saas_loadout_scans: [scanRow(old), scanRow(nextJob)],
       saas_returns: [{ id: "r1", company_id: "co-1", unit_id: "ct3", finished_at: "2026-11-11T20:00:00.000Z" }],
     });
-    expect(await laterLoadout(db, old)).toBeNull();
+    expect(await laterLoadout(db, old, null)).toBeNull();
   });
   it("same trip, then a check-in, then the next job: points at the same-trip one, not the next job", async () => {
     const nextJob = rec({ id: "lo-3", finished_at: "2026-11-13T11:00:00.000Z", verdict: "ready", reasons: [], proof_token: "c".repeat(32) });
@@ -220,15 +220,15 @@ describe("an old NOT READY link points to the newer load-out on the same trip", 
       saas_loadout_scans: [scanRow(old), scanRow(fixed), scanRow(nextJob)],
       saas_returns: [{ id: "r1", company_id: "co-1", unit_id: "ct3", finished_at: "2026-11-11T20:00:00.000Z" }],
     });
-    expect((await laterLoadout(db, old))?.proof_token).toBe("b".repeat(32));
+    expect((await laterLoadout(db, old, null))?.finished_at).toBe(fixed.finished_at);
   });
   it("a newer load-out for a different job is not this operator's to see", async () => {
     const { db } = fakeDb({ saas_loadout_scans: [scanRow(old), scanRow({ ...fixed, job: "Another pad" })] });
-    expect(await laterLoadout(db, old)).toBeNull();
+    expect(await laterLoadout(db, old, null)).toBeNull();
   });
   it("the shop shut the newer link off: not pointed at", async () => {
     const { db } = fakeDb({ saas_loadout_scans: [scanRow(old), scanRow(fixed)], saas_loadout_link_offs: [{ loadout_id: "lo-2", company_id: "co-1" }] });
-    expect(await laterLoadout(db, old)).toBeNull();
+    expect(await laterLoadout(db, old, null)).toBeNull();
   });
   it("the newer one rolled on a manager's override: it says that, not READY", async () => {
     const rolled = { ...fixed, verdict: "not_ready" as const, reasons: ["Short: Quad BOP stack"] };
@@ -236,11 +236,11 @@ describe("an old NOT READY link points to the newer load-out on the same trip", 
       saas_loadout_scans: [scanRow(old), scanRow(rolled)],
       saas_loadout_overrides: [{ loadout_id: "lo-2", by_name: "Kevin Odom", reason: "Spare dual stack", created_at: fixed.finished_at }],
     });
-    expect((await laterLoadout(db, old))?.outcome).toBe("override");
+    expect((await laterLoadout(db, old, null))?.outcome).toBe("override");
   });
   it("another company's load-outs are never looked at", async () => {
     const { db } = fakeDb({ saas_loadout_scans: [scanRow(old), scanRow({ ...fixed, company_id: "co-2" })] });
-    expect(await laterLoadout(db, old)).toBeNull();
+    expect(await laterLoadout(db, old, null)).toBeNull();
   });
 });
 
@@ -263,13 +263,13 @@ describe("the record view on the operator link", () => {
     });
     const html = renderToStaticMarkup(createElement(LoadoutRecordView, {
       rec: r, override: null, forOperator: true, tz: "America/Denver",
-      later: { unit_name: "CT-03", finished_at: "2026-11-12T13:05:00.000Z", outcome: "ready", href: "/l/bbbb", tz: "America/Denver" },
+      later: { unit_name: "CT-03", finished_at: "2026-11-12T13:05:00.000Z", outcome: "ready", tz: "America/Denver" },
     }));
     const t = text(html);
     expect(t).toMatch(/CT-03 load-out, Nov 12, 5:10\sAM MT, by Dale/);
     expect(t).toMatch(/NFC tap 5:10\sAM MT by Dale/);
-    expect(t).toMatch(/CT-03 was loaded out again Nov 12, 6:05\sAM MT: READY \. See the newest record/);
-    expect(html).toContain('href="/l/bbbb"');
+    expect(t).toMatch(/CT-03 was loaded out again for this job Nov 12, 6:05\sAM MT: READY \. Ask the shop for that record/);
+    expect(html).not.toMatch(/href="\/l\//);
   });
   it("in the app (no zone passed) it reads exactly as before", () => {
     const html = renderToStaticMarkup(createElement(LoadoutRecordView, { rec: rec({ finished_at: T510MT }), override: null }));
@@ -354,7 +354,7 @@ describe("cert and photo links on the load-out link don't die after an hour", ()
   });
 });
 
-describe("the /l/ page: the Hobbs record reads Mountain time and points to the fixed load-out", () => {
+describe("the /l/ page: the Hobbs record reads Mountain time and says the truck was fixed", () => {
   it("renders the zone, the newer READY record, and links certs through the link", async () => {
     const token = "f".repeat(32);
     const old = rec({ proof_token: token, finished_at: T510MT, pieces: [{ asset_id: "a1", name: "Quad BOP stack", serial: "QB-4472", how: "nfc", at: T510MT, tests: [{ title: "BOP test", good_until: "2027-05-12", result: "ok", paper: "11111111-1111-1111-1111-111111111111" }] }] });
@@ -368,8 +368,8 @@ describe("the /l/ page: the Hobbs record reads Mountain time and points to the f
     const html = renderToStaticMarkup(await PublicLoadoutPage({ params: Promise.resolve({ token }) }));
     const t = text(html);
     expect(t).toMatch(/CT-03 load-out, Nov 12, 5:10\sAM MT/);
-    expect(t).toMatch(/CT-03 was loaded out again Nov 12, 6:05\sAM MT: READY/);
-    expect(html).toContain(`href="/l/${"b".repeat(32)}"`);
+    expect(t).toMatch(/CT-03 was loaded out again for this job Nov 12, 6:05\sAM MT: READY/);
+    expect(html).not.toContain(`/l/${"b".repeat(32)}`);
     expect(html).toContain(`href="/l/${token}/paper/11111111-1111-1111-1111-111111111111"`);
     expect(html).not.toContain("storage.test");
   });
@@ -436,7 +436,7 @@ describe("a truck link made for one job doesn't show the next job", () => {
       saas_loadout_scans: [{ ...proofTables().saas_loadout_scans[0], verdict: "ready", reasons: [], finished_at: "2026-11-13T11:00:00.000Z" }],
       saas_returns: [{ id: "r1", company_id: "co-1", unit_id: "ct4", finished_at: "2026-11-11T20:00:00.000Z" }],
     }));
-    expect(t).toMatch(/checked back in and loaded out again since this link was made/);
+    expect(t).toMatch(/loaded out again for a later trip since this link was made/);
     expect(html).not.toContain(`/l/${"4".repeat(32)}`);
     expect(t).not.toMatch(/Reel R-5/);
   });

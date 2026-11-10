@@ -31,8 +31,10 @@ export interface PersonWeek {
 }
 export interface IronCounts { out: number; outTooLong: number; outOfTest: number; dueSoon: number; down: number }
 
-export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false, hand = false, picking = false, pickAction, tips }: {
+export default function LoadOutView({ trucks: allTrucks, counts, summary, week, yards = [], yardId = null, activity = [], iron, byPerson = [], myTruckId = null, alertDays = 7, plans = {}, manager = false, hand = false, picking = false, pickAction, tips, companyId = "" }: {
   trucks: LoadOutTruckRow[];
+  /** This company: a yard check-in draft from another company on this phone isn't listed here. */
+  companyId?: string;
   counts: LoadOutCounts;
   summary: string;
   week?: LoadOutWeek;
@@ -69,8 +71,8 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
     return (
       <div className="flex flex-col gap-5">
         <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
-        <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
-        <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
+        <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
+        <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
         {trucks.length === 0 ? (
           <Card className="p-5 text-sm text-ink-dim">No trucks set up yet. A manager adds them.</Card>
         ) : mine && !picking ? (
@@ -112,8 +114,8 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
 
   return (
     <div className="flex flex-col gap-6">
-      <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
-      <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} />
+      <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
+      <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
@@ -129,14 +131,26 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
       </div>
 
       {(() => {
+        // Scanned and blocked is "still blocked", not "nobody scanned it out"
+        // (the same split the morning email makes).
         const late = allTrucks.filter((x) => plans[x.t.id]?.late);
-        return late.length ? (
-          <div role="alert" className="flex flex-col gap-1 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3">
-            <div className="font-semibold text-red-400">{late.length === 1 ? "A truck hasn't been scanned out" : `${late.length} trucks haven't been scanned out`}</div>
-            {late.map((x) => (
-              <Link key={x.t.id} href={`/app/units/${x.t.id}/scan`} className="break-words text-sm text-ink hover:underline">
-                <span className="font-semibold">{x.t.name}:</span> {plans[x.t.id]!.late}
-              </Link>
+        const blocked = late.filter((x) => plans[x.t.id]!.late!.endsWith("Still NOT READY."));
+        const unscanned = late.filter((x) => !blocked.includes(x));
+        const groups = [
+          { key: "blocked", rows: blocked, title: blocked.length === 1 ? "A planned truck is still blocked" : "Planned to leave, still blocked" },
+          { key: "unscanned", rows: unscanned, title: unscanned.length === 1 ? "A truck hasn't been scanned out" : `${unscanned.length} trucks haven't been scanned out` },
+        ].filter((g) => g.rows.length);
+        return groups.length ? (
+          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3">
+            {groups.map((g) => (
+              <div key={g.key} className="flex flex-col gap-1">
+                <div className="font-semibold text-red-400">{g.title}</div>
+                {g.rows.map((x) => (
+                  <Link key={x.t.id} href={`/app/units/${x.t.id}/scan`} className="break-words text-sm text-ink hover:underline">
+                    <span className="font-semibold">{x.t.name}:</span> {plans[x.t.id]!.late}
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         ) : null;

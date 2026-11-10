@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTagReader, type ReaderNote } from "../_components/use-tag-reader";
 import { scanSound } from "../_components/scan-aids";
-import { alnum, checkable, maskSerial, lastFourMatch } from "../_components/serial-check";
+import { checkable, maskSerial, lastFourMatch, findBySerial, serialMiss } from "../_components/serial-check";
 import { finishReturn, type ReturnDest } from "./actions";
 
 /**
@@ -34,16 +34,35 @@ const HOW: Record<ScanHow, string> = { nfc: "NFC tap", qr: "QR", hand: "checked 
 const clock = (t: number) => new Date(t).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
 const noSubscribe = () => () => {};
 const draftKey = (k: string) => `rr-return-${k}`;
-const readDraftRaw = (k: string): string | null => {
+/** Before drafts were kept per company, a loose-iron check-in was saved as plain "rr-return-yard". */
+const LEGACY_YARD = "rr-return-yard";
+const freshDraft = (raw: string | null): string | null => {
+  if (!raw) return null;
+  const d = JSON.parse(raw) as Draft;
+  return Date.now() - d.savedAt < 18 * 3600e3 && Object.keys(d.scans ?? {}).length ? raw : null;
+};
+/**
+ * The phone's saved copy of this check-in. A loose-iron check-in saved
+ * before drafts were kept per company is offered too, but only when every
+ * piece in it is one of this company's.
+ */
+const readDraftRaw = (k: string, legacyIds: Set<string> | null): string | null => {
   try {
-    const raw = localStorage.getItem(draftKey(k));
-    if (!raw) return null;
-    const d = JSON.parse(raw) as Draft;
-    return Date.now() - d.savedAt < 18 * 3600e3 && Object.keys(d.scans ?? {}).length ? raw : null;
+    const own = freshDraft(localStorage.getItem(draftKey(k)));
+    if (own || !legacyIds) return own;
+    const old = freshDraft(localStorage.getItem(LEGACY_YARD));
+    if (!old) return null;
+    const ids = Object.keys((JSON.parse(old) as Draft).scans ?? {});
+    return ids.every((id) => legacyIds.has(id)) ? old : null;
   } catch { return null; }
 };
+const forgetDraft = (k: string) => {
+  try { localStorage.removeItem(draftKey(k)); if (k.startsWith("yard-")) localStorage.removeItem(LEGACY_YARD); } catch { /* storage off */ }
+};
 
-export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false, firstId = null, askLeft = null }: {
+export default function ReturnScanner({ companyId, truck, pieces, outDays, yards, defaultYardId, alertDays = 7, last4 = false, firstId = null, askLeft = null, outNow = null }: {
+  /** A yard check-in's copy on the phone is this company's (a hand can be on two). */
+  companyId: string;
   truck: { id: string; name: string } | null;
   pieces: ScanPiece[];
   /** Days out, for pieces out on a job. */
@@ -62,8 +81,16 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
    * the hand says. since: when it was last checked in, if ever.
    */
   askLeft?: { since: string | null } | null;
+  /**
+   * The records say the truck is out on a job (it rolled and nobody checked
+   * it in since). A check-in ends that trip, so the hand says it's really
+   * back in the yard first, not tapping Check in out on location.
+   */
+  outNow?: { since: string } | null;
 }) {
-  const key = truck?.id ?? "yard";
+  // A truck's id is its own; a yard check-in is keyed by company, so a draft
+  // left in one company never shows (or saves) in another.
+  const key = truck?.id ?? `yard-${companyId}`;
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [scans, setScans] = useState<Record<string, Scan>>({});
   const [outcomes, setOutcomes] = useState<Record<string, Outcome>>({});
@@ -80,7 +107,19 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   /** Did the truck leave the yard? null: not answered yet. */
   const [left, setLeft] = useState<boolean | null>(null);
   const yardCheck = Boolean(truck && askLeft) && left === false;
-  const draftRaw = useSyncExternalStore(noSubscribe, () => readDraftRaw(key), () => null);
+  /** Is the truck back in the yard? null: not answered yet. Only asked when the records say it's out. */
+  const [back, setBack] = useState<boolean | null>(null);
+  const askBack = Boolean(truck && outNow);
+  // A check-in the server refused still found damage or lost iron: name it so it gets recorded.
+  const pieceLabel = (id: string) => { const p = pieces.find((x) => x.id === id); return p ? `${p.name}${p.serial ? ` ${p.serial}` : ""}` : "A piece"; };
+  const deadNotes = [
+    ...Object.entries(scans).filter(([, s]) => s.redTag).map(([id, s]) => ({ id, label: pieceLabel(id), what: `came back damaged (${s.redTag})` })),
+    ...Object.entries(outcomes).filter(([id, o]) => o === "missing" && !scans[id]).map(([id]) => ({ id, label: pieceLabel(id), what: "you said it can't be found" })),
+  ];
+  /** The server said this check-in can never save (too old, or the truck loaded out again since). */
+  const [dead, setDead] = useState(false);
+  const legacyIds = truck ? null : new Set(pieces.map((p) => p.id));
+  const draftRaw = useSyncExternalStore(noSubscribe, () => readDraftRaw(key, legacyIds), () => null);
   const [draftHandled, setDraftHandled] = useState(false);
   const draft = useMemo<Draft | null>(() => { try { return draftRaw ? JSON.parse(draftRaw) as Draft : null; } catch { return null; } }, [draftRaw]);
 
@@ -96,6 +135,9 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
 
   function mark(p: ScanPiece, how: ScanHow, proof?: string) {
     const already = Boolean(scans[p.id]);
+    // The check-in starts at its first scan, not when the screen opened: a
+    // page left open overnight isn't "started too long ago" to save.
+    if (!already && !Object.keys(scans).length) setStartedAt(new Date().toISOString());
     const s: Scan = { how, at: Date.now(), to: dest, rack: dest === "yard" ? rack.trim() : "", yardId, ...(proof ? { proof } : {}) };
     if (!already) setScans((x) => ({ ...x, [p.id]: s }));
     const label = `${p.name}${p.serial ? ` ${p.serial}` : ""}`;
@@ -115,21 +157,12 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   const { hasNfc, nfcOn, camOn, startNfc, stopNfc, startCamera, stopCamera, video, stopAll } = useTagReader(onRead, setBanner);
 
   function bySerial() {
-    const typed = serialText.trim();
-    // Letters and digits only: "PV3019", "pv 3019" and "PV-3019" are one serial.
-    const want = alnum(typed);
-    if (!want) return;
-    const withSerial = pieces.filter((x) => x.serial);
-    let hits = withSerial.filter((x) => alnum(x.serial!) === want);
-    // The band often has just the number: take the one piece whose serial ends
-    // with it (at least the last 4 when the yard asks for the last 4).
-    if (!hits.length && want.length >= (last4 ? 4 : 3)) hits = withSerial.filter((x) => alnum(x.serial!).endsWith(want));
-    if (hits.length > 1) {
-      setBanner({ tone: "warn", text: `More than one piece ends in ${typed}: ${hits.slice(0, 4).map((x) => x.serial).join(", ")}${hits.length > 4 ? ", and more" : ""}. Type the whole serial.` });
-      return;
-    }
-    if (!hits.length) { setBanner({ tone: "warn", text: `No piece with serial ${typed}. Check the stamp and try again.` }); return; }
-    mark(hits[0], "hand"); setSerialText("");
+    // The same match as load-out: dashes, spaces and case don't count, and the
+    // last 4 or more off the band find the one piece that ends that way.
+    if (!serialText.trim()) return;
+    const hit = findBySerial(pieces, serialText);
+    if (!hit || "many" in hit) { setBanner({ tone: "warn", text: serialMiss(serialText, hit) }); return; }
+    mark(hit.piece, "hand"); setSerialText("");
   }
   /** Came back damaged: red-tag it right here, with why. Empty reason takes it back off. */
   // Red-tagged iron goes into the yard, not back on the truck: it can't go out.
@@ -152,14 +185,17 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
   });
 
   useEffect(() => {
-    if (saved || Object.keys(scans).length === 0) return;
-    try { localStorage.setItem(draftKey(key), JSON.stringify({ startedAt, scans, outcomes, savedAt: Date.now(), yardId } satisfies Draft)); } catch { /* storage off */ }
-  }, [scans, outcomes, startedAt, saved, key, yardId]);
+    if (saved || dead || Object.keys(scans).length === 0) return;
+    try {
+      localStorage.setItem(draftKey(key), JSON.stringify({ startedAt, scans, outcomes, savedAt: Date.now(), yardId } satisfies Draft));
+      if (key.startsWith("yard-")) localStorage.removeItem(LEGACY_YARD);
+    } catch { /* storage off */ }
+  }, [scans, outcomes, startedAt, saved, dead, key, yardId]);
 
   const savingNow = useRef(false);
   async function save() {
     // The 30-second retry never starts a second save over one still going.
-    if (savingNow.current) return;
+    if (savingNow.current || dead) return;
     savingNow.current = true;
     setSaving(true); setSaveErr("");
     let res: Awaited<ReturnType<typeof finishReturn>>;
@@ -167,8 +203,10 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       const send = finishReturn({
         unitId: truck?.id ?? null, yardId: yardId || null, startedAt,
         scans: Object.entries(scans).map(([assetId, s]) => ({ assetId, how: s.how, at: s.at, to: s.to, rack: s.rack, proof: s.proof, redTag: s.redTag, yardId: s.yardId })),
-        // A truck that never left: what wasn't scanned just stays on it.
-        notReturned: truck && !yardCheck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
+        // Always sent for a truck: if the server doesn't take the yard check
+        // (the truck loaded out since this screen opened), nothing is lost.
+        // When it does, what wasn't scanned just stays on the truck.
+        notReturned: truck ? expected.filter((p) => !scans[p.id]).map((p) => ({ assetId: p.id, outcome: outcomes[p.id] ?? "still_out" })) : [],
         yardCheck,
       });
       res = await Promise.race([send, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), 25000))]);
@@ -182,9 +220,17 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       savingNow.current = false;
     }
     setSaving(false);
+    // Stale (too old, or the truck loaded out again since): it can never
+    // save. Drop the phone's copy and stop trying, so it stops coming back.
+    if (res.stale) {
+      forgetDraft(key);
+      setWaiting(false); setDead(true);
+      setSaveErr(res.error ?? "This check-in can't be saved. Start a new one.");
+      return;
+    }
     if (!res.ok) { setSaveErr(res.error ?? "Couldn't save the check-in."); return; }
     setWaiting(false);
-    try { localStorage.removeItem(draftKey(key)); } catch { /* storage off */ }
+    forgetDraft(key);
     stopAll();
     setSaved(res.summary ?? "Checked in.");
   }
@@ -309,6 +355,24 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
       {finishing ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
           <h2 className="font-semibold">Before you save</h2>
+          {truck && askBack && !dead ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-base font-medium">Is {truck.name} back in the yard? A check-in ends its trip.</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([true, false] as const).map((v) => (
+                  <button key={String(v)} type="button" onClick={() => setBack(v)} aria-pressed={back === v}
+                    className={cn("min-h-14 rounded-xl border-2 px-3 text-base font-semibold",
+                      back === v ? "border-bone bg-bone/10 text-bone" : "border-line-2 text-ink-dim")}>
+                    {v ? "Yes, it's back" : "No, it's still out"}
+                  </button>
+                ))}
+              </div>
+              {back === false ? (
+                <p className="text-sm text-ink-dim">Then don&apos;t check {truck.name} in yet: it stays out on the job. A piece that came back without the truck goes in from{" "}
+                  <Link href="/app/return" className="font-semibold text-bone underline underline-offset-2">Check in tools or loose iron</Link>.</p>
+              ) : null}
+            </div>
+          ) : null}
           {truck && askLeft ? (
             <div className="flex flex-col gap-2">
               <p className="text-base font-medium">Did {truck.name} leave the yard{askLeft.since ? ` since it was checked in ${askLeft.since}` : ""}?</p>
@@ -344,11 +408,28 @@ export default function ReturnScanner({ truck, pieces, outDays, yards, defaultYa
             </div>
           ) : <p className="text-sm text-ink-dim">{Object.keys(scans).length} {Object.keys(scans).length === 1 ? "piece" : "pieces"} checked in.</p>}
           {saveErr ? <p className={cn("text-sm", waiting ? "text-amber-400" : "text-red-400")}>{saveErr}</p> : null}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={save} disabled={saving || Boolean(truck && askLeft && (left === null || (yardCheck && !Object.keys(scans).length)))}
-              className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waiting ? "Try sending now" : "Save check-in"}</button>
-            <button type="button" onClick={() => setFinishing(false)} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
-          </div>
+          {dead ? (
+            // It can never save: start a fresh one from what the records say now.
+            // What the hand found wrong still has to get recorded, so it's listed here.
+            <div className="flex flex-col gap-2">
+              {deadNotes.length ? (
+                <div className="rounded-xl border border-red-500/40 bg-red-500/[0.06] p-3 text-sm">
+                  <div className="font-semibold text-red-400">Record these before you go: open each piece and red-tag it or flag it missing.</div>
+                  <ul className="mt-1 flex flex-col gap-1">
+                    {deadNotes.map((n) => <li key={n.id}><Link href={`/app/assets/${n.id}`} className="font-medium text-bone underline">{n.label}</Link>: {n.what}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+              <button type="button" onClick={() => window.location.reload()} className={buttonClass("default", "lg", "h-14 self-start text-base")}>Start a new check-in</button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={save} disabled={saving || (askBack && back !== true) || Boolean(truck && askLeft && (left === null || (yardCheck && !Object.keys(scans).length)))}
+                className={buttonClass("default", "lg", "h-14 text-base")}>{saving ? "Saving…" : waiting ? "Try sending now" : "Save check-in"}</button>
+              <button type="button" onClick={() => setFinishing(false)} className={buttonClass("outline", "lg", "h-14 text-base")}>Keep scanning</button>
+              {askBack && back !== true && truck ? <p className="w-full text-[13px] text-amber-400">Answer above first: is {truck.name} back in the yard?</p> : null}
+            </div>
+          )}
         </section>
       ) : null}
 

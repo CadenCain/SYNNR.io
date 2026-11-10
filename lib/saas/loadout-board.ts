@@ -1,9 +1,11 @@
 import type { UnitTile } from "./readiness";
-import type { EquipRow } from "./equipment";
-import { YARD_TZ } from "./format";
+import { stateLabel, type EquipRow } from "./equipment";
+import { YARD_TZ, yardZone, zoneShort } from "./format";
 import { outcomeOf, reasonsOf, type LoadoutRecord } from "./loadout-record";
 import { TESTED_CATEGORIES } from "./taxonomy";
-import { fillLines, shortLines } from "./loadout-lines";
+import { expectedLines, fillLines, shortLines, type LinePiece } from "./loadout-lines";
+import { planShortInYard } from "./dispatch-check";
+import { planTiming, type LoadoutPlan } from "./plans";
 import { truckOut, daysOut, DEFAULT_OUT_ALERT_DAYS } from "./whereabouts";
 
 /**
@@ -67,9 +69,10 @@ export function weekNumbers(
 }
 
 const ORDER: Record<TruckStatus, number> = { blocked: 0, ready: 1, out: 2 };
-const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" });
-const shortDay = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
+const dayIn = (iso: string, tz: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
+const dayOf = (iso: string) => dayIn(iso, YARD_TZ);
+const timeIn = (iso: string, tz: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
+const shortDayIn = (iso: string, tz: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric" });
 
 /**
  * What each truck's kit is short of, going by what's logged on it now. A
@@ -92,6 +95,45 @@ export function kitShortByTruck(kits: Map<string, { label: string; qty: number }
   return out;
 }
 
+/**
+ * What each truck's open plan takes from the yard that the yard can't give,
+ * in the Paper check's own words (planShortInYard), going by the iron on the
+ * board: the truck's own iron fills the kit and the plan first, then good
+ * iron sitting free in the truck's yard. One line per truck: the first short
+ * line, and how many more. A plan more than a day past its leave time no
+ * longer locks the load-out, so it's left out. lastBack: as kitShortByTruck.
+ */
+export function planShortByTruck(
+  plans: Map<string, Pick<LoadoutPlan, "packageIds" | "lines" | "leavesAt">>,
+  packages: Map<string, { name: string; lines: { label: string; qty: number }[] }>,
+  kits: Map<string, { label: string; qty: number }[]>,
+  rows: EquipRow[],
+  units: { id: string; yardId: string }[],
+  now: number,
+  lastBack: Map<string, string> = new Map(),
+): Map<string, string> {
+  const out = new Map<string, string>();
+  const yardOf = new Map(units.map((u) => [u.id, u.yardId]));
+  const piece = (r: EquipRow): LinePiece => ({ id: r.id, name: r.name, serial: r.identifier });
+  // "red-tagged", "missing", "needs redress", "no paper", "no test on file", "out of test".
+  const badWord = (r: EquipRow) => { const w = stateLabel(r); return w === "Overdue" ? "out of test" : w.toLowerCase(); };
+  for (const [unitId, p] of plans) {
+    const yardId = yardOf.get(unitId);
+    if (!yardId || planTiming(p, now) === "old") continue;
+    const pkgs = p.packageIds.map((id) => packages.get(id)).filter((x): x is { name: string; lines: { label: string; qty: number }[] } => Boolean(x));
+    if (!pkgs.length && !p.lines.length) continue;
+    const lines = expectedLines({ kit: kits.get(unitId) ?? [], packages: pkgs, planned: p.lines, quick: [] });
+    const back = lastBack.get(unitId);
+    const truck = rows.filter((r) => r.unitId === unitId && r.state !== "retired" && !(back && r.outSince && r.outSince < back)).map(piece);
+    // Free in the yard: on no truck, not out on a job, not signed out to anyone.
+    const yard = rows.filter((r) => !r.unitId && r.yardId === yardId && r.state !== "retired" && !r.outSince && !r.outWith)
+      .map((r) => ({ ...piece(r), bad: r.state === "down" || r.state === "overdue" ? badWord(r) : null }));
+    const short = planShortInYard({ lines, truck, yard });
+    if (short.length) out.set(unitId, `Next job: ${short[0]}${short.length > 1 ? ` ${short.length - 1} more short too.` : ""}`);
+  }
+  return out;
+}
+
 export function buildLoadOutTrucks(
   units: UnitTile[],
   rows: EquipRow[],
@@ -99,13 +141,19 @@ export function buildLoadOutTrucks(
   /** Load-outs a manager rolled anyway: a set of ids, or ids to when the override was made
    *  (the trip starts then, not when the NOT READY load-out was saved) and who made it. */
   overridden: Set<string> | Map<string, string | { at: string; by?: string | null }>,
-  today: string,
+  /** Today in Central (localToday()). A truck in another zone goes by its own day. */
+  todayCentral: string,
   kitShort: Map<string, string> = new Map(),
   /** hand: the board is a hand's (crew on the job see it too), so out too long
-   *  says how long without telling them to check it in. */
-  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number; hand?: boolean } = {},
+   *  says how long without telling them to check it in.
+   *  zones: each yard's time zone (yardZones() in loadout-record.ts). A Hobbs
+   *  (Mountain) truck's times then read in Mountain, not an hour off. When the
+   *  trucks on the board run on more than one zone, each time says which. */
+  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number; hand?: boolean; zones?: Map<string, string> } = {},
 ): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const now = opts.now ?? Date.now();
+  const zoneOf = (t: UnitTile) => (opts.zones ? yardZone(opts.zones.get(t.yardId)) : YARD_TZ);
+  const mixedZones = new Set(units.map(zoneOf)).size > 1;
   const alertDays = opts.alertDays ?? DEFAULT_OUT_ALERT_DAYS;
   const ov = (id: string) => (overridden.has(id) ? { loadout_id: id, by_name: "", reason: "", created_at: "" } : null);
   const last = new Map<string, LoadoutScanRow>();
@@ -143,6 +191,12 @@ export function buildLoadOutTrucks(
   }
 
   const trucks = units.map((t): LoadOutTruckRow => {
+    // This truck's yard clock: its day, its times, and the zone when the board mixes zones.
+    const tz = zoneOf(t);
+    const today = tz === YARD_TZ ? todayCentral : dayIn(new Date(now).toISOString(), tz);
+    const dayOf = (iso: string) => dayIn(iso, tz);
+    const timeOf = (iso: string) => `${timeIn(iso, tz)}${mixedZones ? ` ${zoneShort(tz)}` : ""}`;
+    const shortDay = (iso: string) => shortDayIn(iso, tz);
     const s = last.get(t.id);
     const doneToday = Boolean(s && dayOf(s.finished_at) === today);
     const by = s?.scanned_by ? ` by ${s.scanned_by}` : "";

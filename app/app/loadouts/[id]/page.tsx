@@ -4,14 +4,14 @@ import Link from "next/link";
 import { ScanLine } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { getLoadout, outcomeOf, recordPhoto } from "@/lib/saas/loadout-record";
+import { getLoadout, outcomeOf, recordPhoto, yardZones } from "@/lib/saas/loadout-record";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { buttonClass } from "@/components/ui/button";
 import LoadoutRecordView from "../../_components/loadout-record-view";
 import ProofLink from "../../_components/proof-link";
 import { rollLoadoutAnyway } from "./actions";
-import { recordPaper } from "@/lib/saas/paper";
+import { recordPaper, recordTruckPaper } from "@/lib/saas/paper";
 import { setLoadoutLink } from "../../_proof-actions";
 import { canStillRoll } from "@/lib/saas/dispatch-check";
 
@@ -42,6 +42,14 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
   const backSince = backRow as { finished_at: string; returned_by: string | null } | null;
   const { data: offRow } = await db.from("saas_loadout_link_offs").select("off_at, off_by").eq("loadout_id", rec.id).maybeSingle();
   const linkOff = offRow as { off_at: string; off_by: string | null } | null;
+  // Times in the zone of the yard it loaded in, the same as the operator's /l/ link.
+  const zones = await yardZones(db, [rec.yard_id]);
+  const tz = (rec.yard_id && zones.get(rec.yard_id)) || null;
+  // Short on a kit line with a piece added on top: the added piece may be the
+  // one the kit should name. A manager changes the kit, then it scans again.
+  const kitFix = manager && rec.unit_id && (rec.lines ?? []).some((l) => l.source === "kit" && (l.filled ?? []).length < l.qty) && (rec.pieces ?? []).some((p) => p.added)
+    ? <Link href={`/app/units/${rec.unit_id}/kit`} className="inline-flex min-h-11 items-center self-start text-sm font-medium text-bone underline underline-offset-2">Put a different piece on? Change the kit</Link>
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,7 +59,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         description="The record of what went on the truck, who scanned each piece, and when."
       />
 
-      <LoadoutRecordView rec={rec} override={override} paper={await recordPaper(db, company.id, rec.pieces)} photo={await recordPhoto(db, rec)} />
+      <LoadoutRecordView rec={rec} override={override} paper={await recordPaper(db, company.id, rec.pieces)} truckPaper={await recordTruckPaper(db, company.id, rec.truck_paper)} photo={await recordPhoto(db, rec)} tz={tz} />
 
       <Card className="flex flex-col gap-3 p-4">
         <div>
@@ -78,19 +86,20 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
         </Card>
       ) : outcome === "blocked" && backSince ? (
         <Card className="flex flex-col gap-2 p-4 text-sm text-ink-dim">
-          <p>{rec.unit_name} was checked back in {fmtWhen(backSince.finished_at)}{backSince.returned_by ? ` by ${backSince.returned_by}` : ""}, so this load-out can&apos;t be rolled anymore. The record stays NOT READY.</p>
+          <p>{rec.unit_name} was checked back in {fmtWhen(backSince.finished_at, tz)}{backSince.returned_by ? ` by ${backSince.returned_by}` : ""}, so this load-out can&apos;t be rolled anymore. The record stays NOT READY.</p>
           {rec.unit_id ? <Link href={`/app/units/${rec.unit_id}/scan`} className="font-medium text-bone underline underline-offset-2">Start a new load-out of {rec.unit_name}</Link> : null}
         </Card>
       ) : outcome === "blocked" && !canStillRoll(rec.finished_at) ? (
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="font-semibold">Scan it again</h2>
           <p className="text-sm text-ink-dim">
-            This load-out is from {fmtWhen(rec.finished_at)}, so it can&apos;t be rolled anymore: what&apos;s on {rec.unit_name} now may not be what was scanned then.
+            This load-out is from {fmtWhen(rec.finished_at, tz)}, so it can&apos;t be rolled anymore: what&apos;s on {rec.unit_name} now may not be what was scanned then.
             Scan {rec.unit_name} again. If it comes back NOT READY, a manager can roll that one.
           </p>
           {rec.unit_id ? (
             <Link href={`/app/units/${rec.unit_id}/scan`} className={buttonClass("default", "lg", "h-14 self-start text-base")}><ScanLine className="h-5 w-5" /> Scan {rec.unit_name} again</Link>
           ) : null}
+          {kitFix}
         </Card>
       ) : outcome === "blocked" ? (
         <Card className="flex flex-col gap-3 p-4">
@@ -99,6 +108,7 @@ export default async function LoadoutRecordPage({ params }: { params: Promise<{ 
           {rec.unit_id ? (
             <Link href={`/app/units/${rec.unit_id}/scan`} className={buttonClass("default", "lg", "h-14 self-start text-base")}><ScanLine className="h-5 w-5" /> Scan {rec.unit_name} again</Link>
           ) : null}
+          {kitFix}
           {manager ? (
             <details className="rounded-xl border border-line p-3">
               <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold">Roll anyway (manager override)</summary>

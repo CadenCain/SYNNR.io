@@ -8,7 +8,7 @@ import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { judgeItem, isNoPaper, FAILING_GEAR, type LineResult } from "@/lib/saas/judge";
 import { localToday } from "@/lib/saas/status";
-import { yardZones, checkedInBetween, type LoadoutOverride } from "@/lib/saas/loadout-record";
+import { yardZones, laterTripSince, type LoadoutOverride } from "@/lib/saas/loadout-record";
 import { loadProof } from "./load-proof";
 
 /**
@@ -187,21 +187,27 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
   // the same as the load-out record and the board.
   let override = null as LoadoutOverride | null;
   let outOnOverride = false;
-  // A truck link is live, but a load-out made for the next job after the
-  // truck was checked in isn't the business of whoever got this link.
+  // A truck link is live, but a load-out made for a later trip (after a
+  // check-in, or after the truck rolled on another load-out, check-in or not)
+  // is another job's, not the business of whoever got this link.
   let loadoutHidden = false;
+  let hiddenText = "";
   if (loadout) {
     const [{ data: ovRow }, { data: backRow }, { data: offRow }, laterTrip] = await Promise.all([
       admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason, created_at").eq("loadout_id", loadout.id).maybeSingle(),
       admin.from("saas_returns").select("id").eq("company_id", proof.company_id).eq("unit_id", proof.unit_id!).gt("finished_at", loadout.finished_at).limit(1).maybeSingle(),
       admin.from("saas_loadout_link_offs").select("loadout_id").eq("loadout_id", loadout.id).maybeSingle(),
-      checkedInBetween(admin, proof.company_id, proof.unit_id!, proof.created_at, loadout.finished_at),
+      laterTripSince(admin, proof.company_id, proof.unit_id!, proof.created_at, loadout),
     ]);
     override = loadout.verdict === "not_ready" ? ((ovRow as LoadoutOverride | null) ?? null) : null;
     blockedAtLoadout = loadout.verdict === "not_ready" && !ovRow && !backRow;
     outOnOverride = Boolean(override) && !backRow;
     loadoutLinkOff = Boolean(offRow);
-    loadoutHidden = laterTrip;
+    loadoutHidden = Boolean(laterTrip);
+    hiddenText = !laterTrip ? ""
+      : laterTrip.why === "out_at_link"
+        ? `When this link was made, the shop's records still had this truck out on its ${fmtWhen(laterTrip.tripAt, tz)} trip (it was never checked back in), so later load-outs don't show here. Ask the shop for the newest load-out record, or for a new truck link.`
+        : "This truck has been loaded out again for a later trip since this link was made. Ask the shop for the record of the newest load-out.";
     if (blockedAtLoadout) ready = false;
   }
   // The load-out reads in the zone of the yard it loaded in (the truck may have moved since).
@@ -293,7 +299,7 @@ export default async function ProofPage({ params }: { params: Promise<{ token: s
         {loadout && loadoutHidden ? (
           <div className="rounded-2xl border border-line bg-surface p-5">
             <h2 className="text-sm font-semibold text-ink-dim">Last load-out scan</h2>
-            <p className="mt-2 text-sm text-ink-dim">This truck has been checked back in and loaded out again since this link was made. Ask the shop for the record of the newest load-out.</p>
+            <p className="mt-2 text-sm text-ink-dim">{hiddenText}</p>
           </div>
         ) : loadout ? (
           <div className="rounded-2xl border border-line bg-surface p-5">

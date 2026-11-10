@@ -20,6 +20,9 @@ import SignOutPicker, { type Pickable } from "./picker";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tools out" };
 
+/** How many sign-outs the page shows. The spreadsheet download has them all. */
+const SHEET_ROWS = 60;
+
 /** The time now, read outside render (the page renders once per request). */
 const clock = () => Date.now();
 
@@ -38,7 +41,7 @@ export default async function ToolsOutPage() {
     db.from("saas_assets").select("id, out_with_user").eq("company_id", company.id).not("out_with_user", "is", null),
     db.from("saas_assets").select("id, needs_redress_since").eq("company_id", company.id).eq("redress_each_run", true),
     db.from("saas_signouts").select("id, asset_id, asset_name, serial, out_name, job_note, out_at, back_at, back_by, back_note")
-      .eq("company_id", company.id).order("out_at", { ascending: false }).limit(60),
+      .eq("company_id", company.id).order("out_at", { ascending: false }).limit(SHEET_ROWS),
     getToolStocks(db, company.id),
   ]);
   const holders = (mineRows ?? []) as { id: string; out_with_user: string }[];
@@ -171,7 +174,7 @@ export default async function ToolsOutPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold">The sheet</h2>
-        <p className="-mt-1 text-[13px] text-ink-faint">Every sign-out, newest first. Nobody can edit it.</p>
+        <p className="-mt-1 text-[13px] text-ink-faint">{sheet.length >= SHEET_ROWS ? `The newest ${SHEET_ROWS} sign-outs, newest first. The download has every one.` : "Every sign-out, newest first."} Nobody can edit it.</p>
         {sheet.length ? (
           <div className="flex flex-col gap-2">
             {sheet.map((s) => (
@@ -185,6 +188,11 @@ export default async function ToolsOutPage() {
             ))}
           </div>
         ) : <Card className="p-4 text-sm text-ink-dim">Nothing signed out yet.</Card>}
+        {/* Plain <a> so the browser downloads the file: every sign-out, hand-off,
+            counted setting tool out, vendor visit and redress. */}
+        <a href="/api/saas/export/tools-out" download className="flex min-h-11 items-center text-sm font-medium text-bone underline underline-offset-2">
+          Download the whole sheet as a spreadsheet
+        </a>
       </section>
     </div>
   );

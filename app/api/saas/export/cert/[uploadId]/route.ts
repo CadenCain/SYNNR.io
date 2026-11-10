@@ -3,12 +3,14 @@ import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 import { ownsStoragePath } from "@/lib/saas/own";
 import { DEMO_PAPER } from "@/lib/saas/paper";
+import { isCrewCardPhoto } from "../../rows";
 
 /**
  * The cert photo behind one line of the test history spreadsheet. The link
  * in the file stays the same; it opens the photo for someone signed in to
  * the company that owns it (a short-lived link to the file each time), and
- * nobody else.
+ * nobody else. Iron and truck paper only, like the spreadsheet: a crew
+ * card's photo doesn't open here.
  */
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ uploadId
     .eq("id", uploadId).eq("company_id", company.id).maybeSingle();
   const up = data as { id: string; item_id: string | null; storage_path: string } | null;
   if (!up) return nope();
+  if (isCrewCardPhoto(up.storage_path)) return nope();
+  if (up.item_id) {
+    const { data: it } = await db.from("saas_compliance_items").select("parent_type")
+      .eq("id", up.item_id).eq("company_id", company.id).maybeSingle();
+    if (!it || (it as { parent_type: string }).parent_type === "crew") return nope();
+  }
   // A demo yard's sample paper is drawn, not stored.
   if (up.storage_path.startsWith(DEMO_PAPER)) return up.item_id ? NextResponse.redirect(new URL(`/demo-cert/${up.item_id}`, req.url)) : nope();
   if (!ownsStoragePath(up.storage_path, company.id)) return nope();

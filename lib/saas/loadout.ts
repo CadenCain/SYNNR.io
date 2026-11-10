@@ -24,7 +24,28 @@ export interface ScanPiece {
   /** Red: overdue, red-tagged, or missing. Yellow: due soon. */
   problem: "red" | "yellow" | null;
   statusText: string;
+  /** Out on a job that hasn't been checked in, or signed out to someone. */
+  out?: boolean;
+  /** Flagged missing. */
+  missing?: boolean;
+  /**
+   * On another truck's job that hasn't been checked in: it went out on that
+   * truck's newest load-out, and nobody has checked the truck in since. A
+   * load-out of any other truck blocks on it until that truck is checked in
+   * (or someone uses Move it on the piece). The server's rule, read when the
+   * page loaded.
+   */
+  trip?: { truck: string; sinceText: string; by: string | null } | null;
+  /**
+   * Signed out to someone. long: for more than a shift, so it went on a job
+   * with them, and one checked on by hand (not scanned off its tag) blocks the
+   * load-out until it's checked in or moved.
+   */
+  outWith?: { name: string; sinceText: string; long: boolean } | null;
 }
+
+/** Out longer than a shift: it went on a job. */
+export const RUN_MS = 12 * 3600e3;
 
 /** What one scan found. A match carries the code read off the tag, sent with the scan as proof. */
 export type ScanResult =
@@ -89,11 +110,24 @@ export async function readScan(input: { link: string | null; chipId: string | nu
   return identifyScan(codes, keys, pieces, truckId);
 }
 
-/** Plain-words verdict for the big banner after a scan. */
+/**
+ * Plain-words verdict for the big banner after a scan. Pass the scan's proof
+ * (the code read off the tag) when there is one: a tool signed out for more
+ * than a shift only goes on by its tag.
+ */
 export function scanMessage(r: Extract<ScanResult, { kind: "match" }>, truckName: string, already: boolean): { tone: "good" | "warn" | "bad"; text: string } {
   const label = `${r.piece.name}${r.piece.serial ? ` ${r.piece.serial}` : ""}`;
   if (already) return { tone: "warn", text: `${label} is already scanned.` };
   if (r.piece.problem === "red") return { tone: "bad", text: `${label}: ${r.piece.statusText}. Don't load it.` };
+  const trip = r.onTruck ? null : r.piece.trip;
+  if (trip) {
+    return { tone: "bad", text: `${label} is on ${trip.truck}'s job from ${trip.sinceText}, and ${trip.truck} hasn't been checked in. Check ${trip.truck} in first, or use Move it on the piece. Until then it blocks ${truckName}.` };
+  }
+  const w = r.onTruck ? null : r.piece.outWith;
+  if (w?.long && !r.proof) {
+    return { tone: "bad", text: `${label} is signed out to ${w.name} since ${w.sinceText}. If it's here, check it in or use Move it on the piece first. Until then it blocks ${truckName}.` };
+  }
+  if (w) return { tone: "warn", text: `${label} is signed out to ${w.name}. It goes on ${truckName}, and off ${w.name}'s sign-out, once ${truckName} rolls READY.` };
   if (!r.onTruck) return { tone: "warn", text: `${label} was logged at ${r.piece.where}. It goes on ${truckName} when you finish.` };
   if (r.piece.problem === "yellow") return { tone: "warn", text: `${label} scanned. ${r.piece.statusText}.` };
   return { tone: "good", text: `${label} scanned.` };

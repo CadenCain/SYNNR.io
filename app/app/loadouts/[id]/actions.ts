@@ -7,7 +7,7 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { logEvent, notifyEvent } from "@/lib/saas/notify";
 import { getLoadout, verdictOf, reasonsOf } from "@/lib/saas/loadout-record";
 import { canStillRoll } from "@/lib/saas/dispatch-check";
-import { getOpenPlan } from "@/lib/saas/plans";
+import { getOpenPlan, markPlansUsed } from "@/lib/saas/plans";
 
 /**
  * Roll a NOT READY load-out anyway. Managers only, with a reason in a full
@@ -75,12 +75,13 @@ export async function rollLoadoutAnyway(fd: FormData): Promise<void> {
   // The truck rolled: its plan is used up (the one this load-out was checked
   // against, or a newer one made since for this load-out), so nobody's told
   // it never left. A plan for a later job stays open for that job.
+  // A plan can count "now" by the time of the override and still have been
+  // for a later job when the truck was scanned: that one isn't this load-out's.
   const open = got.rec.unit_id ? await getOpenPlan(db, company.id, got.rec.unit_id) : null;
-  const planIds = [...new Set([got.rec.plan?.id, open?.id].filter((x): x is string => Boolean(x)))];
-  if (planIds.length) {
-    await admin.from("saas_loadout_plans").update({ used_at: new Date().toISOString(), used_loadout_id: id })
-      .eq("company_id", company.id).in("id", planIds).is("used_at", null);
-  }
+  const openForThis = open && (open.id === got.rec.plan?.id || Date.parse(open.at) > Date.parse(got.rec.finished_at)) ? open : null;
+  const planIds = [...new Set([got.rec.plan?.id, openForThis?.id].filter((x): x is string => Boolean(x)))];
+  // An old plan nobody cleared goes too, the same as on a READY load-out.
+  if (got.rec.unit_id) await markPlansUsed(admin, company.id, got.rec.unit_id, id, planIds, new Date().toISOString());
 
   const why = reasonsOf(got.rec).slice(0, 3).join("; ");
   const message = `${got.rec.unit_name} rolled NOT READY on a manager override by ${actor}. Reason: "${reason.replace(/[.\s]+$/, "")}". Not ready because: ${why}`;

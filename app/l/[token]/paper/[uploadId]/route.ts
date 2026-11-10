@@ -1,10 +1,11 @@
 import { saasAdmin } from "@/lib/saas/db";
-import { DEMO_PAPER, recordPaperUploads } from "@/lib/saas/paper";
+import { DEMO_PAPER, recordPaperUploads, truckPaperUploads } from "@/lib/saas/paper";
 import { loadPublicRecord } from "../../load-record";
 
 /**
  * "See the cert" on a load-out link. Opens the paper only while the link is
- * on, and only paper that record stands on. Signs a fresh short link every
+ * on, and only paper that record stands on: its pieces' tests and the
+ * truck's own paper it kept. Signs a fresh short link every
  * tap, so a tab left open all morning still opens the cert.
  */
 export const dynamic = "force-dynamic";
@@ -19,8 +20,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   if (got === "off") return nope(410);
   if (!got) return nope();
   const { rec } = got;
-  const allowed = await recordPaperUploads(admin, rec.company_id, rec.pieces);
-  if (!allowed.some((w) => w.upload.toLowerCase() === uploadId.toLowerCase())) return nope();
+  const allowed = [...(await recordPaperUploads(admin, rec.company_id, rec.pieces)).map((w) => w.upload), ...truckPaperUploads(rec.truck_paper)];
+  if (!allowed.some((u) => u.toLowerCase() === uploadId.toLowerCase())) return nope();
   const { data: up } = await admin.from("saas_cert_uploads").select("item_id, storage_path")
     .eq("id", uploadId).eq("company_id", rec.company_id).maybeSingle();
   const u = up as { item_id: string; storage_path: string } | null;

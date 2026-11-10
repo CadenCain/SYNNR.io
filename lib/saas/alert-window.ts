@@ -58,3 +58,15 @@ export function isMorningRunHour(now: Date = new Date()): boolean {
     .formatToParts(now).find((p) => p.type === "hour")?.value;
   return Number(hour) === MORNING_RUN_HOUR;
 }
+
+/**
+ * Where today's morning run starts, in UTC: 08:00, ahead of 4 AM yard time on
+ * either clock (09:00 UTC daylight, 10:00 UTC standard). The run's "already
+ * ran today" check and the watchdog both look from here, so yesterday's run,
+ * even a ?force=1 re-run late in the day, never counts for today.
+ */
+export function morningRunWindowStart(now: Date = new Date()): Date {
+  const d = new Date(now.getTime());
+  d.setUTCHours(8, 0, 0, 0);
+  return d;
+}

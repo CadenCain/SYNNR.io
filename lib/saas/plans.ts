@@ -50,16 +50,23 @@ export function planTiming(plan: Pick<LoadoutPlan, "leavesAt">, now: number): "n
 }
 
 /**
+ * When a plan starts to count for a load-out: once it was made, and no more
+ * than 18 hours before it leaves. -Infinity when neither is known.
+ */
+export function planCountsFrom(plan: Pick<LoadoutPlan, "at" | "leavesAt">): number {
+  const made = Date.parse(plan.at);
+  const leaves = plan.leavesAt ? Date.parse(plan.leavesAt) : NaN;
+  return Math.max(Number.isFinite(made) ? made : -Infinity, Number.isFinite(leaves) ? leaves - PLAN_AHEAD_MS : -Infinity);
+}
+
+/**
  * Was this load-out for the plan's job? Only one that finished once the plan
- * counted: after it was made, and no more than 18 hours before it leaves.
- * Saturday's on-call load-out isn't for Monday's planned job.
+ * counted (see planCountsFrom). Saturday's on-call load-out isn't for Monday's
+ * planned job.
  */
 export function loadoutForPlan(plan: Pick<LoadoutPlan, "at" | "leavesAt">, loadout: { finished_at: string } | null): boolean {
   if (!loadout) return false;
-  const made = Date.parse(plan.at);
-  const leaves = plan.leavesAt ? Date.parse(plan.leavesAt) : NaN;
-  const from = Math.max(Number.isFinite(made) ? made : -Infinity, Number.isFinite(leaves) ? leaves - PLAN_AHEAD_MS : -Infinity);
-  return Date.parse(loadout.finished_at) > from;
+  return Date.parse(loadout.finished_at) > planCountsFrom(plan);
 }
 
 /**
@@ -79,10 +86,60 @@ export function lateLine(plan: Pick<LoadoutPlan, "at" | "leavesAt">, lastLoadout
     : `Was planned to leave ${timeText(plan.leavesAt)}. Nobody has scanned it out.`;
 }
 
-/** Every open plan in the company, by truck, whenever it leaves (the board shows them all). */
-export async function getOpenPlans(db: SupabaseClient, companyId: string): Promise<Map<string, LoadoutPlan>> {
+/**
+ * Every open plan in the company, by truck, whenever it leaves (the board
+ * shows them all). Except an old one whose truck has rolled since it counted:
+ * that job is done or went another way, so it isn't the truck's next job. An
+ * old one that never rolled stays, with its own late line (see lateLine).
+ */
+export async function getOpenPlans(db: SupabaseClient, companyId: string, now: number = Date.now()): Promise<Map<string, LoadoutPlan>> {
   const { data } = await db.from("saas_loadout_plans").select(PLAN_COLS).eq("company_id", companyId).is("used_at", null);
-  return new Map(((data ?? []) as Row[]).map((r) => [r.unit_id, toPlan(r)]));
+  const plans = ((data ?? []) as Row[]).map(toPlan);
+  const done = await rolledOnOldPlans(db, companyId, plans.filter((p) => planTiming(p, now) === "old"));
+  return new Map(plans.filter((p) => !done.has(p.id)).map((p) => [p.unitId, p]));
+}
+
+/**
+ * Of these old plans, the ones whose truck's newest load-out rolled (READY,
+ * or a manager's override) once the plan counted: lateLine's own rule, so the
+ * board drops exactly the plans it would show with no late line. By plan id:
+ * when it rolled and who loaded it out.
+ */
+export async function rolledOnOldPlans(db: SupabaseClient, companyId: string, old: Pick<LoadoutPlan, "id" | "unitId" | "at" | "leavesAt">[]): Promise<Map<string, { at: string; by: string | null }>> {
+  if (!old.length) return new Map();
+  const { data: rows } = await db.from("saas_loadout_latest").select("id, unit_id, finished_at, verdict, scanned_by")
+    .eq("company_id", companyId).in("unit_id", [...new Set(old.map((p) => p.unitId))]);
+  const latest = (rows ?? []) as { id: string; unit_id: string; finished_at: string; verdict: string | null; scanned_by: string | null }[];
+  const blocked = latest.filter((l) => l.verdict !== "ready").map((l) => l.id);
+  const { data: ovRows } = blocked.length
+    ? await db.from("saas_loadout_overrides").select("loadout_id, created_at").eq("company_id", companyId).in("loadout_id", blocked)
+    : { data: [] };
+  const overridden = new Map(((ovRows ?? []) as { loadout_id: string; created_at: string }[]).map((o) => [o.loadout_id, o.created_at]));
+  const byUnit = new Map(latest.map((l) => [l.unit_id, l]));
+  const out = new Map<string, { at: string; by: string | null }>();
+  for (const p of old) {
+    const l = byUnit.get(p.unitId);
+    const at = !l ? null : l.verdict === "ready" ? l.finished_at : overridden.get(l.id) ?? null;
+    if (l && at && loadoutForPlan(p, l)) out.set(p.id, { at, by: l.scanned_by });
+  }
+  return out;
+}
+
+/**
+ * The truck rolled on loadoutId (READY, or a manager's override): use up the
+ * plans it was checked against (planIds), and the truck's open plan too when
+ * it's old (more than a day past its leave time), so a plan nobody cleared
+ * doesn't sit on the board as the next job or warn the Paper check about a
+ * load-out it no longer locks. A plan for a later job stays open for it.
+ */
+export async function markPlansUsed(db: SupabaseClient, companyId: string, unitId: string, loadoutId: string, planIds: (string | null | undefined)[], nowIso: string): Promise<void> {
+  const open = await getTruckPlan(db, companyId, unitId);
+  const now = Date.parse(nowIso);
+  const stale = open && planTiming(open, Number.isFinite(now) ? now : Date.now()) === "old" ? open.id : null;
+  const ids = [...new Set([...planIds, stale].filter((x): x is string => Boolean(x)))];
+  if (!ids.length) return;
+  await db.from("saas_loadout_plans").update({ used_at: nowIso, used_loadout_id: loadoutId })
+    .eq("company_id", companyId).in("id", ids).is("used_at", null);
 }
 
 /** This truck's open plan, whenever it leaves: the one a manager sees, edits, or clears. */

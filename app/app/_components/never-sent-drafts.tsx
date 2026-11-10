@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { fmtWhen } from "@/lib/saas/format";
+import { LOADOUT_MAX_AGE, returnDraftOwner } from "./unsent-drafts";
 
 /**
  * Load-outs and check-ins saved on this phone that never sent and are now too
@@ -10,8 +11,11 @@ import { fmtWhen } from "@/lib/saas/format";
  * sent yet" list (unsent-drafts.tsx) drops them, and the server won't take a
  * load-out that old. Instead of vanishing, each one shows here until the hand
  * clears it, so a manager hears what went on the truck. After 3 days they're
- * left alone.
+ * left alone. A load-out started 20 hours ago or more counts too, even if it
+ * was worked on since: the server won't take it, so the scan screen and the
+ * "Not sent yet" list drop it (loadoutDraftSendable in unsent-drafts.tsx).
  */
+// The same 18 hours as unsent-drafts.tsx: change one, change both.
 const FRESH = 18 * 3600e3;
 const SHOW_FOR = 72 * 3600e3;
 const CHANGED = "rr-drafts-changed";
@@ -19,22 +23,25 @@ const CHANGED = "rr-drafts-changed";
 export type NeverSent = { key: string; truckId: string | null; label: string; tell: string; count: number; savedAt: number };
 
 /** The too-old, never-sent drafts in this phone's storage. */
-export function readNeverSent(store: Pick<Storage, "length" | "key" | "getItem">, trucks: { id: string; name: string }[], now: number): NeverSent[] {
+export function readNeverSent(store: Pick<Storage, "length" | "key" | "getItem">, trucks: { id: string; name: string }[], now: number, companyId = ""): NeverSent[] {
   const out: NeverSent[] = [];
   for (let i = 0; i < store.length; i++) {
     const k = store.key(i) ?? "";
     const m = /^rr-(loadout|return)-(.+)$/.exec(k);
     if (!m || k.startsWith("rr-loadout-photo-")) continue;
-    let d: { scans?: Record<string, unknown>; savedAt?: number } | null = null;
+    let d: { scans?: Record<string, unknown>; savedAt?: number; startedAt?: string } | null = null;
     try { d = JSON.parse(store.getItem(k) ?? "null"); } catch { continue; }
     const count = Object.keys(d?.scans ?? {}).length;
     const savedAt = Number(d?.savedAt ?? 0);
     const age = now - savedAt;
-    if (!d || !count || !(age > FRESH && age <= SHOW_FOR)) continue;
+    // A load-out started too long ago for the server is never sent, however fresh.
+    const started = m[1] === "loadout" ? Date.parse(String(d?.startedAt ?? "")) : NaN;
+    const tooOld = age > FRESH || (Number.isFinite(started) && now - started >= LOADOUT_MAX_AGE);
+    if (!d || !count || !(tooOld && age <= SHOW_FOR)) continue;
     const truck = trucks.find((t) => t.id === m[2]) ?? null;
     if (m[1] === "loadout") {
       if (truck) out.push({ key: k, truckId: truck.id, label: `A load-out of ${truck.name}`, tell: `Tell a manager what went on ${truck.name}.`, count, savedAt });
-    } else {
+    } else if (!companyId || returnDraftOwner(m[2], trucks, companyId)) {
       out.push({ key: k, truckId: truck?.id ?? null, label: truck ? `A check-in of ${truck.name}` : "A check-in", tell: truck ? `Tell a manager what came back off ${truck.name}.` : "Tell a manager what came back.", count, savedAt });
     }
   }
@@ -56,9 +63,9 @@ function clear(u: NeverSent) {
   window.dispatchEvent(new Event(CHANGED));
 }
 
-export default function NeverSentDrafts({ trucks }: { trucks: { id: string; name: string }[] }) {
+export default function NeverSentDrafts({ trucks, companyId = "" }: { trucks: { id: string; name: string }[]; companyId?: string }) {
   const raw = useSyncExternalStore(subscribe, () => {
-    try { return JSON.stringify(readNeverSent(localStorage, trucks, Date.now())); } catch { return "[]"; }
+    try { return JSON.stringify(readNeverSent(localStorage, trucks, Date.now(), companyId)); } catch { return "[]"; }
   }, () => "[]");
   const list = JSON.parse(raw) as NeverSent[];
   if (!list.length) return null;

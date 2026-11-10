@@ -3,11 +3,12 @@ import { readAll } from "./read-all";
 import { defaultRecipients, resolveRecipients, sendEmail, type Recipient } from "./notify";
 import { escHtml } from "./html";
 import { isWritable } from "./entitlements";
-import { lateLine, PLAN_AHEAD_MS, type LoadoutPlan } from "./plans";
+import { lateLine, loadoutForPlan, type LoadoutPlan } from "./plans";
 import { daysOut, DEFAULT_OUT_ALERT_DAYS } from "./whereabouts";
-import { YARD_TZ } from "./format";
+import { YARD_TZ, yardZone, zoneShort } from "./format";
 import { getToolStocks, isLow, lowLine, lateOutLines } from "./tool-stock";
 import { getCompanyReadiness } from "./readiness";
+import { yardZones } from "./loadout-record";
 
 /**
  * The manager's morning email: what happened in the last day, where the app
@@ -23,11 +24,19 @@ export interface DaySummary {
   overrides: string[];    // "CT-07 by Kevin Odom: \"Swivel recert booked Thursday\""
   checkins: number;
   unscanned: string[];    // event messages: came back without being cleared
+  /** A hand said a truck with no load-out since its last check-in never left the yard: worth a look, not an alarm. */
+  yardChecks?: string[];
   late: string[];         // "CT-01: Was planned to leave 5:00 AM. Nobody has scanned it out."
   /** Planned, scanned, and blocked: the crew used the app, the truck just can't go. "CT-01: Was planned to leave 5:00 AM. Still NOT READY." */
   stillBlocked?: string[];
   outTooLong: string[];   // "CT-08: 5 pieces, out 9 days" or "With Dale Wooten: Silver Fox #2, out 9 days"
   damaged: string[];      // "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy."
+  /** Marked Can't find at a check-in: "2in 1502 plug valve PV-2207: didn't come back on CT-08. Went out Oct 31, loaded by Dale. Checked in by Freddy." */
+  cantFind?: string[];
+  /** Red-tagged on the piece's page (not at a check-in), with when: "Wire rope slings SL-A on CR-01 red-tagged by Cody Blackburn: cut near the eye (Thu 1:40 PM)" */
+  redTagged?: string[];
+  /** Bad iron moved onto a truck after it loaded out, so the load-out never checked it. */
+  badIronOut?: string[];
   /** Trucks that can't roll right now on their own paper or iron, whatever happened yesterday: "P-02: Annual DOT inspection: expired 23d ago" */
   cantRoll?: string[];
   redressWaiting?: number; // tools back from a run, not redressed yet
@@ -51,7 +60,10 @@ const CANT_ROLL_SHOWN = 10;
 export function summaryText(s: DaySummary): { subject: string; body: string } | null {
   const stillBlocked = s.stillBlocked ?? [];
   const cantRoll = s.cantRoll ?? [];
+  const cantFind = s.cantFind ?? [];
+  const badIronOut = s.badIronOut ?? [];
   const problems = s.blocked.length + s.overrides.length + s.unscanned.length + s.late.length + stillBlocked.length + s.outTooLong.length + s.damaged.length
+    + cantFind.length + (s.redTagged?.length ?? 0) + badIronOut.length + (s.yardChecks?.length ?? 0)
     + (s.toolsLow?.length ?? 0) + cantRoll.length + (s.uploadsWaiting ?? 0) + (s.weekly ? s.idle.length : 0);
   if (s.loadouts + s.checkins + problems === 0) return null;
   const out: string[] = [];
@@ -60,8 +72,12 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   const section = (title: string, rows: string[]) => { if (rows.length) out.push("", title, ...rows.map((r) => `  ${r}`)); };
   const more = (n: number) => (n > 0 ? [`and ${n} more`] : []);
   section("Not scanned out (the app wasn't used):", [...s.late, ...s.unscanned]);
+  section("Said it didn't leave the yard (no load-out between check-ins):", s.yardChecks ?? []);
   section("Planned to leave, still blocked:", stillBlocked);
   section("Came back damaged:", s.damaged);
+  section("Can't find (flagged at check-in):", cantFind);
+  section("Bad iron put on a truck after it rolled:", badIronOut);
+  section("Red-tagged in the yard:", s.redTagged ?? []);
   section("Blocked at load-out:", s.blocked);
   section("Rolled on a manager's override:", s.overrides);
   section("Can't roll right now:", [...cantRoll.slice(0, CANT_ROLL_SHOWN), ...more(cantRoll.length - CANT_ROLL_SHOWN)]);
@@ -88,6 +104,8 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
     ? `RollReady: ${trucks(flag)} not scanned out at ${s.company}`
     : stillBlocked.length ? `RollReady: ${stillBlocked.length} planned ${stillBlocked.length === 1 ? "truck" : "trucks"} still blocked at ${s.company}`
     : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
+    : cantFind.length ? `RollReady: ${cantFind.length} ${cantFind.length === 1 ? "piece" : "pieces"} can't be found at ${s.company}`
+    : badIronOut.length ? `RollReady: bad iron put on a truck after it rolled at ${s.company}`
     : s.weekly && s.idle.length && (s.crew ? s.idle.length >= s.crew : s.loadouts + s.checkins === 0) ? `RollReady: nobody at ${s.company} used it this week`
     : s.weekly && s.idle.length ? `RollReady: ${s.idle.length} ${s.idle.length === 1 ? "person hasn't" : "people haven't"} used it this week at ${s.company}`
     : cantRoll.length ? `RollReady: ${trucks(cantRoll.length)} can't roll at ${s.company}`
@@ -104,38 +122,54 @@ export function blockedWhy(reasons: string[] | null): string {
   return `${worst}${rs.length > 1 ? ` (and ${rs.length - 1} more)` : ""}`;
 }
 
+/** Where a piece had been, as a check-in record keeps it. */
+type WentOut = { truck?: string; by?: string | null; with?: string; at?: string | null } | null;
 /** A piece as a check-in record keeps it (the parts the morning email reads). */
-interface ReturnedPiece { name: string; serial: string | null; red_tag: string | null; from_unit?: string | null; went_out?: { truck?: string; by?: string | null; with?: string; at?: string | null } | null }
+interface ReturnedPiece { name: string; serial: string | null; red_tag: string | null; from_unit?: string | null; went_out?: WentOut }
+/** A piece a check-in says didn't come back (saas_returns.not_returned). */
+interface NotBackPiece { name: string; serial: string | null; outcome: string; went_out?: WentOut }
 
-const dayText = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: YARD_TZ, month: "short", day: "numeric" });
+/** "Nov 2", in the yard's zone (Central when none is passed). */
+const dayText = (iso: string, tz?: string | null) => new Date(iso).toLocaleDateString("en-US", { timeZone: yardZone(tz), month: "short", day: "numeric" });
+
+/** " Went out on CT-03 Nov 2, loaded by Dale." or " Signed out to Lupe Nov 1." The truck is left off when the line already names it. */
+function wentOutText(w: WentOut | undefined, tz?: string | null, truckNamed?: string | null): string {
+  if (w?.with) return ` Signed out to ${w.with}${w.at ? ` ${dayText(w.at, tz)}` : ""}.`;
+  if (w?.truck) return ` Went out${w.truck === truckNamed ? "" : ` on ${w.truck}`}${w.at ? ` ${dayText(w.at, tz)}` : ""}${w.by ? `, loaded by ${w.by}` : ""}.`;
+  return "";
+}
 
 /** "Quad BOP #11 QB-4471: rams bent. Went out on CT-03 Nov 2, loaded by Dale. Checked in by Freddy." */
-export function damagedLine(p: ReturnedPiece, checkedInBy: string): string {
-  const w = p.went_out;
+export function damagedLine(p: ReturnedPiece, checkedInBy: string, tz?: string | null): string {
   // Moved to a truck piece by piece (no load-out of its own): name the truck it came back on.
-  const where = w?.with ? ` Signed out to ${w.with}${w.at ? ` ${dayText(w.at)}` : ""}.`
-    : w?.truck ? ` Went out on ${w.truck}${w.at ? ` ${dayText(w.at)}` : ""}${w.by ? `, loaded by ${w.by}` : ""}.`
-    : p.from_unit ? ` Came back on ${p.from_unit}.` : "";
+  const where = wentOutText(p.went_out, tz) || (p.from_unit ? ` Came back on ${p.from_unit}.` : "");
   return `${p.name}${p.serial ? ` ${p.serial}` : ""}: ${p.red_tag}.${where} Checked in by ${checkedInBy}.`;
 }
 
-const timeText = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: YARD_TZ, weekday: "short", hour: "numeric", minute: "2-digit" });
+/** "2in 1502 plug valve PV-2207: didn't come back on CT-08. Went out Oct 31, loaded by Dale. Checked in by Freddy." */
+export function missingLine(p: NotBackPiece, unitName: string | null, checkedInBy: string, tz?: string | null): string {
+  return `${p.name}${p.serial ? ` ${p.serial}` : ""}: didn't come back${unitName ? ` on ${unitName}` : ""}.${wentOutText(p.went_out, tz, unitName)} Checked in by ${checkedInBy}.`;
+}
+
+/** "Fri 5:00 AM", in the yard's zone. label: the company's yards aren't all on one clock, so say which: "Fri 5:00 AM MT". */
+export function whenText(iso: string, tz?: string | null, label = false): string {
+  const s = new Date(iso).toLocaleString("en-US", { timeZone: yardZone(tz), weekday: "short", hour: "numeric", minute: "2-digit" });
+  return label ? `${s} ${zoneShort(tz)}` : s;
+}
 
 /**
- * Was the planned truck scanned for this plan? lateLine's own rule (plans.ts):
- * a load-out after the plan was made, and inside the window before it leaves.
- * Scanned and blocked is "still blocked", not "the app wasn't used".
+ * Was the planned truck scanned for this plan? lateLine's own rule
+ * (plans.ts loadoutForPlan): a load-out after the plan was made, and inside
+ * the window before it leaves. Scanned and blocked is "still blocked", not
+ * "the app wasn't used".
  */
 export function planScanned(plan: { created_at: string; leaves_at: string }, last: { finished_at: string } | null): boolean {
-  if (!last) return false;
-  const leaves = Date.parse(plan.leaves_at);
-  const made = Date.parse(plan.created_at);
-  const from = Number.isFinite(made) ? Math.max(made, leaves - PLAN_AHEAD_MS) : leaves - PLAN_AHEAD_MS;
-  return Date.parse(last.finished_at) > from;
+  return loadoutForPlan({ at: plan.created_at, leavesAt: plan.leaves_at }, last);
 }
 
 /** A line in the email and the yard it's about (null: no yard known, so only the whole-company email shows it). */
-type Line = { yard: string | null; text: string; /** Already names a yard or a person: no yard in front. */ named?: boolean };
+type Line = { yard: string | null; text: string; /** Already names a yard or a person: no yard in front. */ named?: boolean;
+  /** Can't be tied to one yard (a piece red-tagged on a rack): goes in every yard's email. */ anyYard?: boolean };
 
 /** Build and send every paying company's morning email. */
 export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sent: number; skipped: number; errors: string[] }> {
@@ -150,7 +184,7 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const [{ data: lo }, { data: ov }, { data: ev }, { data: plans }, { data: units }, { data: outRows }, { data: rules }, { data: members }, { data: weekEv }, paper, { data: yardRows }, { count: uploadsWaiting }] = await Promise.all([
         admin.from("saas_loadout_scans").select("id, unit_id, unit_name, yard_id, verdict, reasons, finished_at").eq("company_id", c.id).gte("finished_at", since),
         admin.from("saas_loadout_overrides").select("loadout_id, by_name, reason").eq("company_id", c.id).gte("created_at", since),
-        admin.from("saas_events").select("message, unit_id").eq("company_id", c.id).eq("kind", "unscanned_trip").gte("created_at", since),
+        admin.from("saas_events").select("message, unit_id, kind").eq("company_id", c.id).in("kind", ["unscanned_trip", "yard_check"]).gte("created_at", since),
         admin.from("saas_loadout_plans").select("unit_id, created_at, leaves_at").eq("company_id", c.id).is("used_at", null).not("leaves_at", "is", null),
         admin.from("saas_units").select("id, name, yard_id").eq("company_id", c.id),
         admin.from("saas_assets").select("unit_id, yard_id, out_since, out_with_name, name, identifier").eq("company_id", c.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
@@ -178,6 +212,12 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const unitYard = new Map(unitRows.map((u) => [u.id, u.yard_id ?? null]));
       const yardOf = (unitId: string | null | undefined) => (unitId ? unitYard.get(unitId) ?? null : null);
       const yardName = new Map(((yardRows ?? []) as { id: string; name: string }[]).map((y) => [y.id, y.name]));
+      // Each time reads in its own yard's zone (Central when the yard has none
+      // yet), with the zone said when the yards aren't all on one clock.
+      const zones = await yardZones(admin, [...yardName.keys()]);
+      const zoneOf = (yard: string | null | undefined) => (yard ? zones.get(yard) ?? null : null);
+      const mixedZones = new Set([...yardName.keys()].map((y) => yardZone(zones.get(y)))).size > 1;
+      const at = (iso: string, yard: string | null | undefined) => whenText(iso, zoneOf(yard), mixedZones);
 
       const loads = ((lo ?? []) as { id: string; unit_id: string | null; unit_name: string; yard_id: string | null; verdict: string | null; reasons: string[] | null; finished_at: string }[])
         .map((l) => ({ ...l, yard: l.yard_id ?? yardOf(l.unit_id) }));
@@ -201,8 +241,11 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         const l = last as { id: string; finished_at: string; verdict: string | null } | null;
         let rolled = l?.verdict === "ready";
         if (l && !rolled) rolled = Boolean((await admin.from("saas_loadout_overrides").select("loadout_id").eq("loadout_id", l.id).maybeSingle()).data);
-        const line = lateLine({ at: p.created_at, leavesAt: p.leaves_at } as Pick<LoadoutPlan, "at" | "leavesAt">, l ? { finished_at: l.finished_at, rolled } : null, now, timeText);
-        if (line) (planScanned(p, l) ? stillBlocked : late).push({ yard: yardOf(p.unit_id), text: `${unitName.get(p.unit_id) ?? "A truck"}: ${line}` });
+        const yard = yardOf(p.unit_id);
+        const line = lateLine({ at: p.created_at, leavesAt: p.leaves_at } as Pick<LoadoutPlan, "at" | "leavesAt">, l ? { finished_at: l.finished_at, rolled } : null, now, (iso) => at(iso, yard));
+        // The same rule lateLine sorts by (loadoutForPlan): a load-out from
+        // before this plan counted (a Saturday on-call trip under Monday's plan) isn't one for it.
+        if (line) (planScanned(p, l) ? stillBlocked : late).push({ yard, text: `${unitName.get(p.unit_id) ?? "A truck"}: ${line}` });
       }
 
       const limit = (rules as { out_alert_days: number | null } | null)?.out_alert_days ?? DEFAULT_OUT_ALERT_DAYS;
@@ -210,12 +253,35 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const outByTruck = new Map<string, { yard: string | null; days: number[] }>();
       const withPeople: Line[] = [];
       const out = (outRows ?? []) as { unit_id: string | null; yard_id: string | null; out_since: string; out_with_name: string | null; name: string; identifier: string | null }[];
+      // Out from before its truck's last check-in: it was marked still out
+      // there, so it's on location from that job, not on the truck's trip now
+      // (the same test as the piece's page and the board's kit check).
+      const lastBack = new Map<string, number>();
+      if (out.some((r) => r.unit_id && !r.out_with_name)) {
+        const { data: backRows } = await admin.from("saas_return_latest").select("unit_id, finished_at").eq("company_id", c.id).limit(1000);
+        for (const b of (backRows ?? []) as { unit_id: string | null; finished_at: string }[]) if (b.unit_id) lastBack.set(b.unit_id, Date.parse(b.finished_at));
+      }
+      const leftOn = (r: { unit_id: string | null; out_with_name: string | null; out_since: string }) => {
+        const back = r.unit_id && !r.out_with_name ? lastBack.get(r.unit_id) : undefined;
+        return back !== undefined && Date.parse(r.out_since) < back;
+      };
+      const leftOnLocation = new Map<string, { unitId: string; day: string; yard: string | null; names: string[]; days: number }>();
       for (const r of out) {
         const d = daysOut(r.out_since, now);
         if (d < limit) continue;
         const yard = r.yard_id ?? yardOf(r.unit_id);
         // Signed out to a person: name the person and the tool.
         if (r.out_with_name) { withPeople.push({ yard, named: true, text: `With ${r.out_with_name}: ${r.name}${r.identifier ? ` ${r.identifier}` : ""}, out ${d} days` }); continue; }
+        if (leftOn(r)) {
+          const truckYard = yardOf(r.unit_id);
+          const day = dayText(r.out_since, zoneOf(truckYard));
+          const k = `${r.unit_id}|${day}`;
+          const g = leftOnLocation.get(k) ?? { unitId: r.unit_id as string, day, yard: truckYard, names: [], days: 0 };
+          g.names.push(`${r.name}${r.identifier ? ` ${r.identifier}` : ""}`);
+          g.days = Math.max(g.days, d);
+          leftOnLocation.set(k, g);
+          continue;
+        }
         const key = r.unit_id ?? `@${r.yard_id ?? ""}`;
         const g = outByTruck.get(key) ?? { yard: r.unit_id ? yardOf(r.unit_id) : r.yard_id, days: [] };
         g.days.push(d);
@@ -226,19 +292,33 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
       const toolsLow: Line[] = stocks.filter(isLow).map((s) => ({ yard: s.yardId, named: true, text: lowLine(s) }));
       const outTooLong: Line[] = [
         ...[...outByTruck].map(([k, g]) => ({ yard: g.yard, text: `${(k.startsWith("@") ? null : unitName.get(k)) ?? "In the yard"}: ${g.days.length} ${g.days.length === 1 ? "piece" : "pieces"}, out ${Math.max(...g.days)} days` })),
+        // "Left on location from CT-08's Oct 31 job: 2in 1502 plug valve PV-2207, out 15 days"
+        ...[...leftOnLocation.values()].map((g) => ({ yard: g.yard, text: `Left on location from ${unitName.get(g.unitId) ?? "a truck"}'s ${g.day} job: ${g.names.join(", ")}, out ${g.days} days` })),
         ...withPeople,
         ...stocks.flatMap((s) => lateOutLines([s], limit, now).map((text) => ({ yard: s.yardId, named: true, text }))),
       ];
 
       // Came back damaged: red-tagged at check-in, with whose job it came back from.
       const [{ data: rets }, { data: redressRows }] = await Promise.all([
-        admin.from("saas_returns").select("returned_by, pieces, yard_id, unit_id").eq("company_id", c.id).gte("finished_at", since),
+        admin.from("saas_returns").select("returned_by, unit_name, pieces, not_returned, yard_id, unit_id").eq("company_id", c.id).gte("finished_at", since),
         // The same tools Tools out lists: red-tagged or missing ones aren't waiting on a redress.
         admin.from("saas_assets").select("name, identifier, yard_id, unit_id").eq("company_id", c.id).not("needs_redress_since", "is", null).not("status", "in", "(retired,out_of_service,missing)").limit(1000),
       ]);
-      const backs = ((rets ?? []) as { returned_by: string; pieces: ReturnedPiece[] | null; yard_id: string | null; unit_id: string | null }[])
+      const backs = ((rets ?? []) as { returned_by: string; unit_name: string | null; pieces: ReturnedPiece[] | null; not_returned: NotBackPiece[] | null; yard_id: string | null; unit_id: string | null }[])
         .map((r) => ({ ...r, yard: r.yard_id ?? yardOf(r.unit_id) }));
-      const damaged: Line[] = backs.flatMap((r) => (r.pieces ?? []).filter((p) => p.red_tag).map((p) => ({ yard: r.yard, text: damagedLine(p, r.returned_by) })));
+      const damaged: Line[] = backs.flatMap((r) => (r.pieces ?? []).filter((p) => p.red_tag).map((p) => ({ yard: r.yard, text: damagedLine(p, r.returned_by, zoneOf(r.yard)) })));
+      // Marked Can't find at a check-in (still out on the job isn't news).
+      const cantFind: Line[] = backs.flatMap((r) => (r.not_returned ?? []).filter((n) => n.outcome === "missing")
+        .map((n) => ({ yard: r.yard, text: missingLine(n, r.unit_name, r.returned_by, zoneOf(r.yard)) })));
+      // Red-tagged on a piece's page, and bad iron moved onto a truck after
+      // it rolled: the managers heard right away, and the morning email
+      // keeps it in front of them.
+      const { data: tagEv } = await admin.from("saas_events").select("kind, message, unit_id, created_at").eq("company_id", c.id)
+        .in("kind", ["red_tagged", "bad_iron_out"]).gte("created_at", since).order("created_at", { ascending: true }).limit(200);
+      const tagLines = ((tagEv ?? []) as { kind: string; message: string; unit_id: string | null; created_at: string }[])
+        .map((e) => ({ kind: e.kind, yard: yardOf(e.unit_id), anyYard: !e.unit_id, text: `${e.message} (${at(e.created_at, yardOf(e.unit_id))})` }));
+      const redTagged: Line[] = tagLines.filter((e) => e.kind === "red_tagged");
+      const badIronOut: Line[] = tagLines.filter((e) => e.kind === "bad_iron_out");
       const redress: Line[] = ((redressRows ?? []) as { name: string; identifier: string | null; yard_id: string | null; unit_id: string | null }[])
         .map((a) => ({ yard: a.yard_id ?? yardOf(a.unit_id), text: `${a.name}${a.identifier ? ` ${a.identifier}` : ""}` }));
       const pieceOf = new Map(paper.pieces.map((a) => [a.id, a]));
@@ -273,7 +353,8 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
         ...((weekMoves ?? []) as { actor: string }[]).map((r) => r.actor)]);
       // A hand who loaded out a truck that's still out on a job is on
       // location with nothing to scan, not skipping the app.
-      const outTrucks = [...new Set(out.filter((r) => r.unit_id && !r.out_with_name).map((r) => r.unit_id as string))];
+      // (Iron left on location at the truck's last check-in doesn't keep it out.)
+      const outTrucks = [...new Set(out.filter((r) => r.unit_id && !r.out_with_name && !leftOn(r)).map((r) => r.unit_id as string))];
       if (outTrucks.length) {
         const { data: lastLoads } = await admin.from("saas_loadout_scans").select("unit_id, scanned_by, finished_at").eq("company_id", c.id)
           .in("unit_id", outTrucks.slice(0, 300)).not("scanned_by", "is", null).order("finished_at", { ascending: false }).limit(1000);
@@ -294,13 +375,15 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
 
       const blocked: Line[] = loads.filter((l) => l.verdict !== "ready" && !ovIds.has(l.id)).map((l) => ({ yard: l.yard, text: `${l.unit_name}: ${blockedWhy(l.reasons)}` }));
       const overrides: Line[] = ovs.map((o) => ({ yard: ovTruck.get(o.loadout_id)?.yard ?? null, text: `${ovTruck.get(o.loadout_id)?.name ?? "A truck"} by ${o.by_name}: "${o.reason}"` }));
-      const unscanned: Line[] = ((ev ?? []) as { message: string; unit_id: string | null }[]).map((e) => ({ yard: yardOf(e.unit_id), text: e.message }));
+      const evRows = (ev ?? []) as { message: string; unit_id: string | null; kind: string }[];
+      const unscanned: Line[] = evRows.filter((e) => e.kind !== "yard_check").map((e) => ({ yard: yardOf(e.unit_id), text: e.message }));
+      const yardChecks: Line[] = evRows.filter((e) => e.kind === "yard_check").map((e) => ({ yard: yardOf(e.unit_id), text: e.message }));
       const weekly = new Date().toLocaleDateString("en-US", { timeZone: YARD_TZ, weekday: "short" }) === "Mon";
       const allYards = [...yardName.keys()];
 
       /** The email for these yards (null: the whole company). With more than one yard in it, each truck line says which yard. */
       const pick = (yards: string[] | null): DaySummary => {
-        const keep = (t: { yard: string | null }) => yards === null || (t.yard !== null && yards.includes(t.yard));
+        const keep = (t: { yard: string | null; anyYard?: boolean }) => yards === null || Boolean(t.anyYard) || (t.yard !== null && yards.includes(t.yard));
         const multi = (yards ?? allYards).length > 1;
         const show = (ts: Line[]) => ts.filter(keep).map((t) => (multi && !t.named && t.yard && yardName.has(t.yard) ? `${yardName.get(t.yard)}, ${t.text}` : t.text));
         const myLoads = loads.filter(keep);
@@ -311,8 +394,9 @@ export async function sendMorningSummaries(admin: SupabaseClient): Promise<{ sen
           blocked: show(blocked),
           overrides: show(overrides),
           checkins: backs.filter(keep).length,
-          unscanned: show(unscanned),
+          unscanned: show(unscanned), yardChecks: show(yardChecks),
           late: show(late), stillBlocked: show(stillBlocked), outTooLong: show(outTooLong), damaged: show(damaged),
+          cantFind: show(cantFind), redTagged: show(redTagged), badIronOut: show(badIronOut),
           toolsLow: show(toolsLow), cantRoll: show(cantRoll),
           redressWaiting: redress.filter(keep).length, redressNames: show(redress).slice(0, 5),
           noPaper: noPaper.filter(keep).length, noPaperNames: show(noPaper).slice(0, 5),

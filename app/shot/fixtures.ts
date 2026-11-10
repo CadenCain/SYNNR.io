@@ -1,8 +1,7 @@
 import { YARD_TZ } from "@/lib/saas/format";
 import { buildEquipment, type EquipmentList, type RawAsset, type RawItem } from "@/lib/saas/equipment";
 import { DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS } from "@/lib/saas/demo-data";
-import { demoLoadoutRecord } from "@/lib/saas/demo-loadouts";
-import { kitLinesFrom } from "@/lib/saas/loadout-lines";
+import { demoLoadoutRecord, demoKitLines } from "@/lib/saas/demo-loadouts";
 import type { LoadoutScanRow } from "@/lib/saas/loadout-board";
 import { addDaysIso, localToday } from "@/lib/saas/status";
 import { judgeUnit, withSerial } from "@/lib/saas/judge";
@@ -91,7 +90,8 @@ export function demoLoadOut() {
 export function demoKitAndPackages(unitKey: string) {
   const unit = DEMO_UNITS.find((u) => u.key === unitKey)!;
   return {
-    kit: kitLinesFrom((unit.assets ?? []).filter((a) => a.status !== "retired").map((a) => a.name)),
+    // The same kit the seeded demo truck has ("Fluid end", "Reel, 2-3/8in").
+    kit: demoKitLines(unit),
     packages: DEMO_PACKAGES.map((p, i) => ({ id: `pkg-${i}`, name: p.name, lines: p.lines })),
   };
 }

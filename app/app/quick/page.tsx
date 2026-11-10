@@ -17,7 +17,7 @@ export default async function QuickPage() {
 
   const [itemData, { data: unitData }, assetData, { data: yardData }] = await Promise.all([
     readAll<unknown>((a, b) => db.from("saas_compliance_items_with_status")
-      .select("id, title, status, expiration_date, parent_type, parent_id", { count: "exact" })
+      .select("id, title, kind, status, expiration_date, parent_type, parent_id", { count: "exact" })
       .eq("company_id", company.id).neq("parent_type", "crew").order("id").range(a, b)),
     db.from("saas_units").select("id, name, type, saas_yards(name)").eq("company_id", company.id).order("name"),
     readAll<unknown>((a, b) => db.from("saas_assets").select("id, name, last_seen_where, unit_id", { count: "exact" }).eq("company_id", company.id).order("name").order("id").range(a, b)),
@@ -40,11 +40,12 @@ export default async function QuickPage() {
   const assetRows = (assetData ?? []) as AssetRow[];
   const assetNames = new Map(assetRows.map((a) => [a.id, a.name]));
 
-  type Row = { id: string; title: string; status: ComplianceStatus; expiration_date: string | null; parent_type: string; parent_id: string };
+  type Row = { id: string; title: string; kind: string | null; status: ComplianceStatus; expiration_date: string | null; parent_type: string; parent_id: string };
   const items: QuickItem[] = ((itemData ?? []) as Row[])
     .map((i) => ({
       id: i.id,
       title: i.title,
+      kind: i.kind,
       status: i.status,
       expiration_date: i.expiration_date,
       parentLabel: (i.parent_type === "unit" ? unitNames.get(i.parent_id) : assetNames.get(i.parent_id)) ?? "",

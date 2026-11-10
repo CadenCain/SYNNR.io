@@ -4,8 +4,9 @@ import { saasDb, saasAdmin } from "@/lib/saas/db";
 import { getCompanyReadiness } from "@/lib/saas/readiness";
 import { getEquipment } from "@/lib/saas/equipment";
 import { localToday } from "@/lib/saas/status";
-import { YARD_TZ } from "@/lib/saas/format";
-import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, type LoadoutScanRow } from "@/lib/saas/loadout-board";
+import { YARD_TZ, yardZone, zoneShort } from "@/lib/saas/format";
+import { yardZones } from "@/lib/saas/loadout-record";
+import { buildLoadOutTrucks, weekNumbers, kitShortByTruck, planShortByTruck, type LoadoutScanRow } from "@/lib/saas/loadout-board";
 import { getYardRules } from "@/lib/saas/yard-rules";
 import { daysOut } from "@/lib/saas/whereabouts";
 import LoadOutView, { type ActivityLine, type PersonWeek } from "./_components/loadout-view";
@@ -38,7 +39,7 @@ const clock = () => Date.now();
 const TONE: Record<string, ActivityLine["tone"]> = {
   loadout_blocked: "red", check_not_ready: "red", alert_failed: "red", asset_status: "red", unscanned_trip: "red",
   red_tagged: "red", bad_iron_out: "red",
-  rolled_override: "amber", deleted_failing: "amber",
+  rolled_override: "amber", deleted_failing: "amber", yard_check: "amber",
   loadout_ready: "green", check_ready: "green", renewed: "green",
 };
 
@@ -48,14 +49,12 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const db = await saasDb();
   const weekAgo = weekAgoIso();
   const today = localToday();
-  const [rd, list, { data: scanRows }, { data: weekScans }, { count: oldOverrides }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules, openPlans, { data: pkgNameRows }, { data: latestScanRows }, { data: latestBackRows }] = await Promise.all([
+  const [rd, list, { data: scanRows }, { data: weekScans }, { data: overrideRows }, { data: eventRows }, { data: kitRows }, { data: returnRows }, { data: outRows }, { data: weekEvents }, rules, openPlans, { data: pkgNameRows }, { data: latestScanRows }, { data: latestBackRows }, zones] = await Promise.all([
     getCompanyReadiness(db, company.id),
     getEquipment(db, company.id),
     db.from("saas_loadout_scans").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned")
       .eq("company_id", company.id).order("finished_at", { ascending: false }).limit(300),
     db.from("saas_loadout_scans").select("id, finished_at, pieces, unit_id, scanned_by").eq("company_id", company.id).gte("finished_at", weekAgo),
-    db.from("saas_dispatch_checks").select("id", { count: "exact", head: true })
-      .eq("company_id", company.id).eq("status", "not_ready_override").gte("started_at", weekAgo),
     // Every override, not just this week's: a truck that rolled on one 10 days
     // ago is still out on it, not blocked. Overrides are rare; 2,000 is years.
     db.from("saas_loadout_overrides").select("loadout_id, created_at, by_name").eq("company_id", company.id).order("created_at", { ascending: false }).limit(2000),
@@ -69,16 +68,18 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     ]).then(([a, b]) => ({ data: [...(a.data ?? []), ...(b.data ?? [])].sort((x, y) => String(y.created_at).localeCompare(String(x.created_at))) })),
     db.from("saas_packages").select("unit_id, saas_package_lines(label, qty, sort)").eq("company_id", company.id).not("unit_id", "is", null),
     db.from("saas_returns").select("unit_id, finished_at, returned_by").eq("company_id", company.id).order("finished_at", { ascending: false }).limit(400),
-    db.from("saas_assets").select("id, unit_id, yard_id, out_since").eq("company_id", company.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
+    db.from("saas_assets").select("id, unit_id, yard_id, out_since, out_with_name").eq("company_id", company.id).not("out_since", "is", null).not("status", "in", "(retired,missing)"),
     readAll<{ kind: string; actor: string; unit_id: string | null }>((a, b) => db.from("saas_events").select("id, kind, actor, unit_id", { count: "exact" }).eq("company_id", company.id)
       .gte("created_at", weekAgo).not("actor", "is", null).neq("kind", "asset_moved").order("id").range(a, b)).then((data) => ({ data })),
     getYardRules(db, company.id),
     getOpenPlans(db, company.id),
-    db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null),
+    db.from("saas_packages").select("id, name, saas_package_lines(label, qty, sort)").eq("company_id", company.id).is("unit_id", null),
     // Each truck's newest load-out and check-in, however old: the lists above
     // are the newest few hundred, and a truck out a week can be past them.
     db.from("saas_loadout_latest").select("id, unit_id, finished_at, scanned_by, verdict, reasons, pieces, not_scanned").eq("company_id", company.id),
     db.from("saas_return_latest").select("unit_id, finished_at, returned_by").eq("company_id", company.id),
+    // Each yard's time zone: a Hobbs (Mountain) truck's times read in Mountain.
+    db.from("saas_yards").select("id").eq("company_id", company.id).then(({ data }) => yardZones(db, ((data ?? []) as { id: string }[]).map((y) => y.id))),
   ]);
   // The recent load-outs plus each truck's newest one, once each, newest first.
   const allScans = [...new Map([...((latestScanRows ?? []) as LoadoutScanRow[]), ...((scanRows ?? []) as LoadoutScanRow[])].map((r) => [r.id, r])).values()]
@@ -86,30 +87,41 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const allReturns = [...((latestBackRows ?? []) as { unit_id: string | null; finished_at: string; returned_by: string | null }[]),
     ...((returnRows ?? []) as { unit_id: string | null; finished_at: string; returned_by: string | null }[])];
   // Each truck's planned next job, in words.
-  const pkgNames = new Map(((pkgNameRows ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]));
+  const pkgRows = (pkgNameRows ?? []) as { id: string; name: string; saas_package_lines: { label: string; qty: number; sort: number }[] | null }[];
+  const pkgNames = new Map(pkgRows.map((x) => [x.id, x.name]));
+  const packages = new Map(pkgRows.map((x) => [x.id, { name: x.name, lines: [...(x.saas_package_lines ?? [])].sort((a, b) => a.sort - b.sort).map((l) => ({ label: l.label, qty: l.qty })) }]));
   // A planned job past its leave time with nothing rolled: nobody scanned it out.
   const latestScan = new Map<string, { finished_at: string; rolled: boolean }>();
   const overriddenIds = new Set(((overrideRows ?? []) as { loadout_id: string }[]).map((o) => o.loadout_id));
   for (const r of allScans) {
     if (r.unit_id && !latestScan.has(r.unit_id)) latestScan.set(r.unit_id, { finished_at: r.finished_at, rolled: r.verdict === "ready" || overriddenIds.has(r.id) });
   }
-  const timeText = (iso: string) => {
-    const sameDay = new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ }) === today;
-    return new Date(iso).toLocaleString("en-US", { timeZone: YARD_TZ, ...(sameDay ? {} : { weekday: "short" }), hour: "numeric", minute: "2-digit" });
-  };
-  const planNow = clock();
-  const plans: Record<string, { text: string; by: string | null; note: string | null; late: string | null }> = {};
-  for (const [unitId, p] of openPlans) {
-    // The job or well and when it leaves come first: "University 7-12 #3H, leaves 6:00 AM: just the truck's kit".
-    const head = [p.job?.trim() || null, p.leavesAt ? `leaves ${timeText(p.leavesAt)}` : null].filter(Boolean).join(", ");
-    const summary = planSummary(p, pkgNames);
-    plans[unitId] = { text: head ? `${head}: ${summary}` : summary, by: p.by, note: p.note, late: lateLine(p, latestScan.get(unitId) ?? null, planNow, timeText) };
-  }
-
   const yards = list.yards.map((y) => ({ id: y.id, name: y.name }));
   const yardId = yard && yards.some((y) => y.id === yard) ? yard : null;
   const units = yardId ? rd.units.filter((u) => u.yardId === yardId) : rd.units;
   const unitIds = new Set(units.map((u) => u.id));
+
+  // Times read on each truck's yard clock. When the trucks on screen run on
+  // more than one zone, each time says which (the board does the same).
+  const planNow = clock();
+  const zoneOfUnit = new Map(rd.units.map((u) => [u.id, yardZone(zones.get(u.yardId))]));
+  const companyZones = new Set(list.yards.map((y) => yardZone(zones.get(y.id))));
+  const homeZone = companyZones.size === 1 ? [...companyZones][0] : YARD_TZ;
+  const mixedZones = new Set(units.map((u) => zoneOfUnit.get(u.id) ?? YARD_TZ)).size > 1;
+  const dayIn = (iso: string | number, tz: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
+  const timeText = (tz: string) => (iso: string) => {
+    const sameDay = dayIn(iso, tz) === (tz === YARD_TZ ? today : dayIn(planNow, tz));
+    const s = new Date(iso).toLocaleString("en-US", { timeZone: tz, ...(sameDay ? {} : { weekday: "short" }), hour: "numeric", minute: "2-digit" });
+    return mixedZones ? `${s} ${zoneShort(tz)}` : s;
+  };
+  const plans: Record<string, { text: string; by: string | null; note: string | null; late: string | null }> = {};
+  for (const [unitId, p] of openPlans) {
+    const clockText = timeText(zoneOfUnit.get(unitId) ?? homeZone);
+    // The job or well and when it leaves come first: "University 7-12 #3H, leaves 6:00 AM: just the truck's kit".
+    const head = [p.job?.trim() || null, p.leavesAt ? `leaves ${clockText(p.leavesAt)}` : null].filter(Boolean).join(", ");
+    const summary = planSummary(p, pkgNames);
+    plans[unitId] = { text: head ? `${head}: ${summary}` : summary, by: p.by, note: p.note, late: lateLine(p, latestScan.get(unitId) ?? null, planNow, clockText) };
+  }
 
   const overrides = (overrideRows ?? []) as { loadout_id: string; created_at: string; by_name: string | null }[];
   // Which truck each recent load-out was, so a yard's week counts only its own overrides.
@@ -121,13 +133,19 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   // Each truck's newest check-in: iron marked still out at it isn't on the truck for its kit.
   const lastBack = new Map<string, string>();
   for (const r of allReturns) if (r.unit_id && (lastBack.get(r.unit_id) ?? "") < r.finished_at) lastBack.set(r.unit_id, r.finished_at);
-  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, kitShortByTruck(kits, list.rows, lastBack),
-    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member" });
+  // Heads-up on a truck that's ready to load: its kit is short, or its next
+  // job's plan needs iron the yard has no good one of.
+  const kitShort = kitShortByTruck(kits, list.rows, lastBack);
+  for (const [id, line] of planShortByTruck(openPlans, packages, kits, list.rows, rd.units, nowMs, lastBack)) {
+    kitShort.set(id, kitShort.has(id) ? `${kitShort.get(id)} ${line}` : line);
+  }
+  const { trucks, counts, summary } = buildLoadOutTrucks(units, list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, kitShort,
+    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member", zones });
 
   // The iron, for the manager: what's out, what's out too long, what's out of test.
   const inYardScope = (r: { yardId?: string | null; unitId?: string | null }) => !yardId || r.yardId === yardId || (r.unitId !== null && r.unitId !== undefined && unitIds.has(r.unitId));
-  const outList = ((outRows ?? []) as { id: string; unit_id: string | null; yard_id: string | null; out_since: string }[])
-    .filter((r) => inYardScope({ yardId: r.yard_id, unitId: r.unit_id }));
+  const outAll = (outRows ?? []) as { id: string; unit_id: string | null; yard_id: string | null; out_since: string; out_with_name: string | null }[];
+  const outList = outAll.filter((r) => inYardScope({ yardId: r.yard_id, unitId: r.unit_id }));
   const rowsInScope = list.rows.filter((r) => r.state !== "retired" && (!yardId || r.yardOf === yardId));
   const iron = {
     out: outList.length,
@@ -145,10 +163,24 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   // Moving iron counts as using it too (left out of the tallies, not out of "active").
   const { data: moverRows } = await db.from("saas_events").select("actor").eq("company_id", company.id).eq("kind", "asset_moved")
     .gte("created_at", weekAgo).not("actor", "is", null).order("created_at", { ascending: false }).limit(1000);
+  // A hand who loaded out a truck that's still out on a job is on location
+  // with nothing to scan, not skipping the app (the morning email's rule):
+  // whoever loaded each such truck's newest load-out counts as active.
+  // (Iron left on location at the truck's last check-in doesn't keep it out, the same as the email.)
+  const leftOnLocation = (r: { unit_id: string | null; out_since: string | null }) => {
+    const back = r.unit_id ? lastBack.get(r.unit_id) : undefined;
+    return Boolean(back && r.out_since && Date.parse(r.out_since) < Date.parse(back));
+  };
+  const outTrucks = new Set(outAll.filter((r) => r.unit_id && !r.out_with_name && !leftOnLocation(r)).map((r) => r.unit_id as string));
+  const loadedOut = new Map<string, string>();
+  for (const sc of allScans) if (sc.unit_id && sc.scanned_by && outTrucks.has(sc.unit_id) && !loadedOut.has(sc.unit_id)) loadedOut.set(sc.unit_id, sc.scanned_by);
   const activeAnywhere = new Set([
     ...((moverRows ?? []) as { actor: string }[]).map((e) => e.actor),
     ...((weekEvents ?? []) as { actor: string | null }[]).map((e) => e.actor),
     ...((weekScans ?? []) as { scanned_by: string | null }[]).map((s) => s.scanned_by),
+    // Check-ins count even if the feed line didn't land.
+    ...allReturns.filter((r) => Date.parse(r.finished_at) >= Date.parse(weekAgo)).map((r) => r.returned_by),
+    ...loadedOut.values(),
   ].filter(Boolean) as string[]);
   for (const e of (weekEvents ?? []) as { kind: string; actor: string; unit_id: string | null }[]) {
     if (!e.actor || !inYard({ unit_id: e.unit_id })) continue;
@@ -192,15 +224,16 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
     ? await db.from("saas_loadout_scans").select("unit_id").eq("company_id", company.id).eq("scanned_by_user", user.id).order("finished_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const myTruckId = (picked && units.some((u) => u.id === picked) ? picked : null) ?? (mine as { unit_id: string | null } | null)?.unit_id ?? null;
-  const week = weekNumbers(((weekScans ?? []) as { id: string; finished_at: string; pieces: { red?: boolean; asset_id?: string }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo) && (!yardId || unitIds.has(unitOfScan.get(o.loadout_id) ?? ""))).length + (yardId ? 0 : oldOverrides ?? 0), overriddenIds);
+  const week = weekNumbers(((weekScans ?? []) as { id: string; finished_at: string; pieces: { red?: boolean; asset_id?: string }[]; unit_id: string | null }[]).filter(inYard), overrides.filter((o) => Date.parse(o.created_at) >= Date.parse(weekAgo) && (!yardId || unitIds.has(unitOfScan.get(o.loadout_id) ?? ""))).length, overriddenIds);
 
-  const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: YARD_TZ });
+  // Today's feed, each line on its truck's yard clock.
+  const zoneOfEvent = (e: { unit_id: string | null }) => (e.unit_id ? zoneOfUnit.get(e.unit_id) : undefined) ?? homeZone;
   const activity: ActivityLine[] = ((eventRows ?? []) as { id: string; kind: string; actor: string | null; message: string; unit_id: string | null; created_at: string }[])
-    .filter((e) => dayOf(e.created_at) === today && inYard(e))
+    .filter((e) => { const tz = zoneOfEvent(e); return dayIn(e.created_at, tz) === (tz === YARD_TZ ? today : dayIn(planNow, tz)) && inYard(e); })
     .slice(0, 15)
     .map((e) => ({
       id: e.id,
-      time: new Date(e.created_at).toLocaleTimeString("en-US", { timeZone: YARD_TZ, hour: "numeric", minute: "2-digit" }),
+      time: `${new Date(e.created_at).toLocaleTimeString("en-US", { timeZone: zoneOfEvent(e), hour: "numeric", minute: "2-digit" })}${mixedZones ? ` ${zoneShort(zoneOfEvent(e))}` : ""}`,
       // The message usually names the person already ("... by Dale Wooten").
       actor: e.actor && !e.message.includes(e.actor) ? e.actor : null, message: e.message, tone: TONE[e.kind] ?? null,
     }));
@@ -219,7 +252,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
         plans={plans} manager={company.role === "owner" || company.role === "admin"}
         hand={hand} picking={pick === "1"} pickAction={pickMyTruck}
         tips={hand && (joined === "1" || !myTruckId) ? <HandTips name={(user.user_metadata?.full_name as string | undefined)?.trim() || "there"} company={company.name} /> : null}
-        iron={iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} />
+        iron={iron} byPerson={byPerson} myTruckId={myTruckId} alertDays={rules.outAlertDays} companyId={company.id} />
       <WarmOffline companyId={company.id} urls={["/app/return", ...rd.units.flatMap((u) => [`/app/units/${u.id}/scan`, `/app/units/${u.id}/return`])]} />
     </>
   );

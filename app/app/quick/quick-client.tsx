@@ -11,6 +11,7 @@ import { updateAssetLastSeen } from "../_actions";
 import { fmtDate } from "@/lib/saas/format";
 import { quickAddUnit, quickAddAsset } from "./actions";
 import { UploadCertPanel, AddCert } from "../_components/cert-upload";
+import { isAnnualInspection } from "@/lib/saas/cert-verify";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
 /**
@@ -29,6 +30,8 @@ import { shrinkPhoto } from "@/lib/shrink-photo";
 export interface QuickItem {
   id: string;
   title: string;
+  /** What kind of paper (cert, inspection, dot_sticker, ...): a yearly inspection asks for the day it was done. */
+  kind?: string | null;
   status: ComplianceStatus;
   expiration_date: string | null;
   parentLabel: string;
@@ -208,6 +211,7 @@ export default function QuickClient({ items, units, assets, companyId, isManager
       <div className="flex flex-col gap-4">
         <BackBar onBack={() => setPicked(null)} label={picked.title} sub={picked.parentLabel} />
         <UploadCertPanel big itemId={picked.id} isManager={isManager} allowOnTheWay={allowOnTheWay}
+          annual={isAnnualInspection(picked.kind, picked.title)}
           onClose={() => { reset(); router.refresh(); }} />
       </div>
     );

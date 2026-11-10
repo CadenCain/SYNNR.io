@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { getTruckPlan, planSummary, planTiming, rolledSince, PLAN_AHEAD_MS } from "@/lib/saas/plans";
-import { fmtWhen } from "@/lib/saas/format";
+import { getTruckPlan, planSummary, planTiming, rolledOnOldPlans, rolledSince, PLAN_AHEAD_MS } from "@/lib/saas/plans";
+import { fmtWhen, yardZone, zoneShort } from "@/lib/saas/format";
+import { yardZones } from "@/lib/saas/loadout-record";
+import { computeDispatchCheck } from "@/lib/saas/dispatch-check";
 import { isWritable } from "@/lib/saas/entitlements";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
@@ -28,7 +30,7 @@ export default async function PlanPage({ params }: { params: Promise<{ unitId: s
   const db = await saasDb();
   const now = clock();
   const [{ data: unitRow }, { data: pkgRows }, { data: names }, plan, rolled, { data: backRow }, { data: truckRows }, { data: planRows }] = await Promise.all([
-    db.from("saas_units").select("id, name").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
+    db.from("saas_units").select("id, name, yard_id").eq("id", unitId).eq("company_id", company.id).maybeSingle(),
     db.from("saas_packages").select("id, name, unit_id, saas_package_lines(label, qty, sort)")
       .eq("company_id", company.id).or(`unit_id.is.null,unit_id.eq.${unitId}`).order("name"),
     db.from("saas_assets").select("name").eq("company_id", company.id).neq("status", "retired").limit(2000),
@@ -40,8 +42,11 @@ export default async function PlanPage({ params }: { params: Promise<{ unitId: s
     db.from("saas_units").select("id, name").eq("company_id", company.id).order("name"),
     db.from("saas_loadout_plans").select("unit_id").eq("company_id", company.id).is("used_at", null),
   ]);
-  const unit = unitRow as { id: string; name: string } | null;
+  const unit = unitRow as { id: string; name: string; yard_id?: string | null } | null;
   if (!unit) notFound();
+  // Times on the truck's yard's clock, with the zone on them (a Hobbs yard is on Mountain).
+  const tz = (unit.yard_id && (await yardZones(db, [unit.yard_id])).get(unit.yard_id)) || null;
+  const when = (iso: string) => fmtWhen(iso, tz);
   const back = (backRow as { finished_at: string } | null)?.finished_at ?? null;
   const gone = rolled && !(back && Date.parse(back) > Date.parse(rolled.at)) ? rolled : null;
   const timing = plan ? planTiming(plan, now) : null;
@@ -65,22 +70,42 @@ export default async function PlanPage({ params }: { params: Promise<{ unitId: s
       <div className="flex flex-col gap-5">
         {header}
         <Card className="p-5 text-sm text-ink-dim">
-          {plan ? <>Planned by {plan.by ?? "a manager"} {fmtWhen(plan.at)}{plan.leavesAt ? `, leaves ${fmtWhen(plan.leavesAt)}` : ""}: {planSummary(plan, new Map(packages.map((x) => [x.id, x.name])))}.{plan.note ? ` "${plan.note}"` : ""}</> : "No plan yet."} A manager sets the plan.
+          {plan ? <>Planned by {plan.by ?? "a manager"} {when(plan.at)}{plan.job ? ` for ${plan.job}` : ""}{plan.leavesAt ? `, leaves ${when(plan.leavesAt)}` : ""}: {planSummary(plan, new Map(packages.map((x) => [x.id, x.name])))}.{plan.note ? ` "${plan.note}"` : ""}</> : "No plan yet."} A manager sets the plan.
         </Card>
       </div>
     );
   }
+  // An old plan: did the truck roll since it counted? The board's own rule.
+  // Otherwise, what the plan takes from the yard that the yard can't give, as
+  // of the day it leaves (a heads-up only: it never stops the save).
+  const [oldRolled, check] = await Promise.all([
+    plan && timing === "old" ? rolledOnOldPlans(db, company.id, [plan]).then((m) => m.get(plan.id) ?? null) : null,
+    plan && timing !== "old"
+      ? computeDispatchCheck(db, company.id, unit.id, plan.leavesAt ? new Intl.DateTimeFormat("en-CA", { timeZone: yardZone(tz) }).format(new Date(plan.leavesAt)) : null).catch(() => null)
+      : null,
+  ]);
+  const planShort = check?.planShort ?? [];
   const notes = [
-    gone ? `${unit.name} already rolled, loaded out${gone.by ? ` by ${gone.by}` : ""} ${fmtWhen(gone.at)}. A plan you save now is for its next job.` : null,
-    plan?.leavesAt && timing === "old" ? `This plan was for ${fmtWhen(plan.leavesAt)}, more than a day ago, and ${unit.name} never rolled on it. It doesn't lock a load-out any more. Set a new time and save it, or clear it.` : null,
-    plan?.leavesAt && timing === "later" ? `This plan is for ${fmtWhen(plan.leavesAt)}. A load-out on ${unit.name} before ${fmtWhen(new Date(Date.parse(plan.leavesAt) - PLAN_AHEAD_MS).toISOString())} doesn't use it, and the plan stays open.` : null,
+    gone && !oldRolled ? `${unit.name} already rolled, loaded out${gone.by ? ` by ${gone.by}` : ""} ${when(gone.at)}. A plan you save now is for its next job.` : null,
+    plan?.leavesAt && timing === "old" && oldRolled
+      ? `This plan was for ${when(plan.leavesAt)}, more than a day ago. ${unit.name} has rolled since, loaded out${oldRolled.by ? ` by ${oldRolled.by}` : ""} ${when(oldRolled.at)}, so Load out doesn't show it as the next job any more, and it doesn't lock a load-out. Set a new time and save it for the next job, or clear it.`
+      : null,
+    plan?.leavesAt && timing === "old" && !oldRolled ? `This plan was for ${when(plan.leavesAt)}, more than a day ago, and ${unit.name} never rolled on it. It doesn't lock a load-out any more. Set a new time and save it, or clear it.` : null,
+    plan?.leavesAt && timing === "later" ? `This plan is for ${when(plan.leavesAt)}. A load-out on ${unit.name} before ${when(new Date(Date.parse(plan.leavesAt) - PLAN_AHEAD_MS).toISOString())} doesn't use it, and the plan stays open.` : null,
   ].filter((n): n is string => Boolean(n));
   return (
     <div className="flex flex-col gap-5">
       {header}
       {notes.map((n) => <div key={n} className="break-words rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">{n}</div>)}
-      <PlanForm truck={unit} kit={kitRow ? linesOf(kitRow) : []} packages={packages} pieceNames={pieceNames} seenAt={new Date(now).toISOString()} otherTrucks={otherTrucks}
-        initial={plan ? { packageIds: plan.packageIds, lines: plan.lines, note: plan.note ?? "", job: plan.job ?? "", leavesAt: plan.leavesAt } : null} />
+      {planShort.length ? (
+        <div className="break-words rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">
+          <p className="font-semibold">The yard can&apos;t fill all of this plan:</p>
+          <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">{planShort.map((l) => <li key={l}>{l}</li>)}</ul>
+        </div>
+      ) : null}
+      <PlanForm truck={{ id: unit.id, name: unit.name }} kit={kitRow ? linesOf(kitRow) : []} packages={packages} pieceNames={pieceNames} seenAt={new Date(now).toISOString()} otherTrucks={otherTrucks}
+        tz={yardZone(tz)} zone={zoneShort(tz)}
+        initial={plan ? { id: plan.id, packageIds: plan.packageIds, lines: plan.lines, note: plan.note ?? "", job: plan.job ?? "", leavesAt: plan.leavesAt } : null} />
     </div>
   );
 }

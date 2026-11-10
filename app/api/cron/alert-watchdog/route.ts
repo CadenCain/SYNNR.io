@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/saas/notify";
 import { escHtml } from "@/lib/saas/html";
 import { logCronRun } from "@/lib/saas/cron-log";
 import { reconcileYardBilling } from "@/lib/saas/billing";
+import { morningRunWindowStart } from "@/lib/saas/alert-window";
 
 /**
  * THE DEAD-MAN'S SWITCH.
@@ -38,8 +39,7 @@ export async function GET(req: Request) {
   // on standard time. Look for any heartbeat since 08:00 UTC today — wide
   // enough for either, tight enough that yesterday's run can never satisfy
   // today's check.
-  const windowStart = new Date();
-  windowStart.setUTCHours(8, 0, 0, 0);
+  const windowStart = morningRunWindowStart();
 
   const { data, error } = await admin
     .from("saas_cron_runs")
