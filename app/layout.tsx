@@ -25,24 +25,24 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR | Ask your company anything",
+    default: "SYNNR | Tell it the job. It tells you what to take.",
     template: "%s",
   },
   description:
-    "SYNNR is an AI that learns your service company: what you charge, what your contracts say, how your crews do the job, what's on every truck. Then anybody on the crew can ask it. Built for oilfield service companies, wireline first. Early access.",
+    "SYNNR is an operations AI for wireline. Send it the dispatch or say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR | Ask your company anything",
+    title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "An AI that learns your service company, then answers your crew from the office or the truck. Wireline first. Early access.",
+      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR | Ask your company anything",
+    title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "An AI that learns your service company, then answers your crew from the office or the truck. Wireline first. Early access.",
+      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
   },
 };
 
@@ -64,7 +64,7 @@ export default function RootLayout({
               name: "SYNNR",
               url: "https://www.synnr.io",
               description:
-                "An AI that learns an oilfield service company's prices, contracts, procedures, trucks and tools, and answers the crew's questions. Wireline first.",
+                "Operations AI for wireline service companies. Tell it the job and it gives the crew what to take, a checklist to load by, and the stage sheet.",
               areaServed: "Permian Basin, West Texas",
             }),
           }}
