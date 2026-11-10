@@ -36,6 +36,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const camera = useRef<HTMLInputElement>(null);
   const target = useRef<string | null>(null);
   const reloaded = useRef(false);
+  const dialog = useRef<HTMLDialogElement>(null);
 
   const ordered = orderLines(lines);
   const s = jobState(lines);
@@ -44,12 +45,15 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const proof = ordered.filter((l) => l.critical && l.on_at && l.photo_path);
   const viewing = open ? lines.find((l) => l.id === open && l.photo_path) ?? null : null;
 
+  // A real dialog sits over everything, the site's own header included, and
+  // closes on Escape or the phone's back gesture by itself.
+  const isViewing = Boolean(viewing);
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+    const d = dialog.current;
+    if (!d) return;
+    if (isViewing && !d.open) d.showModal();
+    if (!isViewing && d.open) d.close();
+  }, [isViewing]);
 
   function toggle(l: JobLine, on: boolean) {
     setErr("");
@@ -258,7 +262,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={photo} alt="" onError={stale} className="h-11 w-11 shrink-0 rounded-md border border-line-2 object-cover" />
                   ) : null}
-                  {l.critical ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone")}>Critical</span> : null}
+                  {l.critical ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone", photo && "hidden sm:inline")}>Critical</span> : null}
                 </button>
                 {manager && writable ? (
                   <button type="button" onClick={() => remove(l)} aria-label={`Take ${l.label} off the list`} title="Take it off the list"
@@ -308,40 +312,43 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
       ) : null}
 
       {/* One photo, full size */}
-      {viewing ? (
-        <div role="dialog" aria-modal="true" aria-label={`Photo of ${viewing.label}`} className="fixed inset-0 z-50 flex flex-col bg-black/95">
-          <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <div className="min-w-0">
-              <div className="truncate text-[16px] text-ink">{viewing.label}{viewing.qty > 1 ? <span className="text-ink-faint"> × {viewing.qty}</span> : null}</div>
-              <div className="mt-0.5 truncate text-[13px] text-ink-dim">On the truck: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
-            </div>
-            <button type="button" autoFocus onClick={() => setOpen(null)} aria-label="Close the photo"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <button type="button" onClick={() => setOpen(null)} aria-label="Close the photo" className="flex min-h-0 flex-1 cursor-default items-center justify-center px-4 pb-4 sm:px-6">
-            {viewingUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={viewingUrl} alt={`Photo of ${viewing.label}`} onError={stale} className="max-h-full max-w-full rounded-lg object-contain" />
-            ) : (
-              <span className="text-[14px] text-ink-dim">The photo is on file but didn&apos;t load. Load the page again.</span>
-            )}
-          </button>
-          {writable ? (
-            <div className="flex flex-wrap gap-3 border-t border-line px-4 py-4 sm:px-6">
-              <button type="button" onClick={() => { const id = viewing.id; setOpen(null); shoot(id); }}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white sm:flex-none">
-                <Camera className="h-4 w-4" /> Take it again
-              </button>
-              <button type="button" onClick={() => { const l = viewing; setOpen(null); toggle(l, false); }}
-                className="h-12 flex-1 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:border-red-500/50 hover:text-red-300 sm:flex-none">
-                Take it off the truck
+      <dialog ref={dialog} onClose={() => setOpen(null)} aria-label={viewing ? `Photo of ${viewing.label}` : "Photo"}
+        className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none flex-col border-0 bg-black/95 p-0 text-ink open:flex backdrop:bg-black">
+        {viewing ? (
+          <>
+            <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+              <div className="min-w-0">
+                <div className="truncate text-[16px] text-ink">{viewing.label}{viewing.qty > 1 ? <span className="text-ink-faint"> × {viewing.qty}</span> : null}</div>
+                <div className="mt-0.5 truncate text-[13px] text-ink-dim">On the truck: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
+              </div>
+              <button type="button" onClick={() => setOpen(null)} aria-label="Close the photo"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
+                <X className="h-5 w-5" />
               </button>
             </div>
-          ) : null}
-        </div>
-      ) : null}
+            <div className="flex min-h-0 flex-1 items-center justify-center px-4 pb-4 sm:px-6">
+              {viewingUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={viewingUrl} alt={`Photo of ${viewing.label}`} onError={stale} className="max-h-full max-w-full rounded-lg object-contain" />
+              ) : (
+                <span className="text-[14px] text-ink-dim">The photo is on file but didn&apos;t load. Load the page again.</span>
+              )}
+            </div>
+            {writable ? (
+              <div className="flex gap-3 border-t border-line px-4 py-4 sm:px-6">
+                <button type="button" onClick={() => { const id = viewing.id; setOpen(null); shoot(id); }}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white sm:flex-none">
+                  <Camera className="h-4 w-4" /> Take it again
+                </button>
+                <button type="button" onClick={() => { const l = viewing; setOpen(null); toggle(l, false); }}
+                  className="h-12 flex-1 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:border-red-500/50 hover:text-red-300 sm:flex-none">
+                  Take it off
+                </button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </dialog>
     </div>
   );
 }
