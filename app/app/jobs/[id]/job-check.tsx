@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Check, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { jobState, orderLines, type JobLine } from "@/lib/saas/jobs";
+import { fmtTime } from "@/lib/saas/format";
 import { setLine, addLine, removeLine, markReady, deleteJob } from "../actions";
 
-const when = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+// One clock for the server's first paint and the phone, so a time never changes under a thumb.
+const when = (iso: string | null) => iso ? fmtTime(iso) : "";
 
 /**
  * Loading the truck. Every piece is one big row: tap it when it's on. What

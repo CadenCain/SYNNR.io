@@ -5,6 +5,7 @@ import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
 import { detailRows, type Job, type JobLine } from "@/lib/saas/jobs";
+import { fmtWhen } from "@/lib/saas/format";
 import JobCheck from "./job-check";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,14 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const { company, user, job, lines } = got;
   const me = (user.user_metadata?.full_name as string | undefined)?.trim() || user.email?.split("@")[0] || "Someone";
   const rows = detailRows(job);
-  const started = new Date(job.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const started = fmtWhen(job.created_at);
+
+  const remarks = (
+    <div className="rounded-xl border border-line bg-surface px-5 py-4">
+      <div className="text-[13px] text-ink-faint">Remarks from the dispatch</div>
+      <p className="mt-2 whitespace-pre-wrap border-l-2 border-bone pl-3 text-[15px] leading-relaxed text-ink">{job.remarks}</p>
+    </div>
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-10">
@@ -48,6 +56,9 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       </div>
       <p className="mt-1 text-[13px] text-ink-faint">Started by {job.created_by_name ?? "someone"}, {started}{job.source === "photo" ? ", read from the dispatch" : ""}</p>
 
+      {/* On a phone the dispatch's remarks come first: they're what gets missed. */}
+      {job.remarks ? <div className="mt-6 lg:hidden">{remarks}</div> : null}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <JobCheck jobId={job.id} initial={lines} me={me}
           initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null}
@@ -55,12 +66,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
         {/* What the dispatch said */}
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          {job.remarks ? (
-            <div className="rounded-xl border border-line bg-surface px-5 py-4">
-              <div className="text-[13px] text-ink-faint">Remarks</div>
-              <p className="mt-2 whitespace-pre-wrap border-l-2 border-bone pl-3 text-[15px] leading-relaxed text-ink">{job.remarks}</p>
-            </div>
-          ) : null}
+          {job.remarks ? <div className="hidden lg:block">{remarks}</div> : null}
           {rows.length ? (
             <dl className="overflow-hidden rounded-xl border border-line bg-surface">
               {rows.map(([k, v], i) => (

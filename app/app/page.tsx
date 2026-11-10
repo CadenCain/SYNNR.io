@@ -4,6 +4,7 @@ import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
 import { jobState } from "@/lib/saas/jobs";
+import { fmtTime as time, fmtDay as day } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
 export const metadata = { title: { absolute: "SYNNR" } };
@@ -15,8 +16,6 @@ type Row = {
 };
 
 const clock = () => Date.now();
-const time = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 /**
  * Home: every job the crew is loading for, and where each truck stands.
