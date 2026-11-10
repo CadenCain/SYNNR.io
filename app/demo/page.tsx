@@ -48,7 +48,7 @@ export default async function DemoPage({ searchParams }: { searchParams: Promise
             </Step>
             <Step n={2}>Now check another truck and skip a line. It reads NOT READY and says exactly what&apos;s missing.</Step>
             <Step n={3}>
-              Open <B>Tools out</B> to see the setting tools by count: how many are ready, out with someone, and used and
+              Open <B>Tools out</B>{" "}to see the setting tools by count: how many are ready, out with someone, and used and
               waiting on the vendor&apos;s pickup.
             </Step>
           </ol>
