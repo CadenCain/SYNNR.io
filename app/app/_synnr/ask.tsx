@@ -7,10 +7,10 @@ import { ArrowUp, Paperclip, ArrowRight, X } from "lucide-react";
 type Turn = { id: number; who: "you" | "synnr"; text: string; file?: string | null };
 
 const EXAMPLES = [
+  "What do I need to set a packer in 5-1/2 casing?",
+  "What goes out on a pipe recovery job?",
   "What do we charge for a bond log to 8,000 ft?",
-  "We got a plug set tomorrow on WL-07. What do I need to take?",
-  "Make me a perf run sheet for 3 stages.",
-  "Who has the setting tools out right now?",
+  "What does the MSA say about standby time?",
 ];
 
 /**
@@ -18,7 +18,7 @@ const EXAMPLES = [
  * photo or a file, and SYNNR answers from what it knows about the company.
  * Until its brain is loaded it says so plainly instead of guessing.
  */
-export default function Ask({ firstName, companyName, welcome = null }: { firstName: string; companyName: string; welcome?: "owner" | "joined" | null }) {
+export default function Ask({ firstName, companyName }: { firstName: string; companyName: string }) {
   const [q, setQ] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -40,13 +40,6 @@ export default function Ask({ firstName, companyName, welcome = null }: { firstN
   useEffect(() => {
     if (window.matchMedia("(pointer: fine)").matches) area.current?.focus();
   }, [started]);
-  // "New chat" in the menu, tapped while a chat is open: start clean.
-  useEffect(() => {
-    const fresh = () => { setTurns([]); setQ(""); setFile(null); };
-    window.addEventListener("synnr:new-chat", fresh);
-    return () => window.removeEventListener("synnr:new-chat", fresh);
-  }, []);
-
   function send(e?: FormEvent) {
     e?.preventDefault();
     const text = q.trim();
@@ -124,15 +117,6 @@ export default function Ask({ firstName, companyName, welcome = null }: { firstN
   return (
     <div className="flex flex-1 flex-col justify-center px-4 py-12 md:px-0">
       <div className="mx-auto w-full max-w-2xl">
-        {welcome === "owner" ? (
-          <p className="mb-8 border-l-2 border-bone pl-3 text-[13px] leading-relaxed text-ink-dim">
-            You&apos;re in. Start by bringing in{" "}
-            <Link href="/app/settings/team" className="text-ink underline underline-offset-4 hover:text-white">your team</Link>{" "}and loading{" "}
-            <Link href="/app/brain" className="text-ink underline underline-offset-4 hover:text-white">the Brain</Link>.
-          </p>
-        ) : welcome === "joined" ? (
-          <p className="mb-8 border-l-2 border-bone pl-3 text-[13px] leading-relaxed text-ink-dim">You&apos;re on the crew at {companyName}.</p>
-        ) : null}
         <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink md:text-[34px]">
           What do you need{firstName ? `, ${firstName}` : ""}?
         </h1>

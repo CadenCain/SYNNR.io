@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText, ChevronRight } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
 
@@ -36,7 +36,7 @@ export default async function BrainPage() {
     { label: "Trucks", n: trucks, from: "Your account" },
     { label: "Iron and tools", n: iron + tools, from: "Your account" },
     { label: "Truck lists", n: truckLists, from: "What goes on each truck" },
-    { label: "Job lists", n: jobLists, from: "What each kind of job takes" },
+    { label: "Job lists", n: jobLists, from: "What each kind of job takes", href: "/app/brain/lists" },
   ];
 
   const needs = [
@@ -55,6 +55,15 @@ export default async function BrainPage() {
           Everything SYNNR knows about {company.name}. It answers from this and nothing else, so the more you give it, the more it can answer.
         </p>
       </div>
+
+      <section>
+        <h2 className="text-[14px] font-medium text-ink">Job lists</h2>
+        <p className="mt-1 text-[13px] text-ink-dim">What your shop takes on each kind of job. Every checklist is built from these.</p>
+        <Link href="/app/brain/lists" className="group mt-3 flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4 transition-colors hover:bg-elevated">
+          <span className="text-[15px] text-ink">{jobLists === 0 ? "Add your first job list" : `${jobLists} ${jobLists === 1 ? "job list" : "job lists"}. Add or change them`}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
+        </Link>
+      </section>
 
       <section>
         <h2 className="text-[14px] font-medium text-ink">What it knows</h2>

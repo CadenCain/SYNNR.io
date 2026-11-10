@@ -47,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
       <SynnrNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
-        switchAction={switchCompany} />
+        switchAction={switchCompany} canStart={writable} />
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
         {/* Never-subscribed, lapsed, and payment-failed are three different
             situations — telling a brand-new signup their subscription "paused"
