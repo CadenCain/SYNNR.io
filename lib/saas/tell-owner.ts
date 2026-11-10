@@ -3,7 +3,7 @@ import { sendEmail } from "./notify";
 import { escHtml } from "./html";
 
 /**
- * A heads-up to the person running RollReady (NOTIFY_EMAIL): someone started
+ * A heads-up to the person running SYNNR (NOTIFY_EMAIL): someone started
  * signing up, or paid. The sale depends on a call back the same day, so it
  * shouldn't wait for anyone to check Stripe. Sent after the response.
  */

@@ -20,31 +20,10 @@ const PARKED = [
 const nextConfig: NextConfig = {
   // Off so headless-Chrome captures of the real UI ship clean.
   devIndicators: false,
-  // The cert reader (tesseract) runs in Node with a worker thread and wasm;
-  // it has to load from node_modules as-is, not bundled.
-  serverExternalPackages: ["tesseract.js", "tesseract.js-core"],
-  // Only the upload route reads photos, so only it carries the reader, its
-  // wasm, and the English model (lib/saas/ocr-data).
   outputFileTracingIncludes: {
-    // New demo yards open with a hand's cert photo waiting on the manager.
+    // New demo companies are seeded from these files, at open and on the daily refresh.
     "/demo/start": ["./lib/saas/demo-assets/**"],
-    "/api/cron/alert-watchdog": ["./lib/saas/demo-assets/**"],
-    "/api/saas/certs/upload": [
-      "./lib/saas/ocr-data/**",
-      "./node_modules/tesseract.js/**",
-      "./node_modules/tesseract.js-core/**",
-      // The reader's worker thread loads these itself, so the tracer can't
-      // see them. Without them the worker dies on start.
-      "./node_modules/wasm-feature-detect/**",
-      "./node_modules/bmp-js/**",
-      "./node_modules/zlibjs/**",
-      "./node_modules/is-url/**",
-      "./node_modules/regenerator-runtime/**",
-      "./node_modules/node-fetch/**",
-      "./node_modules/whatwg-url/**",
-      "./node_modules/tr46/**",
-      "./node_modules/webidl-conversions/**",
-    ],
+    "/api/cron/daily": ["./lib/saas/demo-assets/**"],
   },
   experimental: {
     // Phones shrink photos before sending (about 0.5MB), but a server action
@@ -52,8 +31,8 @@ const nextConfig: NextConfig = {
     // caps a request at 4.5MB, so 4MB is the real ceiling.
     serverActions: { bodySizeLimit: "4mb" },
   },
-  // The offline service worker (public/sw.js) must never be cached by the
-  // browser or a CDN, or a fix to it would take days to reach phones.
+  // public/sw.js (now the one that uninstalls the old offline worker) must
+  // never be cached by the browser or a CDN, or it would take days to reach phones.
   async headers() {
     return [
       {
@@ -75,7 +54,7 @@ const nextConfig: NextConfig = {
       // SYNNR sells one thing now. Old shared links land on the homepage's
       // product section instead of a 404.
       { source: "/products", destination: "/#product", permanent: false },
-      // Partners and custom builds are gone: RollReady sells one thing.
+      // Partners and custom builds are gone.
       { source: "/partners", destination: "/", permanent: true },
       { source: "/build", destination: "/", permanent: true },
       { source: "/products/:slug*", destination: "/#product", permanent: false },

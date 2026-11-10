@@ -23,7 +23,7 @@ export { safeNext } from "./safe-next";
 import { safeNext } from "./safe-next";
 
 /** The link in the email: /auth/confirm checks the token and signs them in to
- *  set a new password, then on to where they were headed (an invite, a truck). */
+ *  set a new password, then on to where they were headed (an invite, a page). */
 export const resetLink = (tokenHash: string, next = "") =>
   `${SITE}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=recovery&next=${encodeURIComponent(safeNext(next) ? `/reset?next=${encodeURIComponent(safeNext(next))}` : "/reset")}`;
 
@@ -31,10 +31,10 @@ export function resetEmailHtml(link: string, name?: string | null): string {
   const hi = name?.trim() ? `Hi ${escHtml(name.trim().split(/\s+/)[0])},` : "Hi,";
   return `<div style="font:16px/1.6 -apple-system,Segoe UI,sans-serif;color:#0f172a;max-width:480px">
 <p>${hi}</p>
-<p>Someone asked to reset the password for your RollReady login. Tap the button to set a new one.</p>
-<p style="margin:24px 0"><a href="${escHtml(link)}" style="display:inline-block;background:#2f5ff0;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Set a new password</a></p>
+<p>Someone asked to reset the password for your SYNNR login. Tap the button to set a new one.</p>
+<p style="margin:24px 0"><a href="${escHtml(link)}" style="display:inline-block;background:#0a0a0a;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">Set a new password</a></p>
 <p style="color:#475569;font-size:14px">The link works once and runs out soon. If you didn't ask for this, ignore it and nothing changes.</p>
-<p style="color:#64748b;font-size:13px">RollReady by SYNNR</p>
+<p style="color:#64748b;font-size:13px">SYNNR</p>
 </div>`;
 }
 
@@ -57,6 +57,6 @@ export async function sendPasswordReset(admin: SupabaseClient, email: string, ne
   const token = data?.properties?.hashed_token;
   if (error || !token) return "skipped"; // no login with that email
   const name = data.user?.user_metadata?.full_name as string | undefined;
-  const ok = await sendEmail([clean], "Reset your RollReady password", resetEmailHtml(resetLink(token, next), name));
+  const ok = await sendEmail([clean], "Reset your SYNNR password", resetEmailHtml(resetLink(token, next), name));
   return ok ? "sent" : "failed";
 }

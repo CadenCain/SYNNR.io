@@ -36,7 +36,7 @@ export async function provisionPaidYards(admin: SupabaseClient, companyId: strin
   // A company's first yards made = it just paid. Whoever got here first (the
   // success page or the webhook) sends the heads-up.
   if (!existing.length) {
-    tellOwner(`RollReady paid: ${c?.name ?? "a new company"}, ${paidFor} ${paidFor === 1 ? "yard" : "yards"}`, [
+    tellOwner(`SYNNR paid: ${c?.name ?? "a new company"}, ${paidFor} ${paidFor === 1 ? "yard" : "yards"}`, [
       `${c?.name ?? "A company"} just paid for ${paidFor} ${paidFor === 1 ? "yard" : "yards"} (${monthly(paidFor)}).`,
       [c?.contact_name, c?.contact_email, c?.contact_phone].filter(Boolean).join(", ") || null,
       "Call to welcome them and offer to load their iron.",

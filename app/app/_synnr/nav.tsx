@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus, Brain, Settings, LogOut, Menu, X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,10 +38,23 @@ export default function SynnrNav({ companyName, userName, companies = [], active
     router.refresh();
   }
 
+  // The phone menu, while open: Escape closes it and the page behind holds still.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const was = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = was; };
+  }, [open]);
+
+  // Home and New chat both mean a clean bar, even when a chat is already open.
+  const fresh = () => { setOpen(false); window.dispatchEvent(new Event("synnr:new-chat")); };
+
   const body = (
     <div className="flex h-full flex-col">
       <div className="px-4 pb-4 pt-5">
-        <Link href="/app" onClick={() => setOpen(false)} aria-label="SYNNR home"><Wordmark /></Link>
+        <Link href="/app" onClick={fresh} aria-label="SYNNR home"><Wordmark /></Link>
         {companies.length > 1 && switchAction ? (
           <form action={switchAction} className="mt-3">
             <select name="company_id" defaultValue={activeCompanyId} aria-label="Switch company"
@@ -56,7 +69,7 @@ export default function SynnrNav({ companyName, userName, companies = [], active
       </div>
 
       <div className="px-3">
-        <Link href="/app" onClick={() => setOpen(false)}
+        <Link href="/app" onClick={fresh}
           className="flex h-9 items-center gap-2 rounded-md border border-line-2 px-3 text-[13px] font-medium text-ink transition-colors hover:bg-elevated">
           <Plus className="h-4 w-4" /> New chat
         </Link>
@@ -108,7 +121,7 @@ export default function SynnrNav({ companyName, userName, companies = [], active
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-line bg-coal md:block">{body}</aside>
 
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-coal/90 px-4 backdrop-blur md:hidden">
-        <Link href="/app" aria-label="SYNNR home"><Wordmark /></Link>
+        <Link href="/app" onClick={fresh} aria-label="SYNNR home"><Wordmark /></Link>
         <button type="button" onClick={() => setOpen(true)} aria-label="Menu"
           className="flex h-10 w-10 items-center justify-center rounded-md text-ink-dim hover:bg-elevated hover:text-ink">
           <Menu className="h-5 w-5" />

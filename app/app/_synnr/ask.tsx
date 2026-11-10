@@ -18,7 +18,7 @@ const EXAMPLES = [
  * photo or a file, and SYNNR answers from what it knows about the company.
  * Until its brain is loaded it says so plainly instead of guessing.
  */
-export default function Ask({ firstName, companyName, welcome = false }: { firstName: string; companyName: string; welcome?: boolean }) {
+export default function Ask({ firstName, companyName, welcome = null }: { firstName: string; companyName: string; welcome?: "owner" | "joined" | null }) {
   const [q, setQ] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -34,6 +34,18 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [q]);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns]);
+  // At a desk the cursor is in the bar, ready. On a phone it waits for a tap,
+  // so the keyboard doesn't jump up over the page or over an answer.
+  const started = turns.length > 0;
+  useEffect(() => {
+    if (window.matchMedia("(pointer: fine)").matches) area.current?.focus();
+  }, [started]);
+  // "New chat" in the menu, tapped while a chat is open: start clean.
+  useEffect(() => {
+    const fresh = () => { setTurns([]); setQ(""); setFile(null); };
+    window.addEventListener("synnr:new-chat", fresh);
+    return () => window.removeEventListener("synnr:new-chat", fresh);
+  }, []);
 
   function send(e?: FormEvent) {
     e?.preventDefault();
@@ -46,7 +58,6 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
     };
     setTurns((t) => [...t, you, reply]);
     setQ(""); setFile(null);
-    area.current?.focus();
   }
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); }
@@ -62,7 +73,7 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
           <button type="button" onClick={() => setFile(null)} aria-label="Remove the file" className="rounded p-0.5 text-ink-faint hover:text-ink"><X className="h-3.5 w-3.5" /></button>
         </div>
       ) : null}
-      <textarea ref={area} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey} rows={1} autoFocus
+      <textarea ref={area} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey} rows={1}
         placeholder="Ask SYNNR anything" aria-label="Ask SYNNR"
         className="block w-full resize-none bg-transparent px-4 pb-2 pt-4 text-[15px] leading-6 text-ink outline-none placeholder:text-ink-faint" />
       <div className="flex items-center justify-between px-2 pb-2">
@@ -79,13 +90,13 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
     </form>
   );
 
-  if (turns.length) {
+  if (started) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-6 pt-8 md:px-0">
           <div className="flex flex-col gap-6">
             {turns.map((t) => t.who === "you" ? (
-              <div key={t.id} className="ml-auto max-w-[85%] rounded-xl bg-elevated px-4 py-3 text-[15px] leading-6 text-ink">
+              <div key={t.id} className="ml-auto max-w-[85%] whitespace-pre-wrap break-words rounded-xl bg-elevated px-4 py-3 text-[15px] leading-6 text-ink">
                 {t.file ? <div className="mb-1 flex items-center gap-1.5 text-[13px] text-ink-dim"><Paperclip className="h-3.5 w-3.5" /> {t.file}</div> : null}
                 {t.text}
               </div>
@@ -100,7 +111,7 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
                 </div>
               </div>
             ))}
-            <div ref={end} />
+            <div ref={end} className="scroll-mb-40" />
           </div>
         </div>
         <div className="sticky bottom-0 bg-coal px-4 pb-5 pt-3 md:px-0">
@@ -113,12 +124,14 @@ export default function Ask({ firstName, companyName, welcome = false }: { first
   return (
     <div className="flex flex-1 flex-col justify-center px-4 py-12 md:px-0">
       <div className="mx-auto w-full max-w-2xl">
-        {welcome ? (
+        {welcome === "owner" ? (
           <p className="mb-8 border-l-2 border-bone pl-3 text-[13px] leading-relaxed text-ink-dim">
             You&apos;re in. Start by bringing in{" "}
             <Link href="/app/settings/team" className="text-ink underline underline-offset-4 hover:text-white">your team</Link>{" "}and loading{" "}
             <Link href="/app/brain" className="text-ink underline underline-offset-4 hover:text-white">the Brain</Link>.
           </p>
+        ) : welcome === "joined" ? (
+          <p className="mb-8 border-l-2 border-bone pl-3 text-[13px] leading-relaxed text-ink-dim">You&apos;re on the crew at {companyName}.</p>
         ) : null}
         <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink md:text-[34px]">
           What do you need{firstName ? `, ${firstName}` : ""}?
