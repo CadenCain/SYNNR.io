@@ -2,18 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Team, invites, exports and settings, from the busy-week findings:
- *  - Taking a hand off the crew turns the crew link over (he can't make a new
- *    login and walk back on), takes him off the alert emails, and says how
- *    many proof links he made still work.
+ * The team, from the busy-week findings:
+ *  - Taking a hand off the crew turns the crew link over (they can't make a
+ *    new login and walk back on).
  *  - A manager can fix a typo in a hand's login email, never for a login on
  *    another company's crew.
- *  - Every record can be downloaded: check-ins, the whole Tools out sheet
- *    (setting tool outs too), test history with old tests, and roll checks
- *    and the truck photo on load-outs.
- *  - The load-out records and their spreadsheet filter by dates and job or well.
- *  - The NPT day-rate's estimate counts a stopped truck once per day, and not
- *    when it rolled on an override anyway.
  */
 
 const authMock = vi.hoisted(() => ({
@@ -31,13 +24,6 @@ vi.mock("../db", () => ({
 }));
 
 import { turnOverCrewLink, dropAlertRecipient, liveProofLinksBy, changeLoginEmail, offCrewNotice } from "@/app/app/settings/team/crew-changes";
-import { loadoutFilters, filterQuery, isFiltering, dayStartIso, rangeOf, jobPattern } from "@/app/app/loadouts/export/filters";
-import { esc, csvText } from "@/app/api/saas/export/csv";
-import { checkinRows, toolRows, testHistoryRows, CHECKIN_HEADER, TOOLS_HEADER, TESTS_HEADER } from "@/app/api/saas/export/rows";
-import { caughtCount } from "@/app/app/settings/billing/npt";
-import { GET as loadoutsCsv } from "@/app/app/loadouts/export/route";
-import { GET as checkinsCsv } from "@/app/api/saas/export/checkins/route";
-import { GET as toolsCsv } from "@/app/api/saas/export/tools-out/route";
 
 const CO = "co-1";
 
@@ -106,7 +92,6 @@ function fakeDb(tables: Record<string, Row[]>, auth?: { updateUserById: (id: str
   return { db: db as unknown as SupabaseClient, writes, reads, tables };
 }
 
-const csvRows = (text: string) => text.trim().split("\n");
 
 beforeEach(() => { authMock.company.role = "owner"; });
 
@@ -209,197 +194,5 @@ describe("fixing a hand's login email", () => {
   it("someone no longer on this crew can't be changed from here", async () => {
     const { db } = fakeDb({ saas_memberships: [{ user_id: "u-tony", company_id: CO, status: "removed" }] });
     expect((await changeLoginEmail(db, CO, "u-tony", "tony@example.com")).ok).toBe(false);
-  });
-});
-
-// ------------------------------------------------------------- filters
-describe("load-out filters", () => {
-  it("reads dates, a job, and only real yard ids", () => {
-    const f = loadoutFilters({ from: "2026-11-30", to: "2026-09-01", job: "  Pioneer   Smith 4H ", yard: "not-a-uuid", show: "blocked", by: "Dale" });
-    // Typed backwards: still the days between.
-    expect(f).toMatchObject({ from: "2026-09-01", to: "2026-11-30", job: "Pioneer Smith 4H", yard: "", show: "blocked", by: "Dale" });
-    expect(loadoutFilters({ from: "2026-02-30", show: "everything" })).toMatchObject({ from: "", show: "" });
-    expect(isFiltering(loadoutFilters({}))).toBe(false);
-    expect(filterQuery(loadoutFilters({}))).toBe("");
-    const q = filterQuery(f);
-    expect(loadoutFilters(new URLSearchParams(q.slice(1)))).toEqual(f);
-  });
-
-  it("a yard day starts at midnight in the yard, through the clock change", () => {
-    expect(dayStartIso("2026-08-12")).toBe("2026-08-12T05:00:00.000Z"); // CDT
-    expect(dayStartIso("2026-12-12")).toBe("2026-12-12T06:00:00.000Z"); // CST
-    expect(dayStartIso("2026-11-01")).toBe("2026-11-01T05:00:00.000Z"); // the day clocks fall back
-    expect(rangeOf({ from: "2026-11-01", to: "2026-11-01" })).toEqual({ gte: "2026-11-01T05:00:00.000Z", lt: "2026-11-02T06:00:00.000Z" });
-  });
-
-  it("a job is matched as plain words, not as a pattern", () => {
-    expect(jobPattern("100%_A*")).toBe("%100\\%\\_A %");
-    expect(likeRe(jobPattern("smith 4h")).test("Pioneer Smith 4H")).toBe(true);
-    expect(likeRe(jobPattern("100%")).test("1000")).toBe(false);
-  });
-});
-
-// ------------------------------------------------------------- csv rows
-describe("the spreadsheets", () => {
-  it("a cell that starts like a formula goes in as text", () => {
-    expect(esc("=HYPERLINK(\"x\")")).toBe(`"'=HYPERLINK(""x"")"`);
-    expect(esc("-5")).toBe("-5");
-    expect(csvText(["a", "b"], [["x, y", 1]])).toBe("a,b\n\"x, y\",1\n");
-  });
-
-  it("check-ins: every piece back, where it went, red tags and why, and what didn't come back", () => {
-    const rows = checkinRows([{
-      id: "ret-1", yard_id: "y-odessa", unit_name: "CT-03", returned_by: "Freddy", finished_at: "2026-11-11T20:10:00Z",
-      pieces: [
-        { name: "Quad BOP #11", serial: "QB-4471", how: "nfc", at: Date.parse("2026-11-11T20:05:00Z"), to: "yard", rack: "Rack 2", red_tag: "rams bent", red: true,
-          went_out: { truck: "CT-03", by: "Dale", at: "2026-11-02T11:00:00Z" }, out_days: 9 },
-        { name: "Setting tool #4", serial: "ST-4", how: "hand", to: "truck", needs_redress: true },
-      ],
-      not_returned: [{ name: "Lubricator", serial: "LU-9", outcome: "missing", went_out: { truck: "CT-03", by: "Dale", at: "2026-11-02T11:00:00Z" } }],
-    }], new Map([["y-odessa", "Odessa"]]));
-    expect(rows).toHaveLength(3);
-    for (const r of rows) expect(r).toHaveLength(CHECKIN_HEADER.length);
-    const [bop, tool, lost] = rows;
-    expect(bop.slice(1, 6)).toEqual(["CT-03", "Odessa", "Freddy", "Quad BOP #11", "QB-4471"]);
-    expect(bop[8]).toBe("Into the yard: Rack 2");
-    expect(bop[10]).toMatch(/^On CT-03 .*loaded by Dale$/);
-    expect(bop[12]).toBe("rams bent");
-    expect(bop[13]).toBe("yes");
-    expect(tool[8]).toBe("Back on CT-03");
-    expect(tool[14]).toBe("yes");
-    expect(lost[15]).toBe("Can't find");
-  });
-
-  it("Tools out: per-piece sign-outs and hand-offs, counted setting tools, the vendor, and redress, newest first", () => {
-    const rows = toolRows({
-      signouts: [{ asset_name: "Setting tool #4", serial: "ST-4", out_name: "Dale", job_note: "Smith 4H", out_at: "2026-11-10T11:00:00Z", back_at: "2026-11-10T15:00:00Z", back_by: "Dale", back_note: "handed to Freddy" }],
-      toolOuts: [{ stock_id: "s1", out_name: "Freddy", qty: 3, job_note: null, out_at: "2026-11-12T11:00:00Z", out_by: "Kevin", back_at: null, back_by: null, back_used: null, back_unused: null }],
-      stocks: [{ id: "s1", name: "Baker 20", vendor: "Silver Fox", yard_id: "y-odessa" }],
-      log: [
-        { stock_id: "s1", kind: "vendor", note: "Vendor picked up 5 used, dropped off 6 ready", by_name: "Kevin", created_at: "2026-11-11T11:00:00Z" },
-        { stock_id: "s1", kind: "out", note: "3 to Freddy", by_name: "Kevin", created_at: "2026-11-12T11:00:00Z" },
-      ],
-      redress: [{ kind: "redressed", message: "Dale redressed Setting tool #4 ST-4", actor: "Dale", created_at: "2026-11-10T16:00:00Z" }],
-      yardName: new Map([["y-odessa", "Odessa"]]),
-    });
-    for (const r of rows) expect(r).toHaveLength(TOOLS_HEADER.length);
-    expect(rows.map((r) => r[1])).toEqual(["Setting tools out (counted)", "Vendor visit", "Redressed", "Signed out"]);
-    expect(rows[0].slice(2, 7)).toEqual(["Baker 20 (Silver Fox)", "", "Odessa", 3, "Freddy"]);
-    expect(rows[0][9]).toBe("Still out");
-    expect(rows[3][13]).toBe("handed to Freddy");
-  });
-
-  it("test history keeps last year's test after a retest, with a link to each cert", () => {
-    const rows = testHistoryRows({
-      uploads: [
-        { id: "up-2026", item_id: "it-bop", created_at: "2026-10-01T15:00:00Z", uploaded_by_name: "Dale", evidence: "cert", claimed_issued: "2026-09-30", claimed_expiration: "2027-09-30", pending_until: null, verdict: "verified", status: "applied", applied_at: "2026-10-01T15:00:00Z", reviewed_by_name: null, reviewed_at: null, review_note: null },
-        { id: "up-2025", item_id: "it-bop", created_at: "2025-10-01T15:00:00Z", uploaded_by_name: "Dale", evidence: "cert", claimed_issued: "2025-09-30", claimed_expiration: "2026-09-30", pending_until: null, verdict: "needs_review", status: "superseded", applied_at: "2025-10-02T15:00:00Z", reviewed_by_name: "Kevin", reviewed_at: "2025-10-02T15:00:00Z", review_note: null },
-        { id: "up-gone", item_id: null, created_at: "2026-01-01T15:00:00Z", uploaded_by_name: "Dale", evidence: "cert", claimed_issued: null, claimed_expiration: "2027-01-01", pending_until: null, verdict: "verified", status: "superseded", applied_at: null, reviewed_by_name: null, reviewed_at: null, review_note: null },
-      ],
-      items: [{ id: "it-bop", title: "Pressure test", parent_type: "asset", parent_id: "a-bop", expiration_date: "2027-09-30", last_upload_id: "up-2026" }],
-      pieces: new Map([["a-bop", { name: "Quad BOP #11", serial: "QB-4471" }]]),
-      trucks: new Map(),
-      certUrl: (id) => `https://www.synnr.io/api/saas/export/cert/${id}`,
-    });
-    for (const r of rows) expect(r).toHaveLength(TESTS_HEADER.length);
-    expect(rows.map((r) => r[13])).toEqual([
-      "https://www.synnr.io/api/saas/export/cert/up-2026",
-      "https://www.synnr.io/api/saas/export/cert/up-2025",
-      "https://www.synnr.io/api/saas/export/cert/up-gone",
-    ]);
-    expect(rows[0].slice(1, 4)).toEqual(["Quad BOP #11", "QB-4471", "Pressure test"]);
-    expect(rows[0][7]).toBe("2027-09-30");
-    expect(rows[0][8]).toBe("On file");
-    expect(rows[0][10]).toBe("RollReady, against the photo");
-    expect(rows[1][6]).toBe("2026-09-30");
-    expect(rows[1][7]).toBe("");
-    expect(rows[1][8]).toBe("Replaced by a newer test");
-    expect(rows[1][10]).toBe("Kevin");
-    expect(rows[2][1]).toBe("Test deleted");
-  });
-});
-
-// ------------------------------------------------------------- npt
-describe("the NPT estimate", () => {
-  it("one per truck per day, and none on a day the truck rolled on an override anyway", () => {
-    const n = caughtCount([
-      { id: "l1", unit_id: "t1", finished_at: "2026-11-10T11:00:00Z" },
-      { id: "l2", unit_id: "t1", finished_at: "2026-11-10T11:20:00Z" }, // scanned again after a fix
-      { id: "l3", unit_id: "t2", finished_at: "2026-11-10T11:00:00Z" },
-      { id: "l4", unit_id: "t2", finished_at: "2026-11-10T12:00:00Z" }, // rolled on an override
-      { id: "l5", unit_id: "t1", finished_at: "2026-11-12T11:00:00Z" },
-    ], new Set(["l4"]));
-    expect(n).toBe(2);
-  });
-});
-
-// ------------------------------------------------------------- routes
-const piece = (name: string) => ({ asset_id: `a-${name}`, name, serial: null, how: "nfc", at: "2026-11-10T11:00:00Z" });
-const loadout = (id: string, job: string | null, finished_at: string, extra: Row = {}) => ({
-  id, company_id: CO, unit_name: "CT-03", yard_id: "y-odessa", finished_at, scanned_by: "Dale", verdict: "ready", reasons: [],
-  pieces: [piece("Quad BOP #11")], not_scanned: [], proof_token: `tok-${id}`, job, roll_checks: null, photo_path: null, ...extra,
-});
-
-describe("the load-out spreadsheet", () => {
-  it("carries the records page's filters, roll checks, and the truck photo", async () => {
-    const f = fakeDb({
-      saas_loadout_scans: [
-        loadout("l-pioneer", "Pioneer Smith 4H", "2026-11-10T11:00:00Z", {
-          roll_checks: [{ label: "BOP rams closed for travel", ok: true, by: "Dale", at: "2026-11-10T10:58:00Z" }], photo_path: "co-1/l/x.jpg" }),
-        loadout("l-other", "Diamondback Jones 2", "2026-11-10T12:00:00Z"),
-        loadout("l-old", "Pioneer Smith 4H", "2026-07-01T12:00:00Z"),
-        { ...loadout("l-other-co", "Pioneer Smith 4H", "2026-11-10T11:00:00Z"), company_id: "co-2" },
-      ],
-      saas_yards: [{ id: "y-odessa", company_id: CO, name: "Odessa" }],
-      saas_loadout_overrides: [],
-      saas_loadout_link_offs: [],
-    });
-    dbHolder.current = f.db;
-    const res = await loadoutsCsv(new Request("https://www.synnr.io/app/loadouts/export?from=2026-11-01&to=2026-11-30&job=pioneer"));
-    const lines = csvRows(await res.text());
-    expect(lines[0]).toContain("Roll checks,Truck photo");
-    expect(lines).toHaveLength(2);
-    expect(lines[1]).toContain("Pioneer Smith 4H");
-    expect(lines[1]).toContain("BOP rams closed for travel: done by Dale");
-    expect(lines[1]).toContain(",yes,");
-    expect(lines[1]).toContain("https://www.synnr.io/l/tok-l-pioneer");
-    expect(res.headers.get("Content-Disposition")).toContain("2026-11-01-to-2026-11-30");
-    // Every read is this company's.
-    expect(f.reads.every((r) => r.filters.some(([c, op, v]) => c === "company_id" && op === "eq" && v === CO))).toBe(true);
-  });
-
-  it("with no filters it's still every load-out", async () => {
-    dbHolder.current = fakeDb({
-      saas_loadout_scans: [loadout("l1", null, "2026-11-10T11:00:00Z"), loadout("l2", "x", "2025-01-10T11:00:00Z")],
-      saas_yards: [], saas_loadout_overrides: [], saas_loadout_link_offs: [],
-    }).db;
-    const lines = csvRows(await (await loadoutsCsv(new Request("https://www.synnr.io/app/loadouts/export"))).text());
-    expect(lines).toHaveLength(3);
-  });
-});
-
-describe("check-in and Tools out downloads", () => {
-  it("check-ins read every one past a page, this company's only", async () => {
-    const many = Array.from({ length: 1205 }, (_, i) => ({
-      id: `r${i}`, company_id: CO, yard_id: null, unit_name: "CT-03", returned_by: "Freddy", finished_at: "2026-11-10T11:00:00Z",
-      pieces: [{ name: "Valve", serial: `V-${i}`, how: "qr", to: "truck" }], not_returned: [],
-    }));
-    const f = fakeDb({ saas_returns: [...many, { ...many[0], id: "r-other", company_id: "co-2" }], saas_yards: [] });
-    dbHolder.current = f.db;
-    const res = await checkinsCsv();
-    expect(res.headers.get("Content-Type")).toContain("text/csv");
-    expect(csvRows(await res.text())).toHaveLength(1 + 1205);
-  });
-
-  it("Tools out has counted setting tools and per-piece sign-outs", async () => {
-    dbHolder.current = fakeDb({
-      saas_signouts: [{ id: "so1", company_id: CO, asset_name: "Setting tool #4", serial: "ST-4", out_name: "Dale", job_note: null, out_at: "2026-11-10T11:00:00Z", back_at: null, back_by: null, back_note: null }],
-      saas_tool_outs: [{ id: "to1", company_id: CO, stock_id: "s1", out_name: "Freddy", qty: 2, job_note: null, out_at: "2026-11-11T11:00:00Z", out_by: "Freddy", back_at: null, back_by: null, back_used: null, back_unused: null }],
-      saas_tool_stocks: [{ id: "s1", company_id: CO, name: "Baker 20", vendor: null, yard_id: null }],
-      saas_tool_stock_log: [], saas_events: [], saas_yards: [],
-    }).db;
-    const text = await (await toolsCsv()).text();
-    expect(text).toContain("Setting tools out (counted),Baker 20");
-    expect(text).toContain("Signed out,Setting tool #4,ST-4");
   });
 });

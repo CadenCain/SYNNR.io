@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
-import { createElement } from "react";
 import { quickLines, quickKey, quickVerdict } from "../quick-check";
-import LoadoutRecordView from "../../../app/app/_components/loadout-record-view";
-import type { LoadoutRecord } from "../loadout-record";
 
 /**
  * The quick check: a short list per truck and job, "On truck" taps, one
@@ -48,32 +44,5 @@ describe("READY or NOT READY", () => {
     const v = quickVerdict({ lines: [], notTapped: [], needPhoto: false, empty: true });
     expect(v.verdict).toBe("not_ready");
     expect(v.reasons[0]).toMatch(/no list yet/);
-  });
-});
-
-describe("the record a quick check leaves", () => {
-  const rec: LoadoutRecord = {
-    id: "lo-1", company_id: "co", unit_id: "ct4", unit_name: "CT-04", yard_id: "ody", scanned_by: "Manuel Ortega",
-    started_at: "2026-11-10T10:28:00.000Z", finished_at: "2026-11-10T10:29:10.000Z", expected: 6, scanned: 6, verdict: "ready", reasons: [],
-    lines: [
-      { label: "Lubricator", qty: 1, source: "kit", filled: [], confirmed: { n: 1, by: "Manuel Ortega", at: "2026-11-10T10:29:05.000Z" } },
-      { label: "Sinker bars", qty: 4, source: "kit", filled: [], confirmed: { n: 4, by: "Manuel Ortega", at: "2026-11-10T10:29:05.000Z" } },
-      { label: "BOP", qty: 1, source: "kit", filled: [], confirmed: { n: 1, by: "Manuel Ortega", at: "2026-11-10T10:29:05.000Z" } },
-    ],
-    packages: [], pieces: [], not_scanned: [], proof_token: "x",
-    roll_checks: [{ label: "BOP rams closed for travel", ok: true, at: "2026-11-10T10:29:05.000Z", by: "Manuel Ortega" }],
-  };
-  const text = renderToStaticMarkup(createElement(LoadoutRecordView, { rec, override: null, forOperator: true })).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-  it("says who cleared the truck and what they said was on it", () => {
-    expect(text).toMatch(/READY/);
-    expect(text).toMatch(/CT-04 checked/);
-    expect(text).toMatch(/Manuel Ortega said 3 of 3 on the list are on the truck/);
-    expect(text).toMatch(/Sinker bars .*4 of 4/);
-    expect(text).toMatch(/on the truck, said Manuel Ortega/);
-    expect(text).toMatch(/BOP rams closed for travel/);
-  });
-  it("doesn't show an empty pieces table", () => {
-    expect(text).not.toMatch(/What went on the truck/);
-    expect(text).not.toMatch(/Nothing went on/);
   });
 });

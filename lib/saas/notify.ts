@@ -148,7 +148,6 @@ async function sendNotify(args: { companyId: string; companyName: string; yardId
 
     const sms = `RollReady: ${args.message}. - ${args.companyName}`;
     const emails = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.email as string);
-    const phones = smsConfigured() ? recips.filter((r) => r.channels.includes("sms") && r.phone).map((r) => r.phone as string) : [];
 
     const emailNames = recips.filter((r) => r.channels.includes("email") && r.email).map((r) => r.name);
     const smsRecips = smsConfigured() ? recips.filter((r) => r.channels.includes("sms") && r.phone) : [];
