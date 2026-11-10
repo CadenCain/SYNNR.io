@@ -183,7 +183,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             </div>
             <p className="mt-3 text-[14px] text-ink-dim" role="status">
               {isReady
-                ? `Cleared by ${ready?.by ?? "someone"}${ready?.at ? ` at ${when(ready.at)}` : ""}. Everything on the list is on the truck${proven ? (critical.length === 1 ? ", with a photo of the critical piece" : `, with a photo of all ${critical.length} critical pieces`) : ""}.`
+                ? `Cleared by ${ready?.by ?? "someone"}${ready?.at ? ` at ${when(ready.at)}` : ""}. Everything on the list is on the truck${proven ? (critical.length === 1 ? ", with a photo of the critical piece" : critical.length === 2 ? ", with a photo of both critical pieces" : `, with a photo of all ${critical.length} critical pieces`) : ""}.`
                 : s.total === 0
                   ? "This job has no list yet. Add what it takes."
                   : s.ready
@@ -297,7 +297,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
                     )}
                     <span className="block px-3 py-2.5">
                       <span className="block truncate text-[13px] text-ink">{l.label}</span>
-                      <span className="mt-0.5 block truncate text-[12px] text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
                     </span>
                   </button>
                 </li>
