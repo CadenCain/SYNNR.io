@@ -29,20 +29,20 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "SYNNR is an operations AI for wireline. Send it the dispatch or say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
+    "SYNNR is an operations AI for wireline. Send it the dispatch or say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
     title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
+      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
     url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
     title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built. Early access.",
+      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
   },
 };
 
@@ -64,7 +64,7 @@ export default function RootLayout({
               name: "SYNNR",
               url: "https://www.synnr.io",
               description:
-                "Operations AI for wireline service companies. Tell it the job and it gives the crew what to take, a checklist to load by, and the stage sheet.",
+                "Operations AI for wireline service companies. Tell it the job and it gives the crew what to take, a checklist to load by, and a ready check before the truck rolls.",
               areaServed: "Permian Basin, West Texas",
             }),
           }}

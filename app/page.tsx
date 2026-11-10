@@ -27,14 +27,14 @@ const GET: { title: string; body: string }[] = [
     body: "Tap each item as it goes on. Anyone in the company can see what's loaded and what's still missing.",
   },
   {
-    title: "The paperwork, built",
-    body: "Stage sheets and run sheets filled in from the job and handed back as Excel, ready to check and print.",
+    title: "Ready, or not",
+    body: "When everything's on, the truck reads READY with who loaded it and when. Until then it says exactly what's missing.",
   },
 ];
 
 const ASKS = [
-  "What do I need to take on a bond log?",
-  "Make me a stage sheet for 3 stages.",
+  "What do I need to set a packer in 5-1/2 casing?",
+  "What goes out on a pipe recovery job?",
   "Which cable head goes with this string?",
   "What do we charge for a bond log to 8,000 ft?",
   "What does the MSA say about standby time?",
@@ -79,7 +79,8 @@ export default function Home() {
             </h1>
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
               Send SYNNR the dispatch, or just say what you&apos;re running. It gives your crew what the job takes
-              with the critical pieces first, a checklist to load by, and the stage sheet already built.
+              with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck
+              rolls.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="#access" className="flex h-12 items-center justify-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">
@@ -146,7 +147,7 @@ export default function Home() {
             <div className="synnr-reveal mt-12 rounded-2xl border border-line bg-[#0b0c0e] px-5 py-9 md:mt-16 md:px-10 md:py-12">
               <Toolstring />
             </div>
-            <p className="mt-4 text-[14px] text-ink-faint">A pump-down plug and perf string, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
+            <p className="mt-4 text-[14px] text-ink-faint">A packer setting string, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
           </div>
         </section>
 

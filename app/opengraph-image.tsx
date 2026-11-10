@@ -32,7 +32,7 @@ export default function OgImage() {
             <span style={{ color: "#62666e" }}>It tells you what to take.</span>
           </div>
           <div style={{ display: "flex", fontSize: 30, color: "#a1a4aa", maxWidth: 980, lineHeight: 1.35 }}>
-            What the job takes with the critical pieces first, a checklist to load by, and the stage sheet already built.
+            What the job takes with the critical pieces first, a checklist to load by, and READY or NOT READY before the truck rolls.
           </div>
         </div>
         <div style={{ display: "flex", fontSize: 26, color: "#71757d" }}>synnr.io · Operations AI for wireline. Early access.</div>
