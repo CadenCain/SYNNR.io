@@ -14,7 +14,7 @@ import type { LoadOutTruckRow } from "@/lib/saas/loadout-board";
  *     seconds) is marked, so the page says it's the copy saved on this phone
  *     and when, even with signal. Last night's board never passes for live.
  *   - the board's late-plan box splits "still blocked" (scanned, NOT READY)
- *     from "hasn't been scanned out", like the morning email.
+ *     from "hasn't been checked out", like the morning email.
  */
 
 const ORIGIN = "https://www.synnr.io";
@@ -194,7 +194,7 @@ function truck(id: string, name: string): LoadOutTruckRow {
 
 describe("Load out board: a late plan that was scanned and blocked isn't 'not scanned out'", () => {
   const STILL = "Was planned to leave 5:00 AM. Still NOT READY.";
-  const NOBODY = "Was planned to leave 5:00 AM. Nobody has scanned it out.";
+  const NOBODY = "Was planned to leave 5:00 AM. Nobody has checked it out yet.";
   const OLD = "Was planned to leave Sat 5:00 AM, more than a day ago. That plan doesn't lock a load-out any more. Set a new time or clear it.";
   const plan = (late: string) => ({ text: "Job", by: null, note: null, late });
   const board = (plans: Record<string, ReturnType<typeof plan>>) => renderToStaticMarkup(createElement(LoadOutView, {
@@ -206,10 +206,10 @@ describe("Load out board: a late plan that was scanned and blocked isn't 'not sc
   it("one of each: its own heading for each", () => {
     const box = alertBox(board({ ct01: plan(STILL), ct02: plan(NOBODY) }));
     expect(box).toContain("A planned truck is still blocked");
-    expect(box).toContain("A truck hasn&#x27;t been scanned out");
+    expect(box).toContain("A truck hasn&#x27;t been checked out");
     expect(box.indexOf("still blocked")).toBeLessThan(box.indexOf("CT-01:"));
-    expect(box.indexOf("CT-01:")).toBeLessThan(box.indexOf("been scanned out"));
-    expect(box.indexOf("been scanned out")).toBeLessThan(box.indexOf("CT-02:"));
+    expect(box.indexOf("CT-01:")).toBeLessThan(box.indexOf("been checked out"));
+    expect(box.indexOf("been checked out")).toBeLessThan(box.indexOf("CT-02:"));
   });
 
   it("two scanned and blocked: they don't count as not scanned out", () => {
@@ -218,9 +218,9 @@ describe("Load out board: a late plan that was scanned and blocked isn't 'not sc
     expect(html).not.toContain("been scanned out");
   });
 
-  it("not scanned and an old plan stay under 'haven't been scanned out'", () => {
+  it("not scanned and an old plan stay under 'haven't been checked out'", () => {
     const html = board({ ct02: plan(NOBODY), ct03: plan(OLD) });
-    expect(html).toContain("2 trucks haven&#x27;t been scanned out");
+    expect(html).toContain("2 trucks haven&#x27;t been checked out");
     expect(html).not.toContain("still blocked");
   });
 

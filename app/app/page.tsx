@@ -145,7 +145,7 @@ export default async function LoadOutHome({ searchParams }: { searchParams: Prom
   const { trucks, counts, summary } = buildLoadOutTrucks(
     quick ? units.map((u) => ({ ...u, state: "ready" as const, why: "" })) : units,
     quick ? [] : list.rows, allScans, new Map(overrides.map((o) => [o.loadout_id, { at: o.created_at, by: o.by_name }])), today, quick ? new Map() : kitShort,
-    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member", zones });
+    { returns: allReturns, now: nowMs, alertDays: rules.outAlertDays, hand: company.role === "member", zones, quick });
 
   // The iron, for the manager: what's out, what's out too long, what's out of test.
   const inYardScope = (r: { yardId?: string | null; unitId?: string | null }) => !yardId || r.yardId === yardId || (r.unitId !== null && r.unitId !== undefined && unitIds.has(r.unitId));

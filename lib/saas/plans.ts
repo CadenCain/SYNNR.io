@@ -83,7 +83,7 @@ export function lateLine(plan: Pick<LoadoutPlan, "at" | "leavesAt">, lastLoadout
   if (now - leaves > PLAN_OLD_MS) return `Was planned to leave ${timeText(plan.leavesAt)}, more than a day ago. That plan doesn't lock a load-out any more. Set a new time or clear it.`;
   return since
     ? `Was planned to leave ${timeText(plan.leavesAt)}. Still NOT READY.`
-    : `Was planned to leave ${timeText(plan.leavesAt)}. Nobody has scanned it out.`;
+    : `Was planned to leave ${timeText(plan.leavesAt)}. Nobody has checked it out yet.`;
 }
 
 /**

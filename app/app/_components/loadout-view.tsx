@@ -141,7 +141,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
         const unscanned = late.filter((x) => !blocked.includes(x));
         const groups = [
           { key: "blocked", rows: blocked, title: blocked.length === 1 ? "A planned truck is still blocked" : "Planned to leave, still blocked" },
-          { key: "unscanned", rows: unscanned, title: unscanned.length === 1 ? "A truck hasn't been scanned out" : `${unscanned.length} trucks haven't been scanned out` },
+          { key: "unscanned", rows: unscanned, title: unscanned.length === 1 ? "A truck hasn't been checked out" : `${unscanned.length} trucks haven't been checked out` },
         ].filter((g) => g.rows.length);
         return groups.length ? (
           <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-500/50 bg-red-500/10 px-4 py-3">

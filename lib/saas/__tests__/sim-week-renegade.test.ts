@@ -654,7 +654,7 @@ describe("midweek: tools signed out to two people", () => {
     expect(W.thuEmail.s.damaged).toEqual(["Baker 20 setting tool #4 BK-4: threads galled. Signed out to Lupe Cardenas Nov 10. Checked in by Jesse Ruiz."]);
     expect(W.thuEmail.s.redressWaiting).toBe(2);
     expect(W.thuEmail.s.unscanned).toEqual(["WL-14 came back, but its last load-out was NOT READY and nobody rolled it. It left without being cleared. Checked in by Lupe Cardenas."]);
-    expect(W.thuEmail.msg!.subject).toBe("RollReady: 1 truck not scanned out at Renegade Wireline");
+    expect(W.thuEmail.msg!.subject).toBe("RollReady: 1 truck not checked out at Renegade Wireline");
   });
 
   it("the list, search, and the sign-out sheet agree neither tool can go; redressed, Dale's can", () => {

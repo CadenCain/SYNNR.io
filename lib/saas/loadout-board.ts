@@ -149,7 +149,9 @@ export function buildLoadOutTrucks(
    *  zones: each yard's time zone (yardZones() in loadout-record.ts). A Hobbs
    *  (Mountain) truck's times then read in Mountain, not an hour off. When the
    *  trucks on the board run on more than one zone, each time says which. */
-  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number; hand?: boolean; zones?: Map<string, string> } = {},
+  opts: { returns?: { unit_id: string | null; finished_at: string; returned_by?: string | null }[]; now?: number; alertDays?: number; hand?: boolean; zones?: Map<string, string>;
+    /** The quick check: "checked", not "load-out". */
+    quick?: boolean } = {},
 ): { trucks: LoadOutTruckRow[]; counts: LoadOutCounts; summary: string } {
   const now = opts.now ?? Date.now();
   const zoneOf = (t: UnitTile) => (opts.zones ? yardZone(opts.zones.get(t.yardId)) : YARD_TZ);
@@ -234,13 +236,13 @@ export function buildLoadOutTrucks(
         return { ...base, loadoutId: s.id, status: "blocked", overridden: false, whyTone: paperFixed ? "amber" : "red",
           why: paperFixed ? `Blocked ${dayOf(s.finished_at) === today ? "today" : shortDay(s.finished_at)} on truck paper. That paper is good now. Scan it again to roll.`
             : reasons.length ? `${reasons[0]}${reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : ""}` : "NOT READY at load-out",
-          loadoutLine: `Blocked at load-out ${when}${by}` };
+          loadoutLine: `${opts.quick ? "NOT READY at its check" : "Blocked at load-out"} ${when}${by}` };
       }
     }
     const backBy = back?.returned_by ? ` by ${back.returned_by}` : "";
     const loadoutLine = isBack && back
       ? `Checked in ${dayOf(back.finished_at) === today ? `today ${timeOf(back.finished_at)}` : shortDay(back.finished_at)}${backBy}`
-      : s ? `Last load-out ${shortDay(s.finished_at)}${by}` : null;
+      : s ? `${opts.quick ? "Last checked" : "Last load-out"} ${shortDay(s.finished_at)}${by}` : null;
     const left = isBack ? outNames.get(t.id) ?? [] : [];
     const stillOut = left.length ? `Still out on the job: ${left.slice(0, 3).join(", ")}${left.length > 3 ? ` and ${left.length - 3} more` : ""}` : null;
     // A truck that's back starts fresh: its next scan is a new load-out, not "scan again".

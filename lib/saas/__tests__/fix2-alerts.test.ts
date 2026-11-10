@@ -198,8 +198,8 @@ describe("a plan for a later job isn't scanned by the on-call load-out before it
     dbHolder.current = client;
     await sendMorningSummaries(client as unknown as SupabaseClient);
     expect(mails).toHaveLength(1);
-    expect(mails[0].subject).toBe("RollReady: 1 truck not scanned out at Renegade Wireline");
-    expect(mails[0].html).toContain("Nobody has scanned it out.");
+    expect(mails[0].subject).toBe("RollReady: 1 truck not checked out at Renegade Wireline");
+    expect(mails[0].html).toContain("Nobody has checked it out yet.");
     expect(mails[0].html).not.toContain("Planned to leave, still blocked");
   });
 });
@@ -253,7 +253,7 @@ describe("sendMorningSummaries puts the new lines where they belong", () => {
     expect(body).toMatch(/Left on location from CT-08&#39;s [A-Z][a-z]{2} \d{1,2} job: Lubricator LU-9, out 15 days/);
     expect(body).not.toContain("CT-08: 1 piece");
     // The Hobbs plan reads in Mountain time, and says so.
-    expect(body).toMatch(/Hobbs Yard, H-01: Was planned to leave \w{3} \d{1,2}:\d{2} [AP]M MT\. Nobody has scanned it out\./);
+    expect(body).toMatch(/Hobbs Yard, H-01: Was planned to leave \w{3} \d{1,2}:\d{2} [AP]M MT\. Nobody has checked it out yet\./);
   });
 
   it("iron out on the truck's trip now still reads as the truck's", async () => {
@@ -278,6 +278,6 @@ describe("lateLine with a zone-aware clock", () => {
   it("passes the yard's time through", () => {
     const plan = { at: "2026-11-12T20:00:00Z", leavesAt: "2026-11-13T11:00:00Z" } as Pick<LoadoutPlan, "at" | "leavesAt">;
     const line = lateLine(plan, null, Date.parse("2026-11-13T12:00:00Z"), (iso) => whenText(iso, "America/Denver", true))!;
-    expect(line.replace(/\s/g, " ")).toBe("Was planned to leave Fri 4:00 AM MT. Nobody has scanned it out.");
+    expect(line.replace(/\s/g, " ")).toBe("Was planned to leave Fri 4:00 AM MT. Nobody has checked it out yet.");
   });
 });

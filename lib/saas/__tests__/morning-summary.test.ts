@@ -11,10 +11,10 @@ describe("the managers' morning email", () => {
   });
   it("leads with trucks that weren't scanned out, and says so in the subject", () => {
     const m = summaryText({ ...base, loadouts: 2, ready: 1, blocked: ["CT-03: Out of test: BOP QB-4471"], checkins: 1,
-      late: ["CT-01: Was planned to leave Tue 5:00 AM. Nobody has scanned it out."],
+      late: ["CT-01: Was planned to leave Tue 5:00 AM. Nobody has checked it out yet."],
       unscanned: ["CT-04 came back from a job it was never scanned out for. Checked in by Freddy Carrasco."],
       idle: ["Lupe Cardenas"], noPaper: 2 })!;
-    expect(m.subject).toBe("RollReady: 2 trucks not scanned out at Caprock");
+    expect(m.subject).toBe("RollReady: 2 trucks not checked out at Caprock");
     expect(m.body).toContain("2 load-outs (1 READY, 1 blocked), 1 check-in.");
     expect(m.body.indexOf("Not scanned out")).toBeLessThan(m.body.indexOf("Blocked at load-out"));
     expect(m.body).toContain("On the crew, nothing in RollReady this week:\n  Lupe Cardenas");
@@ -33,8 +33,8 @@ describe("planned to leave, never scanned out", () => {
     expect(lateLine(plan, null, Date.parse("2026-11-04T10:00:00Z"), t)).toBeNull();
   });
   it("past it with no load-out: nobody scanned it out", () => {
-    expect(lateLine(plan, null, after, t)).toBe("Was planned to leave 5:00 AM. Nobody has scanned it out.");
-    expect(lateLine(plan, { finished_at: "2026-11-01T11:00:00Z", rolled: true }, after, t)).toBe("Was planned to leave 5:00 AM. Nobody has scanned it out.");
+    expect(lateLine(plan, null, after, t)).toBe("Was planned to leave 5:00 AM. Nobody has checked it out yet.");
+    expect(lateLine(plan, { finished_at: "2026-11-01T11:00:00Z", rolled: true }, after, t)).toBe("Was planned to leave 5:00 AM. Nobody has checked it out yet.");
   });
   it("past it, scanned but blocked: still NOT READY", () => {
     expect(lateLine(plan, { finished_at: "2026-11-04T10:30:00Z", rolled: false }, after, t)).toBe("Was planned to leave 5:00 AM. Still NOT READY.");

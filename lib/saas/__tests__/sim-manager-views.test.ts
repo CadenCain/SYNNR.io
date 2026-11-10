@@ -40,7 +40,7 @@ describe("the morning email over a week", () => {
   it("Wednesday: a late truck outranks damage in the subject; both show in the body", () => {
     const m = summaryText({ ...quiet, loadouts: 1, ready: 0, blocked: ["CT-01: Short: Lubricator, 1 of 2 scanned"], checkins: 1,
       late: ["CT-01: Was planned to leave Wed 5:00 AM. Still NOT READY."], damaged: ["Plug valve 2\" #3 PV-2203: body washed. Checked in by Freddy Carrasco."] })!;
-    expect(m.subject).toBe("RollReady: 1 truck not scanned out at Renegade Wireline");
+    expect(m.subject).toBe("RollReady: 1 truck not checked out at Renegade Wireline");
     expect(m.body).toContain("1 load-out (0 READY, 1 blocked), 1 check-in.");
     expect(m.body.indexOf("Not scanned out")).toBeLessThan(m.body.indexOf("Came back damaged"));
     expect(m.body.indexOf("Came back damaged")).toBeLessThan(m.body.indexOf("Blocked at load-out"));
@@ -56,11 +56,11 @@ describe("planned to leave at 5 AM Central", () => {
     expect(lateLine(plan, null, Date.parse("2026-11-10T10:59:00Z"), timeText)).toBeNull();
   });
   it("5:01 AM with nothing scanned: nobody scanned it out", () => {
-    expect(lateLine(plan, null, Date.parse("2026-11-10T11:01:00Z"), timeText)).toBe("Was planned to leave Tue 5:00 AM. Nobody has scanned it out.");
+    expect(lateLine(plan, null, Date.parse("2026-11-10T11:01:00Z"), timeText)).toBe("Was planned to leave Tue 5:00 AM. Nobody has checked it out yet.");
   });
   it("Monday's READY load-out from before the plan doesn't count for Tuesday's job", () => {
     expect(lateLine(plan, { finished_at: "2026-11-09T12:00:00Z", rolled: true }, Date.parse("2026-11-10T11:01:00Z"), timeText))
-      .toBe("Was planned to leave Tue 5:00 AM. Nobody has scanned it out.");
+      .toBe("Was planned to leave Tue 5:00 AM. Nobody has checked it out yet.");
   });
   it("scanned at 4:40 AM and blocked: still NOT READY", () => {
     expect(lateLine(plan, { finished_at: "2026-11-10T10:40:00Z", rolled: false }, Date.parse("2026-11-10T11:30:00Z"), timeText))

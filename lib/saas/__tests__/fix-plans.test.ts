@@ -132,7 +132,7 @@ describe("the late line", () => {
   const plan = { at: ct("2026-11-13 15:00"), leavesAt: ct("2026-11-16 05:00") };
   it("Saturday's READY on-call load-out (without the plan) doesn't count for Monday's job", () => {
     const sat = { finished_at: ct("2026-11-14 02:10"), rolled: true };
-    expect(lateLine(plan, sat, Date.parse(ct("2026-11-16 05:01")), timeText)).toBe("Was planned to leave Mon 5:00 AM. Nobody has scanned it out.");
+    expect(lateLine(plan, sat, Date.parse(ct("2026-11-16 05:01")), timeText)).toBe("Was planned to leave Mon 5:00 AM. Nobody has checked it out yet.");
   });
   it("Sunday night's READY load-out inside the 18 hours does", () => {
     expect(lateLine(plan, { finished_at: ct("2026-11-15 22:00"), rolled: true }, Date.parse(ct("2026-11-16 05:01")), timeText)).toBeNull();

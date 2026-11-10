@@ -26,7 +26,7 @@ export interface DaySummary {
   unscanned: string[];    // event messages: came back without being cleared
   /** A hand said a truck with no load-out since its last check-in never left the yard: worth a look, not an alarm. */
   yardChecks?: string[];
-  late: string[];         // "CT-01: Was planned to leave 5:00 AM. Nobody has scanned it out."
+  late: string[];         // "CT-01: Was planned to leave 5:00 AM. Nobody has checked it out yet."
   /** Planned, scanned, and blocked: the crew used the app, the truck just can't go. "CT-01: Was planned to leave 5:00 AM. Still NOT READY." */
   stillBlocked?: string[];
   outTooLong: string[];   // "CT-08: 5 pieces, out 9 days" or "With Dale Wooten: Silver Fox #2, out 9 days"
@@ -71,7 +71,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   out.push(`${s.loadouts} ${s.loadouts === 1 ? "load-out" : "load-outs"} (${s.ready} READY${s.blocked.length ? `, ${s.blocked.length} blocked` : ""}), ${s.checkins} ${s.checkins === 1 ? "check-in" : "check-ins"}.`);
   const section = (title: string, rows: string[]) => { if (rows.length) out.push("", title, ...rows.map((r) => `  ${r}`)); };
   const more = (n: number) => (n > 0 ? [`and ${n} more`] : []);
-  section("Not scanned out (the app wasn't used):", [...s.late, ...s.unscanned]);
+  section("Not checked out (the app wasn't used):", [...s.late, ...s.unscanned]);
   section("Said it didn't leave the yard (no load-out between check-ins):", s.yardChecks ?? []);
   section("Planned to leave, still blocked:", stillBlocked);
   section("Came back damaged:", s.damaged);
@@ -101,7 +101,7 @@ export function summaryText(s: DaySummary): { subject: string; body: string } | 
   const flag = s.late.length + s.unscanned.length;
   const trucks = (n: number) => `${n} ${n === 1 ? "truck" : "trucks"}`;
   const subject = flag
-    ? `RollReady: ${trucks(flag)} not scanned out at ${s.company}`
+    ? `RollReady: ${trucks(flag)} not checked out at ${s.company}`
     : stillBlocked.length ? `RollReady: ${stillBlocked.length} planned ${stillBlocked.length === 1 ? "truck" : "trucks"} still blocked at ${s.company}`
     : s.damaged.length ? `RollReady: ${s.damaged.length} ${s.damaged.length === 1 ? "piece" : "pieces"} came back damaged at ${s.company}`
     : cantFind.length ? `RollReady: ${cantFind.length} ${cantFind.length === 1 ? "piece" : "pieces"} can't be found at ${s.company}`
