@@ -87,7 +87,7 @@ export default async function PublicLoadoutPage({ params }: { params: Promise<{ 
         {demo ? <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300">Demo yard on synnr.io. The company and its records are made up.</p> : null}
         <LoadoutRecordView rec={rec} override={override} tagHref={(id) => (tagOf.get(id) ? `/t/${tagOf.get(id)}` : null)} paper={paper} truckPaper={truckPaper} photo={photo} forOperator tz={tz}
           later={later ? { unit_name: later.unit_name, finished_at: later.finished_at, outcome: later.outcome, tz: (later.yard_id && zones.get(later.yard_id)) || tz } : null} />
-        <p className="text-[13px] text-ink-faint">Tap a piece to see its tests and cert. Sent from RollReady by SYNNR.</p>
+        <p className="text-[13px] text-ink-faint">{rec.pieces.length ? "Tap a piece to see its tests and cert. " : ""}Sent from RollReady by SYNNR.</p>
       </div>
     </div>
   );

@@ -73,7 +73,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
     const others = trucks.filter((x) => x !== mine);
     return (
       <div className="flex flex-col gap-5">
-        <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
+        <h1 className="text-[26px] font-semibold tracking-tight">{quick ? "Trucks" : "Load out"}</h1>
         <UnsentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
         <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
         {trucks.length === 0 ? (
@@ -98,7 +98,7 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
           </Card>
         )}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check in tools or loose iron</Link>
+          {quick ? null : <Link href="/app/return" className={buttonClass("outline", "lg", "h-12 text-base")}><PackageCheck className="h-5 w-5" /> Check in tools or loose iron</Link>}
           <Link href="/app/signout" className={buttonClass("outline", "lg", "h-12 text-base")}><Wrench className="h-5 w-5" /> Sign out a tool</Link>
         </div>
         {tips}
@@ -121,14 +121,14 @@ export default function LoadOutView({ trucks: allTrucks, counts, summary, week, 
       <NeverSentDrafts trucks={allTrucks.map((x) => ({ id: x.t.id, name: x.t.name }))} companyId={companyId} />
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-semibold tracking-tight">Load out</h1>
+          <h1 className="text-[26px] font-semibold tracking-tight">{quick ? "Trucks" : "Load out"}</h1>
           <p className="mt-0.5 text-sm text-ink-dim">{summary}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check in tools or loose iron</Link>
+          {quick ? null : <Link href="/app/return" className={buttonClass("outline", "sm")}><PackageCheck className="h-4 w-4" /> Check in tools or loose iron</Link>}
           <Link href="/app/signout" className={buttonClass("outline", "sm")}><Wrench className="h-4 w-4" /> Tools out</Link>
-          <Link href="/app/packages" className={buttonClass("outline", "sm")}><Boxes className="h-4 w-4" /> Packages &amp; kits</Link>
-          <Link href="/app/loadouts" className={buttonClass("outline", "sm")}><History className="h-4 w-4" /> Load-out records</Link>
+          <Link href="/app/packages" className={buttonClass("outline", "sm")}><Boxes className="h-4 w-4" /> {quick ? "Truck lists" : "Packages & kits"}</Link>
+          <Link href="/app/loadouts" className={buttonClass("outline", "sm")}><History className="h-4 w-4" /> {quick ? "Records" : "Load-out records"}</Link>
           <Link href="/app/yards" className={buttonClass("outline", "sm")}><Warehouse className="h-4 w-4" /> Yards &amp; trucks</Link>
         </div>
       </div>
