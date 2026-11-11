@@ -11,7 +11,7 @@ import JobCheck from "./job-check";
 
 export const dynamic = "force-dynamic";
 
-const JOB = "id, job_type, truck, details, remarks, source, status, ready_by, ready_at, created_by_name, created_at";
+const JOB = "id, job_type, truck, details, remarks, source, status, ready_by, ready_at, created_by_name, created_at, share_token";
 
 async function load(id: string) {
   const { company, user } = await requireCompany();
@@ -69,7 +69,8 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <JobCheck jobId={job.id} initial={lines} photos={photos} me={me}
           initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null}
-          manager={company.role !== "member"} writable={isWritable(company.subscription_status, company.comped)} />
+          manager={company.role !== "member"} writable={isWritable(company.subscription_status, company.comped)}
+          share={{ title: [job.truck, job.job_type].filter(Boolean).join(", "), origin: process.env.NEXT_PUBLIC_SITE_URL || "https://www.synnr.io", token: job.share_token ?? null, demo: company.is_demo }} />
 
         {/* What the dispatch said */}
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">

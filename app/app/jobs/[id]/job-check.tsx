@@ -8,6 +8,7 @@ import { shrinkPhoto } from "@/lib/shrink-photo";
 import { jobState, orderLines, type JobLine } from "@/lib/saas/jobs";
 import { fmtTime, fmtWhen } from "@/lib/saas/format";
 import { setLine, addLine, removeLine, markReady, deleteJob } from "../actions";
+import ShareProof from "./share-proof";
 
 // One clock for the server's first paint and the phone, so a time never changes under a thumb.
 const when = (iso: string | null) => iso ? fmtTime(iso) : "";
@@ -19,8 +20,9 @@ const when = (iso: string | null) => iso ? fmtTime(iso) : "";
  * READY, and says what's missing, until every row is on and someone calls it
  * ready. The photos stay with the job as the proof.
  */
-export default function JobCheck({ jobId, initial, photos, initialReady, me, manager, writable }: {
+export default function JobCheck({ jobId, initial, photos, initialReady, me, manager, writable, share }: {
   jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null; me: string; manager: boolean; writable: boolean;
+  share: { title: string; origin: string; token: string | null; demo: boolean };
 }) {
   const router = useRouter();
   const [lines, setLines] = useState(initial);
@@ -305,6 +307,10 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             })}
           </ul>
         </section>
+      ) : null}
+
+      {s.total > 0 ? (
+        <ShareProof jobId={jobId} title={share.title} origin={share.origin} initialToken={share.token} manager={manager} writable={writable} demo={share.demo} />
       ) : null}
 
       {manager && writable ? (

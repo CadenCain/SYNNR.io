@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
 import { removeJobPhotos, removePhotos } from "@/lib/saas/job-photos";
+import { newShareToken } from "@/lib/saas/job-share";
 import { buildLines, clampQty, matchList, type Callout, type JobDetails } from "@/lib/saas/jobs";
 
 /**
@@ -153,5 +154,56 @@ export async function deleteJob(jobId: string): Promise<{ ok: true } | Fail> {
   if (error || !data) return fail("Couldn't delete it. Try again.");
   await removeJobPhotos(saasAdmin(), got.company.id, jobId);
   revalidatePath("/app");
+  return { ok: true };
+}
+
+/**
+ * The link a crew sends the customer: this job's list and its photos, no
+ * login. Anyone on the crew can make it, and it's the same link every time
+ * until a manager turns it off. Only the server writes it (the database
+ * refuses anyone else), so a link can't be typed in or guessed.
+ */
+export async function shareJob(jobId: string): Promise<{ ok: true; token: string } | Fail> {
+  if (!isId(jobId)) return fail("That job isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  // The demo is open to anyone: no public pages come out of it.
+  if (got.company.is_demo) return fail("Links to send a customer are off in the demo company.");
+  // Read as the signed-in person: the database decides whether this job is theirs.
+  const db = await saasDb();
+  const mine = () => db.from("synnr_jobs").select("id, share_token").eq("id", jobId).eq("company_id", got.company.id).maybeSingle();
+  const { data: found } = await mine();
+  const job = found as { id: string; share_token: string | null } | null;
+  if (!job) return fail("That job isn't there anymore.");
+  if (job.share_token) return { ok: true, token: job.share_token };
+
+  const admin = saasAdmin();
+  if (!admin) return fail("Links aren't set up. Call or text 432-250-0715.");
+  const token = newShareToken();
+  const { data, error } = await admin.from("synnr_jobs").update({ share_token: token, shared_by: nameOf(got.user) })
+    .eq("id", jobId).eq("company_id", got.company.id).is("share_token", null).select("share_token").maybeSingle();
+  if (error) { console.error("[share] make:", error.message); return fail("Couldn't make the link. Try again."); }
+  revalidatePath(`/app/jobs/${jobId}`);
+  if (data) return { ok: true, token };
+  // Someone else on the crew made it a moment ago: theirs is the link.
+  const { data: again } = await mine();
+  const theirs = (again as { share_token: string | null } | null)?.share_token;
+  return theirs ? { ok: true, token: theirs } : fail("Couldn't make the link. Try again.");
+}
+
+/** Turn a job's link off. Whoever has it can't open it anymore. Managers only. */
+export async function unshareJob(jobId: string): Promise<{ ok: true } | Fail> {
+  if (!isId(jobId)) return fail("That job isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  if (got.company.role === "member") return fail("Only a manager can turn a link off.");
+  const db = await saasDb();
+  const { data: found } = await db.from("synnr_jobs").select("id").eq("id", jobId).eq("company_id", got.company.id).maybeSingle();
+  if (!found) return fail("That job isn't there anymore.");
+  const admin = saasAdmin();
+  if (!admin) return fail("Links aren't set up. Call or text 432-250-0715.");
+  const { error } = await admin.from("synnr_jobs").update({ share_token: null }).eq("id", jobId).eq("company_id", got.company.id);
+  if (error) { console.error("[share] off:", error.message); return fail("Couldn't turn it off. Try again."); }
+  revalidatePath(`/app/jobs/${jobId}`);
   return { ok: true };
 }

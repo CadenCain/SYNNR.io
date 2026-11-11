@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, buildLines, matchList, detailRows } from "../jobs";
+import { orderLines, jobState, buildLines, matchList, detailRows, firstName, sharedLines, type JobLine } from "../jobs";
+import { SHARE_TOKEN, newShareToken } from "../job-share";
 
 /**
  * A wireline job in SYNNR: a pipe recovery dispatch whose remarks say there is a
@@ -81,5 +82,53 @@ describe("the job facts shown", () => {
     expect(rows).toEqual([
       ["Truck", "WL-07"], ["Tubing", "2-3/8"], ["Wellhead", "2-3/8 8 round"], ["Pressure control", "Lubricator"], ["Also assigned", "Grease package"],
     ]);
+  });
+});
+
+describe("the link sent to a customer", () => {
+  const line = (over: Partial<JobLine>): JobLine => ({
+    id: "l1", label: "CCL", qty: 1, critical: false, why: null, source: "list", sort: 0, on_by: null, on_at: null, photo_path: null, ...over,
+  });
+  const on = "2026-11-11T12:00:00.000Z";
+
+  it("shows a first name only", () => {
+    expect(firstName("Keegan  Ramirez")).toBe("Keegan");
+    expect(firstName("cadencain")).toBe("cadencain");
+    expect(firstName("  ")).toBe("Someone");
+    expect(firstName(null)).toBe("Someone");
+  });
+
+  it("never carries where a photo is kept, a line's id, or a last name", () => {
+    const out = sharedLines([
+      line({ id: "a", label: "Weight bars", sort: 1, on_at: on, on_by: "Keegan Ramirez" }),
+      line({ id: "b", label: "Jet cutter", sort: 2, critical: true, on_at: on, on_by: "Keegan Ramirez", photo_path: "co/jobs/j/b.jpg" }),
+    ], (path) => (path === "co/jobs/j/b.jpg" ? "https://signed.example/1" : undefined));
+    const text = JSON.stringify(out);
+    expect(text).not.toContain("co/jobs");
+    expect(text).not.toContain("Ramirez");
+    expect(Object.keys(out[0]).sort()).toEqual(["critical", "label", "on_at", "on_by", "photo", "qty", "why"]);
+    // Critical first, the way the crew loads.
+    expect(out.map((l) => l.label)).toEqual(["Jet cutter", "Weight bars"]);
+    expect(out[0]).toMatchObject({ on_by: "Keegan", photo: "https://signed.example/1" });
+    expect(out[1].photo).toBeNull();
+  });
+
+  it("a piece that's off the truck shows no name and no photo", () => {
+    const [l] = sharedLines([line({ critical: true, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => "https://signed.example/x");
+    expect(l).toMatchObject({ on_at: null, on_by: null, photo: null });
+  });
+
+  it("a photo that won't sign is left out, not shown broken", () => {
+    const [l] = sharedLines([line({ critical: true, on_at: on, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => undefined);
+    expect(l.photo).toBeNull();
+  });
+
+  it("makes a link that can't be guessed and fits the database's rule", () => {
+    const a = newShareToken(), b = newShareToken();
+    expect(a).not.toBe(b);
+    expect(a).toHaveLength(24);
+    expect(SHARE_TOKEN.test(a)).toBe(true);
+    expect(SHARE_TOKEN.test("short")).toBe(false);
+    expect(SHARE_TOKEN.test("a".repeat(23) + "/")).toBe(false);
   });
 });
