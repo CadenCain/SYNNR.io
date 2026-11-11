@@ -107,7 +107,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
                 {proof.map((l, i) => (
                   <li key={i}>
                     <a href={l.photo!} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-2">
-                      {/* A private link that expires: it goes straight to the browser, not through an image resizer. */}
+                      {/* Served under the link itself, straight from the shop's private photos: no image resizer in between. */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={l.photo!} alt={`Photo of ${l.label}`} referrerPolicy="no-referrer" loading="lazy" className="aspect-[4/3] w-full bg-coal object-cover" />
                       <span className="block px-3 py-2.5">

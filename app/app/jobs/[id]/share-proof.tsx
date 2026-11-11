@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Send } from "lucide-react";
 import { shareJob, unshareJob } from "../actions";
+
+// The link uses the address the crew is on right now, so it's right on the
+// live site and on a test one. The server's first paint assumes the live site.
+const never = () => () => {};
+const here = () => window.location.origin;
+const live = () => "https://www.synnr.io";
 
 /**
  * The link for the customer. It opens this job with no login: the list,
  * what's on the truck, and the photo of each critical piece. Anyone on the
  * crew can make it and send it; a manager can turn it off.
  */
-export default function ShareProof({ jobId, title, origin, initialToken, manager, writable, demo }: {
-  jobId: string; title: string; origin: string; initialToken: string | null; manager: boolean; writable: boolean; demo: boolean;
+export default function ShareProof({ jobId, title, initialToken, manager, writable, demo }: {
+  jobId: string; title: string; initialToken: string | null; manager: boolean; writable: boolean; demo: boolean;
 }) {
+  const origin = useSyncExternalStore(never, here, live);
   const [token, setToken] = useState(initialToken);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");

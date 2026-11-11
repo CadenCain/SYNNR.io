@@ -70,7 +70,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         <JobCheck jobId={job.id} initial={lines} photos={photos} me={me}
           initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null}
           manager={company.role !== "member"} writable={isWritable(company.subscription_status, company.comped)}
-          share={{ title: [job.truck, job.job_type].filter(Boolean).join(", "), origin: process.env.NEXT_PUBLIC_SITE_URL || "https://www.synnr.io", token: job.share_token ?? null, demo: company.is_demo }} />
+          share={{ title: [job.truck, job.job_type].filter(Boolean).join(", "), token: job.share_token ?? null, demo: company.is_demo }} />
 
         {/* What the dispatch said */}
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">

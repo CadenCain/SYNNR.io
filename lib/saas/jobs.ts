@@ -137,19 +137,19 @@ export const firstName = (name: string | null | undefined) => (name ?? "").trim(
 export type SharedLine = {
   label: string; qty: number; critical: boolean; why: string | null;
   on_by: string | null; on_at: string | null;
-  /** A short-lived link to the proof photo. Never where the photo is kept. */
+  /** Where the customer's browser gets the proof photo: a page of ours, never where the photo is kept. */
   photo: string | null;
 };
 
 /**
  * The list as it goes out on a job's link: in loading order, first names
- * only, and each proof photo as a link that expires rather than its place
- * in storage. Nothing else about the line leaves the shop.
+ * only, and each proof photo as an address the caller picks rather than its
+ * place in storage. Nothing else about the line leaves the shop.
  */
-export function sharedLines(lines: JobLine[], photoUrl: (path: string) => string | null | undefined): SharedLine[] {
+export function sharedLines(lines: JobLine[], photoUrl: (line: JobLine) => string | null | undefined): SharedLine[] {
   return orderLines(lines).map((l) => ({
     label: l.label, qty: l.qty, critical: l.critical, why: l.why,
     on_at: l.on_at, on_by: l.on_at ? firstName(l.on_by) : null,
-    photo: l.on_at && l.photo_path ? photoUrl(l.photo_path) ?? null : null,
+    photo: l.on_at && l.photo_path ? photoUrl(l) ?? null : null,
   }));
 }

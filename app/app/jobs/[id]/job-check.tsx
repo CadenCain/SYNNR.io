@@ -22,7 +22,7 @@ const when = (iso: string | null) => iso ? fmtTime(iso) : "";
  */
 export default function JobCheck({ jobId, initial, photos, initialReady, me, manager, writable, share }: {
   jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null; me: string; manager: boolean; writable: boolean;
-  share: { title: string; origin: string; token: string | null; demo: boolean };
+  share: { title: string; token: string | null; demo: boolean };
 }) {
   const router = useRouter();
   const [lines, setLines] = useState(initial);
@@ -310,7 +310,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
       ) : null}
 
       {s.total > 0 ? (
-        <ShareProof jobId={jobId} title={share.title} origin={share.origin} initialToken={share.token} manager={manager} writable={writable} demo={share.demo} />
+        <ShareProof jobId={jobId} title={share.title} initialToken={share.token} manager={manager} writable={writable} demo={share.demo} />
       ) : null}
 
       {manager && writable ? (

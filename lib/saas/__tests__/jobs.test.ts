@@ -98,27 +98,27 @@ describe("the link sent to a customer", () => {
     expect(firstName(null)).toBe("Someone");
   });
 
-  it("never carries where a photo is kept, a line's id, or a last name", () => {
+  it("never carries where a photo is kept or a last name", () => {
     const out = sharedLines([
       line({ id: "a", label: "Weight bars", sort: 1, on_at: on, on_by: "Keegan Ramirez" }),
       line({ id: "b", label: "Jet cutter", sort: 2, critical: true, on_at: on, on_by: "Keegan Ramirez", photo_path: "co/jobs/j/b.jpg" }),
-    ], (path) => (path === "co/jobs/j/b.jpg" ? "https://signed.example/1" : undefined));
+    ], (l) => `/p/TOKEN/photo/${l.id}`);
     const text = JSON.stringify(out);
     expect(text).not.toContain("co/jobs");
     expect(text).not.toContain("Ramirez");
     expect(Object.keys(out[0]).sort()).toEqual(["critical", "label", "on_at", "on_by", "photo", "qty", "why"]);
     // Critical first, the way the crew loads.
     expect(out.map((l) => l.label)).toEqual(["Jet cutter", "Weight bars"]);
-    expect(out[0]).toMatchObject({ on_by: "Keegan", photo: "https://signed.example/1" });
+    expect(out[0]).toMatchObject({ on_by: "Keegan", photo: "/p/TOKEN/photo/b" });
     expect(out[1].photo).toBeNull();
   });
 
   it("a piece that's off the truck shows no name and no photo", () => {
-    const [l] = sharedLines([line({ critical: true, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => "https://signed.example/x");
+    const [l] = sharedLines([line({ critical: true, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => "/p/TOKEN/photo/l1");
     expect(l).toMatchObject({ on_at: null, on_by: null, photo: null });
   });
 
-  it("a photo that won't sign is left out, not shown broken", () => {
+  it("a photo with no address is left out, not shown broken", () => {
     const [l] = sharedLines([line({ critical: true, on_at: on, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => undefined);
     expect(l.photo).toBeNull();
   });
