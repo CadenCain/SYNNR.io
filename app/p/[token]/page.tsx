@@ -23,8 +23,10 @@ const load = cache(async (token: string) => {
   return admin ? getSharedJob(admin, token) : null;
 });
 
-// Times carry their zone here: whoever opens this holds it up against his own clock.
+// Whoever opens this holds the times up against their own clock, so the
+// time the truck was cleared says its zone, and the page says it once below.
 const when = (iso: string | null) => (iso ? fmtWhen(iso, null) : "");
+const at = (iso: string | null) => (iso ? fmtWhen(iso) : "");
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const job = await load((await params).token);
@@ -100,7 +102,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
           <section className="mt-9">
             <h2 className="text-[15px] font-medium">Proof</h2>
             <p className="mt-1 text-[13px] leading-relaxed text-ink-faint">
-              {proof.length} of {critical.length} critical {critical.length === 1 ? "piece" : "pieces"} photographed going on the truck. A critical piece can&apos;t be marked on without its photo.
+              {`${proof.length} of ${critical.length} critical ${critical.length === 1 ? "piece" : "pieces"} photographed going on the truck. A critical piece can't be marked on without its photo.`}
             </p>
             {proof.length ? (
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -112,7 +114,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
                       <img src={l.photo!} alt={`Photo of ${l.label}`} referrerPolicy="no-referrer" loading="lazy" className="aspect-[4/3] w-full bg-coal object-cover" />
                       <span className="block px-3 py-2.5">
                         <span className="block text-[13px] leading-snug text-ink">{l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}</span>
-                        <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by}, {when(l.on_at)}</span>
+                        <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by}, {at(l.on_at)}</span>
                       </span>
                     </a>
                   </li>
@@ -140,7 +142,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
                     <span className="block text-[16px] leading-snug">{l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}</span>
                     {l.why ? <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Dispatch: {l.why}</span> : null}
                     <span className={cn("mt-0.5 block text-[12px]", on ? "text-ink-faint" : l.critical ? "text-bone" : "text-ink-faint")}>
-                      {on ? `On the truck: ${l.on_by}, ${when(l.on_at)}` : "Not on the truck yet"}
+                      {on ? `On the truck: ${l.on_by}, ${at(l.on_at)}` : "Not on the truck yet"}
                     </span>
                   </span>
                   {l.critical ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone")}>Critical</span> : null}
@@ -151,7 +153,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
         </section>
 
         <p className="mt-9 max-w-xl text-[13px] leading-relaxed text-ink-faint">
-          This page shows the truck as it stands right now. {job.company} loads out with SYNNR: the crew taps each piece onto the truck, and the truck reads Not ready until every one is on.
+          {`This page shows the truck as it stands right now. Times are Central. ${job.company} loads out with SYNNR: the crew taps each piece onto the truck, and the truck reads Not ready until every one is on.`}
         </p>
       </main>
 
