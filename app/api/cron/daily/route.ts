@@ -9,8 +9,9 @@ import { reconcileYardBilling } from "@/lib/saas/billing";
  * Once a day, housekeeping. Billing: what Stripe bills against what the
  * company has, an email to the operator on any drift. Demo: throwaway demo
  * companies (and their users) are deleted after 24 hours, and the showcase
- * is re-seeded so it doesn't age. Any failure emails the operator; none of
- * it touches a paying company's data.
+ * is re-seeded so it doesn't age. After the job: each company's managers
+ * get the trucks that went out and have no photo of the gear put away. Any
+ * failure emails the operator; none of it changes a paying company's data.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,13 +56,26 @@ export async function GET(req: Request) {
     await sendEmail([OWNER], "[SYNNR ops] demo cleanup CRASHED", pre(e instanceof Error ? e.message : String(e))).catch(() => {});
   }
 
+  // After the job: a company's managers hear each morning which trucks went out and have no photo of the gear put away.
+  let owed = { companies: 0, sent: 0, errors: [] as string[] };
+  try {
+    const { sendAfterOwed } = await import("@/lib/saas/after-email");
+    owed = await sendAfterOwed(admin, Date.now());
+    if (owed.errors.length) await sendEmail([OWNER], "[SYNNR ops] after-the-job email hit errors", pre(owed.errors.join("\n"))).catch(() => {});
+  } catch (e) {
+    owed.errors.push(e instanceof Error ? e.message : String(e));
+    await sendEmail([OWNER], "[SYNNR ops] after-the-job email CRASHED", pre(e instanceof Error ? e.message : String(e))).catch(() => {});
+  }
+
   await logCronRun(admin, {
     job: "daily",
-    ok: billing.drift === 0 && billing.errors === 0,
+    ok: billing.drift === 0 && billing.errors === 0 && owed.errors.length === 0,
+    alerts_sent: owed.sent,
     detail: [billing.drift ? `billing drift x${billing.drift}` : null, billing.errors ? `billing check errors x${billing.errors}` : null,
-      demo.deleted ? `demo deleted x${demo.deleted}` : null].filter(Boolean).join(", ") || null,
+      demo.deleted ? `demo deleted x${demo.deleted}` : null, owed.sent ? `after-the-job email x${owed.sent}` : null,
+      owed.errors.length ? `after-the-job email errors x${owed.errors.length}` : null].filter(Boolean).join(", ") || null,
   });
-  return NextResponse.json({ ok: true, billing, demo: demo.deleted });
+  return NextResponse.json({ ok: true, billing, demo: demo.deleted, owed: owed.sent });
 }
 
 export const POST = GET;
