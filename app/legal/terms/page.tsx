@@ -1,4 +1,5 @@
 import { LegalShell } from "../LegalShell";
+import { SHARE_IMAGE } from "../../_site/share";
 
 // Plain-language terms for SYNNR. Brought in line with the product on
 // 2026-11-12: job lists, a checklist with photo proof, READY or NOT READY, a
@@ -20,7 +21,7 @@ import { LegalShell } from "../LegalShell";
 const description = "The terms for using SYNNR, in plain words: what the service is and isn't, access and billing, your data, and the limits on what we promise.";
 export const metadata = {
   title: "Terms of Service · SYNNR", description, alternates: { canonical: "/legal/terms" },
-  openGraph: { title: "Terms of Service · SYNNR", description },
+  openGraph: { title: "Terms of Service · SYNNR", description, images: SHARE_IMAGE },
 };
 
 export default function TermsPage() {

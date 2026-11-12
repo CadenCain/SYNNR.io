@@ -1,4 +1,5 @@
 import { LegalShell } from "../LegalShell";
+import { SHARE_IMAGE } from "../../_site/share";
 
 // Plain-language privacy policy for SYNNR. Brought in line with the product
 // on 2026-11-12 (job lists, jobs, proof photos, customer links, the morning
@@ -10,7 +11,7 @@ import { LegalShell } from "../LegalShell";
 const description = "What SYNNR collects, what it's used for, where it's kept, who can see it, and how to get a copy or have it deleted.";
 export const metadata = {
   title: "Privacy Policy · SYNNR", description, alternates: { canonical: "/legal/privacy" },
-  openGraph: { title: "Privacy Policy · SYNNR", description },
+  openGraph: { title: "Privacy Policy · SYNNR", description, images: SHARE_IMAGE },
 };
 
 export default function PrivacyPage() {

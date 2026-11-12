@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteNav, SiteFooter } from "../_site/chrome";
+import { SHARE_IMAGE } from "../_site/share";
 import { AfterShot, BoardShot, DispatchShot, JobShot, ListShot, ReadShot } from "../_site/shots";
 
 export const metadata: Metadata = {
   title: "How SYNNR works",
-  openGraph: { title: "How SYNNR works", description: "From the dispatch to a truck that reads READY, with photo proof, and what the crew proves after the job." },
+  openGraph: { title: "How SYNNR works", description: "From the dispatch to a truck that reads READY, with photo proof, and what the crew proves after the job.", images: SHARE_IMAGE },
   description: "From the dispatch to a truck that reads READY, with photo proof: your shop's job lists, a checklist the crew taps, a board the manager can see, and what the crew proves after the job.",
   alternates: { canonical: "/product" },
 };

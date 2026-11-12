@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteNav, SiteFooter } from "../_site/chrome";
+import { SHARE_IMAGE } from "../_site/share";
 
 const title = "Your data · SYNNR";
 export const metadata: Metadata = {
   title,
-  openGraph: { title, description: "What SYNNR does with your company's data, in plain words." },
+  openGraph: { title, description: "What SYNNR does with your company's data, in plain words.", images: SHARE_IMAGE },
   description: "What SYNNR does with your company's data, in plain words: who can see it, where the photos are kept, what gets read from a dispatch, and how to get it back.",
   alternates: { canonical: "/security" },
 };
