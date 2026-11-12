@@ -207,7 +207,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
               : on ? <span className="mt-0.5 block text-[12px] text-ink-faint">{l.on_by ?? "Someone"}{l.on_at ? `, ${isAfter ? fmtWhen(l.on_at) : when(l.on_at)}` : ""}</span>
                 : l.critical ? <span className="sr-only">{isAfter ? "Take a photo to prove it." : "Take a photo of it to put it on."}</span> : null}
           </span>
-          {photo ? (
+          {photo && !isAfter ? (
             // A private, short-lived link: it goes straight to the phone, not through an image resizer.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photo} alt="" onError={stale} className="h-11 w-11 shrink-0 rounded-md border border-line-2 object-cover" />
@@ -239,7 +239,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
                 <span className="flex aspect-[4/3] w-full items-center justify-center bg-coal text-[12px] text-ink-faint">Photo on file</span>
               )}
               <span className="block px-3 py-2.5">
-                <span className="block truncate text-[13px] text-ink">{l.label}</span>
+                <span className="block text-[13px] leading-snug text-ink">{l.label}</span>
                 <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
               </span>
             </button>
@@ -346,7 +346,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             {after.length === 0
               ? "Nothing to prove after this job. Add a check here, or put it on the job list under The Brain so every job gets it."
               : a.done
-                ? `All ${a.total === 1 ? "" : `${a.total} `}proven. Last one by ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
+                ? `${a.total === 1 ? "Proven" : a.total === 2 ? "Both proven" : `All ${a.total} proven`}. ${a.total === 1 ? "By" : "Last one by"} ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
                 : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
           </p>
 

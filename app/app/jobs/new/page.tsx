@@ -13,7 +13,7 @@ export default async function NewJobPage() {
   const { company } = await requireCompany();
   const db = await saasDb();
   const [{ data: lists }, { data: units }] = await Promise.all([
-    db.from("saas_packages").select("id, name, saas_package_lines(id)").eq("company_id", company.id).is("unit_id", null).order("name").limit(200),
+    db.from("saas_packages").select("id, name, saas_package_lines(phase)").eq("company_id", company.id).is("unit_id", null).order("name").limit(200),
     db.from("saas_units").select("name").eq("company_id", company.id).order("name").limit(300),
   ]);
   return (
@@ -25,7 +25,11 @@ export default async function NewJobPage() {
       <p className="mt-1.5 text-[15px] text-ink-dim">Tell SYNNR the job. It builds what to take.</p>
       <div className="mt-7">
         <NewJob ai={aiReady() && !company.is_demo}
-          lists={((lists ?? []) as { id: string; name: string; saas_package_lines: { id: string }[] | null }[]).map((l) => ({ id: l.id, name: l.name, count: l.saas_package_lines?.length ?? 0 }))}
+          lists={((lists ?? []) as { id: string; name: string; saas_package_lines: { phase: string }[] | null }[]).map((l) => {
+            // Pieces that go on the truck, and what the crew proves after the job, are counted apart.
+            const after = (l.saas_package_lines ?? []).filter((x) => x.phase === "after").length;
+            return { id: l.id, name: l.name, count: (l.saas_package_lines?.length ?? 0) - after, after };
+          })}
           trucks={((units ?? []) as { name: string }[]).map((u) => u.name)} />
       </div>
     </div>

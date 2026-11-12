@@ -21,7 +21,7 @@ const label = "flex flex-col gap-1.5 text-[13px] text-ink-dim";
  * it in by hand. Either way the hand sees what the job is before the list is
  * built, and can fix anything SYNNR read wrong.
  */
-export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id: string; name: string; count: number }[]; trucks: string[] }) {
+export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id: string; name: string; count: number; after: number }[]; trucks: string[] }) {
   const router = useRouter();
   const [jobType, setJobType] = useState("");
   const [truck, setTruck] = useState("");
@@ -152,7 +152,7 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
 
       <p className="text-[14px] leading-relaxed text-ink-dim" role="status">
         {!jobType.trim() ? "Pick the kind of job and SYNNR pulls your shop's list for it."
-          : list ? `Your shop's list for ${list.name} has ${list.count} ${list.count === 1 ? "piece" : "pieces"}. They go on the checklist.`
+          : list ? `Your shop's list for ${list.name} has ${list.count} ${list.count === 1 ? "piece" : "pieces"}. ${list.count === 1 ? "It goes" : "They go"} on the checklist.${list.after ? ` It also has ${list.after} ${list.after === 1 ? "thing" : "things"} to prove with a photo after the job.` : ""}`
             : `Your shop hasn't given SYNNR a list for "${jobType.trim()}" yet, so the checklist starts with only what the dispatch calls out. A manager can add the list under The Brain.`}
       </p>
 
