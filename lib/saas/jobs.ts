@@ -6,6 +6,14 @@
 
 export type LineSource = "list" | "dispatch" | "added";
 
+/**
+ * Where a line sits in the job. "load" is a piece that goes on the truck, and
+ * READY is about those only. "after" is something the crew proves when the
+ * job is done (BOP rams closed for travel, the package washed): always a
+ * photo, and it never holds a truck back from READY.
+ */
+export type Phase = "load" | "after";
+
 export type JobLine = {
   id: string;
   label: string;
@@ -13,6 +21,7 @@ export type JobLine = {
   critical: boolean;
   why: string | null;
   source: LineSource;
+  phase: Phase;
   sort: number;
   on_by: string | null;
   on_at: string | null;
@@ -61,8 +70,16 @@ export function orderLines<T extends { critical: boolean; sort: number }>(lines:
   return [...lines].sort((a, b) => Number(b.critical) - Number(a.critical) || a.sort - b.sort);
 }
 
-/** READY only when there's a list and every piece on it is on the truck. */
-export function jobState(lines: Pick<JobLine, "label" | "qty" | "critical" | "on_at">[]) {
+const isAfter = (l: { phase?: Phase }) => l.phase === "after";
+
+/** The pieces that go on the truck, without what's proven after the job. */
+export const loadLines = <T extends { phase?: Phase }>(lines: T[]): T[] => lines.filter((l) => !isAfter(l));
+/** What the crew proves when the job is done. */
+export const afterLines = <T extends { phase?: Phase }>(lines: T[]): T[] => lines.filter(isAfter);
+
+/** READY only when there's a list and every piece on it is on the truck. What's proven after the job doesn't count here. */
+export function jobState(all: (Pick<JobLine, "label" | "qty" | "critical" | "on_at"> & { phase?: Phase })[]) {
+  const lines = loadLines(all);
   const missing = lines.filter((l) => !l.on_at);
   return {
     total: lines.length,
@@ -74,18 +91,45 @@ export function jobState(lines: Pick<JobLine, "label" | "qty" | "critical" | "on
 }
 
 /**
+ * After the job: how many of the checks have their photo, and when the last
+ * one went in. "done" only when there are checks and every one has a photo.
+ */
+export function afterState(all: (Pick<JobLine, "on_at"> & { on_by?: string | null; phase?: Phase })[]) {
+  const lines = afterLines(all);
+  const proven = lines.filter((l) => l.on_at);
+  const last = proven.reduce<(typeof proven)[number] | null>((m, l) => (!m || (l.on_at as string) > (m.on_at as string) ? l : m), null);
+  return {
+    total: lines.length,
+    proven: proven.length,
+    left: lines.length - proven.length,
+    done: lines.length > 0 && proven.length === lines.length,
+    last_at: last?.on_at ?? null,
+    last_by: last?.on_by ?? null,
+  };
+}
+
+/**
  * The list for a new job: the shop's own list for that kind of job, then
  * whatever the dispatch itself called out. A callout the shop's list already
  * has isn't added twice; it marks that line critical and carries the reason.
  */
-export function buildLines(input: { list: { label: string; qty: number; critical: boolean }[]; callouts: Callout[] }): NewLine[] {
+export function buildLines(input: { list: { label: string; qty: number; critical: boolean; phase?: Phase }[]; callouts: Callout[] }): NewLine[] {
   const out: NewLine[] = [];
   const at = new Map<string, number>();
+  const after = new Set<string>();
   for (const l of input.list) {
     const label = l.label.trim().slice(0, 120);
-    if (!label || at.has(norm(label))) continue;
+    if (!label) continue;
+    // Something proven after the job: its own line, always with a photo, never matched to a dispatch callout.
+    if (l.phase === "after") {
+      if (after.has(norm(label))) continue;
+      after.add(norm(label));
+      out.push({ label, qty: 1, critical: true, why: null, source: "list", phase: "after", sort: out.length });
+      continue;
+    }
+    if (at.has(norm(label))) continue;
     at.set(norm(label), out.length);
-    out.push({ label, qty: clampQty(l.qty), critical: Boolean(l.critical), why: null, source: "list", sort: out.length });
+    out.push({ label, qty: clampQty(l.qty), critical: Boolean(l.critical), why: null, source: "list", phase: "load", sort: out.length });
   }
   for (const c of input.callouts) {
     const label = c.item.trim().slice(0, 120);
@@ -97,7 +141,7 @@ export function buildLines(input: { list: { label: string; qty: number; critical
       continue;
     }
     at.set(norm(label), out.length);
-    out.push({ label, qty: clampQty(c.qty), critical: true, why, source: "dispatch", sort: out.length });
+    out.push({ label, qty: clampQty(c.qty), critical: true, why, source: "dispatch", phase: "load", sort: out.length });
   }
   return out;
 }
@@ -144,10 +188,12 @@ export type SharedLine = {
 /**
  * The list as it goes out on a job's link: in loading order, first names
  * only, and each proof photo as an address the caller picks rather than its
- * place in storage. Nothing else about the line leaves the shop.
+ * place in storage. Nothing else about the line leaves the shop, and what
+ * the crew proves after the job (washing, putting away) is the shop's own
+ * business: it never goes out on the link.
  */
 export function sharedLines(lines: JobLine[], photoUrl: (line: JobLine) => string | null | undefined): SharedLine[] {
-  return orderLines(lines).map((l) => ({
+  return orderLines(loadLines(lines)).map((l) => ({
     label: l.label, qty: l.qty, critical: l.critical, why: l.why,
     on_at: l.on_at, on_by: l.on_at ? firstName(l.on_by) : null,
     photo: l.on_at && l.photo_path ? photoUrl(l) ?? null : null,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shrinkPhoto } from "@/lib/shrink-photo";
-import { jobState, orderLines, type JobLine } from "@/lib/saas/jobs";
+import { afterLines, afterState, jobState, loadLines, orderLines, type JobLine } from "@/lib/saas/jobs";
 import { fmtTime, fmtWhen } from "@/lib/saas/format";
 import { setLine, addLine, removeLine, markReady, deleteJob } from "../actions";
 import ShareProof from "./share-proof";
@@ -19,6 +19,10 @@ const when = (iso: string | null) => iso ? fmtTime(iso) : "";
  * the photo is the tap. What stops the job is at the top. The truck reads NOT
  * READY, and says what's missing, until every row is on and someone calls it
  * ready. The photos stay with the job as the proof.
+ *
+ * Once the truck is ready, the same screen holds what the crew proves after
+ * the job (rams closed for travel, the package washed): a photo of each, so
+ * the manager sees it was done without driving up to look.
  */
 export default function JobCheck({ jobId, initial, photos, initialReady, me, manager, writable, share }: {
   jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null; me: string; manager: boolean; writable: boolean;
@@ -29,6 +33,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const [ready, setReady] = useState(initialReady);
   const [err, setErr] = useState("");
   const [adding, setAdding] = useState(false);
+  const [addingAfter, setAddingAfter] = useState(false);
   const [, start] = useTransition();
   const [busyReady, setBusyReady] = useState(false);
   // Photos taken on this screen, so they show before the page loads again.
@@ -40,10 +45,12 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const reloaded = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
-  const ordered = orderLines(lines);
+  const ordered = orderLines(loadLines(lines));
+  const after = afterLines(lines).sort((x, y) => x.sort - y.sort);
   const s = jobState(lines);
+  const a = afterState(lines);
   const photoOf = (l: JobLine) => l.photo_path ? fresh[l.id] ?? photos[l.id] ?? null : null;
-  const critical = lines.filter((l) => l.critical);
+  const critical = ordered.filter((l) => l.critical);
   const proof = ordered.filter((l) => l.critical && l.on_at && l.photo_path);
   const viewing = open ? lines.find((l) => l.id === open && l.photo_path) ?? null : null;
 
@@ -61,7 +68,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
     setErr("");
     // Show it right away; put it back if the save doesn't go through.
     setLines((ls) => ls.map((x) => x.id === l.id ? { ...x, on_at: on ? new Date().toISOString() : null, on_by: on ? me : null, photo_path: on ? x.photo_path : null } : x));
-    if (!on) setReady(null);
+    if (!on && l.phase !== "after") setReady(null);
     start(async () => {
       const r = await setLine(l.id, on);
       if (!r.ok) {
@@ -127,15 +134,18 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
     const fd = new FormData(form);
     const label = String(fd.get("label") ?? "").trim();
     if (!label) return;
-    const qty = Number(fd.get("qty")) || 1;
-    const isCritical = fd.get("critical") === "on";
+    // A check for after the job is one thing, and always takes its photo.
+    const isAfter = fd.get("phase") === "after";
+    const qty = isAfter ? 1 : Number(fd.get("qty")) || 1;
+    const isCritical = isAfter || fd.get("critical") === "on";
     setErr("");
     start(async () => {
-      const r = await addLine(jobId, { label, qty, critical: isCritical });
+      const r = await addLine(jobId, { label, qty, critical: isCritical, phase: isAfter ? "after" : "load" });
       if (!r.ok) { setErr(r.error); return; }
-      setLines((ls) => [...ls, { id: r.id, label, qty, critical: isCritical, why: null, source: "added", sort: r.sort, on_at: null, on_by: null, photo_path: null }]);
-      setReady(null);
+      setLines((ls) => [...ls, { id: r.id, label, qty, critical: isCritical, why: null, source: "added", phase: isAfter ? "after" : "load", sort: r.sort, on_at: null, on_by: null, photo_path: null }]);
       form.reset();
+      if (isAfter) { setAddingAfter(false); return; }
+      setReady(null);
       setAdding(false);
     });
   }
@@ -168,6 +178,76 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const isReady = Boolean(ready) && s.ready;
   const proven = critical.length > 0 && proof.length === critical.length;
   const viewingUrl = viewing ? photoOf(viewing) : null;
+  const afterProven = after.filter((l) => l.on_at && l.photo_path);
+  // After-the-job checks open once the truck is ready. A shop that doesn't use them never sees the section, except a manager, who can add one.
+  const showAfter = after.length > 0 ? isReady || a.proven > 0 : isReady && manager && writable;
+
+  // One line: a piece to load, or something to prove after the job.
+  const row = (l: JobLine) => {
+    const on = Boolean(l.on_at);
+    const isAfter = l.phase === "after";
+    const photo = photoOf(l);
+    const busy = saving === l.id;
+    // Anyone who can see the job can open a photo; only a paid-up account can load.
+    const canTap = l.critical && on && l.photo_path ? true : writable;
+    return (
+      <li key={l.id} className="flex items-stretch border-b border-line bg-surface last:border-b-0">
+        <button type="button" onClick={() => tap(l)} disabled={!canTap || busy} aria-pressed={on}
+          className={cn("flex min-h-16 min-w-0 flex-1 items-center gap-4 px-4 py-3 text-left transition-colors sm:px-5", canTap && "hover:bg-elevated active:bg-elevated")}>
+          <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+            on ? "border-emerald-400 bg-emerald-400 text-coal" : l.critical ? "border-bone text-bone" : "border-line-2", busy && "animate-pulse")}>
+            {on ? <Check className="h-4 w-4" strokeWidth={3} /> : l.critical ? <Camera className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block text-[16px] leading-snug", on ? "text-ink-dim" : "text-ink")}>
+              {l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}
+            </span>
+            {l.why ? <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Dispatch: {l.why}</span> : null}
+            {busy ? <span className="mt-0.5 block text-[12px] text-bone">Saving the photo…</span>
+              : on ? <span className="mt-0.5 block text-[12px] text-ink-faint">{l.on_by ?? "Someone"}{l.on_at ? `, ${isAfter ? fmtWhen(l.on_at) : when(l.on_at)}` : ""}</span>
+                : l.critical ? <span className="sr-only">{isAfter ? "Take a photo to prove it." : "Take a photo of it to put it on."}</span> : null}
+          </span>
+          {photo ? (
+            // A private, short-lived link: it goes straight to the phone, not through an image resizer.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="" onError={stale} className="h-11 w-11 shrink-0 rounded-md border border-line-2 object-cover" />
+          ) : null}
+          {l.critical && !isAfter ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone", photo && "hidden sm:inline")}>Critical</span> : null}
+        </button>
+        {manager && writable ? (
+          <button type="button" onClick={() => remove(l)} aria-label={`Take ${l.label} off the list`} title="Take it off the list"
+            className="flex w-11 shrink-0 items-center justify-center border-l border-line text-ink-faint transition-colors hover:bg-elevated hover:text-red-400">
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </li>
+    );
+  };
+
+  // The photos, big enough to judge from a phone, with who took each and when.
+  const photoGrid = (shown: JobLine[]) => (
+    <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {shown.map((l) => {
+        const photo = photoOf(l);
+        return (
+          <li key={l.id}>
+            <button type="button" onClick={() => setOpen(l.id)} className="block w-full overflow-hidden rounded-xl border border-line bg-surface text-left transition-colors hover:border-line-2">
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photo} alt={`Photo of ${l.label}`} onError={stale} className="aspect-[4/3] w-full bg-coal object-cover" />
+              ) : (
+                <span className="flex aspect-[4/3] w-full items-center justify-center bg-coal text-[12px] text-ink-faint">Photo on file</span>
+              )}
+              <span className="block px-3 py-2.5">
+                <span className="block truncate text-[13px] text-ink">{l.label}</span>
+                <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -236,45 +316,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
         <ul className="mt-3 overflow-hidden rounded-xl border border-line">
           {ordered.length === 0 ? (
             <li className="bg-surface px-5 py-8 text-center text-[14px] text-ink-dim">Nothing on the list yet.</li>
-          ) : ordered.map((l) => {
-            const on = Boolean(l.on_at);
-            const photo = photoOf(l);
-            const busy = saving === l.id;
-            // Anyone who can see the job can open a photo; only a paid-up account can load.
-            const canTap = l.critical && on && l.photo_path ? true : writable;
-            return (
-              <li key={l.id} className="flex items-stretch border-b border-line bg-surface last:border-b-0">
-                <button type="button" onClick={() => tap(l)} disabled={!canTap || busy} aria-pressed={on}
-                  className={cn("flex min-h-16 min-w-0 flex-1 items-center gap-4 px-4 py-3 text-left transition-colors sm:px-5", canTap && "hover:bg-elevated active:bg-elevated")}>
-                  <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                    on ? "border-emerald-400 bg-emerald-400 text-coal" : l.critical ? "border-bone text-bone" : "border-line-2", busy && "animate-pulse")}>
-                    {on ? <Check className="h-4 w-4" strokeWidth={3} /> : l.critical ? <Camera className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className={cn("block text-[16px] leading-snug", on ? "text-ink-dim" : "text-ink")}>
-                      {l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}
-                    </span>
-                    {l.why ? <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Dispatch: {l.why}</span> : null}
-                    {busy ? <span className="mt-0.5 block text-[12px] text-bone">Saving the photo…</span>
-                      : on ? <span className="mt-0.5 block text-[12px] text-ink-faint">{l.on_by ?? "Someone"}{l.on_at ? `, ${when(l.on_at)}` : ""}</span>
-                        : l.critical ? <span className="sr-only">Take a photo of it to put it on.</span> : null}
-                  </span>
-                  {photo ? (
-                    // A private, short-lived link: it goes straight to the phone, not through an image resizer.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photo} alt="" onError={stale} className="h-11 w-11 shrink-0 rounded-md border border-line-2 object-cover" />
-                  ) : null}
-                  {l.critical ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone", photo && "hidden sm:inline")}>Critical</span> : null}
-                </button>
-                {manager && writable ? (
-                  <button type="button" onClick={() => remove(l)} aria-label={`Take ${l.label} off the list`} title="Take it off the list"
-                    className="flex w-11 shrink-0 items-center justify-center border-l border-line text-ink-faint transition-colors hover:bg-elevated hover:text-red-400">
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
+          ) : ordered.map(row)}
         </ul>
       </section>
 
@@ -285,28 +327,45 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
           <p className="mt-1 text-[13px] text-ink-faint">
             {proof.length} of {critical.length} critical {critical.length === 1 ? "piece" : "pieces"} photographed going on the truck.
           </p>
-          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {proof.map((l) => {
-              const photo = photoOf(l);
-              return (
-                <li key={l.id}>
-                  <button type="button" onClick={() => setOpen(l.id)} className="block w-full overflow-hidden rounded-xl border border-line bg-surface text-left transition-colors hover:border-line-2">
-                    {photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt={`Photo of ${l.label}`} onError={stale} className="aspect-[4/3] w-full bg-coal object-cover" />
-                    ) : (
-                      <span className="flex aspect-[4/3] w-full items-center justify-center bg-coal text-[12px] text-ink-faint">Photo on file</span>
-                    )}
-                    <span className="block px-3 py-2.5">
-                      <span className="block truncate text-[13px] text-ink">{l.label}</span>
-                      <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {photoGrid(proof)}
         </section>
+      ) : null}
+
+      {/* After the job: what the crew proves before anyone goes home */}
+      {showAfter ? (
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[15px] font-medium text-ink">After the job</h2>
+            {writable ? (
+              <button type="button" onClick={() => setAddingAfter((x) => !x)} className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
+                <Plus className="h-4 w-4" /> Add a check
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-faint" role="status">
+            {after.length === 0
+              ? "Nothing to prove after this job. Add a check here, or put it on the job list under The Brain so every job gets it."
+              : a.done
+                ? `All ${a.total === 1 ? "" : `${a.total} `}proven. Last one by ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
+                : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
+          </p>
+
+          {addingAfter ? (
+            <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
+              <input type="hidden" name="phase" value="after" />
+              <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like BOP rams closed for travel" aria-label="Something to prove after the job"
+                className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
+              <button type="submit" className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white">Add</button>
+            </form>
+          ) : null}
+
+          {after.length ? <ul className="mt-3 overflow-hidden rounded-xl border border-line">{after.map(row)}</ul> : null}
+          {afterProven.length ? photoGrid(afterProven) : null}
+        </section>
+      ) : after.length && s.total > 0 ? (
+        <p className="text-[13px] leading-relaxed text-ink-faint">
+          After the job: {after.length} {after.length === 1 ? "thing" : "things"} to prove with a photo. {after.length === 1 ? "It opens" : "They open"} once the truck is ready.
+        </p>
       ) : null}
 
       {s.total > 0 ? (
@@ -325,7 +384,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
               <div className="min-w-0">
                 <div className="truncate text-[16px] text-ink">{viewing.label}{viewing.qty > 1 ? <span className="text-ink-faint"> × {viewing.qty}</span> : null}</div>
-                <div className="mt-0.5 truncate text-[13px] text-ink-dim">On the truck: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
+                <div className="mt-0.5 truncate text-[13px] text-ink-dim">{viewing.phase === "after" ? "After the job" : "On the truck"}: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
               </div>
               <button type="button" onClick={() => setOpen(null)} aria-label="Close the photo"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
@@ -348,7 +407,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
                 </button>
                 <button type="button" onClick={() => { const l = viewing; setOpen(null); toggle(l, false); }}
                   className="h-12 flex-1 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:border-red-500/50 hover:text-red-300 sm:flex-none">
-                  Take it off
+                  {viewing.phase === "after" ? "Throw this photo out" : "Take it off"}
                 </button>
               </div>
             ) : null}

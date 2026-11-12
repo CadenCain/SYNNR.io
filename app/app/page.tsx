@@ -3,8 +3,8 @@ import { Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { jobState } from "@/lib/saas/jobs";
-import { fmtTime as time, fmtDay as day } from "@/lib/saas/format";
+import { afterState, jobState, type Phase } from "@/lib/saas/jobs";
+import { fmtTime as time, fmtDay as day, fmtWhen } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
 export const metadata = { title: { absolute: "SYNNR" } };
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 type Row = {
   id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; created_at: string;
-  synnr_job_lines: { label: string; qty: number; critical: boolean; on_at: string | null; photo_path: string | null }[] | null;
+  synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null }[] | null;
 };
 
 const clock = () => Date.now();
@@ -28,19 +28,22 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   const db = await saasDb();
   const since = new Date(clock() - 14 * 86400e3).toISOString();
   const [{ data }, { count: listCount }] = await Promise.all([
-    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, on_at, photo_path)")
+    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
       .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(80),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
   ]);
-  const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
+  const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
   const loading = jobs.filter((j) => j.status !== "ready");
   const ready = jobs.filter((j) => j.status === "ready");
   const criticalOff = loading.reduce((n, j) => n + j.s.criticalMissing, 0);
+  // After the job: what the trucks that went out still owe a photo of.
+  const usesAfter = jobs.some((j) => j.a.total > 0);
+  const afterOpen = ready.reduce((n, j) => n + j.a.left, 0);
   const manager = company.role !== "member";
   const writable = isWritable(company.subscription_status, company.comped);
 
   const stat = (n: number, label: string, tone = "text-ink") => (
-    <div className="flex items-baseline gap-2.5 px-5 py-5 sm:px-6">
+    <div className="flex items-baseline gap-2.5 bg-[#0b0c0e] px-5 py-5 sm:px-6">
       <span className={`text-[40px] font-light leading-none tracking-[-0.03em] tabular-nums sm:text-[48px] ${tone}`}>{n}</span>
       <span className="text-[13px] leading-tight text-ink-dim">{label}</span>
     </div>
@@ -65,10 +68,11 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
       </div>
 
       {jobs.length ? (
-        <div className="mt-6 grid divide-y divide-line overflow-hidden rounded-2xl border border-line-2 bg-[#0b0c0e] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className={`mt-6 grid gap-px overflow-hidden rounded-2xl border border-line-2 bg-line ${usesAfter ? "grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
           {stat(loading.length, "loading out")}
           {stat(ready.length, "ready", ready.length ? "text-emerald-400" : "text-ink")}
           {stat(criticalOff, "critical pieces still off", criticalOff ? "text-bone" : "text-ink")}
+          {usesAfter ? stat(afterOpen, "to prove after the job", afterOpen ? "text-bone" : "text-ink") : null}
         </div>
       ) : null}
 
@@ -122,6 +126,13 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                     </span>
                     <span className="shrink-0 text-ink-faint">{j.photos ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}, ` : ""}{day(j.created_at)}</span>
                   </div>
+                  {isReady && j.a.total ? (
+                    <div className={`mt-2 border-t border-line pt-2 text-[13px] ${j.a.done ? "text-ink-dim" : "text-bone"}`}>
+                      {j.a.done
+                        ? `After the job: all proven, ${fmtWhen(j.a.last_at)}`
+                        : `After the job: ${j.a.left} of ${j.a.total} still to prove`}
+                    </div>
+                  ) : null}
                 </Link>
               );
             })}

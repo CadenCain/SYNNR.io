@@ -13,8 +13,8 @@ export default async function JobLists({ searchParams }: { searchParams: Promise
   const { company } = await requireCompany();
   const { err } = await searchParams;
   const db = await saasDb();
-  const { data } = await db.from("saas_packages").select("id, name, saas_package_lines(critical)").eq("company_id", company.id).is("unit_id", null).order("name").limit(200);
-  const lists = (data ?? []) as { id: string; name: string; saas_package_lines: { critical: boolean }[] | null }[];
+  const { data } = await db.from("saas_packages").select("id, name, saas_package_lines(critical, phase)").eq("company_id", company.id).is("unit_id", null).order("name").limit(200);
+  const lists = (data ?? []) as { id: string; name: string; saas_package_lines: { critical: boolean; phase: string }[] | null }[];
   const canEdit = company.role !== "member" && isWritable(company.subscription_status, company.comped);
 
   return (
@@ -34,13 +34,15 @@ export default async function JobLists({ searchParams }: { searchParams: Promise
       {lists.length ? (
         <div className="overflow-hidden rounded-xl border border-line">
           {lists.map((l) => {
-            const n = l.saas_package_lines?.length ?? 0;
-            const crit = (l.saas_package_lines ?? []).filter((x) => x.critical).length;
+            const pieces = (l.saas_package_lines ?? []).filter((x) => x.phase !== "after");
+            const after = (l.saas_package_lines?.length ?? 0) - pieces.length;
+            const n = pieces.length;
+            const crit = pieces.filter((x) => x.critical).length;
             return (
               <Link key={l.id} href={`/app/brain/lists/${l.id}`} className="group flex items-center gap-4 border-b border-line bg-surface px-5 py-4 transition-colors last:border-b-0 hover:bg-elevated">
                 <span className="min-w-0 flex-1">
                   <span className="block text-[16px] text-ink">{l.name}</span>
-                  <span className="mt-0.5 block text-[13px] text-ink-dim">{n === 0 ? "Nothing on it yet" : `${n} ${n === 1 ? "piece" : "pieces"}${crit ? `, ${crit} critical` : ""}`}</span>
+                  <span className="mt-0.5 block text-[13px] text-ink-dim">{n === 0 && !after ? "Nothing on it yet" : `${n} ${n === 1 ? "piece" : "pieces"}${crit ? `, ${crit} critical` : ""}${after ? `, ${after} after the job` : ""}`}</span>
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
               </Link>

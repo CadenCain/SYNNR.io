@@ -50,13 +50,16 @@ export async function addListLine(formData: FormData) {
   const { company, db } = await manager();
   const id = clip(formData.get("id"), 40);
   const label = clip(formData.get("label"), 120);
-  if (!label) redirect(back(id, "Say what the piece is."));
+  // A check for after the job is one thing, and always takes a photo.
+  const after = formData.get("phase") === "after";
+  if (!label) redirect(back(id, after ? "Say what the crew proves." : "Say what the piece is."));
   // The list has to be one of this company's job lists, not a truck's kit.
   const { data: list } = await db.from("saas_packages").select("id").eq("id", id).eq("company_id", company.id).is("unit_id", null).maybeSingle();
   if (!list) redirect("/app/brain/lists");
   const { data: last } = await db.from("saas_package_lines").select("sort").eq("package_id", id).eq("company_id", company.id).order("sort", { ascending: false }).limit(1).maybeSingle();
   const { error } = await db.from("saas_package_lines").insert({
-    package_id: id, company_id: company.id, label, qty: clampQty(formData.get("qty")), critical: formData.get("critical") === "on",
+    package_id: id, company_id: company.id, label,
+    ...(after ? { phase: "after", qty: 1, critical: true } : { phase: "load", qty: clampQty(formData.get("qty")), critical: formData.get("critical") === "on" }),
     sort: ((last as { sort: number } | null)?.sort ?? -1) + 1,
   });
   if (error) redirect(back(id, "Couldn't add it. Try again."));
@@ -68,7 +71,7 @@ export async function addListLine(formData: FormData) {
 export async function setLineCritical(formData: FormData) {
   const { company, db } = await manager();
   const id = clip(formData.get("id"), 40);
-  await db.from("saas_package_lines").update({ critical: formData.get("critical") === "1" }).eq("id", clip(formData.get("line"), 40)).eq("package_id", id).eq("company_id", company.id);
+  await db.from("saas_package_lines").update({ critical: formData.get("critical") === "1" }).eq("id", clip(formData.get("line"), 40)).eq("package_id", id).eq("company_id", company.id).eq("phase", "load");
   revalidatePath(back(id));
   redirect(back(id));
 }

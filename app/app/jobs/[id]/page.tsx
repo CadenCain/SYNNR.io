@@ -19,7 +19,7 @@ async function load(id: string) {
   const db = await saasDb();
   const [{ data: job }, { data: lines }] = await Promise.all([
     db.from("synnr_jobs").select(JOB).eq("id", id).eq("company_id", company.id).maybeSingle(),
-    db.from("synnr_job_lines").select("id, label, qty, critical, why, source, sort, on_by, on_at, photo_path").eq("job_id", id).eq("company_id", company.id).order("sort").limit(500),
+    db.from("synnr_job_lines").select("id, label, qty, critical, why, source, phase, sort, on_by, on_at, photo_path").eq("job_id", id).eq("company_id", company.id).order("sort").limit(500),
   ]);
   if (!job) return null;
   return { company, user, job: job as Job, lines: (lines ?? []) as JobLine[] };

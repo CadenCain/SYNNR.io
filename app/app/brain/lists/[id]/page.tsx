@@ -4,7 +4,7 @@ import { ChevronLeft, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { orderLines } from "@/lib/saas/jobs";
+import { afterLines, loadLines, orderLines, type Phase } from "@/lib/saas/jobs";
 import { addListLine, deleteList, removeListLine, renameList, setLineCritical } from "../actions";
 
 export const metadata = { title: "Job list" };
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const field = "h-12 rounded-lg border border-line-2 bg-coal px-3.5 text-[16px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint";
 
-/** One kind of job: the pieces it takes, and which ones stop the job if they're missing. */
+/** One kind of job: the pieces it takes, which ones stop the job if they're missing, and what the crew proves when it's done. */
 export default async function JobList({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ err?: string }> }) {
   const { company } = await requireCompany();
   const { id } = await params;
@@ -21,11 +21,13 @@ export default async function JobList({ params, searchParams }: { params: Promis
   const db = await saasDb();
   const [{ data: list }, { data: lineRows }] = await Promise.all([
     db.from("saas_packages").select("id, name").eq("id", id).eq("company_id", company.id).is("unit_id", null).maybeSingle(),
-    db.from("saas_package_lines").select("id, label, qty, critical, sort").eq("package_id", id).eq("company_id", company.id).order("sort").limit(300),
+    db.from("saas_package_lines").select("id, label, qty, critical, phase, sort").eq("package_id", id).eq("company_id", company.id).order("sort").limit(300),
   ]);
   if (!list) notFound();
   const l = list as { id: string; name: string };
-  const lines = orderLines((lineRows ?? []) as { id: string; label: string; qty: number; critical: boolean; sort: number }[]);
+  const all = (lineRows ?? []) as { id: string; label: string; qty: number; critical: boolean; phase: Phase; sort: number }[];
+  const lines = orderLines(loadLines(all));
+  const after = afterLines(all).sort((a, b) => a.sort - b.sort);
   const canEdit = company.role !== "member" && isWritable(company.subscription_status, company.comped);
 
   return (
@@ -64,15 +66,48 @@ export default async function JobList({ params, searchParams }: { params: Promis
       </ul>
 
       {canEdit ? (
-        <>
+        <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
+          <input type="hidden" name="id" value={l.id} />
+          <input name="label" required maxLength={120} placeholder="A piece, like Free point tool" aria-label="Piece" className={`${field} min-w-0 flex-1`} />
+          <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many" className={`${field} w-20`} />
+          <label className="flex h-12 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
+          <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
+        </form>
+      ) : null}
+
+      {/* After the job: what the crew proves before anyone goes home */}
+      <section className="mt-3 flex flex-col gap-3">
+        <div>
+          <h2 className="text-[17px] font-medium text-ink">After the job</h2>
+          <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">
+            What the crew proves when the job is done, like BOP rams closed for travel or the package washed. Each one takes a photo, so you see it was done without going to look. These don&apos;t hold a truck back from Ready.
+          </p>
+        </div>
+        <ul className="overflow-hidden rounded-xl border border-line">
+          {after.length === 0 ? <li className="bg-surface px-5 py-6 text-[15px] text-ink-dim">Nothing to prove after this job yet.</li> : after.map((x) => (
+            <li key={x.id} className="flex items-center gap-3 border-b border-line bg-surface px-4 py-2.5 last:border-b-0 sm:px-5">
+              <span className="min-w-0 flex-1 text-[16px] text-ink">{x.label}</span>
+              <span className="shrink-0 text-[12px] text-ink-faint">Photo</span>
+              {canEdit ? (
+                <form action={removeListLine}>
+                  <input type="hidden" name="id" value={l.id} /><input type="hidden" name="line" value={x.id} />
+                  <button type="submit" aria-label={`Take ${x.label} off the list`} className="flex h-9 w-9 items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-elevated hover:text-red-400"><X className="h-4 w-4" /></button>
+                </form>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {canEdit ? (
           <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
-            <input type="hidden" name="id" value={l.id} />
-            <input name="label" required maxLength={120} placeholder="A piece, like Free point tool" aria-label="Piece" className={`${field} min-w-0 flex-1`} />
-            <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many" className={`${field} w-20`} />
-            <label className="flex h-12 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
+            <input type="hidden" name="id" value={l.id} /><input type="hidden" name="phase" value="after" />
+            <input name="label" required maxLength={120} placeholder="Something to prove, like BOP rams closed for travel" aria-label="Something to prove after the job" className={`${field} min-w-0 flex-1`} />
             <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
           </form>
+        ) : null}
+      </section>
 
+      {canEdit ? (
+        <>
           <details className="rounded-xl border border-line">
             <summary className="cursor-pointer list-none px-5 py-3.5 text-[14px] text-ink-dim transition-colors hover:text-ink">Rename or delete this list</summary>
             <div className="flex flex-col gap-4 border-t border-line px-5 py-4">

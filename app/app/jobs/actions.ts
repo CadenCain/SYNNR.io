@@ -6,7 +6,7 @@ import { requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
 import { removeJobPhotos, removePhotos } from "@/lib/saas/job-photos";
 import { newShareToken } from "@/lib/saas/job-share";
-import { buildLines, clampQty, matchList, type Callout, type JobDetails } from "@/lib/saas/jobs";
+import { buildLines, clampQty, matchList, type Callout, type JobDetails, type Phase } from "@/lib/saas/jobs";
 
 /**
  * What a crew does to a job: start one, tap pieces on and off, add a piece
@@ -49,7 +49,7 @@ export async function createJob(input: {
   const lists = (listRows ?? []) as { id: string; name: string }[];
   const list = (isId(input.listId) ? lists.find((l) => l.id === input.listId) : null) ?? matchList(lists, jobType);
   const { data: lineRows } = list
-    ? await db.from("saas_package_lines").select("label, qty, critical, sort").eq("company_id", company.id).eq("package_id", list.id).order("sort").limit(300)
+    ? await db.from("saas_package_lines").select("label, qty, critical, phase, sort").eq("company_id", company.id).eq("package_id", list.id).order("sort").limit(300)
     : { data: [] };
 
   const { data: job, error } = await db.from("synnr_jobs").insert({
@@ -60,7 +60,7 @@ export async function createJob(input: {
   if (error || !job) return fail("Couldn't start the job. Try again.");
   const id = (job as { id: string }).id;
 
-  const lines = buildLines({ list: (lineRows ?? []) as { label: string; qty: number; critical: boolean }[], callouts });
+  const lines = buildLines({ list: (lineRows ?? []) as { label: string; qty: number; critical: boolean; phase: Phase }[], callouts });
   if (lines.length) {
     const { error: lineErr } = await db.from("synnr_job_lines").insert(lines.map((l) => ({ ...l, job_id: id, company_id: company.id })));
     // The job still opens; the hand sees an empty list and can add to it.
@@ -94,8 +94,8 @@ export async function setLine(lineId: string, on: boolean): Promise<{ ok: true; 
   return { ok: true, on_at: row.on_at, on_by: row.on_by };
 }
 
-/** Something this job needs that wasn't on the list. */
-export async function addLine(jobId: string, input: { label: string; qty: number; critical: boolean }): Promise<{ ok: true; id: string; sort: number } | Fail> {
+/** Something this job needs that wasn't on the list: a piece to load, or a check to prove after the job. */
+export async function addLine(jobId: string, input: { label: string; qty: number; critical: boolean; phase?: Phase }): Promise<{ ok: true; id: string; sort: number } | Fail> {
   if (!isId(jobId)) return fail("That job isn't there anymore.");
   const got = await requireWritableCompany();
   if (!got.ok) return fail(got.error);
@@ -105,7 +105,9 @@ export async function addLine(jobId: string, input: { label: string; qty: number
   const { data: last } = await db.from("synnr_job_lines").select("sort").eq("job_id", jobId).eq("company_id", got.company.id).order("sort", { ascending: false }).limit(1).maybeSingle();
   const sort = ((last as { sort: number } | null)?.sort ?? -1) + 1;
   const { data, error } = await db.from("synnr_job_lines").insert({
-    job_id: jobId, company_id: got.company.id, label, qty: clampQty(input.qty), critical: Boolean(input.critical), source: "added", sort,
+    job_id: jobId, company_id: got.company.id, label, source: "added", sort,
+    // A check after the job is one thing, and always takes its photo.
+    ...(input.phase === "after" ? { phase: "after", qty: 1, critical: true } : { phase: "load", qty: clampQty(input.qty), critical: Boolean(input.critical) }),
   }).select("id").single();
   if (error || !data) return fail("Couldn't add it. Try again.");
   revalidatePath(`/app/jobs/${jobId}`);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, buildLines, matchList, detailRows, firstName, sharedLines, type JobLine } from "../jobs";
+import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, type JobLine } from "../jobs";
 import { SHARE_TOKEN, newShareToken } from "../job-share";
 
 /**
@@ -32,7 +32,7 @@ describe("the list for a new job", () => {
   });
   it("with no shop list yet, the dispatch's callouts are still the list", () => {
     const lines = buildLines({ list: [], callouts: [{ item: "Small cutters", qty: 0, why: "" }] });
-    expect(lines).toEqual([{ label: "Small cutters", qty: 1, critical: true, why: null, source: "dispatch", sort: 0 }]);
+    expect(lines).toEqual([{ label: "Small cutters", qty: 1, critical: true, why: null, source: "dispatch", phase: "load", sort: 0 }]);
   });
 });
 
@@ -87,7 +87,7 @@ describe("the job facts shown", () => {
 
 describe("the link sent to a customer", () => {
   const line = (over: Partial<JobLine>): JobLine => ({
-    id: "l1", label: "CCL", qty: 1, critical: false, why: null, source: "list", sort: 0, on_by: null, on_at: null, photo_path: null, ...over,
+    id: "l1", label: "CCL", qty: 1, critical: false, why: null, source: "list", phase: "load", sort: 0, on_by: null, on_at: null, photo_path: null, ...over,
   });
   const on = "2026-11-11T12:00:00.000Z";
 
@@ -130,5 +130,69 @@ describe("the link sent to a customer", () => {
     expect(SHARE_TOKEN.test(a)).toBe(true);
     expect(SHARE_TOKEN.test("short")).toBe(false);
     expect(SHARE_TOKEN.test("a".repeat(23) + "/")).toBe(false);
+  });
+});
+
+describe("after the job", () => {
+  const on = "2026-11-12T03:14:00.000Z";
+  const later = "2026-11-12T03:20:00.000Z";
+
+  it("a job list's checks become their own lines: one each, always a photo", () => {
+    const lines = buildLines({
+      list: [
+        { label: "Pressure control", qty: 1, critical: true, phase: "load" },
+        { label: "BOP rams closed for travel", qty: 3, critical: false, phase: "after" },
+        { label: "bop rams closed for travel", qty: 1, critical: false, phase: "after" },
+      ],
+      callouts: [],
+    });
+    expect(lines.map((l) => `${l.phase}:${l.label}:${l.qty}:${l.critical}`)).toEqual([
+      "load:Pressure control:1:true",
+      "after:BOP rams closed for travel:1:true",
+    ]);
+  });
+
+  it("a dispatch callout never lands on a check, even with the same words", () => {
+    const lines = buildLines({
+      list: [{ label: "Lubricator", qty: 1, critical: false, phase: "after" }],
+      callouts: [{ item: "Lubricator", qty: 2, why: "Bring the 3 inch lube" }],
+    });
+    expect(lines.map((l) => `${l.phase}:${l.source}:${l.qty}`)).toEqual(["after:list:1", "load:dispatch:2"]);
+  });
+
+  it("doesn't hold a truck back from READY", () => {
+    const s = jobState([
+      { label: "CCL", qty: 1, critical: false, on_at: on, phase: "load" },
+      { label: "BOP rams closed for travel", qty: 1, critical: true, on_at: null, phase: "after" },
+    ]);
+    expect(s).toMatchObject({ ready: true, on: 1, total: 1, criticalMissing: 0 });
+  });
+
+  it("a job with only checks and nothing to load still can't be READY", () => {
+    expect(jobState([{ label: "Package washed", qty: 1, critical: true, on_at: on, phase: "after" }]).ready).toBe(false);
+  });
+
+  it("counts what's proven, and says who proved the last one and when", () => {
+    const a = afterState([
+      { on_at: on, on_by: "Keegan", phase: "load" },
+      { on_at: on, on_by: "Justin", phase: "after" },
+      { on_at: later, on_by: "Keegan", phase: "after" },
+      { on_at: null, on_by: null, phase: "after" },
+    ]);
+    expect(a).toMatchObject({ total: 3, proven: 2, left: 1, done: false, last_at: later, last_by: "Keegan" });
+  });
+
+  it("is done only when there are checks and every one has its photo", () => {
+    expect(afterState([{ on_at: on, phase: "after" }]).done).toBe(true);
+    expect(afterState([{ on_at: on, phase: "load" }])).toMatchObject({ total: 0, done: false, last_at: null });
+    expect(afterState([]).done).toBe(false);
+  });
+
+  it("never goes out on the customer's link", () => {
+    const out = sharedLines([
+      { id: "a", label: "CCL", qty: 1, critical: false, why: null, source: "list", phase: "load", sort: 0, on_by: "Keegan", on_at: on, photo_path: null },
+      { id: "b", label: "Package washed", qty: 1, critical: true, why: null, source: "list", phase: "after", sort: 1, on_by: "Keegan", on_at: on, photo_path: "co/jobs/j/b.jpg" },
+    ], (l) => `/p/TOKEN/photo/${l.id}`);
+    expect(out.map((l) => l.label)).toEqual(["CCL"]);
   });
 });
