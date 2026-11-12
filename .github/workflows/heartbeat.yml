@@ -1,27 +1,25 @@
-# THE EXTERNAL DEAD-MAN — runs on GitHub's schedulers, not Vercel's.
+# THE OUTSIDE CHECK: runs on GitHub's schedulers, not Vercel's.
 #
-# Chain of watchers, each outside the previous one's blast radius:
-#   1. The sweep emails the operator about its own errors.
-#   2. The Vercel watchdog cron (13:30 UTC) catches a sweep that never ran.
-#   3. THIS catches Vercel itself being down — site unreachable, cron
-#      scheduler dead, or heartbeat stale — from infrastructure Vercel
-#      doesn't own.
+# SYNNR's daily job (app/api/cron/daily, 13:30 UTC) sends managers the
+# morning email about trucks with no after-the-job photo, checks billing, and
+# cleans up demo companies. It logs every run. /api/health answers 200 only
+# when the last run is under 26 hours old and finished clean. This workflow
+# asks that question from infrastructure Vercel doesn't own, so it also
+# catches the site being down or Vercel's scheduler being dead.
 #
-# Notification path: when this job fails, GitHub emails the repo owner
-# (default notification setting for failed scheduled workflows on your own
-# repo). Verify once: github.com → Settings → Notifications → Actions →
-# "Send notifications for failed workflows" is on.
+# When this job fails, GitHub emails the repo owner (the default for failed
+# scheduled workflows on your own repo). Check once: github.com -> Settings ->
+# Notifications -> Actions -> "Send notifications for failed workflows" is on.
 #
-# NOTE: GitHub disables cron workflows on repos with no pushes for 60 days —
-# a real limitation, but this repo ships far more often than that, and
-# GitHub emails a warning before disabling.
+# GitHub turns off scheduled workflows on a repo with no pushes for 60 days,
+# and emails a warning first.
 
 name: alert-pipeline-heartbeat
 
 on:
   schedule:
-    # Twice daily, offset from the 11:30 UTC sweep: 14:00 UTC catches this
-    # morning's run missing; 02:00 UTC catches a site that died overnight.
+    # Twice a day: 14:00 UTC catches this morning's 13:30 run missing;
+    # 02:00 UTC catches a site that died overnight.
     - cron: "0 14 * * *"
     - cron: "0 2 * * *"
   workflow_dispatch: {} # manual "test the pinger" button in the Actions tab
@@ -31,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Sweep heartbeat is fresh and site is up
+      - name: Daily job ran and the site is up
         run: |
           set -euo pipefail
           # Retry transient blips so a single 502 doesn't page anyone;
@@ -46,5 +44,5 @@ jobs:
             echo "attempt $i: HTTP $code — $(cat /tmp/health.json 2>/dev/null || echo 'no body')"
             sleep 30
           done
-          echo "::error::Alert pipeline unhealthy — the daily sweep heartbeat is stale or synnr.io is down. Customers may not be getting expiration warnings. Check Vercel crons and /op/health."
+          echo "::error::SYNNR's daily job hasn't run clean in over a day, or www.synnr.io is down. Managers may not be getting the morning email. Check the Vercel cron for /api/cron/daily and the saas_cron_runs table."
           exit 1

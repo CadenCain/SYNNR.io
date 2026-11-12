@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { saasAdmin } from "@/lib/saas/db";
 
 /**
- * Public health endpoint — the surface the EXTERNAL dead-man pinger watches
+ * Public health endpoint: what the outside pinger watches
  * (.github/workflows/heartbeat.yml). Everything inside Vercel shares Vercel's
- * fate: if their cron scheduler dies, the sweep AND the watchdog die together
- * and neither can say so. This endpoint lets something outside the blast
- * radius ask "did the sweep run?" — it returns 200 only when the last
- * saas-alerts heartbeat is fresh (< 26h) and clean.
+ * fate: if its scheduler dies, the daily job dies with it and can't say so.
+ * This lets something outside ask "did the daily job run?" It returns 200
+ * only when the last "daily" run (app/api/cron/daily: the morning email
+ * about trucks with no after-the-job photo, billing check, demo cleanup) is
+ * under 26 hours old and finished clean.
  *
- * Deliberately public and deliberately vague: status + age only. No company
- * data, no counts, no error details — those live behind /op/health.
+ * Public and vague on purpose: status and age only. No company data, no
+ * counts, no error details.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("saas_cron_runs")
     .select("ran_at, ok")
-    .eq("job", "saas-alerts")
+    .eq("job", "daily")
     .order("ran_at", { ascending: false })
     .limit(1);
   if (error) {
@@ -38,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, reason: "heartbeat_stale", age_hours: Math.round(ageHours) }, { status: 503 });
   }
   if (!run.ok) {
-    return NextResponse.json({ ok: false, reason: "last_sweep_failed" }, { status: 503 });
+    return NextResponse.json({ ok: false, reason: "last_run_failed" }, { status: 503 });
   }
   return NextResponse.json({ ok: true, age_hours: Math.round(ageHours * 10) / 10 });
 }

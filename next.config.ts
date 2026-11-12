@@ -17,20 +17,28 @@ const nextConfig: NextConfig = {
   // Off so headless-Chrome captures of the real UI ship clean.
   devIndicators: false,
   outputFileTracingIncludes: {
-    // New demo companies are seeded from these files, at open and on the daily refresh.
+    // New demo companies are seeded from these files when one is opened.
     "/demo/start": ["./lib/saas/demo-assets/**"],
-    "/api/cron/daily": ["./lib/saas/demo-assets/**"],
   },
-  experimental: {
-    // Phones shrink photos before sending (about 0.5MB), but a server action
-    // carrying an older photo form shouldn't die at the 1MB default. Vercel
-    // caps a request at 4.5MB, so 4MB is the real ceiling.
-    serverActions: { bodySizeLimit: "4mb" },
-  },
-  // public/sw.js (now the one that uninstalls the old offline worker) must
-  // never be cached by the browser or a CDN, or it would take days to reach phones.
   async headers() {
     return [
+      // Every page: don't let another site frame SYNNR, don't guess file
+      // types, don't hand full addresses (a customer's link, a job) to
+      // other sites, and no microphone or location. The camera stays: the
+      // crew's proof photos use it.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+        ],
+      },
+      // A customer's link and a crew invite never belong in a search result.
+      ...["/p/:path*", "/invite/:path*"].map((source) => ({ source, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] })),
+      // public/sw.js (now the one that uninstalls the old offline worker) must
+      // never be cached by the browser or a CDN, or it would take days to reach phones.
       {
         source: "/sw.js",
         headers: [
