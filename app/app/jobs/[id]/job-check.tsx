@@ -34,7 +34,6 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const [err, setErr] = useState("");
   const [adding, setAdding] = useState(false);
   const [addingAfter, setAddingAfter] = useState(false);
-  const [rented, setRented] = useState(false);
   const [, start] = useTransition();
   const [busyReady, setBusyReady] = useState(false);
   // Photos taken on this screen, so they show before the page loads again.
@@ -139,17 +138,12 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
     const isAfter = fd.get("phase") === "after";
     const qty = isAfter ? 1 : Number(fd.get("qty")) || 1;
     const isCritical = isAfter || fd.get("critical") === "on";
-    // Rented for this job: it goes on the list, and it's owed back after.
-    const from = isAfter ? "" : String(fd.get("rented_from") ?? "").trim();
     setErr("");
     start(async () => {
-      const r = await addLine(jobId, { label, qty, critical: isCritical, phase: isAfter ? "after" : "load", rentedFrom: from });
+      const r = await addLine(jobId, { label, qty, critical: isCritical, phase: isAfter ? "after" : "load" });
       if (!r.ok) { setErr(r.error); return; }
-      const made: JobLine = { id: r.id, label, qty, critical: isCritical, why: null, source: "added", phase: isAfter ? "after" : "load", sort: r.sort, on_at: null, on_by: null, photo_path: null, rented_from: from || null };
-      const back = r.back;
-      setLines((ls) => [...ls, made, ...(back ? [{ ...made, id: back.id, sort: back.sort, qty: 1, critical: true, phase: "after" as const }] : [])]);
+      setLines((ls) => [...ls, { id: r.id, label, qty, critical: isCritical, why: null, source: "added", phase: isAfter ? "after" : "load", sort: r.sort, on_at: null, on_by: null, photo_path: null }]);
       form.reset();
-      setRented(false);
       if (isAfter) { setAddingAfter(false); return; }
       setReady(null);
       setAdding(false);
@@ -185,8 +179,8 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const proven = critical.length > 0 && proof.length === critical.length;
   const viewingUrl = viewing ? photoOf(viewing) : null;
   const afterProven = after.filter((l) => l.on_at && l.photo_path);
-  // After-the-job checks open once the truck is ready (a manager sees them sooner, to set the job up). A shop that doesn't use them never sees the section, except a manager, who can add one.
-  const showAfter = after.length > 0 ? isReady || a.proven > 0 || (manager && writable) : isReady && manager && writable;
+  // After-the-job checks open once the truck is ready. A shop that doesn't use them never sees the section, except a manager, who can add one.
+  const showAfter = after.length > 0 ? isReady || a.proven > 0 : isReady && manager && writable;
 
   // One line: a piece to load, or something to prove after the job.
   const row = (l: JobLine) => {
@@ -209,11 +203,6 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
               {l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}
             </span>
             {l.why ? <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Dispatch: {l.why}</span> : null}
-            {l.rented_from ? (
-              <span className={cn("mt-0.5 block text-[13px] leading-snug", isAfter && !on ? "text-bone" : "text-ink-dim")}>
-                Rented from {l.rented_from}. {isAfter ? (on ? "Back." : "A photo of it back in the yard, or of the return ticket.") : "It has to come back."}
-              </span>
-            ) : null}
             {busy ? <span className="mt-0.5 block text-[12px] text-bone">Saving the photo…</span>
               : on ? <span className="mt-0.5 block text-[12px] text-ink-faint">{l.on_by ?? "Someone"}{l.on_at ? `, ${isAfter ? fmtWhen(l.on_at) : when(l.on_at)}` : ""}</span>
                 : l.critical ? <span className="sr-only">{isAfter ? "Take a photo to prove it." : "Take a photo of it to put it on."}</span> : null}
@@ -314,17 +303,12 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
         ) : null}
 
         {adding ? (
-          <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:flex-wrap sm:items-center">
+          <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
             <input name="label" required maxLength={120} autoFocus placeholder="What is it?" aria-label="What is it?"
               className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
             <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many"
               className="h-11 w-20 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none focus:border-ink-faint" />
             <label className="flex h-11 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
-            <label className="flex h-11 items-center gap-2 text-[14px] text-ink-dim"><input type="checkbox" checked={rented} onChange={(e) => setRented(e.target.checked)} className="h-5 w-5 accent-bone" /> Rented</label>
-            {rented ? (
-              <input name="rented_from" required maxLength={80} placeholder="Who it's rented from" aria-label="Who it's rented from"
-                className="h-11 min-w-0 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint sm:w-48" />
-            ) : null}
             <button type="submit" className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white">Add</button>
           </form>
         ) : null}
@@ -400,7 +384,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
               <div className="min-w-0">
                 <div className="truncate text-[16px] text-ink">{viewing.label}{viewing.qty > 1 ? <span className="text-ink-faint"> × {viewing.qty}</span> : null}</div>
-                <div className="mt-0.5 truncate text-[13px] text-ink-dim">{viewing.phase === "after" ? (viewing.rented_from ? `Back from the job, rented from ${viewing.rented_from}` : "After the job") : "On the truck"}: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
+                <div className="mt-0.5 truncate text-[13px] text-ink-dim">{viewing.phase === "after" ? "After the job" : "On the truck"}: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
               </div>
               <button type="button" onClick={() => setOpen(null)} aria-label="Close the photo"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-dim transition-colors hover:bg-elevated hover:text-ink">

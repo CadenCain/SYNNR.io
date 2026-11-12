@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterState, daysOut, daysOutText, jobState, type Phase } from "@/lib/saas/jobs";
+import { afterState, jobState, type Phase } from "@/lib/saas/jobs";
 import { fmtTime as time, fmtDay as day, fmtWhen } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
@@ -14,9 +14,6 @@ type Row = {
   id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; created_at: string;
   synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null }[] | null;
 };
-
-/** A rented piece with no photo of it back, and the job it went out on. */
-type Rented = { id: string; label: string; rented_from: string; job_id: string; synnr_jobs: { truck: string | null; job_type: string; ready_at: string | null; created_at: string } | null };
 
 const clock = () => Date.now();
 
@@ -30,20 +27,11 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   const { welcome, joined } = await searchParams;
   const db = await saasDb();
   const since = new Date(clock() - 14 * 86400e3).toISOString();
-  const now = clock();
-  const [{ data }, { count: listCount }, { data: rentedRows }] = await Promise.all([
+  const [{ data }, { count: listCount }] = await Promise.all([
     db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
       .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(80),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
-    // Rented gear with no photo of it back. No cutoff: a job drops off this screen after two weeks, a rental bill doesn't.
-    db.from("synnr_job_lines").select("id, label, rented_from, job_id, synnr_jobs(truck, job_type, ready_at, created_at)")
-      .eq("company_id", company.id).eq("phase", "after").not("rented_from", "is", null).is("on_at", null).order("created_at").limit(50),
   ]);
-  // Out since the truck was cleared, or since the job was started if it never was. Longest out first.
-  const rented = ((rentedRows ?? []) as unknown as Rented[]).map((r) => {
-    const since = r.synnr_jobs?.ready_at ?? r.synnr_jobs?.created_at ?? null;
-    return { ...r, since, days: daysOut(since, now), job: [r.synnr_jobs?.truck, r.synnr_jobs?.job_type].filter(Boolean).join(", ") };
-  }).sort((x, y) => y.days - x.days);
   const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
   const loading = jobs.filter((j) => j.status !== "ready");
   const ready = jobs.filter((j) => j.status === "ready");
@@ -86,32 +74,6 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
           {stat(criticalOff, "critical pieces still off", criticalOff ? "text-bone" : "text-ink")}
           {usesAfter ? stat(afterOpen, "to prove after the job", afterOpen ? "text-bone" : "text-ink") : null}
         </div>
-      ) : null}
-
-      {/* Somebody else's iron, billing by the day until there's a photo of it back. */}
-      {rented.length ? (
-        <section className="mt-6 overflow-hidden rounded-2xl border border-line-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 bg-[#0b0c0e] px-5 py-3.5 sm:px-6">
-            <h2 className="text-[15px] font-medium text-ink">Rented gear still out</h2>
-            <span className="text-[13px] text-ink-dim">No photo of it back yet</span>
-          </div>
-          <ul>
-            {rented.map((r) => (
-              <li key={r.id} className="border-t border-line">
-                <Link href={`/app/jobs/${r.job_id}`} className="flex items-center justify-between gap-4 bg-surface px-5 py-3.5 transition-colors hover:bg-elevated sm:px-6">
-                  <span className="min-w-0">
-                    <span className="block truncate text-[16px] text-ink">{r.label}</span>
-                    <span className="mt-0.5 block truncate text-[13px] text-ink-dim">Rented from {r.rented_from}{r.job ? `. ${r.job}` : ""}</span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className={`block text-[16px] tabular-nums ${r.days >= 3 ? "text-red-300" : "text-bone"}`}>{r.days <= 0 ? "Out today" : `Out ${daysOutText(r.days)}`}</span>
-                    <span className="mt-0.5 block text-[12px] text-ink-faint">since {day(r.since)}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : null}
 
       {!jobs.length ? (

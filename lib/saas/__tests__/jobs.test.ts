@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, rentedLines, rentedOut, daysOut, daysOutText, type JobLine } from "../jobs";
+import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, type JobLine } from "../jobs";
 import { SHARE_TOKEN, newShareToken } from "../job-share";
 
 /**
@@ -194,56 +194,5 @@ describe("after the job", () => {
       { id: "b", label: "Package washed", qty: 1, critical: true, why: null, source: "list", phase: "after", sort: 1, on_by: "Keegan", on_at: on, photo_path: "co/jobs/j/b.jpg" },
     ], (l) => `/p/TOKEN/photo/${l.id}`);
     expect(out.map((l) => l.label)).toEqual(["CCL"]);
-  });
-});
-
-describe("rented gear", () => {
-  const out = "2026-11-09T12:00:00.000Z";
-
-  it("makes two lines: the piece on the checklist, and one owed back after the job", () => {
-    const [piece, back] = rentedLines({ label: "  7-1/16 5K flange ", qty: 2, critical: false, from: " Vendor Rentals ", sort: 4 });
-    expect(piece).toMatchObject({ label: "7-1/16 5K flange", qty: 2, critical: false, phase: "load", sort: 4, rented_from: "Vendor Rentals" });
-    // Coming back is one thing to prove, and it always takes its photo.
-    expect(back).toMatchObject({ label: "7-1/16 5K flange", qty: 1, critical: true, phase: "after", sort: 5, rented_from: "Vendor Rentals" });
-  });
-
-  it("holds the truck back like any piece, and stays owed after it's ready", () => {
-    const [piece, back] = rentedLines({ label: "Flange", qty: 1, critical: false, from: "Vendor", sort: 0 });
-    expect(jobState([{ ...piece, on_at: null }, { ...back, on_at: null }])).toMatchObject({ total: 1, ready: false });
-    const loaded = [{ ...piece, on_at: out }, { ...back, on_at: null }];
-    expect(jobState(loaded).ready).toBe(true);
-    expect(afterState(loaded)).toMatchObject({ total: 1, left: 1, done: false });
-  });
-
-  it("is still out until there's a photo of it back", () => {
-    const lines = [
-      { label: "Flange", phase: "load" as const, rented_from: "Vendor", on_at: out },
-      { label: "Flange", phase: "after" as const, rented_from: "Vendor", on_at: null },
-      { label: "BOP rams closed for travel", phase: "after" as const, rented_from: null, on_at: null },
-      { label: "Adapter", phase: "after" as const, rented_from: "Vendor", on_at: out },
-    ];
-    // Only the rented piece with no photo: not the piece on the truck, not a plain check, not one that's back.
-    expect(rentedOut(lines).map((l) => `${l.label}:${l.phase}`)).toEqual(["Flange:after"]);
-  });
-
-  it("counts whole days out, never less than none", () => {
-    const t = new Date(out).getTime();
-    expect(daysOut(out, t + 3600e3)).toBe(0);
-    expect(daysOut(out, t + 86400e3)).toBe(1);
-    expect(daysOut(out, t + 4.9 * 86400e3)).toBe(4);
-    expect(daysOut(out, t - 86400e3)).toBe(0);
-    expect(daysOut(null, t)).toBe(0);
-    expect(daysOut("not a date", t)).toBe(0);
-    expect([0, 1, 4].map(daysOutText)).toEqual(["today", "1 day", "4 days"]);
-  });
-
-  it("goes out on the customer's link as a plain piece, with no vendor and no return line", () => {
-    const [piece, back] = rentedLines({ label: "Flange", qty: 1, critical: false, from: "Vendor", sort: 0 });
-    const shared = sharedLines([
-      { ...piece, id: "a", on_by: "Keegan Smith", on_at: out, photo_path: null },
-      { ...back, id: "b", on_by: null, on_at: null, photo_path: null },
-    ], () => null);
-    expect(shared).toHaveLength(1);
-    expect(JSON.stringify(shared)).not.toContain("Vendor");
   });
 });
