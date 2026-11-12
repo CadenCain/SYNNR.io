@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SYNNR",
     short_name: "SYNNR",
-    description: "Ask anything about your company: prices, tickets, trucks, tools, and jobs.",
+    description: "What the job takes, a checklist to load by, photo proof, and READY or NOT READY before the truck rolls.",
     start_url: "/app",
     display: "standalone",
     background_color: "#08090a",

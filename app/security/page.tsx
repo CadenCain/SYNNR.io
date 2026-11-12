@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteNav, SiteFooter } from "../_site/chrome";
 
+const title = "Your data · SYNNR";
 export const metadata: Metadata = {
-  title: "Your data · SYNNR",
-  description: "What SYNNR does with your company's data, in plain words: who can see it, what gets read from a dispatch, where it lives, and how to get it back.",
+  title,
+  openGraph: { title, description: "What SYNNR does with your company's data, in plain words." },
+  description: "What SYNNR does with your company's data, in plain words: who can see it, where the photos are kept, what gets read from a dispatch, and how to get it back.",
   alternates: { canonical: "/security" },
 };
 
@@ -18,12 +20,20 @@ const FACTS: { title: string; body: string }[] = [
     body: "Your job lists and jobs are only ever used to build your checklists. Nothing you load shows up in another company's lists or answers.",
   },
   {
+    title: "Proof photos stay private",
+    body: "The photos your crew takes of critical pieces, and of gear put away after a job, are kept with that job in private storage. Only people logged in to your company can open them, unless your crew sends a customer the link below. They aren't used for anything else.",
+  },
+  {
+    title: "A customer link shows one job, and you can turn it off",
+    body: "If your crew makes a link to send a customer, anyone holding that link can see that one job's list and the photos of what went on the truck, with first names only. What your crew proves after the job isn't on it, and nothing else in your company is behind it. A manager can turn the link off, and it stops working right then.",
+  },
+  {
     title: "A dispatch photo is read, then thrown away",
-    body: "When you send a photo of a dispatch, it goes to our AI provider (Anthropic) to be read, and SYNNR keeps only the job facts: the kind of job, the truck, the sizes, the remarks. The photo itself isn't stored.",
+    body: "Reading a photo of the dispatch is being turned on now; until it is, your crew types the job. When you send one, it goes to our AI provider (Anthropic) to be read, and SYNNR keeps only the job facts: the kind of job, the truck, the customer and the well, the start time, the sizes, the pressure control, and the remarks. The photo itself isn't stored.",
   },
   {
     title: "Names and phone numbers stay out",
-    body: "A dispatch has people on it. SYNNR is told to leave names, phone numbers, and emails out of what it reads, and the job record has nowhere to put them.",
+    body: "A dispatch has people on it. SYNNR is told to leave names, phone numbers, and emails out of what it reads. Remarks are kept as written, so a name somebody put in the remarks stays in them.",
   },
   {
     title: "Everybody has their own login",
@@ -74,7 +84,7 @@ export default function Security() {
             <div className="max-w-2xl text-[16px] leading-[1.65] text-ink-dim">
               <p>
                 Data is stored in the United States with Supabase. The app runs on Vercel. Payments go through Stripe, so SYNNR never sees a card number.
-                Reading a dispatch uses Anthropic&apos;s AI.
+                Reading a dispatch uses Anthropic&apos;s AI. Email goes out through Resend.
               </p>
               <p className="mt-4">
                 The full detail is in the <Link href="/legal/privacy" className="text-ink underline underline-offset-4">Privacy Policy</Link> and the{" "}

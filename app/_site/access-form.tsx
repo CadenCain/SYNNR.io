@@ -35,7 +35,8 @@ export default function AccessForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3">
+    // method and action matter before the script loads: without them a quick tap would put the name and number in the address bar.
+    <form onSubmit={onSubmit} method="post" action="/api/access" className="flex flex-col gap-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-[13px] text-ink-dim">Your name
           <input name="name" required maxLength={120} autoComplete="name" className={field} />

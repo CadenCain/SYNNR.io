@@ -1,5 +1,9 @@
 import { Check, Paperclip } from "lucide-react";
 
+// Everything in this sample is something the app does today: the three
+// fields a hand fills in, the shop's own list for that kind of job (sizes
+// and all, as the shop wrote it), and where the truck stands.
+
 /**
  * The product, drawn as it works: a job goes in, what to take comes out with
  * the critical items first, and the truck reads READY or NOT READY. A sample
@@ -22,10 +26,9 @@ const TAKE: Item[] = [
 ];
 
 const READ: [string, string][] = [
-  ["Job", "Plug and cement"],
-  ["Casing", "5-1/2 in."],
-  ["Bailer", "3-1/2"],
+  ["Kind of job", "Plug and cement, 5-1/2"],
   ["Truck", "WL-07"],
+  ["Your list", "9 pieces, 6 critical"],
 ];
 
 const on = TAKE.filter((t) => t.on).length;
@@ -51,7 +54,7 @@ export default function Console() {
         <div className="flex min-w-0 items-center gap-3 text-[13px]">
           <span className="h-2 w-2 shrink-0 rounded-[1px] bg-bone" />
           <span className="whitespace-nowrap font-medium text-ink">WL-07</span>
-          <span className="truncate text-ink-faint">Plug and cement</span>
+          <span className="truncate text-ink-faint">Plug and cement, 5-1/2</span>
         </div>
         <span className="flex shrink-0 items-center gap-2 rounded-full border border-line-2 px-3 py-1 text-[12px] text-ink-dim">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Loading out
@@ -61,9 +64,9 @@ export default function Console() {
       <div className="grid divide-y divide-line lg:grid-cols-[0.85fr_1.2fr_1.25fr] lg:divide-x lg:divide-y-0">
         <Step n="1" title="The job">
           <p className="synnr-rise mt-5 rounded-xl rounded-tl-sm bg-elevated px-4 py-3 text-[15px] leading-relaxed text-ink" style={{ ["--i" as string]: 0 }}>
-            Plug and cement tomorrow. <span className="whitespace-nowrap">5-1/2</span> casing. Taking <span className="whitespace-nowrap">WL-07</span>.
+            Plug and cement, <span className="whitespace-nowrap">5-1/2</span>. Taking <span className="whitespace-nowrap">WL-07</span>.
           </p>
-          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-faint"><Paperclip className="h-3.5 w-3.5" /> Or a photo of the dispatch</p>
+          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-faint"><Paperclip className="h-3.5 w-3.5" /> A photo of the dispatch instead: being turned on now</p>
           <dl className="mt-6 border-t border-line">
             {READ.map(([k, v], i) => (
               <div key={k} className="synnr-rise flex items-baseline justify-between gap-4 border-b border-line py-2.5 text-[14px]" style={{ ["--i" as string]: i + 2 }}>
@@ -107,12 +110,8 @@ export default function Console() {
                 {t.critical ? <span className="shrink-0 text-[12px] text-bone">Critical</span> : <span className="shrink-0 text-[12px] text-ink-faint">Not on</span>}
               </li>
             ))}
-            <li className="synnr-rise flex items-center justify-between gap-3 border-b border-line py-2.5 text-[14px]" style={{ ["--i" as string]: 16 }}>
-              <span className="min-w-0 truncate text-ink">BOP rams closed for travel</span>
-              <span className="shrink-0 text-[12px] text-ink-faint">Not confirmed</span>
-            </li>
           </ul>
-          <p className="mt-auto pt-5 text-[12px] leading-relaxed text-ink-faint">When it&apos;s all on, the truck reads READY, with who loaded it and when.</p>
+          <p className="mt-auto pt-5 text-[12px] leading-relaxed text-ink-faint">When it&apos;s all on, the truck reads READY, with who loaded it, when, and a photo of each critical piece.</p>
         </Step>
       </div>
     </div>

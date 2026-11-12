@@ -55,7 +55,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
     <div className="saas flex min-h-dvh flex-col bg-coal text-ink antialiased">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-5 md:px-8">
         <Link href="/" aria-label="SYNNR home"><Wordmark /></Link>
-        <span className="truncate text-[13px] text-ink-faint">Load-out proof</span>
+        <span className="truncate text-[13px] text-ink-faint">What&apos;s on the truck</span>
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 md:px-8">

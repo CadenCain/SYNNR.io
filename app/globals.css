@@ -20,8 +20,8 @@
   --color-elevated:  #15171a;
   --color-ink:       #ededef;
   --color-ink-dim:   #a1a4aa;
-  /* 4.7:1 on the ground: timestamps, hints, labels. */
-  --color-ink-faint: #71757d;
+  /* Timestamps, hints, labels. 5.0:1 on the ground, 4.8 on a panel, 4.5 on a raised panel. */
+  --color-ink-faint: #7c8088;
   --color-line:      #1d1f23;
   --color-line-2:    #2a2d32;
   --color-bone:      #ff5a1f;

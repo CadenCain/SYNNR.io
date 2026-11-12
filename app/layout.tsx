@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { SiteAnalytics } from "@/components/site-analytics";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -29,14 +29,13 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "SYNNR is an operations AI for wireline. Send it the dispatch or say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
+    "SYNNR is an operations AI for wireline. Say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by with photo proof, and a plain READY or NOT READY before the truck rolls. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
     title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
       "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
-    url: "https://www.synnr.io",
   },
   twitter: {
     card: "summary_large_image",
@@ -70,7 +69,7 @@ export default function RootLayout({
           }}
         />
         {children}
-        <Analytics />
+        <SiteAnalytics />
       </body>
     </html>
   );

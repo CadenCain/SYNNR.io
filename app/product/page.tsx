@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteNav, SiteFooter } from "../_site/chrome";
-import { BoardShot, DispatchShot, JobShot, ListShot, ReadShot } from "../_site/shots";
+import { AfterShot, BoardShot, DispatchShot, JobShot, ListShot, ReadShot } from "../_site/shots";
 
 export const metadata: Metadata = {
   title: "How SYNNR works",
-  description: "From the dispatch to a truck that reads READY: your shop's job lists, the dispatch you already get, a checklist the crew taps, and a board the manager can see.",
+  openGraph: { title: "How SYNNR works", description: "From the dispatch to a truck that reads READY, with photo proof, and what the crew proves after the job." },
+  description: "From the dispatch to a truck that reads READY, with photo proof: your shop's job lists, a checklist the crew taps, a board the manager can see, and what the crew proves after the job.",
   alternates: { canonical: "/product" },
 };
 
@@ -36,37 +37,45 @@ export default function Product() {
           <div className={`${wrap} pb-16 pt-14 md:pb-24 md:pt-24`}>
             <p className="text-[13px] text-ink-dim">How it works</p>
             <h1 className="mt-5 max-w-4xl text-[clamp(38px,6.4vw,72px)] font-semibold leading-[1] tracking-[-0.045em] text-ink">
-              From the dispatch to a truck that reads ready.
+              From the dispatch to a truck that reads READY.
             </h1>
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
-              SYNNR sits between the dispatch you already get and the truck leaving the yard. Five steps, and the crew only touches two of them.
+              SYNNR sits between the dispatch you already get and the gear being put away after the job. Six steps.
             </p>
           </div>
         </section>
 
         <Step n={1} title="It starts with what your shop takes." visual={<ListShot />}>
           <p>For each kind of job you run, SYNNR holds your list: what goes on the truck, and which pieces stop the job if they&apos;re forgotten.</p>
-          <p>It&apos;s your list in your words, not ours. We sit down with you and load them, and a manager can change them any time.</p>
+          <p>They&apos;re your lists in your words, not ours. We sit down with you and load them, and a manager can change them any time.</p>
         </Step>
 
         <Step n={2} title="A job comes in." flip visual={<div className="grid gap-4 sm:grid-cols-2"><DispatchShot /><ReadShot /></div>}>
-          <p>Send a photo or a screenshot of the dispatch you already get, or just type the job. SYNNR reads what kind of job it is, the truck, the sizes, and the remarks.</p>
-          <p>If the dispatch says to bring something, that goes to the top of the list as critical, with the dispatch&apos;s own words next to it.</p>
-          <p>It leaves names and phone numbers out, and the photo isn&apos;t kept.</p>
+          <p>Type the kind of job and the truck, and put in what the dispatch says about the hole. SYNNR pulls your shop&apos;s list for that kind of job.</p>
+          <p>If the dispatch says to bring something, add it to the job as critical and it goes to the top of the list.</p>
+          <p className="text-[14px] text-ink-faint">Being turned on now: send a photo or a screenshot of the dispatch instead of typing, and SYNNR reads it for you. It leaves names and phone numbers out, and the photo isn&apos;t kept.</p>
         </Step>
 
         <Step n={3} title="The crew loads by the list." visual={<JobShot />}>
           <p>Every piece is one big row. Tap it when it&apos;s on the truck. What stops the job is at the top.</p>
+          <p>A critical piece only goes on with a photo of it. Tap it and the camera opens, so the photo is the tap.</p>
           <p>It works on a phone, with one hand, and it shows who put each piece on and when.</p>
         </Step>
 
         <Step n={4} title="Ready, or not." flip visual={<JobShot ready />}>
           <p>The truck reads NOT READY, and says exactly what&apos;s missing, until every piece is tapped and someone calls it ready.</p>
           <p>Nobody can call it ready early. If a piece comes back off, or one gets added, it goes back to NOT READY.</p>
+          <p>The photos stay with the job. One link sends the list and the photos to the customer, with no login.</p>
         </Step>
 
         <Step n={5} title="The manager sees every truck." wide visual={<BoardShot />}>
           <p>One screen: every job, how much is loaded, and how many critical pieces are still off. No walking the yard, no calling around at 5 AM.</p>
+        </Step>
+
+        <Step n={6} title="After the job, the crew proves it was put away right." visual={<AfterShot />}>
+          <p>A job list also says what gets proven when the job is done: rams closed for travel, the package washed, whatever your shop keeps having to check.</p>
+          <p>Each one takes a photo, with who took it and when. The manager sees it on the same board, and a truck still missing a photo the next morning is in his email.</p>
+          <p>Nobody drives back up to the yard to look.</p>
         </Step>
 
         <section className="border-t border-line">

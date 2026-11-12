@@ -14,9 +14,10 @@ const EXAMPLES = [
 ];
 
 /**
- * The Ask screen: one bar. Type or talk (the phone keyboard's mic), add a
- * photo or a file, and SYNNR answers from what it knows about the company.
- * Until its brain is loaded it says so plainly instead of guessing.
+ * The Ask screen: one bar. Asking isn't built yet, and the screen says so
+ * up front and again when someone asks, with the way to what does work
+ * today (a job). It never tells anyone to load something there's no way to
+ * load.
  */
 export default function Ask({ firstName, companyName }: { firstName: string; companyName: string }) {
   const [q, setQ] = useState("");
@@ -47,7 +48,7 @@ export default function Ask({ firstName, companyName }: { firstName: string; com
     const you: Turn = { id: ++seq.current, who: "you", text, file: file?.name ?? null };
     const reply: Turn = {
       id: ++seq.current, who: "synnr",
-      text: `I'm not taught ${companyName} yet, so I won't guess. Load my brain first: the price book, your MSAs, procedures, job lists, trucks and tools. Then ask me again.`,
+      text: `I can't answer questions about ${companyName} yet. That part is being built, and I won't guess. What works today: start a job, and I build its list from your shop's job lists, keep the photo proof, and show your manager what's still owed after the job.`,
     };
     setTurns((t) => [...t, you, reply]);
     setQ(""); setFile(null);
@@ -98,8 +99,8 @@ export default function Ask({ firstName, companyName }: { firstName: string; com
                 <span aria-hidden className="mt-2 h-2 w-2 shrink-0 rounded-[1px] bg-bone" />
                 <div className="min-w-0 text-[15px] leading-7 text-ink">
                   <p>{t.text}</p>
-                  <Link href="/app/brain" className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-ink-dim underline-offset-4 hover:text-ink hover:underline">
-                    Open the Brain <ArrowRight className="h-3.5 w-3.5" />
+                  <Link href="/app/jobs/new" className="mt-2 inline-flex min-h-9 items-center gap-1 text-[13px] font-medium text-ink-dim underline-offset-4 hover:text-ink hover:underline">
+                    Start a job <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </div>
@@ -120,9 +121,12 @@ export default function Ask({ firstName, companyName }: { firstName: string; com
         <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink md:text-[34px]">
           What do you need{firstName ? `, ${firstName}` : ""}?
         </h1>
-        <p className="mt-2 text-[15px] text-ink-dim">Ask anything about {companyName}. Prices, tickets, trucks, tools, jobs.</p>
+        <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-ink-dim">
+          Asking is being built, so it can&apos;t answer yet. Today SYNNR runs your jobs: the list, the photo proof, and what&apos;s still owed after.
+        </p>
         <div className="mt-8">{bar}</div>
-        <div className="mt-8 border-t border-line">
+        <p className="mt-8 text-[13px] text-ink-faint">What you&apos;ll be able to ask</p>
+        <div className="mt-2 border-t border-line">
           {EXAMPLES.map((ex) => (
             <button key={ex} type="button" onClick={() => { setQ(ex); area.current?.focus(); }}
               className="group flex w-full items-center justify-between gap-4 border-b border-line py-3.5 text-left text-[14px] text-ink-dim transition-colors hover:text-ink">
