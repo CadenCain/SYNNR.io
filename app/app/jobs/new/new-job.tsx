@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, X } from "lucide-react";
 import { shrinkPhoto } from "@/lib/shrink-photo";
-import type { Callout, JobDetails } from "@/lib/saas/jobs";
+import { matchList, type Callout, type JobDetails } from "@/lib/saas/jobs";
 import { createJob } from "../actions";
 
 type Read = {
@@ -35,8 +35,8 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
   const [readNote, setReadNote] = useState("");
   const photo = useRef<HTMLInputElement>(null);
 
-  const list = lists.find((l) => l.name.trim().toLowerCase() === jobType.trim().toLowerCase())
-    ?? (jobType.trim().length >= 4 ? lists.find((l) => jobType.toLowerCase().includes(l.name.toLowerCase()) || l.name.toLowerCase().includes(jobType.trim().toLowerCase())) : undefined);
+  // The same rule the server uses, on the same lists in the same order: the list named here is the one the job gets.
+  const list = matchList(lists, jobType);
 
   async function read(body: FormData) {
     setReading(true); setErr(""); setReadNote("");
@@ -72,9 +72,14 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
     if (saving) return;
     if (!jobType.trim()) { setErr("Say what kind of job it is."); return; }
     setSaving(true); setErr("");
-    const r = await createJob({ jobType, truck, remarks, details, callouts, source, listId: list?.id ?? null });
-    if (!r.ok) { setErr(r.error); setSaving(false); return; }
-    router.push(`/app/jobs/${r.id}`);
+    try {
+      const r = await createJob({ jobType, truck, remarks, details, callouts, source, listId: list?.id ?? null });
+      if (!r.ok) { setErr(r.error); setSaving(false); return; }
+      router.push(`/app/jobs/${r.id}`);
+    } catch {
+      setErr("That didn't send. Check your signal and try again.");
+      setSaving(false);
+    }
   }
 
   const facts: [string, string][] = details

@@ -200,15 +200,18 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
   const members = ((memberData ?? []) as { user_id: string; role: string; created_at: string }[])
     .sort((a, b) => (order[a.role] ?? 3) - (order[b.role] ?? 3));
 
-  // Names, emails, and last sign-in come from the auth accounts.
+  // Names, emails, and last sign-in come from the auth accounts. A hand sees
+  // who's on the crew by name; login emails and sign-in times are for managers
+  // (and each person's own).
   const info = new Map<string, { name?: string; email?: string; lastIn?: string | null }>();
   if (admin) {
     await Promise.all(members.slice(0, 200).map(async (m) => {
       const { data } = await admin.auth.admin.getUserById(m.user_id);
+      const mine = manager || m.user_id === user.id;
       info.set(m.user_id, {
-        name: (data?.user?.user_metadata?.full_name as string | undefined)?.trim(),
-        email: data?.user?.email,
-        lastIn: data?.user?.last_sign_in_at ?? null,
+        name: (data?.user?.user_metadata?.full_name as string | undefined)?.trim() || (mine ? undefined : data?.user?.email?.split("@")[0]),
+        email: mine ? data?.user?.email : undefined,
+        lastIn: mine ? data?.user?.last_sign_in_at ?? null : undefined,
       });
     }));
   }
@@ -274,8 +277,12 @@ export default async function TeamSettings({ searchParams }: { searchParams: Pro
               <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
                   <span className="block text-[14px] font-medium text-ink">{i.name ?? "No name yet"}{me ? " (you)" : ""}</span>
-                  <span className="block break-all text-sm text-ink-dim">{i.email ?? ""}</span>
-                  <span className="block text-[13px] text-ink-faint">{lastInText(i.lastIn)}</span>
+                  {manager || me ? (
+                    <>
+                      <span className="block break-all text-sm text-ink-dim">{i.email ?? ""}</span>
+                      <span className="block text-[13px] text-ink-faint">{lastInText(i.lastIn)}</span>
+                    </>
+                  ) : null}
                 </span>
                 <span className="shrink-0 rounded-md border border-line px-2.5 py-0.5 text-xs text-ink-dim">{ROLE_LABEL[m.role] ?? m.role}</span>
               </div>

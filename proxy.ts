@@ -12,16 +12,18 @@ export async function proxy(request: NextRequest) {
   // Referral attribution: a partner link (?ref=cody) can land ANYWHERE on the
   // site — persist it 30 days so it survives browsing until signup. First
   // touch wins (don't let a later plain visit overwrite the referrer).
+  // Set on whatever response goes out: a session refresh below makes a new one.
   const ref = request.nextUrl.searchParams.get("ref");
-  if (ref && !request.cookies.get("synnr_ref")) {
-    response.cookies.set("synnr_ref", ref.slice(0, 60), {
-      maxAge: 60 * 60 * 24 * 30, path: "/", sameSite: "lax",
-    });
-  }
+  const keepRef = () => {
+    if (ref && !request.cookies.get("synnr_ref")) {
+      response.cookies.set("synnr_ref", ref.slice(0, 60), { maxAge: 60 * 60 * 24 * 30, path: "/", sameSite: "lax" });
+    }
+    return response;
+  };
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return response;
+  if (!url || !key) return keepRef();
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -36,7 +38,7 @@ export async function proxy(request: NextRequest) {
 
   // Touch the session so expired tokens refresh into the response cookies.
   await supabase.auth.getUser();
-  return response;
+  return keepRef();
 }
 
 export const config = {

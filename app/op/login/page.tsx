@@ -42,7 +42,7 @@ export default async function OpLoginPage({ searchParams }: { searchParams: Prom
     <div className="op-login-wrap">
       <div className="op-login-card">
         <h1>SYNNR operator sign-in</h1>
-        <p>This is not the shop login. SYNNR shops don&apos;t log in — we run it for them.</p>
+        <p>This is not the shop login.</p>
 
         {sent ? (
           <p className="op-login-ok">

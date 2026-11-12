@@ -2,18 +2,23 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
-import { PHOTO_TYPES, PROOFS, photoPath, removePhotos, signPhotos } from "@/lib/saas/job-photos";
+import { PHOTO_TYPES, PROOFS, isPhoto, photoPath, removePhotos, signPhotos } from "@/lib/saas/job-photos";
 
 /**
  * Put a piece on the truck with its proof: the photo is saved, then the line
  * is marked on with who and when, in that order. The database only lets the
  * server attach a photo, and won't let a critical piece go on without one,
  * so this route is the only way a critical piece ever reads as loaded.
+ * The file has to really be a photo (its first bytes are checked, not the
+ * label the phone sent), and each one is saved under its own name, so a
+ * retake that fails never costs the photo it was replacing.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 4 * 1024 * 1024;
+/** The demo is open to anyone, so it keeps a handful of photos, not a drive full. */
+const DEMO_PHOTOS = 40;
 
 export async function POST(req: Request) {
   const no = (error: string, status: number) => NextResponse.json({ ok: false, error }, { status });
@@ -36,11 +41,19 @@ export async function POST(req: Request) {
   const line = found as { id: string; job_id: string; photo_path: string | null } | null;
   if (!line) return no("That line isn't there anymore.", 404);
 
+  const bytes = Buffer.from(await photo.arrayBuffer());
+  if (!isPhoto(bytes, photo.type)) return no("That isn't a photo. Use the camera and take it again.", 415);
+
   const admin = saasAdmin();
   if (!admin) return no("Photos aren't set up. Call or text 432-250-0715.", 500);
 
-  const path = photoPath(company.id, line.job_id, line.id, photo.type);
-  const { error: upErr } = await admin.storage.from(PROOFS).upload(path, Buffer.from(await photo.arrayBuffer()), { contentType: photo.type, upsert: true });
+  if (company.is_demo) {
+    const { count } = await admin.from("synnr_job_lines").select("id", { count: "exact", head: true }).eq("company_id", company.id).not("photo_path", "is", null);
+    if ((count ?? 0) >= DEMO_PHOTOS && !line.photo_path) return no("The demo company keeps 40 photos. Take one off, or ask for your own account.", 429);
+  }
+
+  const path = photoPath(company.id, line.job_id, line.id, photo.type, Date.now());
+  const { error: upErr } = await admin.storage.from(PROOFS).upload(path, bytes, { contentType: photo.type, upsert: false });
   if (upErr) {
     console.error("[line-photo] upload:", upErr.message);
     return no("The photo didn't save. Check your signal and try again.", 502);
@@ -55,7 +68,7 @@ export async function POST(req: Request) {
     await removePhotos(admin, [path]);
     return no("That didn't save. Try again.", 500);
   }
-  // A retake in another format leaves the old file behind: clear it.
+  // The line points at the new photo now: the one it replaced can go.
   if (line.photo_path && line.photo_path !== path) await removePhotos(admin, [line.photo_path]);
 
   revalidatePath(`/app/jobs/${line.job_id}`);

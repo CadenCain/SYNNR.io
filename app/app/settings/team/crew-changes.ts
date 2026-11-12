@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isWritable } from "@/lib/saas/entitlements";
+import { isAllowedOperatorEmail } from "@/lib/op/auth";
 
 /**
  * What has to happen around taking someone off the crew, and fixing a
@@ -67,6 +68,7 @@ export async function changeLoginEmail(
 ): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
   const email = raw.trim().toLowerCase().slice(0, 254);
   if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+  if (isAllowedOperatorEmail(email)) return { ok: false, error: "That email can't be used for a crew login." };
   const { data: mem } = await admin.from("saas_memberships").select("company_id")
     .eq("user_id", userId).eq("status", "active");
   const crews = ((mem ?? []) as { company_id: string }[]).map((m) => m.company_id);

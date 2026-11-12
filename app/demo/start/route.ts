@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/saas/notify";
 import { fmtWhen } from "@/lib/saas/format";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { seedDemoCompany } from "@/lib/saas/demo-seed";
+import { fromThisSite } from "@/lib/saas/same-site";
 
 /**
  * One click → your own private demo yard.
@@ -22,6 +23,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   // The demo page is gone (nothing links here for now), so a failure just lands on home.
   const back = (q: string) => { console.error("[demo] start refused:", q); return NextResponse.redirect(new URL("/", req.url), 303); };
+  // Another site's page can't post here to swap a visitor's login for a demo one.
+  if (!fromThisSite(req)) return back("err=elsewhere");
   const admin = saasAdmin();
   const sb = await getServerSupabase();
   if (!admin || !sb) return back("err=unavailable");

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { safeNext } from "@/lib/saas/safe-next";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { fromThisSite } from "@/lib/saas/same-site";
 
 /**
  * Emailed links with a token the server checks itself (password reset, from
@@ -15,7 +16,12 @@ import { getServerSupabase } from "@/lib/supabase/server";
  */
 export const dynamic = "force-dynamic";
 
-const TYPES: EmailOtpType[] = ["recovery", "magiclink", "email", "signup", "invite", "email_change"];
+// Password reset is the link SYNNR sends here; a sign-in link is allowed for
+// the operator's login. Sign-up, invite and email-change links aren't sent
+// by SYNNR, so they're refused. The button only works when it's pressed on
+// this site's own page (see POST), so another site can't use this route to
+// sign a visitor into a login it picked.
+const TYPES: EmailOtpType[] = ["recovery", "magiclink"];
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 export async function GET(req: Request) {
@@ -46,7 +52,7 @@ export async function POST(req: Request) {
   const tokenHash = String(fd?.get("token_hash") ?? "");
   const type = String(fd?.get("type") ?? "") as EmailOtpType;
   const next = safeNext(fd?.get("next"), "/app");
-  if (tokenHash && TYPES.includes(type)) {
+  if (tokenHash && TYPES.includes(type) && fromThisSite(req)) {
     const supabase = await getServerSupabase();
     if (supabase) {
       const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { requireBillableCompany } from "@/lib/saas/auth";
 import { saasDb } from "@/lib/saas/db";
-import { clampQty } from "@/lib/saas/jobs";
+import { clampQty, MAX_LINES } from "@/lib/saas/jobs";
 
 /**
  * The shop's job lists: what it takes on each kind of job, and which pieces
@@ -40,6 +40,9 @@ export async function renameList(formData: FormData) {
   const id = clip(formData.get("id"), 40);
   const name = clip(formData.get("name"), 80);
   if (!name) redirect(back(id, "Give it a name."));
+  // Two lists with one name: a job could only ever find the first.
+  const { data: same } = await db.from("saas_packages").select("id").eq("company_id", company.id).is("unit_id", null).neq("id", id).ilike("name", name.replace(/[%_\\]/g, "\\$&")).limit(1).maybeSingle();
+  if (same) redirect(back(id, "Another list already has that name."));
   const { error } = await db.from("saas_packages").update({ name }).eq("id", id).eq("company_id", company.id).is("unit_id", null);
   if (error) redirect(back(id, "Couldn't rename it. Try again."));
   revalidatePath("/app/brain");
@@ -56,6 +59,9 @@ export async function addListLine(formData: FormData) {
   // The list has to be one of this company's job lists, not a truck's kit.
   const { data: list } = await db.from("saas_packages").select("id").eq("id", id).eq("company_id", company.id).is("unit_id", null).maybeSingle();
   if (!list) redirect("/app/brain/lists");
+  // A job is built from the first MAX_LINES lines of its list. Past that, a line would be on the list and never on a job.
+  const { count } = await db.from("saas_package_lines").select("id", { count: "exact", head: true }).eq("package_id", id).eq("company_id", company.id);
+  if ((count ?? 0) >= MAX_LINES) redirect(back(id, `A list holds ${MAX_LINES} lines. Take one off to add another.`));
   const { data: last } = await db.from("saas_package_lines").select("sort").eq("package_id", id).eq("company_id", company.id).order("sort", { ascending: false }).limit(1).maybeSingle();
   const { error } = await db.from("saas_package_lines").insert({
     package_id: id, company_id: company.id, label,

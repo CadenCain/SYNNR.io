@@ -20,8 +20,12 @@ import type { Instrumentation } from "next";
 const lastSent = new Map<string, number>();
 const THROTTLE_MS = 60 * 60 * 1000;
 
-export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
+/** The path without anything after "?", and with a link's token blanked: those are keys, and don't belong in a log or an inbox. */
+const safePath = (p: string) => p.split("?")[0].replace(/^\/(p|invite)\/[^/]+/, "/$1/[link]");
+
+export const onRequestError: Instrumentation.onRequestError = async (err, req, context) => {
   const e = err as { message?: string; stack?: string; digest?: string };
+  const request = { method: req.method, path: safePath(req.path) };
   const signature = `${e.digest ?? ""}|${(e.message ?? "unknown").slice(0, 120)}|${request.path}`;
 
   console.error("[server-error]", JSON.stringify({
@@ -36,7 +40,7 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
   // Never let the reporter take down the request path it's reporting on.
   try {
     const key = process.env.RESEND_API_KEY;
-    const to = process.env.NOTIFY_EMAIL;
+    const to = process.env.NOTIFY_EMAIL || "cadencain@synnr.io";
     if (!key || !to || process.env.NODE_ENV !== "production") return;
 
     const now = Date.now();
@@ -50,9 +54,9 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({
-        from: process.env.ALERTS_FROM_EMAIL || "RollReady Alerts <alerts@synnr.io>",
+        from: process.env.ALERTS_FROM_EMAIL || "SYNNR <alerts@synnr.io>",
         to: [to],
-        subject: `[SYNNR ops] server error — ${request.method} ${request.path}`,
+        subject: `[SYNNR ops] server error: ${request.method} ${request.path}`,
         html: `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${
           [
             `path:    ${request.method} ${request.path}`,

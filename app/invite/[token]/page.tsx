@@ -7,6 +7,7 @@ import { getServerSupabase } from "@/lib/supabase/server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getSaasUser } from "@/lib/saas/auth";
 import { isDemoUser } from "@/lib/saas/plan";
+import { isAllowedOperatorEmail } from "@/lib/op/auth";
 import { Button } from "@/components/ui/button";
 import JoinForm from "./join-form";
 import { logEventNow } from "@/lib/saas/notify";
@@ -56,8 +57,9 @@ async function joinWithNewLogin(formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim().slice(0, 120);
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!fullName) back("Add your name. It goes on every scan you make.");
+  if (!fullName) back("Add your name. It goes on every piece you load.");
   if (!EMAIL_RE.test(email)) back("That email doesn't look right.");
+  if (isAllowedOperatorEmail(email)) back("That email can't be used for a crew login. Use your own.");
   if (password.length < 8) back("The password needs at least 8 characters.");
 
   const sb = (await getServerSupabase()) as unknown as SupabaseClient | null;

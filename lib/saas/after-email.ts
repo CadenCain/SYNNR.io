@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { afterLines } from "./jobs";
 import { escHtml } from "./html";
 import { fmtWhen } from "./format";
 import { sendEmail } from "./notify";
@@ -12,8 +11,11 @@ import { sendEmail } from "./notify";
  * skips the photo is on the list by name of truck. The photo takes a truck
  * off it. SYNNR doesn't know when a truck is back, so a truck still out on
  * its job shows here too; one cleared in the last half day doesn't.
+ *
+ * It goes by the first time the truck was cleared, which never moves: a
+ * piece tapped off after the job doesn't take the truck out of this email.
  */
-export type OwedJob = { job_id: string; job: string; ready_by: string | null; ready_at: string | null; checks: string[] };
+export type OwedJob = { job_id: string; job: string; ready_by: string | null; out_at: string | null; checks: string[] };
 
 const SITE = "https://www.synnr.io";
 /** A truck cleared in the last half day is still on its job. */
@@ -23,14 +25,14 @@ export const WINDOW_MS = 7 * 86400e3;
 
 /** The email for one company, oldest first. Null when nothing is owed. */
 export function afterEmail(company: string, all: OwedJob[]): { subject: string; html: string } | null {
-  const jobs = all.filter((j) => j.checks.length).sort((a, b) => (a.ready_at ?? "").localeCompare(b.ready_at ?? ""));
+  const jobs = all.filter((j) => j.checks.length).sort((a, b) => (a.out_at ?? "").localeCompare(b.out_at ?? ""));
   if (!jobs.length) return null;
   const subject = jobs.length === 1
     ? `No photo after the job: ${jobs[0].job || "one truck"}`
     : `${jobs.length} trucks with no photo after the job`;
   const rows = jobs.map((j) => `<tr><td style="padding:12px 0;border-top:1px solid #ddd">
 <a href="${SITE}/app/jobs/${escHtml(j.job_id)}" style="color:#111;font-weight:600">${escHtml(j.job || "A job")}</a><br>
-<span style="color:#555">Cleared by ${escHtml(j.ready_by ?? "someone")}, ${escHtml(fmtWhen(j.ready_at, null))}</span><br>
+<span style="color:#555">${j.ready_by ? `Cleared by ${escHtml(j.ready_by)}` : "Cleared"}, ${escHtml(fmtWhen(j.out_at, null))}</span><br>
 No photo: ${j.checks.map(escHtml).join("; ")}
 </td></tr>`).join("");
   const html = `<div style="font:15px/1.55 -apple-system,'Segoe UI',Arial,sans-serif;color:#111;max-width:560px">
@@ -43,21 +45,34 @@ No photo: ${j.checks.map(escHtml).join("; ")}
 }
 
 type Row = {
-  id: string; company_id: string; truck: string | null; job_type: string; ready_by: string | null; ready_at: string | null;
-  synnr_job_lines: { label: string; phase: "load" | "after"; on_at: string | null; sort: number }[] | null;
+  label: string; sort: number; job_id: string; company_id: string;
+  synnr_jobs: { truck: string | null; job_type: string; ready_by: string | null; first_ready_at: string | null } | null;
 };
 
 /** Send the morning note to the managers of every real company that's owed a photo. Returns what happened, for the cron's log. */
 export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise<{ companies: number; sent: number; errors: string[] }> {
   const errors: string[] = [];
-  const { data, error } = await admin.from("synnr_jobs")
-    .select("id, company_id, truck, job_type, ready_by, ready_at, synnr_job_lines(label, phase, on_at, sort)")
-    .eq("status", "ready").gte("ready_at", new Date(now - WINDOW_MS).toISOString()).lte("ready_at", new Date(now - SETTLE_MS).toISOString()).limit(1000);
-  if (error) return { companies: 0, sent: 0, errors: [`jobs: ${error.message}`] };
-  const owed = ((data ?? []) as unknown as Row[]).map((j) => ({
-    company_id: j.company_id, job_id: j.id, job: [j.truck, j.job_type].filter(Boolean).join(", "), ready_by: j.ready_by, ready_at: j.ready_at,
-    checks: afterLines(j.synnr_job_lines ?? []).filter((l) => !l.on_at).sort((a, b) => a.sort - b.sort).map((l) => l.label),
-  })).filter((j) => j.checks.length);
+  // Only what's owed: after-the-job checks with no photo, on trucks first cleared between a week and half a day ago.
+  const { data, error } = await admin.from("synnr_job_lines")
+    .select("label, sort, job_id, company_id, synnr_jobs!inner(truck, job_type, ready_by, first_ready_at)")
+    .eq("phase", "after").is("on_at", null)
+    .gte("synnr_jobs.first_ready_at", new Date(now - WINDOW_MS).toISOString())
+    .lte("synnr_jobs.first_ready_at", new Date(now - SETTLE_MS).toISOString())
+    .order("sort").limit(5000);
+  if (error) return { companies: 0, sent: 0, errors: [`after-the-job checks: ${error.message}`] };
+  const rows = (data ?? []) as unknown as Row[];
+  if (rows.length >= 5000) errors.push("after-the-job email: more than 5,000 checks owed, some trucks were left out");
+
+  const byJob = new Map<string, OwedJob & { company_id: string }>();
+  for (const r of rows) {
+    const j = byJob.get(r.job_id) ?? {
+      company_id: r.company_id, job_id: r.job_id, job: [r.synnr_jobs?.truck, r.synnr_jobs?.job_type].filter(Boolean).join(", "),
+      ready_by: r.synnr_jobs?.ready_by ?? null, out_at: r.synnr_jobs?.first_ready_at ?? null, checks: [],
+    };
+    j.checks.push(r.label);
+    byJob.set(r.job_id, j);
+  }
+  const owed = [...byJob.values()];
   const ids = [...new Set(owed.map((j) => j.company_id))];
   if (!ids.length) return { companies: 0, sent: 0, errors };
 

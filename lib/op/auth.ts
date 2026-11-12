@@ -52,8 +52,14 @@ export async function requireOperator(): Promise<Operator> {
   return op;
 }
 
-/** True if the email is on the allowlist — used by the login page so we don't
- *  trigger a magic-link email for randos. */
+/**
+ * True if the email is on the allowlist. Used by the login page (so a sign-in
+ * link is never emailed to a stranger), and by the two places a login's email
+ * is set without the address being checked first (joining from a crew link,
+ * a manager fixing a hand's email). Those refuse an operator's address:
+ * otherwise anyone holding a crew link could make a login with it and walk
+ * into the console.
+ */
 export function isAllowedOperatorEmail(email: string): boolean {
   return allowedEmails().has(email.trim().toLowerCase());
 }

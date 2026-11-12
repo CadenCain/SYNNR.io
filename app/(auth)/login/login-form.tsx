@@ -40,7 +40,10 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    // method="post" matters before the page's script loads: without it a quick tap
+    // (or a password manager) would send the form as a plain link, with the
+    // email and password in the address bar and the browser's history.
+    <form onSubmit={onSubmit} method="post" className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-ink">Email</span>
         <input
@@ -63,7 +66,7 @@ export default function LoginForm() {
           placeholder="••••••••"
         />
       </label>
-      {err ? <p className="text-sm text-red-400">{err}</p> : null}
+      {err ? <p role="alert" className="text-sm text-red-400">{err}</p> : null}
       <Button type="submit" disabled={busy} className="h-11 w-full md:h-11 md:text-sm">
         {busy ? "Logging in…" : "Log in"}
       </Button>

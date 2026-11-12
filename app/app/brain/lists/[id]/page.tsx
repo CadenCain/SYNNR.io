@@ -4,7 +4,7 @@ import { ChevronLeft, X } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterLines, loadLines, orderLines, type Phase } from "@/lib/saas/jobs";
+import { afterLines, loadLines, MAX_LINES, orderLines, type Phase } from "@/lib/saas/jobs";
 import { addListLine, deleteList, removeListLine, renameList, setLineCritical } from "../actions";
 
 export const metadata = { title: "Job list" };
@@ -21,7 +21,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
   const db = await saasDb();
   const [{ data: list }, { data: lineRows }] = await Promise.all([
     db.from("saas_packages").select("id, name").eq("id", id).eq("company_id", company.id).is("unit_id", null).maybeSingle(),
-    db.from("saas_package_lines").select("id, label, qty, critical, phase, sort").eq("package_id", id).eq("company_id", company.id).order("sort").limit(300),
+    db.from("saas_package_lines").select("id, label, qty, critical, phase, sort").eq("package_id", id).eq("company_id", company.id).order("sort").limit(MAX_LINES),
   ]);
   if (!list) notFound();
   const l = list as { id: string; name: string };

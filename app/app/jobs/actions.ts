@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
-import { requireWritableCompany } from "@/lib/saas/auth";
+import { requireCompany, requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
 import { removeJobPhotos, removePhotos } from "@/lib/saas/job-photos";
 import { newShareToken } from "@/lib/saas/job-share";
-import { buildLines, clampQty, matchList, type Callout, type JobDetails, type Phase } from "@/lib/saas/jobs";
+import { buildLines, clampQty, matchList, MAX_LINES, type Callout, type JobDetails, type Phase } from "@/lib/saas/jobs";
 
 /**
  * What a crew does to a job: start one, tap pieces on and off, add a piece
@@ -44,12 +44,14 @@ export async function createJob(input: {
     .map((c) => ({ item: clip(c?.item, 120), qty: clampQty(c?.qty), why: clip(c?.why, 300) })).filter((c) => c.item);
 
   const db = await saasDb();
-  // The shop's own list for this kind of job: the one picked, or the one with the same name.
-  const { data: listRows } = await db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null).limit(200);
+  // The shop's own list for this kind of job: the one the screen showed, or
+  // the one with the same name. Same lists, same order, same rule as the
+  // screen, so what it said it would use is what gets used.
+  const { data: listRows } = await db.from("saas_packages").select("id, name").eq("company_id", company.id).is("unit_id", null).order("name").limit(200);
   const lists = (listRows ?? []) as { id: string; name: string }[];
   const list = (isId(input.listId) ? lists.find((l) => l.id === input.listId) : null) ?? matchList(lists, jobType);
   const { data: lineRows } = list
-    ? await db.from("saas_package_lines").select("label, qty, critical, phase, sort").eq("company_id", company.id).eq("package_id", list.id).order("sort").limit(300)
+    ? await db.from("saas_package_lines").select("label, qty, critical, phase, sort").eq("company_id", company.id).eq("package_id", list.id).order("sort").limit(MAX_LINES)
     : { data: [] };
 
   const { data: job, error } = await db.from("synnr_jobs").insert({
@@ -60,7 +62,7 @@ export async function createJob(input: {
   if (error || !job) return fail("Couldn't start the job. Try again.");
   const id = (job as { id: string }).id;
 
-  const lines = buildLines({ list: (lineRows ?? []) as { label: string; qty: number; critical: boolean; phase: Phase }[], callouts });
+  const lines = buildLines({ list: (lineRows ?? []) as { label: string; qty: number; critical: boolean; phase: Phase }[], callouts }).slice(0, MAX_LINES);
   if (lines.length) {
     const { error: lineErr } = await db.from("synnr_job_lines").insert(lines.map((l) => ({ ...l, job_id: id, company_id: company.id })));
     // The job still opens; the hand sees an empty list and can add to it.
@@ -102,6 +104,9 @@ export async function addLine(jobId: string, input: { label: string; qty: number
   const label = clip(input.label, 120);
   if (!label) return fail("Say what it is.");
   const db = await saasDb();
+  // Every screen reads this many lines. One more would be a piece nobody can see, holding the truck back.
+  const { count } = await db.from("synnr_job_lines").select("id", { count: "exact", head: true }).eq("job_id", jobId).eq("company_id", got.company.id);
+  if ((count ?? 0) >= MAX_LINES) return fail(`This job's list is full at ${MAX_LINES} lines. Take one off to add another.`);
   const { data: last } = await db.from("synnr_job_lines").select("sort").eq("job_id", jobId).eq("company_id", got.company.id).order("sort", { ascending: false }).limit(1).maybeSingle();
   const sort = ((last as { sort: number } | null)?.sort ?? -1) + 1;
   const { data, error } = await db.from("synnr_job_lines").insert({
@@ -193,11 +198,14 @@ export async function shareJob(jobId: string): Promise<{ ok: true; token: string
   return theirs ? { ok: true, token: theirs } : fail("Couldn't make the link. Try again.");
 }
 
-/** Turn a job's link off. Whoever has it can't open it anymore. Managers only. */
+/**
+ * Turn a job's link off. Whoever has it can't open it anymore. Managers
+ * only, and it works on a paused account too: closing a door is never
+ * something to pay for.
+ */
 export async function unshareJob(jobId: string): Promise<{ ok: true } | Fail> {
   if (!isId(jobId)) return fail("That job isn't there anymore.");
-  const got = await requireWritableCompany();
-  if (!got.ok) return fail(got.error);
+  const got = await requireCompany();
   if (got.company.role === "member") return fail("Only a manager can turn a link off.");
   const db = await saasDb();
   const { data: found } = await db.from("synnr_jobs").select("id").eq("id", jobId).eq("company_id", got.company.id).maybeSingle();

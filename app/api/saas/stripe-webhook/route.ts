@@ -53,9 +53,23 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
-    // 500 so Stripe retries: a database blip must not drop a payment.
-    console.error("[stripe-webhook]", event.type, e instanceof Error ? e.message : e);
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "handler failed" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : "handler failed";
+    console.error("[stripe-webhook]", event.type, msg);
+    // A live subscription that matches no company (one billed by hand from
+    // Stripe's dashboard, say). Retrying can't fix that, and days of failed
+    // retries get the whole endpoint switched off. Tell the operator once,
+    // with what to do, and take the event.
+    if (/^no company matched/.test(msg)) {
+      const { sendEmail } = await import("@/lib/saas/notify");
+      const { escHtml } = await import("@/lib/saas/html");
+      await sendEmail([process.env.NOTIFY_EMAIL || "cadencain@synnr.io"], "[SYNNR ops] Stripe subscription with no company to put it on", `<pre style="font:13px/1.6 monospace;white-space:pre-wrap">${escHtml(
+        `Stripe sent ${event.type} (${event.id}), and ${msg}.\n\n` +
+        "Nothing in SYNNR changed. To link it: put the Stripe customer id on the company (saas_companies.stripe_customer_id), " +
+        "then open the event in Stripe's dashboard and press Resend.")}</pre>`).catch(() => false);
+      return NextResponse.json({ received: true, matched: false });
+    }
+    // Anything else: 500 so Stripe retries. A database blip must not drop a payment.
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
   return NextResponse.json({ received: true });
 }

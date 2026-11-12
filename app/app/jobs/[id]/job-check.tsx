@@ -22,18 +22,47 @@ const when = (iso: string | null) => iso ? fmtTime(iso) : "";
  *
  * Once the truck is ready, the same screen holds what the crew proves after
  * the job (rams closed for travel, the package washed): a photo of each, so
- * the manager sees it was done without driving up to look.
+ * the manager sees it was done without driving up to look. Those stay open
+ * once the truck has gone out, even if a stray tap later takes it back to
+ * NOT READY.
+ *
+ * The server's copy of the job wins whenever a new one arrives (after every
+ * save, and whenever the phone comes back to this screen), so two phones
+ * loading the same truck never disagree for long.
  */
-export default function JobCheck({ jobId, initial, photos, initialReady, me, manager, writable, share }: {
-  jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null; me: string; manager: boolean; writable: boolean;
+const OFFLINE = "That didn't send. Check your signal and try again.";
+
+/** Run a save. A dropped signal comes back as a plain message here instead of taking the whole screen down. */
+async function safe<T extends { ok: true }>(run: () => Promise<T | { ok: false; error: string }>): Promise<T | { ok: false; error: string }> {
+  try {
+    return await run();
+  } catch (e) {
+    // The framework's own signals (a redirect to log in again) pass through.
+    if (typeof (e as { digest?: unknown })?.digest === "string" && (e as { digest: string }).digest.startsWith("NEXT_")) throw e;
+    return { ok: false, error: OFFLINE };
+  }
+}
+
+export default function JobCheck({ jobId, initial, photos, initialReady, wentOut, me, manager, writable, share }: {
+  jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null;
+  /** The truck has been cleared at least once: what's proven after the job is open. */
+  wentOut: boolean; me: string; manager: boolean; writable: boolean;
   share: { title: string; token: string | null; demo: boolean };
 }) {
   const router = useRouter();
   const [lines, setLines] = useState(initial);
   const [ready, setReady] = useState(initialReady);
+  // A new copy from the server replaces what this screen was holding.
+  const [from, setFrom] = useState(initial);
+  if (from !== initial) {
+    setFrom(initial);
+    setLines(initial);
+    setReady(initialReady);
+  }
   const [err, setErr] = useState("");
   const [adding, setAdding] = useState(false);
   const [addingAfter, setAddingAfter] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
   const [, start] = useTransition();
   const [busyReady, setBusyReady] = useState(false);
   // Photos taken on this screen, so they show before the page loads again.
@@ -43,7 +72,19 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const camera = useRef<HTMLInputElement>(null);
   const target = useRef<string | null>(null);
   const reloaded = useRef(false);
+  const shooting = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
+
+  // Coming back to this screen (the phone was in a pocket, or another phone
+  // changed the job): ask the server where the truck stands. Not while the
+  // camera is open, which also takes the phone away from the page.
+  useEffect(() => {
+    const back = () => { if (document.visibilityState === "visible" && !shooting.current) router.refresh(); };
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+  }, [router]);
+  // New links to the photos arrived: a later stale one can ask for new ones again.
+  useEffect(() => { reloaded.current = false; }, [photos]);
 
   const ordered = orderLines(loadLines(lines));
   const after = afterLines(lines).sort((x, y) => x.sort - y.sort);
@@ -68,11 +109,13 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
     setErr("");
     // Show it right away; put it back if the save doesn't go through.
     setLines((ls) => ls.map((x) => x.id === l.id ? { ...x, on_at: on ? new Date().toISOString() : null, on_by: on ? me : null, photo_path: on ? x.photo_path : null } : x));
+    const wasReady = ready;
     if (!on && l.phase !== "after") setReady(null);
     start(async () => {
-      const r = await setLine(l.id, on);
+      const r = await safe(() => setLine(l.id, on));
       if (!r.ok) {
         setLines((ls) => ls.map((x) => x.id === l.id ? { ...x, on_at: l.on_at, on_by: l.on_by, photo_path: l.photo_path } : x));
+        setReady(wasReady);
         setErr(r.error);
       } else {
         setLines((ls) => ls.map((x) => x.id === l.id ? { ...x, on_at: r.on_at, on_by: r.on_by } : x));
@@ -91,8 +134,10 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   }
 
   function shoot(id: string) {
-    if (!writable || saving) return;
+    if (!writable) return;
+    if (saving) { setErr("Hold on. The last photo is still saving."); return; }
     target.current = id;
+    shooting.current = true;
     camera.current?.click();
   }
 
@@ -100,7 +145,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   async function onShot(file: File | undefined) {
     const id = target.current;
     target.current = null;
-    if (!file || !id) return;
+    if (!file || !id) { shooting.current = false; return; }
     setErr(""); setSaving(id);
     try {
       // A phone photo is several megabytes; shrink it so it sends on one bar.
@@ -117,6 +162,9 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
       setErr("The photo didn't send. Check your signal and try again.");
     } finally {
       setSaving(null);
+      shooting.current = false;
+      // Whatever the server holds now is the truth, this photo included.
+      router.refresh();
     }
   }
 
@@ -138,9 +186,11 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
     const isAfter = fd.get("phase") === "after";
     const qty = isAfter ? 1 : Number(fd.get("qty")) || 1;
     const isCritical = isAfter || fd.get("critical") === "on";
-    setErr("");
+    if (addBusy) return; // a second tap before the first one saved would add it twice
+    setErr(""); setAddBusy(true);
     start(async () => {
-      const r = await addLine(jobId, { label, qty, critical: isCritical, phase: isAfter ? "after" : "load" });
+      const r = await safe(() => addLine(jobId, { label, qty, critical: isCritical, phase: isAfter ? "after" : "load" }));
+      setAddBusy(false);
       if (!r.ok) { setErr(r.error); return; }
       setLines((ls) => [...ls, { id: r.id, label, qty, critical: isCritical, why: null, source: "added", phase: isAfter ? "after" : "load", sort: r.sort, on_at: null, on_by: null, photo_path: null }]);
       form.reset();
@@ -151,9 +201,11 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   }
 
   function remove(l: JobLine) {
+    // A line with a photo takes its proof with it: ask first.
+    if (l.photo_path && !window.confirm(`Take "${l.label}" off the list? Its photo goes with it.`)) return;
     setErr("");
     start(async () => {
-      const r = await removeLine(l.id);
+      const r = await safe(() => removeLine(l.id));
       if (!r.ok) { setErr(r.error); return; }
       setLines((ls) => ls.filter((x) => x.id !== l.id));
     });
@@ -161,7 +213,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
 
   async function callReady() {
     setBusyReady(true); setErr("");
-    const r = await markReady(jobId);
+    const r = await safe(() => markReady(jobId));
     setBusyReady(false);
     if (!r.ok) { setErr(r.error); router.refresh(); return; }
     setReady({ by: r.ready_by, at: r.ready_at });
@@ -169,7 +221,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
 
   async function del() {
     if (!window.confirm("Delete this job? Its list, its photos, and who loaded what go with it.")) return;
-    const r = await deleteJob(jobId);
+    const r = await safe(() => deleteJob(jobId));
     if (!r.ok) { setErr(r.error); return; }
     router.replace("/app");
     router.refresh();
@@ -179,8 +231,12 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
   const proven = critical.length > 0 && proof.length === critical.length;
   const viewingUrl = viewing ? photoOf(viewing) : null;
   const afterProven = after.filter((l) => l.on_at && l.photo_path);
-  // After-the-job checks open once the truck is ready. A shop that doesn't use them never sees the section, except a manager, who can add one.
-  const showAfter = after.length > 0 ? isReady || a.proven > 0 : isReady && manager && writable;
+  // After-the-job checks open once the truck has gone out, and stay open if a
+  // stray tap later takes it back to NOT READY. A job with nothing to load
+  // shows them straight away. A shop that doesn't use them never sees the
+  // section, except a manager, who can add one.
+  const out = isReady || wentOut;
+  const showAfter = after.length > 0 ? out || a.proven > 0 || s.total === 0 : out && manager && writable;
 
   // One line: a piece to load, or something to prove after the job.
   const row = (l: JobLine) => {
@@ -309,7 +365,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
             <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many"
               className="h-11 w-20 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none focus:border-ink-faint" />
             <label className="flex h-11 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
-            <button type="submit" className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white">Add</button>
+            <button type="submit" disabled={addBusy} className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">{addBusy ? "Adding…" : "Add"}</button>
           </form>
         ) : null}
 
@@ -355,7 +411,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, me, man
               <input type="hidden" name="phase" value="after" />
               <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like BOP rams closed for travel" aria-label="Something to prove after the job"
                 className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
-              <button type="submit" className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white">Add</button>
+              <button type="submit" disabled={addBusy} className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">{addBusy ? "Adding…" : "Add"}</button>
             </form>
           ) : null}
 

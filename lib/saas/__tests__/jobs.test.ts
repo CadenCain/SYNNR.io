@@ -92,34 +92,37 @@ describe("the link sent to a customer", () => {
   const on = "2026-11-11T12:00:00.000Z";
 
   it("shows a first name only", () => {
-    expect(firstName("Keegan  Ramirez")).toBe("Keegan");
+    expect(firstName("Mike  Hand")).toBe("Mike");
     expect(firstName("cadencain")).toBe("cadencain");
+    // No name on file: they go by the front of their email, cut at the dot, so a last name doesn't go out that way either.
+    expect(firstName("mike.hand")).toBe("mike");
+    expect(firstName("mike_hand+yard")).toBe("mike");
     expect(firstName("  ")).toBe("Someone");
     expect(firstName(null)).toBe("Someone");
   });
 
   it("never carries where a photo is kept or a last name", () => {
     const out = sharedLines([
-      line({ id: "a", label: "Weight bars", sort: 1, on_at: on, on_by: "Keegan Ramirez" }),
-      line({ id: "b", label: "Jet cutter", sort: 2, critical: true, on_at: on, on_by: "Keegan Ramirez", photo_path: "co/jobs/j/b.jpg" }),
+      line({ id: "a", label: "Weight bars", sort: 1, on_at: on, on_by: "Mike Hand" }),
+      line({ id: "b", label: "Jet cutter", sort: 2, critical: true, on_at: on, on_by: "Mike Hand", photo_path: "co/jobs/j/b.jpg" }),
     ], (l) => `/p/TOKEN/photo/${l.id}`);
     const text = JSON.stringify(out);
     expect(text).not.toContain("co/jobs");
-    expect(text).not.toContain("Ramirez");
+    expect(text).not.toContain("Hand");
     expect(Object.keys(out[0]).sort()).toEqual(["critical", "label", "on_at", "on_by", "photo", "qty", "why"]);
     // Critical first, the way the crew loads.
     expect(out.map((l) => l.label)).toEqual(["Jet cutter", "Weight bars"]);
-    expect(out[0]).toMatchObject({ on_by: "Keegan", photo: "/p/TOKEN/photo/b" });
+    expect(out[0]).toMatchObject({ on_by: "Mike", photo: "/p/TOKEN/photo/b" });
     expect(out[1].photo).toBeNull();
   });
 
   it("a piece that's off the truck shows no name and no photo", () => {
-    const [l] = sharedLines([line({ critical: true, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => "/p/TOKEN/photo/l1");
+    const [l] = sharedLines([line({ critical: true, on_by: "Mike", photo_path: "co/jobs/j/l1.jpg" })], () => "/p/TOKEN/photo/l1");
     expect(l).toMatchObject({ on_at: null, on_by: null, photo: null });
   });
 
   it("a photo with no address is left out, not shown broken", () => {
-    const [l] = sharedLines([line({ critical: true, on_at: on, on_by: "Keegan", photo_path: "co/jobs/j/l1.jpg" })], () => undefined);
+    const [l] = sharedLines([line({ critical: true, on_at: on, on_by: "Mike", photo_path: "co/jobs/j/l1.jpg" })], () => undefined);
     expect(l.photo).toBeNull();
   });
 
@@ -130,6 +133,17 @@ describe("the link sent to a customer", () => {
     expect(SHARE_TOKEN.test(a)).toBe(true);
     expect(SHARE_TOKEN.test("short")).toBe(false);
     expect(SHARE_TOKEN.test("a".repeat(23) + "/")).toBe(false);
+  });
+});
+
+describe("a piece that's on the shop's list twice", () => {
+  it("is one line, and critical if either copy says so", () => {
+    const lines = buildLines({ list: [
+      { label: "Jars", qty: 1, critical: false },
+      { label: "CCL", qty: 1, critical: false },
+      { label: "jars", qty: 3, critical: true },
+    ], callouts: [] });
+    expect(lines.map((l) => `${l.label}:${l.qty}:${l.critical}`)).toEqual(["Jars:1:true", "CCL:1:false"]);
   });
 });
 
@@ -174,12 +188,12 @@ describe("after the job", () => {
 
   it("counts what's proven, and says who proved the last one and when", () => {
     const a = afterState([
-      { on_at: on, on_by: "Keegan", phase: "load" },
-      { on_at: on, on_by: "Justin", phase: "after" },
-      { on_at: later, on_by: "Keegan", phase: "after" },
+      { on_at: on, on_by: "Mike", phase: "load" },
+      { on_at: on, on_by: "Luis", phase: "after" },
+      { on_at: later, on_by: "Mike", phase: "after" },
       { on_at: null, on_by: null, phase: "after" },
     ]);
-    expect(a).toMatchObject({ total: 3, proven: 2, left: 1, done: false, last_at: later, last_by: "Keegan" });
+    expect(a).toMatchObject({ total: 3, proven: 2, left: 1, done: false, last_at: later, last_by: "Mike" });
   });
 
   it("is done only when there are checks and every one has its photo", () => {
@@ -190,8 +204,8 @@ describe("after the job", () => {
 
   it("never goes out on the customer's link", () => {
     const out = sharedLines([
-      { id: "a", label: "CCL", qty: 1, critical: false, why: null, source: "list", phase: "load", sort: 0, on_by: "Keegan", on_at: on, photo_path: null },
-      { id: "b", label: "Package washed", qty: 1, critical: true, why: null, source: "list", phase: "after", sort: 1, on_by: "Keegan", on_at: on, photo_path: "co/jobs/j/b.jpg" },
+      { id: "a", label: "CCL", qty: 1, critical: false, why: null, source: "list", phase: "load", sort: 0, on_by: "Mike", on_at: on, photo_path: null },
+      { id: "b", label: "Package washed", qty: 1, critical: true, why: null, source: "list", phase: "after", sort: 1, on_by: "Mike", on_at: on, photo_path: "co/jobs/j/b.jpg" },
     ], (l) => `/p/TOKEN/photo/${l.id}`);
     expect(out.map((l) => l.label)).toEqual(["CCL"]);
   });

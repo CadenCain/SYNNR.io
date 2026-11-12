@@ -11,34 +11,47 @@ export const metadata = { title: { absolute: "SYNNR" } };
 export const dynamic = "force-dynamic";
 
 type Row = {
-  id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; created_at: string;
+  id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; first_ready_at: string | null; created_at: string;
   synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null }[] | null;
 };
 
 const clock = () => Date.now();
+
+/** The board shows the last two weeks. "Older jobs" opens the last six months, so a job (and its customer link) is never out of reach. */
+const RECENT_DAYS = 14;
+const OLDER_DAYS = 180;
+const RECENT_MAX = 80;
+const OLDER_MAX = 300;
 
 /**
  * Home: every job the crew is loading for, and where each truck stands.
  * Loading out first (what still needs something), then what's been cleared.
  * Every number on this screen is counted from the jobs below it.
  */
-export default async function JobsHome({ searchParams }: { searchParams: Promise<{ welcome?: string; joined?: string }> }) {
+export default async function JobsHome({ searchParams }: { searchParams: Promise<{ welcome?: string; joined?: string; older?: string }> }) {
   const { company } = await requireCompany();
-  const { welcome, joined } = await searchParams;
+  const { welcome, joined, older } = await searchParams;
   const db = await saasDb();
-  const since = new Date(clock() - 14 * 86400e3).toISOString();
-  const [{ data }, { count: listCount }] = await Promise.all([
-    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, created_at, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
-      .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(80),
+  const showOlder = older === "1";
+  const max = showOlder ? OLDER_MAX : RECENT_MAX;
+  const since = new Date(clock() - (showOlder ? OLDER_DAYS : RECENT_DAYS) * 86400e3).toISOString();
+  const [{ data }, { count: listCount }, { count: before }] = await Promise.all([
+    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
+      .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(max),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
+    // Jobs from before this screen's window: there's a way to them below.
+    db.from("synnr_jobs").select("id", { count: "exact", head: true }).eq("company_id", company.id).lt("created_at", since),
   ]);
+  const cut = (data ?? []).length >= max;
   const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
   const loading = jobs.filter((j) => j.status !== "ready");
   const ready = jobs.filter((j) => j.status === "ready");
   const criticalOff = loading.reduce((n, j) => n + j.s.criticalMissing, 0);
-  // After the job: what the trucks that went out still owe a photo of.
+  // After the job: what the trucks that went out still owe a photo of. A
+  // truck that went out counts even if a stray tap has since taken it back
+  // to NOT READY.
   const usesAfter = jobs.some((j) => j.a.total > 0);
-  const afterOpen = ready.reduce((n, j) => n + j.a.left, 0);
+  const afterOpen = jobs.reduce((n, j) => n + (j.first_ready_at ? j.a.left : 0), 0);
   const manager = company.role !== "member";
   const writable = isWritable(company.subscription_status, company.comped);
 
@@ -126,7 +139,7 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                     </span>
                     <span className="shrink-0 text-ink-faint">{j.photos ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}, ` : ""}{day(j.created_at)}</span>
                   </div>
-                  {isReady && j.a.total ? (
+                  {j.first_ready_at && j.a.total ? (
                     <div className={`mt-2 border-t border-line pt-2 text-[13px] ${j.a.done ? "text-ink-dim" : "text-bone"}`}>
                       {j.a.done
                         ? `After the job: all proven, ${fmtWhen(j.a.last_at)}`
@@ -139,6 +152,15 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
           </div>
         </section>
       ) : null)}
+
+      {cut || before || showOlder ? (
+        <p className="mt-9 text-[13px] leading-relaxed text-ink-faint">
+          {cut ? `Showing the newest ${max} jobs. ` : showOlder ? "Showing the last six months. " : ""}
+          {showOlder
+            ? <Link href="/app" className="inline-flex min-h-9 items-center text-ink-dim underline underline-offset-4 hover:text-ink">Back to the last two weeks</Link>
+            : before ? <Link href="/app?older=1" className="inline-flex min-h-9 items-center text-ink-dim underline underline-offset-4 hover:text-ink">{before === 1 ? "1 older job" : `${before} older jobs`}</Link> : null}
+        </p>
+      ) : null}
     </div>
   );
 }

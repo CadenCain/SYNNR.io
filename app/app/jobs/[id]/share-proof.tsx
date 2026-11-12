@@ -27,10 +27,15 @@ export default function ShareProof({ jobId, title, initialToken, manager, writab
 
   async function make() {
     setBusy(true); setErr(""); setNote("");
-    const r = await shareJob(jobId);
-    setBusy(false);
-    if (!r.ok) { setErr(r.error); return; }
-    setToken(r.token);
+    try {
+      const r = await shareJob(jobId);
+      if (!r.ok) { setErr(r.error); return; }
+      setToken(r.token);
+    } catch {
+      setErr("That didn't send. Check your signal and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function copy() {
@@ -58,11 +63,16 @@ export default function ShareProof({ jobId, title, initialToken, manager, writab
   async function off() {
     if (!window.confirm("Turn this link off? Anyone you sent it to won't be able to open it anymore.")) return;
     setBusy(true); setErr(""); setNote("");
-    const r = await unshareJob(jobId);
-    setBusy(false);
-    if (!r.ok) { setErr(r.error); return; }
-    setToken(null);
-    setNote("The link is off.");
+    try {
+      const r = await unshareJob(jobId);
+      if (!r.ok) { setErr(r.error); return; }
+      setToken(null);
+      setNote("The link is off.");
+    } catch {
+      setErr("That didn't send. The link is still on. Check your signal and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!token && !writable) return null;

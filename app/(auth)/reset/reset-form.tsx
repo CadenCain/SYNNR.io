@@ -31,7 +31,10 @@ export default function ResetForm({ next = "" }: { next?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    // method="post" matters before the page's script loads: without it a quick tap
+    // (or a password manager) would send the form as a plain link, with the
+    // email and password in the address bar and the browser's history.
+    <form onSubmit={onSubmit} method="post" className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-ink">New password</span>
         <input name="password" type={show ? "text" : "password"} required minLength={8} autoComplete="new-password"
@@ -41,7 +44,7 @@ export default function ResetForm({ next = "" }: { next?: string }) {
       <label className="-mt-2 flex items-center gap-2 text-sm text-ink-dim">
         <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
       </label>
-      {err ? <p className="text-sm text-red-400">{err}</p> : null}
+      {err ? <p role="alert" className="text-sm text-red-400">{err}</p> : null}
       <Button type="submit" disabled={busy} className="h-11 w-full md:h-11 md:text-sm">{busy ? "Saving…" : "Set password and go in"}</Button>
     </form>
   );

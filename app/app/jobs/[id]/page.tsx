@@ -5,13 +5,13 @@ import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
 import { signPhotos } from "@/lib/saas/job-photos";
-import { detailRows, type Job, type JobLine } from "@/lib/saas/jobs";
+import { detailRows, MAX_LINES, type Job, type JobLine } from "@/lib/saas/jobs";
 import { fmtWhen } from "@/lib/saas/format";
 import JobCheck from "./job-check";
 
 export const dynamic = "force-dynamic";
 
-const JOB = "id, job_type, truck, details, remarks, source, status, ready_by, ready_at, created_by_name, created_at, share_token";
+const JOB = "id, job_type, truck, details, remarks, source, status, ready_by, ready_at, first_ready_at, created_by_name, created_at, share_token";
 
 async function load(id: string) {
   const { company, user } = await requireCompany();
@@ -19,7 +19,7 @@ async function load(id: string) {
   const db = await saasDb();
   const [{ data: job }, { data: lines }] = await Promise.all([
     db.from("synnr_jobs").select(JOB).eq("id", id).eq("company_id", company.id).maybeSingle(),
-    db.from("synnr_job_lines").select("id, label, qty, critical, why, source, phase, sort, on_by, on_at, photo_path").eq("job_id", id).eq("company_id", company.id).order("sort").limit(500),
+    db.from("synnr_job_lines").select("id, label, qty, critical, why, source, phase, sort, on_by, on_at, photo_path").eq("job_id", id).eq("company_id", company.id).order("sort").limit(MAX_LINES),
   ]);
   if (!job) return null;
   return { company, user, job: job as Job, lines: (lines ?? []) as JobLine[] };
@@ -68,7 +68,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <JobCheck jobId={job.id} initial={lines} photos={photos} me={me}
-          initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null}
+          initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null} wentOut={Boolean(job.first_ready_at)}
           manager={company.role !== "member"} writable={isWritable(company.subscription_status, company.comped)}
           share={{ title: [job.truck, job.job_type].filter(Boolean).join(", "), token: job.share_token ?? null, demo: company.is_demo }} />
 

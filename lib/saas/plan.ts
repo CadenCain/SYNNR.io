@@ -63,7 +63,10 @@ export interface PlanCompany { subscription_status: string; comped: boolean; is_
  * SYNNR is in early access: accounts are opened by hand after a call, and
  * nobody is charged the old per-yard price for a product that has changed
  * under it. Crew invites are not affected. Turn this on only once the new
- * price exists in Stripe and checkout sells it.
+ * price exists in Stripe and checkout sells it. The database is closed to
+ * match (migration 0075): turning this on also takes
+ * `grant execute on function public.saas_create_company(text) to authenticated;`
+ * or onboarding can't make the company.
  */
 export const SELF_SERVE_OPEN = false;
 /** What every closed door says. */

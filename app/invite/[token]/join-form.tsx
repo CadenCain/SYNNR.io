@@ -27,11 +27,11 @@ export default function JoinForm({ action, token, error }: { action: (fd: FormDa
       <label className="-mt-1 flex items-center gap-2 text-sm text-ink-dim">
         <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-5 w-5 accent-bone" /> Show password
       </label>
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-red-400">{error}</p> : null}
       <button type="submit" disabled={busy} className="h-11 w-full rounded-lg bg-ink text-sm font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
         {busy ? "Joining…" : "Join the crew"}
       </button>
-      <p className="text-xs text-ink-faint">Your name goes on every scan you make. By joining you agree to the <a href="/legal/terms" className="underline">Terms</a> and <a href="/legal/privacy" className="underline">Privacy Policy</a>.</p>
+      <p className="text-xs text-ink-faint">Your name goes on every piece you load. By joining you agree to the <a href="/legal/terms" className="underline">Terms</a> and <a href="/legal/privacy" className="underline">Privacy Policy</a>.</p>
     </form>
   );
 }

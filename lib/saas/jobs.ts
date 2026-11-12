@@ -51,6 +51,12 @@ export type Job = {
   status: "loading" | "ready";
   ready_by: string | null;
   ready_at: string | null;
+  /**
+   * The first time the truck was cleared. Set once by the database and never
+   * moved, so a piece tapped off after the job (which takes the truck back
+   * to NOT READY) doesn't take the after-the-job checks with it.
+   */
+  first_ready_at?: string | null;
   created_by_name: string | null;
   created_at: string;
   /** The link sent to the customer, when there is one. */
@@ -127,7 +133,12 @@ export function buildLines(input: { list: { label: string; qty: number; critical
       out.push({ label, qty: 1, critical: true, why: null, source: "list", phase: "after", sort: out.length });
       continue;
     }
-    if (at.has(norm(label))) continue;
+    const seen = at.get(norm(label));
+    if (seen !== undefined) {
+      // The same piece twice on a list is one line. If either says critical, it's critical.
+      if (l.critical) out[seen] = { ...out[seen], critical: true };
+      continue;
+    }
     at.set(norm(label), out.length);
     out.push({ label, qty: clampQty(l.qty), critical: Boolean(l.critical), why: null, source: "list", phase: "load", sort: out.length });
   }
@@ -174,8 +185,15 @@ export function detailRows(job: Pick<Job, "details" | "truck">): [string, string
   return rows.filter((r): r is [string, string] => Boolean(r[1] && String(r[1]).trim()));
 }
 
-/** A first name is enough for a customer to know who loaded it. Last names stay in the shop. */
-export const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] || "Someone";
+/**
+ * A first name is enough for a customer to know who loaded it. Last names
+ * stay in the shop. Someone with no name on file goes by the front of their
+ * email, so "john.smith" is cut at the dot too.
+ */
+export const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/[\s._+]+/)[0] || "Someone";
+
+/** The most lines a job or a job list holds. Every screen reads this many, so nothing is ever hidden past the end. */
+export const MAX_LINES = 300;
 
 /** One line as a customer sees it through the job's link. */
 export type SharedLine = {

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { firstName, sharedLines, type JobDetails, type JobLine, type SharedLine } from "./jobs";
+import { firstName, MAX_LINES, sharedLines, type JobDetails, type JobLine, type SharedLine } from "./jobs";
 
 /**
  * The link a crew sends the customer. It opens one job, with no login: the
@@ -42,7 +42,7 @@ export async function getSharedJob(admin: SupabaseClient, token: string): Promis
   if (!job || !job.company || job.company.is_demo) return null;
 
   const { data: rows } = await admin.from("synnr_job_lines")
-    .select("id, label, qty, critical, why, source, phase, sort, on_by, on_at, photo_path").eq("job_id", job.id).order("sort").limit(500);
+    .select("id, label, qty, critical, why, source, phase, sort, on_by, on_at, photo_path").eq("job_id", job.id).order("sort").limit(MAX_LINES);
   const lines = (rows ?? []) as JobLine[];
 
   return {

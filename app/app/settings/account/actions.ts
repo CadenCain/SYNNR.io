@@ -7,7 +7,7 @@ import { logEvent } from "@/lib/saas/notify";
 
 type Result = { ok: boolean; message: string };
 
-/** Your name, as it goes on every scan, check-in, and override from now on. */
+/** Your name, as it goes on every piece you load and every truck you clear from now on. */
 export async function saveName(_prev: Result | null, fd: FormData): Promise<Result> {
   const { company, user } = await requireCompany();
   const name = String(fd.get("full_name") ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
