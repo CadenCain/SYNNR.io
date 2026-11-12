@@ -9,8 +9,9 @@ import { reconcileYardBilling } from "@/lib/saas/billing";
  * Once a day, housekeeping. Billing: what Stripe bills against what the
  * company has, an email to the operator on any drift. Demo: throwaway demo
  * companies (and their users) are deleted after 24 hours, and the showcase
- * is re-seeded so it doesn't age. Any failure emails the operator; none of
- * it touches a paying company's data.
+ * is re-seeded so it doesn't age. Rented gear: each company's managers get
+ * the list of what's still out. Any failure emails the operator; none of it
+ * changes a paying company's data.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,13 +56,26 @@ export async function GET(req: Request) {
     await sendEmail([OWNER], "[SYNNR ops] demo cleanup CRASHED", pre(e instanceof Error ? e.message : String(e))).catch(() => {});
   }
 
+  // Rented gear still out: a company's managers hear about it every morning until there's a photo of it back.
+  let rented = { companies: 0, sent: 0, errors: [] as string[] };
+  try {
+    const { sendRentedOut } = await import("@/lib/saas/rented-email");
+    rented = await sendRentedOut(admin, Date.now());
+    if (rented.errors.length) await sendEmail([OWNER], "[SYNNR ops] rented gear email hit errors", pre(rented.errors.join("\n"))).catch(() => {});
+  } catch (e) {
+    rented.errors.push(e instanceof Error ? e.message : String(e));
+    await sendEmail([OWNER], "[SYNNR ops] rented gear email CRASHED", pre(e instanceof Error ? e.message : String(e))).catch(() => {});
+  }
+
   await logCronRun(admin, {
     job: "daily",
-    ok: billing.drift === 0 && billing.errors === 0,
+    ok: billing.drift === 0 && billing.errors === 0 && rented.errors.length === 0,
+    alerts_sent: rented.sent,
     detail: [billing.drift ? `billing drift x${billing.drift}` : null, billing.errors ? `billing check errors x${billing.errors}` : null,
-      demo.deleted ? `demo deleted x${demo.deleted}` : null].filter(Boolean).join(", ") || null,
+      demo.deleted ? `demo deleted x${demo.deleted}` : null, rented.sent ? `rented gear email x${rented.sent}` : null,
+      rented.errors.length ? `rented gear email errors x${rented.errors.length}` : null].filter(Boolean).join(", ") || null,
   });
-  return NextResponse.json({ ok: true, billing, demo: demo.deleted });
+  return NextResponse.json({ ok: true, billing, demo: demo.deleted, rented: rented.sent });
 }
 
 export const POST = GET;

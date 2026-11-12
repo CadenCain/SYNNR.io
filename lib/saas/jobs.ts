@@ -27,6 +27,8 @@ export type JobLine = {
   on_at: string | null;
   /** Where the proof photo is kept. A critical piece can't go on without one. */
   photo_path: string | null;
+  /** Who the piece is rented from, when it isn't the shop's own. It bills by the day until it's back. */
+  rented_from?: string | null;
 };
 
 /** The job facts SYNNR keeps from a dispatch. Never people or phone numbers. */
@@ -107,6 +109,35 @@ export function afterState(all: (Pick<JobLine, "on_at"> & { on_by?: string | nul
     last_by: last?.on_by ?? null,
   };
 }
+
+/**
+ * A piece rented for the job makes two lines: the piece itself on the
+ * checklist, like any other, and one after the job that stays open, with the
+ * vendor's name on it, until there's a photo of it back. Somebody else's
+ * iron left on location bills by the day, and nobody notices until the
+ * invoice.
+ */
+export function rentedLines(input: { label: string; qty: number; critical: boolean; from: string; sort: number }): [NewLine, NewLine] {
+  const label = input.label.trim().slice(0, 120);
+  const rented_from = input.from.trim().slice(0, 80);
+  return [
+    { label, qty: clampQty(input.qty), critical: Boolean(input.critical), why: null, source: "added", phase: "load", sort: input.sort, rented_from },
+    { label, qty: 1, critical: true, why: null, source: "added", phase: "after", sort: input.sort + 1, rented_from },
+  ];
+}
+
+/** Rented gear the job still owes back: no photo of it back yet. */
+export const rentedOut = <T extends { phase?: Phase; rented_from?: string | null; on_at: string | null }>(lines: T[]): T[] =>
+  afterLines(lines).filter((l) => Boolean(l.rented_from) && !l.on_at);
+
+/** Whole days since it went out. Rent is by the day, so this is the number that costs money. */
+export function daysOut(since: string | null | undefined, now: number): number {
+  const t = since ? new Date(since).getTime() : NaN;
+  return Number.isFinite(t) ? Math.max(0, Math.floor((now - t) / 86400e3)) : 0;
+}
+
+/** "today", "1 day", "4 days". */
+export const daysOutText = (n: number) => (n <= 0 ? "today" : n === 1 ? "1 day" : `${n} days`);
 
 /**
  * The list for a new job: the shop's own list for that kind of job, then

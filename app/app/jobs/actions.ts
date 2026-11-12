@@ -6,7 +6,7 @@ import { requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
 import { removeJobPhotos, removePhotos } from "@/lib/saas/job-photos";
 import { newShareToken } from "@/lib/saas/job-share";
-import { buildLines, clampQty, matchList, type Callout, type JobDetails, type Phase } from "@/lib/saas/jobs";
+import { buildLines, clampQty, matchList, rentedLines, type Callout, type JobDetails, type Phase } from "@/lib/saas/jobs";
 
 /**
  * What a crew does to a job: start one, tap pieces on and off, add a piece
@@ -94,25 +94,35 @@ export async function setLine(lineId: string, on: boolean): Promise<{ ok: true; 
   return { ok: true, on_at: row.on_at, on_by: row.on_by };
 }
 
-/** Something this job needs that wasn't on the list: a piece to load, or a check to prove after the job. */
-export async function addLine(jobId: string, input: { label: string; qty: number; critical: boolean; phase?: Phase }): Promise<{ ok: true; id: string; sort: number } | Fail> {
+/**
+ * Something this job needs that wasn't on the list: a piece to load, or a
+ * check to prove after the job. A rented piece is both: it goes on the
+ * checklist, and it stays owed after the job until there's a photo of it back.
+ */
+export async function addLine(jobId: string, input: { label: string; qty: number; critical: boolean; phase?: Phase; rentedFrom?: string }): Promise<{ ok: true; id: string; sort: number; back?: { id: string; sort: number } } | Fail> {
   if (!isId(jobId)) return fail("That job isn't there anymore.");
   const got = await requireWritableCompany();
   if (!got.ok) return fail(got.error);
   const label = clip(input.label, 120);
   if (!label) return fail("Say what it is.");
+  const from = input.phase === "after" ? "" : clip(input.rentedFrom, 80);
   const db = await saasDb();
   const { data: last } = await db.from("synnr_job_lines").select("sort").eq("job_id", jobId).eq("company_id", got.company.id).order("sort", { ascending: false }).limit(1).maybeSingle();
   const sort = ((last as { sort: number } | null)?.sort ?? -1) + 1;
-  const { data, error } = await db.from("synnr_job_lines").insert({
-    job_id: jobId, company_id: got.company.id, label, source: "added", sort,
+  const rows = from
+    ? rentedLines({ label, qty: input.qty, critical: input.critical, from, sort })
     // A check after the job is one thing, and always takes its photo.
-    ...(input.phase === "after" ? { phase: "after", qty: 1, critical: true } : { phase: "load", qty: clampQty(input.qty), critical: Boolean(input.critical) }),
-  }).select("id").single();
-  if (error || !data) return fail("Couldn't add it. Try again.");
+    : [input.phase === "after"
+      ? { label, source: "added", sort, phase: "after", qty: 1, critical: true }
+      : { label, source: "added", sort, phase: "load", qty: clampQty(input.qty), critical: Boolean(input.critical) }];
+  const { data, error } = await db.from("synnr_job_lines").insert(rows.map((r) => ({ ...r, job_id: jobId, company_id: got.company.id }))).select("id, phase, sort");
+  const made = (data ?? []) as { id: string; phase: Phase; sort: number }[];
+  const first = from ? made.find((r) => r.phase === "load") : made[0];
+  if (error || !first) return fail("Couldn't add it. Try again.");
+  const back = from ? made.find((r) => r.phase === "after") : undefined;
   revalidatePath(`/app/jobs/${jobId}`);
   revalidatePath("/app");
-  return { ok: true, id: (data as { id: string }).id, sort };
+  return { ok: true, id: first.id, sort: first.sort, ...(back ? { back: { id: back.id, sort: back.sort } } : {}) };
 }
 
 /** Take a line off the list. A manager's call: a hand who thinks a line is wrong leaves it untapped and says so. */
