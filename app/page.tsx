@@ -180,8 +180,9 @@ export default function Home() {
               <p className="text-[13px] text-ink-faint">Being built now</p>
               <h2 className={`${h2} mt-3`}>An AI that checks the work.</h2>
               <p className={lede}>
-                SYNNR will look at every proof photo and flag the ones that don&apos;t look right, so your manager
-                sees those first. It will also answer for the shop, from your own job lists, procedures, and prices.
+                SYNNR will learn what right looks like in your yard, from your own photos of right and wrong. Then
+                it looks at every proof photo and flags the ones that don&apos;t match, so your manager sees those
+                first. It will also answer for the shop, from your own job lists, procedures, and prices.
               </p>
             </div>
             <ul className="mt-10 grid border-t border-line md:mt-16 md:grid-cols-2 md:gap-x-16">
@@ -198,11 +199,13 @@ export default function Home() {
             <div className="synnr-reveal">
               <h2 className={h2}>Built around your shop.</h2>
               <p className={lede}>
-                SYNNR doesn&apos;t come with somebody else&apos;s checklist. Each company loads its own: what every kind
-                of job takes, which pieces stop the job, and what the crew proves when it&apos;s done.
+                SYNNR doesn&apos;t come with somebody else&apos;s checklist. We set it up with you: we sit down with your
+                manager and load what every kind of job takes, which pieces stop the job, and what the crew proves
+                when it&apos;s done, in your shop&apos;s words.
               </p>
               <p className="mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-dim md:text-[18px]">
-                If your crews go out with gear and have to bring it back right, it fits.
+                Your hands use it on every job. Your manager sees every truck on one screen. If your crews go out
+                with gear and have to bring it back right, it fits.
               </p>
             </div>
             <div className="synnr-reveal mt-12 rounded-2xl border border-line bg-[#0b0c0e] px-5 py-9 md:mt-16 md:px-10 md:py-12">
@@ -250,7 +253,8 @@ export default function Home() {
               <h2 className={h2}>Request access.</h2>
               <p className="mt-5 max-w-md text-[16px] leading-[1.6] text-ink-dim">
                 SYNNR is in early access for oilfield service companies in the Permian. Leave a number and Caden
-                will call you, look at what you run, and tell you straight whether it&apos;s ready for your shop.
+                will call you, look at what you run, and tell you straight whether it&apos;s ready for your shop. If
+                it is, he sets it up with you, on your jobs and your gear.
               </p>
             </div>
             <AccessForm />

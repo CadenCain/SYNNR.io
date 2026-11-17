@@ -87,7 +87,7 @@ export default function Product() {
             <div className="text-[14px] text-ink-faint md:pt-2">What&apos;s next</div>
             <div className="synnr-reveal max-w-2xl">
               <p className="text-[22px] leading-[1.35] tracking-[-0.015em] text-ink md:text-[28px]">
-                An AI that checks the work. It will look at every proof photo and flag the ones that don&apos;t look right, so your manager sees those first. And it will answer questions from what your shop has given it: what you charge, what a contract says, how your shop does a procedure.
+                An AI that checks the work. It will learn what right looks like in your yard, from your own photos of right and wrong, then look at every proof photo and flag the ones that don&apos;t match, so your manager sees those first. And it will answer questions from what your shop has given it: what you charge, what a contract says, how your shop does a procedure.
               </p>
               <p className="mt-6 text-[15px] text-ink-dim">Both are being built now.</p>
               <Link href="/#access" className="mt-8 inline-flex h-12 items-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">Request access</Link>
