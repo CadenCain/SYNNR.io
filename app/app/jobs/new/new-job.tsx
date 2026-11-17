@@ -100,7 +100,7 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
               className="flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-ink text-[16px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
               <Camera className="h-5 w-5" /> {reading ? "Reading the dispatch…" : "Photo or PDF of the dispatch"}
             </button>
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-faint">A screenshot or the Aradia PDF works. SYNNR reads the job and what it says to bring. The file isn&apos;t kept, and names and phone numbers are left out.</p>
+            <p className="mt-3 text-[13px] leading-relaxed text-ink-faint">A screenshot or a PDF from your dispatch software works. SYNNR reads the job and what it says to bring. The file isn&apos;t kept, and names and phone numbers are left out.</p>
           </>
         ) : (
           <p className="text-[14px] leading-relaxed text-ink-dim">
@@ -112,17 +112,17 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={label}>Kind of job
-          <input value={jobType} onChange={(e) => setJobType(e.target.value)} list="synnr-job-lists" required maxLength={80} placeholder="Pipe recovery" className={field} />
+          <input value={jobType} onChange={(e) => setJobType(e.target.value)} list="synnr-job-lists" required maxLength={80} placeholder={lists[0] ? `Like ${lists[0].name}` : "The kind of job"} className={field} />
           <datalist id="synnr-job-lists">{lists.map((l) => <option key={l.id} value={l.name} />)}</datalist>
         </label>
         <label className={label}>Truck
-          <input value={truck} onChange={(e) => setTruck(e.target.value)} list="synnr-trucks" maxLength={40} placeholder="WL-07" className={field} />
+          <input value={truck} onChange={(e) => setTruck(e.target.value)} list="synnr-trucks" maxLength={40} placeholder={trucks[0] ? `Like ${trucks[0]}` : "Truck or unit number"} className={field} />
           <datalist id="synnr-trucks">{trucks.map((t) => <option key={t} value={t} />)}</datalist>
         </label>
       </div>
 
       <label className={label}>Remarks from the dispatch
-        <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={2000} rows={3} placeholder="Anything it says about the hole or what to bring"
+        <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={2000} rows={3} placeholder="Anything it says about the job or what to bring"
           className="w-full rounded-lg border border-line-2 bg-coal px-3.5 py-3 text-[16px] leading-relaxed text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint" />
       </label>
 

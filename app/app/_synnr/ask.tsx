@@ -7,9 +7,9 @@ import { ArrowUp, Paperclip, ArrowRight, X } from "lucide-react";
 type Turn = { id: number; who: "you" | "synnr"; text: string; file?: string | null };
 
 const EXAMPLES = [
-  "What do I need to set a packer in 5-1/2 casing?",
-  "What goes out on a pipe recovery job?",
-  "What do we charge for a bond log to 8,000 ft?",
+  "What goes out on this kind of job?",
+  "Which trucks came back with no photo this week?",
+  "What do we charge for a day of standby?",
   "What does the MSA say about standby time?",
 ];
 

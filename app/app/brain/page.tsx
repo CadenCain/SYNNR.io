@@ -39,7 +39,7 @@ export default async function BrainPage() {
     { label: "MSAs", what: "Each customer's terms, rates, and what they require on location." },
     { label: "Procedures", what: "How your crews rig up, run, and rig down, the way your shop does it." },
     { label: "Signed tickets", what: "What actually got run and billed, job by job." },
-    { label: "Job sheets", what: "Perf run sheets, checklists, and the forms your crews already use." },
+    { label: "Job sheets", what: "Run sheets, checklists, and the forms your crews already use." },
   ];
 
   return (

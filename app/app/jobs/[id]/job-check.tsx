@@ -409,7 +409,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
           {addingAfter ? (
             <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
               <input type="hidden" name="phase" value="after" />
-              <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like BOP rams closed for travel" aria-label="Something to prove after the job"
+              <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job"
                 className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
               <button type="submit" disabled={addBusy} className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">{addBusy ? "Adding…" : "Add"}</button>
             </form>

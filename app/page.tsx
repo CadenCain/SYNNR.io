@@ -13,8 +13,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * synnr.io. What SYNNR does, in the order a wireline manager would ask: what
- * is it, what do I get, can I trust it, who built it, how do I get it. It's
+ * synnr.io. What SYNNR does, in the order a service company's manager would
+ * ask: what goes wrong, what is it, what do I get, can I trust it, who built
+ * it, how do I get it. It's for any oilfield service company; the sample
+ * job on the page is from a wireline shop, and says so. It's
  * in early access, so the only thing to do here is ask for it. The job shown
  * is a sample; nothing here is a made-up customer or result.
  */
@@ -35,18 +37,18 @@ const GET: { title: string; body: string }[] = [
 ];
 
 const ASKS = [
-  "What do I need to set a packer in 5-1/2 casing?",
-  "What goes out on a pipe recovery job?",
-  "Which cable head goes with this string?",
-  "What do we charge for a bond log to 8,000 ft?",
+  "What goes out on this kind of job?",
+  "Which trucks came back with no photo this week?",
+  "Who cleared Truck 12 this morning?",
+  "What do we charge for a day of standby?",
   "What does the MSA say about standby time?",
-  "Who has the setting tools out right now?",
+  "How does our shop rig this up?",
 ];
 
 const TRUST: { title: string; body: string }[] = [
   {
     title: "It builds from your shop",
-    body: "Your job lists, in your words. What the internet thinks a wireline job takes doesn't count.",
+    body: "Your job lists, in your words. What the internet thinks your job takes doesn't count.",
   },
   {
     title: "It shows where it got it",
@@ -54,7 +56,7 @@ const TRUST: { title: string; body: string }[] = [
   },
   {
     title: "It says when it doesn't know",
-    body: "On explosives and pressure control, a guess is worse than no answer. If your shop hasn't given it a list for a job, SYNNR says so and leaves the list empty instead of making one up.",
+    body: "On a job, a guess is worse than no answer. If your shop hasn't given it a list for a job, SYNNR says so and leaves the list empty instead of making one up.",
   },
 ];
 
@@ -73,16 +75,16 @@ export default function Home() {
           <div className={`${wrap} pb-16 pt-14 md:pb-24 md:pt-24`}>
             <p className="flex items-center gap-2.5 text-[13px] text-ink-dim">
               <span aria-hidden className="h-1.5 w-1.5 rounded-[1px] bg-bone" />
-              Operations AI for wireline. Early access.
+              For oilfield service companies. Early access.
             </p>
             <h1 className="mt-6 text-[clamp(40px,7.2vw,84px)] font-semibold leading-[0.98] tracking-[-0.045em]">
               <span className="block text-ink">Tell it the job.</span>
               <span className="block text-[#62666e]">It tells you what to take.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
-              Say what you&apos;re running. SYNNR gives your crew what the job takes with the critical pieces
-              first, a checklist to load by with a photo of what matters, and a plain READY or NOT READY before
-              the truck rolls.
+              Say what you&apos;re running. SYNNR gives your crew what the job takes, has them prove the critical
+              pieces with a photo, and tells you READY or NOT READY before the truck rolls. When they&apos;re back
+              in, they prove the gear was put away right.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               <AccessLink className="flex h-12 items-center justify-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">
@@ -96,7 +98,25 @@ export default function Home() {
             <div className="mt-14 md:mt-20">
               <Console />
               <p className="mt-4 text-[14px] leading-relaxed text-ink-faint">
-                A sample job. Yours runs on your trucks, your gear, and the way your shop does it.
+                A sample job from a wireline shop. Yours runs on your jobs, your gear, and the way your shop does it.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* What goes wrong */}
+        <section className="border-t border-line">
+          <div className={`${wrap} grid gap-8 py-16 md:grid-cols-[0.8fr_1.2fr] md:gap-16 md:py-28`}>
+            <h2 className={`${h2} synnr-reveal`}>The gear was fine. A step got skipped.</h2>
+            <div className="synnr-reveal max-w-2xl">
+              <p className="text-[18px] leading-[1.55] text-ink md:text-[22px]">
+                The wrong tool on the truck. A piece left on location. Equipment put away dirty, or not made safe
+                to travel.
+              </p>
+              <p className="mt-5 text-[16px] leading-[1.6] text-ink-dim md:text-[18px]">
+                None of it is hard. It gets missed because everybody&apos;s in a hurry and nobody has to show it was
+                done. SYNNR makes showing it part of the job: a photo, a name, and a time on every step that
+                matters, where your manager can see it from his phone.
               </p>
             </div>
           </div>
@@ -142,7 +162,8 @@ export default function Home() {
               <h2 className={h2}>And after the job.</h2>
               <p className={lede}>
                 Getting back in is where steps get skipped. When the job&apos;s done, the crew proves the gear was put
-                away right: rams closed for travel, the package washed. A photo of each, with who took it and when.
+                away right: washed, made safe to travel, back where it belongs. A photo of each, with who took it
+                and when.
               </p>
               <p className="mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-dim md:text-[18px]">
                 The manager sees it from his phone. A truck still missing a photo the next morning is in his email.
@@ -152,15 +173,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Ask it */}
+        {/* The AI: being built, and labelled that way */}
         <section className="border-t border-line">
           <div className={`${wrap} py-16 md:py-28`}>
             <div className="synnr-reveal">
               <p className="text-[13px] text-ink-faint">Being built now</p>
-              <h2 className={`${h2} mt-3`}>Then ask it anything.</h2>
+              <h2 className={`${h2} mt-3`}>An AI that checks the work.</h2>
               <p className={lede}>
-                The same SYNNR that preps the job will answer for the rest of the company. Everybody gets their own
-                login, and everybody asks the same brain.
+                SYNNR will look at every proof photo and flag the ones that don&apos;t look right, so your manager
+                sees those first. It will also answer for the shop, from your own job lists, procedures, and prices.
               </p>
             </div>
             <ul className="mt-10 grid border-t border-line md:mt-16 md:grid-cols-2 md:gap-x-16">
@@ -171,20 +192,23 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Wireline */}
-        <section id="wireline" className="scroll-mt-14 border-t border-line">
+        {/* Any service company, its own way */}
+        <section id="shop" className="scroll-mt-14 border-t border-line">
           <div className={`${wrap} py-16 md:py-28`}>
             <div className="synnr-reveal">
-              <h2 className={h2}>Wireline first.</h2>
+              <h2 className={h2}>Built around your shop.</h2>
               <p className={lede}>
-                SYNNR starts with the work we know, down to the cable head and the setting tool. Then it learns the
-                sizes, the vendors, and the names your shop uses for all of it.
+                SYNNR doesn&apos;t come with somebody else&apos;s checklist. Each company loads its own: what every kind
+                of job takes, which pieces stop the job, and what the crew proves when it&apos;s done.
+              </p>
+              <p className="mt-4 max-w-xl text-[16px] leading-[1.6] text-ink-dim md:text-[18px]">
+                If your crews go out with gear and have to bring it back right, it fits.
               </p>
             </div>
             <div className="synnr-reveal mt-12 rounded-2xl border border-line bg-[#0b0c0e] px-5 py-9 md:mt-16 md:px-10 md:py-12">
               <Toolstring />
             </div>
-            <p className="mt-4 text-[14px] text-ink-faint">A plug setting string, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
+            <p className="mt-4 text-[14px] text-ink-faint">Where it started: a plug setting string from a wireline shop, from the truck end down.<span className="md:hidden"> Swipe to follow it.</span></p>
           </div>
         </section>
 
@@ -225,8 +249,8 @@ export default function Home() {
             <div>
               <h2 className={h2}>Request access.</h2>
               <p className="mt-5 max-w-md text-[16px] leading-[1.6] text-ink-dim">
-                SYNNR is in early access and built for wireline companies first. Leave a number and Caden will
-                call you, look at what you run, and tell you straight whether it&apos;s ready for your shop.
+                SYNNR is in early access for oilfield service companies in the Permian. Leave a number and Caden
+                will call you, look at what you run, and tell you straight whether it&apos;s ready for your shop.
               </p>
             </div>
             <AccessForm />

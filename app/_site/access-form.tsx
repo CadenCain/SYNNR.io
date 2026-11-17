@@ -50,7 +50,7 @@ export default function AccessForm() {
           <input name="phone" type="tel" required maxLength={40} autoComplete="tel" inputMode="tel" className={field} />
         </label>
         <label className="flex flex-col gap-1.5 text-[13px] text-ink-dim">What you run <span className="sr-only">(optional)</span>
-          <input name="runs" maxLength={200} placeholder="Wireline, 6 trucks" className={field} />
+          <input name="runs" maxLength={200} placeholder="Coil tubing, 4 units" className={field} />
         </label>
       </div>
       {/* People never see this one. Only a bot fills it in. */}

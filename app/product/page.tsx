@@ -43,6 +43,9 @@ export default function Product() {
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
               SYNNR sits between the dispatch you already get and the gear being put away after the job. Six steps.
             </p>
+            <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-ink-faint">
+              The screens here are a sample from a wireline shop. Yours show your jobs and your gear.
+            </p>
           </div>
         </section>
 
@@ -52,7 +55,7 @@ export default function Product() {
         </Step>
 
         <Step n={2} title="A job comes in." flip visual={<div className="grid gap-4 sm:grid-cols-2"><DispatchShot /><ReadShot /></div>}>
-          <p>Type the kind of job and the truck, and put in what the dispatch says about the hole. SYNNR pulls your shop&apos;s list for that kind of job.</p>
+          <p>Type the kind of job and the truck, and put in what the dispatch says about the job. SYNNR pulls your shop&apos;s list for that kind of job.</p>
           <p>If the dispatch says to bring something, add it to the job as critical and it goes to the top of the list.</p>
           <p className="text-[14px] text-ink-faint">Being turned on now: send a photo or a screenshot of the dispatch instead of typing, and SYNNR reads it for you. It leaves names and phone numbers out, and the photo isn&apos;t kept.</p>
         </Step>
@@ -74,7 +77,7 @@ export default function Product() {
         </Step>
 
         <Step n={6} title="After the job, the crew proves it was put away right." visual={<AfterShot />}>
-          <p>A job list also says what gets proven when the job is done: rams closed for travel, the package washed, whatever your shop keeps having to check.</p>
+          <p>A job list also says what gets proven when the job is done: the equipment washed, made safe to travel, back where it belongs, whatever your shop keeps having to check.</p>
           <p>Each one takes a photo, with who took it and when. The manager sees it on the same board, and a truck still missing a photo the next morning is in his email.</p>
           <p>Nobody drives back up to the yard to look.</p>
         </Step>
@@ -84,9 +87,9 @@ export default function Product() {
             <div className="text-[14px] text-ink-faint md:pt-2">What&apos;s next</div>
             <div className="synnr-reveal max-w-2xl">
               <p className="text-[22px] leading-[1.35] tracking-[-0.015em] text-ink md:text-[28px]">
-                Asking it questions. What you charge, what a contract says, how your shop does a procedure. Same SYNNR, same company, and it only answers from what you&apos;ve given it.
+                An AI that checks the work. It will look at every proof photo and flag the ones that don&apos;t look right, so your manager sees those first. And it will answer questions from what your shop has given it: what you charge, what a contract says, how your shop does a procedure.
               </p>
-              <p className="mt-6 text-[15px] text-ink-dim">That part is being built now, with wireline first.</p>
+              <p className="mt-6 text-[15px] text-ink-dim">Both are being built now.</p>
               <Link href="/#access" className="mt-8 inline-flex h-12 items-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">Request access</Link>
             </div>
           </div>

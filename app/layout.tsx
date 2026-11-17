@@ -29,19 +29,19 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "SYNNR is an operations AI for wireline. Say what you're running. It gives your crew what the job takes with the critical pieces first, a checklist to load by with photo proof, and a plain READY or NOT READY before the truck rolls. Early access.",
+    "SYNNR is for oilfield service companies. Say what you're running. It gives your crew what the job takes, has them prove the critical pieces with a photo, and tells you READY or NOT READY before the truck rolls. After the job, they prove the gear was put away right. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
     title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
+      "For oilfield service companies. What the job takes, photo proof of the critical pieces, READY or NOT READY before the truck rolls, and proof the gear was put away right. Early access.",
   },
   twitter: {
     card: "summary_large_image",
     title: "SYNNR | Tell it the job. It tells you what to take.",
     description:
-      "Operations AI for wireline. What the job takes with the critical pieces first, a checklist to load by, and a plain READY or NOT READY before the truck rolls. Early access.",
+      "For oilfield service companies. What the job takes, photo proof of the critical pieces, READY or NOT READY before the truck rolls, and proof the gear was put away right. Early access.",
   },
 };
 
@@ -63,7 +63,7 @@ export default function RootLayout({
               name: "SYNNR",
               url: "https://www.synnr.io",
               description:
-                "Operations AI for wireline service companies. Tell it the job and it gives the crew what to take, a checklist to load by, and a ready check before the truck rolls.",
+                "Software for oilfield service companies. Tell it the job and it gives the crew what to take, a checklist to load by with photo proof, and a ready check before the truck rolls.",
               areaServed: "Permian Basin, West Texas",
             }),
           }}

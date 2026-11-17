@@ -68,7 +68,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
       {canEdit ? (
         <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
           <input type="hidden" name="id" value={l.id} />
-          <input name="label" required maxLength={120} placeholder="A piece, like Free point tool" aria-label="Piece" className={`${field} min-w-0 flex-1`} />
+          <input name="label" required maxLength={120} placeholder="A piece of gear this job takes" aria-label="Piece" className={`${field} min-w-0 flex-1`} />
           <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many" className={`${field} w-20`} />
           <label className="flex h-12 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
           <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
@@ -80,7 +80,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
         <div>
           <h2 className="text-[17px] font-medium text-ink">After the job</h2>
           <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">
-            What the crew proves when the job is done, like BOP rams closed for travel or the package washed. Each one takes a photo, so you see it was done without going to look. These don&apos;t hold a truck back from Ready.
+            What the crew proves when the job is done, like the equipment washed, or made safe to travel. Each one takes a photo, so you see it was done without going to look. These don&apos;t hold a truck back from Ready.
           </p>
         </div>
         <ul className="overflow-hidden rounded-xl border border-line">
@@ -100,7 +100,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
         {canEdit ? (
           <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
             <input type="hidden" name="id" value={l.id} /><input type="hidden" name="phase" value="after" />
-            <input name="label" required maxLength={120} placeholder="Something to prove, like BOP rams closed for travel" aria-label="Something to prove after the job" className={`${field} min-w-0 flex-1`} />
+            <input name="label" required maxLength={120} placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job" className={`${field} min-w-0 flex-1`} />
             <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
           </form>
         ) : null}
