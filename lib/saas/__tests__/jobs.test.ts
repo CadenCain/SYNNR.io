@@ -251,6 +251,10 @@ describe("the job board", () => {
     const back = j("back-early", "2026-11-18T01:20:00.000Z", "2026-11-18T02:10:00.000Z", 2, 1);
     expect(outNow(back, now)).toBe(false);
     expect(boardGroups([back], now).owed).toHaveLength(1);
+    // Its only photo was sent back by a manager: it's back, and it owes a better one now.
+    const rejected = { ...soon, id: "sent-back", back: "Still dirty" };
+    expect(outNow(rejected, now)).toBe(false);
+    expect(boardGroups([rejected], now).owed).toHaveLength(1);
     // Four hours on with nothing sent, it owes.
     expect(boardGroups([j("morning", "2026-11-17T10:00:00.000Z", "2026-11-17T10:40:00.000Z", 3)], now).owed).toHaveLength(1);
   });

@@ -383,7 +383,9 @@ export default function JobCheck({ jobId, initial, photos, backPhotos, initialRe
               ? "Nothing to prove after this job. Add a check here, or put it on the job list under The Brain so every job gets it."
               : a.done
                 ? `${a.total === 1 ? "Proven" : a.total === 2 ? "Both proven" : `All ${a.total} proven`}. ${a.total === 1 ? "By" : "Last one by"} ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
-                : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
+                : closed
+                  ? `${a.left} of ${a.total} never proven. The job was closed out, so nothing more is owed.`
+                  : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
           </p>
 
           {addingAfter ? (
@@ -398,7 +400,7 @@ export default function JobCheck({ jobId, initial, photos, backPhotos, initialRe
           {afterOpen.length ? <ul className="mt-3 overflow-hidden rounded-xl border border-line">{afterOpen.map(row)}</ul> : null}
           {afterProven.length ? photoGrid(afterProven) : null}
         </section>
-      ) : after.length && s.total > 0 ? (
+      ) : after.length && s.total > 0 && !closed ? (
         <p className="text-[13px] leading-relaxed text-ink-faint">
           After the job: {after.length} {after.length === 1 ? "thing" : "things"} to prove with a photo. {after.length === 1 ? "It opens" : "They open"} once the truck is ready.
         </p>

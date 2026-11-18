@@ -242,9 +242,13 @@ export const LIVE_HOURS = 36;
 /** A truck cleared less than this long ago is still on its job: it doesn't owe a photo yet. */
 export const OUT_HOURS = 4;
 
-/** Cleared so recently that it's still out, with nothing proven after the job yet. */
-export function outNow(j: { first_ready_at: string | null; a: { left: number; proven: number } }, now: number): boolean {
-  return Boolean(j.first_ready_at) && j.a.left > 0 && j.a.proven === 0 && new Date(j.first_ready_at as string).getTime() > now - OUT_HOURS * 3600e3;
+/**
+ * Cleared so recently that it's still out, with nothing proven after the job
+ * yet. A truck with a photo a manager sent back isn't out: someone took that
+ * photo, so it's back, and it owes a better one now.
+ */
+export function outNow(j: { first_ready_at: string | null; a: { left: number; proven: number }; back?: string | null }, now: number): boolean {
+  return Boolean(j.first_ready_at) && !j.back && j.a.left > 0 && j.a.proven === 0 && new Date(j.first_ready_at as string).getTime() > now - OUT_HOURS * 3600e3;
 }
 
 /**
@@ -260,7 +264,7 @@ export function outNow(j: { first_ready_at: string | null; a: { left: number; pr
  * stray tap doesn't move. A job a manager closed out owes nothing: it's
  * never in owed, stale or live.
  */
-export function boardGroups<T extends { first_ready_at: string | null; created_at: string; closed_at?: string | null; a: { left: number; proven: number } }>(jobs: T[], now: number) {
+export function boardGroups<T extends { first_ready_at: string | null; created_at: string; closed_at?: string | null; back?: string | null; a: { left: number; proven: number } }>(jobs: T[], now: number) {
   const cutoff = now - LIVE_HOURS * 3600e3;
   const went = jobs.filter((j) => j.first_ready_at).sort((x, y) => (y.first_ready_at as string).localeCompare(x.first_ready_at as string));
   const waiting = jobs.filter((j) => !j.first_ready_at && !j.closed_at);
