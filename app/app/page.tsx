@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterState, boardGroups, jobState, type Phase } from "@/lib/saas/jobs";
+import { afterState, boardGroups, jobState, tooSoon, type Phase } from "@/lib/saas/jobs";
 import { fmtTime as time, fmtWhen, dayHeading, dayKey } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
@@ -121,15 +121,16 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
       {owed.length || stale.length ? (
         <section className="mt-8">
           <h2 className="text-[15px] font-medium text-ink">Needs a look</h2>
+          <p className="mt-1 text-[13px] text-ink-faint">Trucks that went out and still owe a photo after the job, and trucks loaded but never called ready.</p>
           <ul className="mt-3 overflow-hidden rounded-2xl border border-line-2">
             {owed.map((j) => (
               <li key={j.id} className="border-b border-line last:border-b-0">
                 <Link href={`/app/jobs/${j.id}`} className="flex items-center justify-between gap-4 bg-surface px-4 py-3.5 transition-colors hover:bg-elevated sm:px-5">
                   <span className="min-w-0">
                     <span className="block truncate text-[16px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
-                    <span className="mt-0.5 block truncate text-[13px] text-ink-dim">{j.ready_by ? `Cleared by ${j.ready_by}` : "Cleared"}, {when(j.first_ready_at)}</span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Cleared {when(j.first_ready_at)}{j.ready_by ? ` · ${j.ready_by}` : ""}</span>
                   </span>
-                  <span className="shrink-0 text-right text-[13px] text-bone">{j.a.left} of {j.a.total}<span className="block text-[12px] text-ink-faint">no photo after the job</span></span>
+                  <span className="shrink-0 text-right text-[13px] text-bone">{j.a.left} of {j.a.total} no photo</span>
                 </Link>
               </li>
             ))}
@@ -138,9 +139,9 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                 <Link href={`/app/jobs/${j.id}`} className="flex items-center justify-between gap-4 bg-surface px-4 py-3.5 transition-colors hover:bg-elevated sm:px-5">
                   <span className="min-w-0">
                     <span className="block truncate text-[16px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
-                    <span className="mt-0.5 block truncate text-[13px] text-ink-dim">Started by {j.created_by_name ?? "someone"}, {when(j.created_at)}</span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Started {when(j.created_at)}{j.created_by_name ? ` · ${j.created_by_name}` : ""}. {j.s.on} of {j.s.total} on.</span>
                   </span>
-                  <span className="shrink-0 text-right text-[13px] text-red-300">Never called ready<span className="block text-[12px] text-ink-faint">{j.s.on} of {j.s.total} on the truck</span></span>
+                  <span className="shrink-0 text-right text-[13px] text-red-300">Never called ready</span>
                 </Link>
               </li>
             ))}
@@ -204,15 +205,22 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
                     <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
-                      {j.ready_by ? `Cleared by ${j.ready_by}` : "Cleared"}, {time(j.first_ready_at)}
-                      {j.status !== "ready" ? <span className="text-red-300">{`. Not ready now: ${j.s.missing.length} off`}</span> : null}
+                      {time(j.first_ready_at)}{j.ready_by ? ` · ${j.ready_by}` : ""}
+                      {j.status !== "ready" ? <span className="text-red-300">{` · Not ready now: ${j.s.missing.length} off`}</span> : null}
                     </span>
                   </span>
-                  <span className={`shrink-0 text-right text-[13px] ${j.a.left ? "text-bone" : "text-ink-faint"}`}>
-                    {j.a.total === 0 ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}`
-                      : j.a.left ? `${j.a.left} of ${j.a.total} no photo`
-                        : `Put away, ${dayKey(j.a.last_at) === dayKey(j.first_ready_at) ? time(j.a.last_at) : fmtWhen(j.a.last_at)}`}
-                  </span>
+                  {(() => {
+                    // Put-away photos taken within the hour the truck was cleared were taken before the job.
+                    const early = j.a.left ? null : tooSoon(j.first_ready_at, j.a.last_at);
+                    return (
+                      <span className={`shrink-0 text-right text-[13px] ${j.a.left || early !== null ? "text-bone" : "text-ink-faint"}`}>
+                        {j.a.total === 0 ? "Nothing to prove after"
+                          : j.a.left ? `${j.a.left} of ${j.a.total} no photo`
+                            : early !== null ? `Photos ${early} min after clearing`
+                              : `Put away, ${dayKey(j.a.last_at) === dayKey(j.first_ready_at) ? time(j.a.last_at) : fmtWhen(j.a.last_at)}`}
+                      </span>
+                    );
+                  })()}
                 </Link>
               </li>
             ))}
