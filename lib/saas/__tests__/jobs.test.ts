@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, type JobLine } from "../jobs";
+import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, boardGroups, tooSoon, LIVE_HOURS, type JobLine } from "../jobs";
+import { dayHeading, dayKey } from "../format";
 import { SHARE_TOKEN, newShareToken } from "../job-share";
 
 /**
@@ -208,5 +209,60 @@ describe("after the job", () => {
       { id: "b", label: "Package washed", qty: 1, critical: true, why: null, source: "list", phase: "after", sort: 1, on_by: "Mike", on_at: on, photo_path: "co/jobs/j/b.jpg" },
     ], (l) => `/p/TOKEN/photo/${l.id}`);
     expect(out.map((l) => l.label)).toEqual(["CCL"]);
+  });
+});
+
+describe("the job board", () => {
+  const now = new Date("2026-11-18T02:45:00.000Z").getTime(); // Tuesday Nov 17, 8:45 PM Central
+  const j = (id: string, created: string, cleared: string | null, left = 0) => ({ id, created_at: created, first_ready_at: cleared, a: { left } });
+  const jobs = [
+    j("loading-tonight", "2026-11-18T01:40:00.000Z", null),
+    j("out-today-owes", "2026-11-17T10:15:00.000Z", "2026-11-17T11:15:00.000Z", 3),
+    j("out-today-done", "2026-11-17T10:10:00.000Z", "2026-11-17T10:50:00.000Z", 0),
+    j("out-last-week-owes", "2026-11-11T11:00:00.000Z", "2026-11-11T11:40:00.000Z", 3),
+    j("never-called-ready", "2026-11-13T10:25:00.000Z", null),
+  ];
+
+  it("puts what needs a look ahead of history", () => {
+    const g = boardGroups(jobs, now);
+    expect(g.live.map((x) => x.id)).toEqual(["loading-tonight"]);
+    // Started more than a day and a half ago and never cleared: not loading anymore.
+    expect(g.stale.map((x) => x.id)).toEqual(["never-called-ready"]);
+    expect(g.owed.map((x) => x.id)).toEqual(["out-today-owes", "out-last-week-owes"]);
+    expect(g.went.map((x) => x.id)).toEqual(["out-today-owes", "out-today-done", "out-last-week-owes"]);
+  });
+
+  it("calls a truck loading for a day and a half, then stale", () => {
+    const edge = (hours: number) => boardGroups([j("x", new Date(now - hours * 3600e3).toISOString(), null)], now);
+    expect(edge(LIVE_HOURS - 1).live).toHaveLength(1);
+    expect(edge(LIVE_HOURS + 1).stale).toHaveLength(1);
+  });
+
+  it("keeps a truck that went out in 'went out' even if a stray tap made it not ready again", () => {
+    // The board goes by the first time it was cleared, not by what it reads now.
+    expect(boardGroups([j("untapped", "2026-11-13T11:10:00.000Z", "2026-11-13T11:30:00.000Z")], now).went).toHaveLength(1);
+  });
+
+  it("groups days in the yard's time, not the server's", () => {
+    // 8:45 PM Central on the 17th is already the 18th in UTC.
+    expect(dayKey(new Date(now).toISOString())).toBe("2026-11-17");
+    expect(dayHeading("2026-11-17T11:15:00.000Z", now)).toBe("Today");
+    expect(dayHeading("2026-11-16T23:30:00.000Z", now)).toBe("Yesterday");
+    expect(dayHeading("2026-11-14T11:00:00.000Z", now)).toBe("Sat, Nov 14");
+    expect(dayHeading(null, now)).toBe("No date");
+  });
+});
+
+describe("an after-the-job photo taken before the job", () => {
+  const cleared = "2026-11-16T11:40:00.000Z";
+  it("is flagged when it was taken within the hour the truck was cleared", () => {
+    expect(tooSoon(cleared, "2026-11-16T11:46:00.000Z")).toBe(6);
+    expect(tooSoon(cleared, "2026-11-16T12:39:00.000Z")).toBe(59);
+  });
+  it("is fine an hour or more later, or when there's nothing to compare", () => {
+    expect(tooSoon(cleared, "2026-11-16T12:40:00.000Z")).toBeNull();
+    expect(tooSoon(cleared, "2026-11-17T00:20:00.000Z")).toBeNull();
+    expect(tooSoon(null, "2026-11-16T11:46:00.000Z")).toBeNull();
+    expect(tooSoon(cleared, null)).toBeNull();
   });
 });

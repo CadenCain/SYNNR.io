@@ -68,14 +68,15 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <JobCheck jobId={job.id} initial={lines} photos={photos} me={me}
-          initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null} wentOut={Boolean(job.first_ready_at)}
+          initialReady={job.status === "ready" ? { by: job.ready_by, at: job.ready_at } : null} wentOutAt={job.first_ready_at ?? null}
           manager={company.role !== "member"} writable={isWritable(company.subscription_status, company.comped)}
           share={{ title: [job.truck, job.job_type].filter(Boolean).join(", "), token: job.share_token ?? null, demo: company.is_demo }} />
 
         {/* What the dispatch said */}
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
           {job.remarks ? <div className="hidden lg:block">{remarks}</div> : null}
-          {rows.length ? (
+          {/* The truck is already the page's title: the box is only worth showing when the dispatch said more. */}
+          {rows.some(([k]) => k !== "Truck") ? (
             <dl className="overflow-hidden rounded-xl border border-line bg-surface">
               {rows.map(([k, v], i) => (
                 <div key={`${k}-${i}`} className="flex items-baseline justify-between gap-4 border-b border-line px-5 py-3 text-[14px] last:border-b-0">

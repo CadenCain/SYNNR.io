@@ -58,7 +58,7 @@ export default async function JobLists({ searchParams }: { searchParams: Promise
       {canEdit ? (
         <form action={createList} className="flex flex-col gap-3 sm:flex-row">
           <input name="name" required maxLength={80} placeholder="A kind of job your shop runs" aria-label="Kind of job"
-            className="h-12 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3.5 text-[16px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
+            className="h-12 min-w-0 shrink-0 rounded-lg sm:flex-1 border border-line-2 bg-coal px-3.5 text-[16px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
           <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add a job list</button>
         </form>
       ) : (

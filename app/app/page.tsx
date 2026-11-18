@@ -3,15 +3,16 @@ import { Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterState, jobState, type Phase } from "@/lib/saas/jobs";
-import { fmtTime as time, fmtDay as day, fmtWhen } from "@/lib/saas/format";
+import { afterState, boardGroups, jobState, type Phase } from "@/lib/saas/jobs";
+import { fmtTime as time, fmtWhen, dayHeading, dayKey } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
 export const metadata = { title: { absolute: "SYNNR" } };
 export const dynamic = "force-dynamic";
 
 type Row = {
-  id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; first_ready_at: string | null; created_at: string;
+  id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; first_ready_at: string | null;
+  created_at: string; created_by_name: string | null;
   synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null }[] | null;
 };
 
@@ -24,19 +25,23 @@ const RECENT_MAX = 80;
 const OLDER_MAX = 300;
 
 /**
- * Home: every job the crew is loading for, and where each truck stands.
- * Loading out first (what still needs something), then what's been cleared.
- * Every number on this screen is counted from the jobs below it.
+ * Home: where every truck stands, in the order a manager needs it. First
+ * what needs a look (a truck that went out and still owes a photo, or one
+ * that was started and never called ready). Then what's loading out now, as
+ * big cards, because that's where a hand taps in. Then every truck that went
+ * out, one line each, by day. Every number on this screen is counted from
+ * the jobs below it.
  */
 export default async function JobsHome({ searchParams }: { searchParams: Promise<{ welcome?: string; joined?: string; older?: string }> }) {
   const { company } = await requireCompany();
   const { welcome, joined, older } = await searchParams;
   const db = await saasDb();
+  const now = clock();
   const showOlder = older === "1";
   const max = showOlder ? OLDER_MAX : RECENT_MAX;
-  const since = new Date(clock() - (showOlder ? OLDER_DAYS : RECENT_DAYS) * 86400e3).toISOString();
+  const since = new Date(now - (showOlder ? OLDER_DAYS : RECENT_DAYS) * 86400e3).toISOString();
   const [{ data }, { count: listCount }, { count: before }] = await Promise.all([
-    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
+    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, created_by_name, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
       .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(max),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
     // Jobs from before this screen's window: there's a way to them below.
@@ -44,23 +49,31 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   ]);
   const cut = (data ?? []).length >= max;
   const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
-  const loading = jobs.filter((j) => j.status !== "ready");
-  const ready = jobs.filter((j) => j.status === "ready");
-  const criticalOff = loading.reduce((n, j) => n + j.s.criticalMissing, 0);
-  // After the job: what the trucks that went out still owe a photo of. A
-  // truck that went out counts even if a stray tap has since taken it back
-  // to NOT READY.
+  const { owed, stale, live, went } = boardGroups(jobs, now);
+  const criticalOff = live.reduce((n, j) => n + j.s.criticalMissing, 0);
+  const today = dayKey(new Date(now).toISOString());
+  const wentToday = went.filter((j) => dayKey(j.first_ready_at) === today).length;
   const usesAfter = jobs.some((j) => j.a.total > 0);
-  const afterOpen = jobs.reduce((n, j) => n + (j.first_ready_at ? j.a.left : 0), 0);
   const manager = company.role !== "member";
   const writable = isWritable(company.subscription_status, company.comped);
 
+  // Trucks that went out, a day at a time, newest day first.
+  const days: { key: string; heading: string; jobs: typeof went }[] = [];
+  for (const j of went) {
+    const key = dayKey(j.first_ready_at);
+    const last = days[days.length - 1];
+    if (last && last.key === key) last.jobs.push(j);
+    else days.push({ key, heading: dayHeading(j.first_ready_at, now), jobs: [j] });
+  }
+
   const stat = (n: number, label: string, tone = "text-ink") => (
-    <div className="flex items-baseline gap-2.5 bg-[#0b0c0e] px-5 py-5 sm:px-6">
-      <span className={`text-[40px] font-light leading-none tracking-[-0.03em] tabular-nums sm:text-[48px] ${tone}`}>{n}</span>
+    <div className="flex items-baseline gap-2.5 bg-[#0b0c0e] px-5 py-4 sm:px-6 sm:py-5">
+      <span className={`text-[34px] font-light leading-none tracking-[-0.03em] tabular-nums sm:text-[44px] ${tone}`}>{n}</span>
       <span className="text-[13px] leading-tight text-ink-dim">{label}</span>
     </div>
   );
+  const name = (j: { truck: string | null; job_type: string }) => j.truck || j.job_type;
+  const when = (iso: string | null) => `${dayHeading(iso, now)} ${time(iso)}`;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-10">
@@ -81,11 +94,11 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
       </div>
 
       {jobs.length ? (
-        <div className={`mt-6 grid gap-px overflow-hidden rounded-2xl border border-line-2 bg-line ${usesAfter ? "grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
-          {stat(loading.length, "loading out")}
-          {stat(ready.length, "ready", ready.length ? "text-emerald-400" : "text-ink")}
+        <div className={`mt-6 grid gap-px overflow-hidden rounded-2xl border border-line-2 bg-line ${usesAfter ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3"}`}>
+          {stat(live.length, "loading out now")}
+          {stat(wentToday, "went out today", wentToday ? "text-emerald-400" : "text-ink")}
           {stat(criticalOff, "critical pieces still off", criticalOff ? "text-bone" : "text-ink")}
-          {usesAfter ? stat(afterOpen, "to prove after the job", afterOpen ? "text-bone" : "text-ink") : null}
+          {usesAfter ? stat(owed.length, owed.length === 1 ? "truck owes a photo after the job" : "trucks owe a photo after the job", owed.length ? "text-bone" : "text-ink") : null}
         </div>
       ) : null}
 
@@ -104,54 +117,108 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
         </div>
       ) : null}
 
-      {[["Loading out", loading] as const, ["Ready", ready] as const].map(([title, group]) => group.length ? (
-        <section key={title} className="mt-9">
-          <h2 className="text-[15px] font-medium text-ink">{title}</h2>
+      {/* What needs a look: a photo still owed, or a truck that was never called ready. */}
+      {owed.length || stale.length ? (
+        <section className="mt-8">
+          <h2 className="text-[15px] font-medium text-ink">Needs a look</h2>
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-line-2">
+            {owed.map((j) => (
+              <li key={j.id} className="border-b border-line last:border-b-0">
+                <Link href={`/app/jobs/${j.id}`} className="flex items-center justify-between gap-4 bg-surface px-4 py-3.5 transition-colors hover:bg-elevated sm:px-5">
+                  <span className="min-w-0">
+                    <span className="block truncate text-[16px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
+                    <span className="mt-0.5 block truncate text-[13px] text-ink-dim">{j.ready_by ? `Cleared by ${j.ready_by}` : "Cleared"}, {when(j.first_ready_at)}</span>
+                  </span>
+                  <span className="shrink-0 text-right text-[13px] text-bone">{j.a.left} of {j.a.total}<span className="block text-[12px] text-ink-faint">no photo after the job</span></span>
+                </Link>
+              </li>
+            ))}
+            {stale.map((j) => (
+              <li key={j.id} className="border-b border-line last:border-b-0">
+                <Link href={`/app/jobs/${j.id}`} className="flex items-center justify-between gap-4 bg-surface px-4 py-3.5 transition-colors hover:bg-elevated sm:px-5">
+                  <span className="min-w-0">
+                    <span className="block truncate text-[16px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
+                    <span className="mt-0.5 block truncate text-[13px] text-ink-dim">Started by {j.created_by_name ?? "someone"}, {when(j.created_at)}</span>
+                  </span>
+                  <span className="shrink-0 text-right text-[13px] text-red-300">Never called ready<span className="block text-[12px] text-ink-faint">{j.s.on} of {j.s.total} on the truck</span></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Loading out now: the cards a hand taps into. */}
+      {live.length ? (
+        <section className="mt-8">
+          <h2 className="text-[15px] font-medium text-ink">Loading out</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            {group.map((j) => {
-              const isReady = j.status === "ready";
+            {live.map((j) => {
               const pct = j.s.total ? Math.round((j.s.on / j.s.total) * 100) : 0;
               return (
                 <Link key={j.id} href={`/app/jobs/${j.id}`}
                   className="group flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-2 hover:bg-elevated">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-[20px] font-medium tracking-[-0.015em] text-ink">{j.truck || j.job_type}</div>
+                      <div className="truncate text-[20px] font-medium tracking-[-0.015em] text-ink">{name(j)}</div>
                       <div className="mt-0.5 truncate text-[14px] text-ink-dim">{j.truck ? j.job_type : "No truck picked"}</div>
                     </div>
                     <span className="flex shrink-0 items-center gap-2 rounded-full border border-line-2 px-3 py-1 text-[12px] text-ink-dim">
-                      <span className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-emerald-400" : "bg-red-400"}`} /> {isReady ? "Ready" : "Not ready"}
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Not ready
                     </span>
                   </div>
-                  <div className="mt-5 flex items-baseline gap-2.5">
+                  <div className="mt-4 flex items-baseline gap-2.5">
                     <span className="text-[34px] font-light leading-none tracking-[-0.03em] text-ink tabular-nums">{j.s.on}<span className="text-ink-faint"> / {j.s.total}</span></span>
                     <span className="text-[13px] text-ink-dim">on the truck</span>
                   </div>
                   <div className="mt-3 h-1 overflow-hidden rounded-full bg-line">
-                    <div className={`h-full rounded-full ${isReady ? "bg-emerald-400" : "bg-ink-dim"}`} style={{ width: `${pct}%` }} />
+                    <div className="h-full rounded-full bg-ink-dim" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3 text-[13px]">
-                    <span className={isReady ? "text-emerald-400" : j.s.criticalMissing ? "text-bone" : "text-ink-dim"}>
-                      {isReady ? `Cleared by ${j.ready_by ?? "someone"}${j.ready_at ? `, ${time(j.ready_at)}` : ""}`
-                        : j.s.total === 0 ? "No list yet"
-                          : j.s.criticalMissing ? `${j.s.criticalMissing} critical still off`
-                            : j.s.ready ? "Everything's on. Not called ready yet." : `${j.s.missing.length} still off`}
+                    <span className={j.s.criticalMissing ? "text-bone" : "text-ink-dim"}>
+                      {j.s.total === 0 ? "No list yet"
+                        : j.s.criticalMissing ? `${j.s.criticalMissing} critical still off`
+                          : j.s.ready ? "Everything's on. Not called ready yet." : `${j.s.missing.length} still off`}
                     </span>
-                    <span className="shrink-0 text-ink-faint">{j.photos ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}, ` : ""}{day(j.created_at)}</span>
+                    <span className="shrink-0 text-ink-faint">Started {time(j.created_at)}</span>
                   </div>
-                  {j.first_ready_at && j.a.total ? (
-                    <div className={`mt-2 border-t border-line pt-2 text-[13px] ${j.a.done ? "text-ink-dim" : "text-bone"}`}>
-                      {j.a.done
-                        ? `After the job: all proven, ${fmtWhen(j.a.last_at)}`
-                        : `After the job: ${j.a.left} of ${j.a.total} still to prove`}
-                    </div>
-                  ) : null}
                 </Link>
               );
             })}
           </div>
         </section>
-      ) : null)}
+      ) : null}
+
+      {/* Every truck that went out, one line each, a day at a time. */}
+      {days.map((d) => (
+        <section key={d.key} className="mt-8">
+          <h2 className="flex items-baseline justify-between gap-3 text-[15px] font-medium text-ink">
+            <span>{d.heading}</span>
+            <span className="text-[13px] font-normal text-ink-faint">{d.jobs.length} {d.jobs.length === 1 ? "truck" : "trucks"} went out</span>
+          </h2>
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
+            {d.jobs.map((j) => (
+              <li key={j.id} className="border-b border-line last:border-b-0">
+                <Link href={`/app/jobs/${j.id}`} className="flex items-center gap-3 bg-surface px-4 py-3 transition-colors hover:bg-elevated sm:px-5">
+                  <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${j.status === "ready" ? "bg-emerald-400" : "bg-red-400"}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
+                    <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
+                      {j.ready_by ? `Cleared by ${j.ready_by}` : "Cleared"}, {time(j.first_ready_at)}
+                      {j.status !== "ready" ? <span className="text-red-300">{`. Not ready now: ${j.s.missing.length} off`}</span> : null}
+                    </span>
+                  </span>
+                  <span className={`shrink-0 text-right text-[13px] ${j.a.left ? "text-bone" : "text-ink-faint"}`}>
+                    {j.a.total === 0 ? `${j.photos} ${j.photos === 1 ? "photo" : "photos"}`
+                      : j.a.left ? `${j.a.left} of ${j.a.total} no photo`
+                        : `Put away, ${dayKey(j.a.last_at) === dayKey(j.first_ready_at) ? time(j.a.last_at) : fmtWhen(j.a.last_at)}`}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
       {cut || before || showOlder ? (
         <p className="mt-9 text-[13px] leading-relaxed text-ink-faint">

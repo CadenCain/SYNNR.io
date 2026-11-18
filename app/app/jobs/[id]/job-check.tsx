@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shrinkPhoto } from "@/lib/shrink-photo";
-import { afterLines, afterState, jobState, loadLines, orderLines, type JobLine } from "@/lib/saas/jobs";
+import { afterLines, afterState, jobState, loadLines, orderLines, tooSoon, type JobLine } from "@/lib/saas/jobs";
 import { fmtTime, fmtWhen } from "@/lib/saas/format";
 import { setLine, addLine, removeLine, markReady, deleteJob } from "../actions";
 import ShareProof from "./share-proof";
@@ -43,10 +43,10 @@ async function safe<T extends { ok: true }>(run: () => Promise<T | { ok: false; 
   }
 }
 
-export default function JobCheck({ jobId, initial, photos, initialReady, wentOut, me, manager, writable, share }: {
+export default function JobCheck({ jobId, initial, photos, initialReady, wentOutAt, me, manager, writable, share }: {
   jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null;
-  /** The truck has been cleared at least once: what's proven after the job is open. */
-  wentOut: boolean; me: string; manager: boolean; writable: boolean;
+  /** When the truck was first cleared, if it ever was: from then on, what's proven after the job is open. */
+  wentOutAt: string | null; me: string; manager: boolean; writable: boolean;
   share: { title: string; token: string | null; demo: boolean };
 }) {
   const router = useRouter();
@@ -130,7 +130,10 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
       else shoot(l.id);
       return;
     }
-    if (writable) toggle(l, !l.on_at);
+    if (!writable) return;
+    // One thumb on a cleared truck takes it back to NOT READY for everyone: ask first.
+    if (l.on_at && l.phase !== "after" && out && !window.confirm(`Take "${l.label}" back off? This truck was cleared, and it will read Not ready again.`)) return;
+    toggle(l, !l.on_at);
   }
 
   function shoot(id: string) {
@@ -235,7 +238,10 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
   // stray tap later takes it back to NOT READY. A job with nothing to load
   // shows them straight away. A shop that doesn't use them never sees the
   // section, except a manager, who can add one.
-  const out = isReady || wentOut;
+  const clearedAt = wentOutAt ?? (isReady ? ready?.at ?? null : null);
+  const out = isReady || Boolean(wentOutAt);
+  // Each check after the job is shown once: as a row to tap until it has its photo, then as the photo.
+  const afterOpen = after.filter((l) => !(l.on_at && l.photo_path));
   const showAfter = after.length > 0 ? out || a.proven > 0 || s.total === 0 : out && manager && writable;
 
   // One line: a piece to load, or something to prove after the job.
@@ -270,7 +276,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
           ) : null}
           {l.critical && !isAfter ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone", photo && "hidden sm:inline")}>Critical</span> : null}
         </button>
-        {manager && writable ? (
+        {manager && writable && (isAfter || !out) ? (
           <button type="button" onClick={() => remove(l)} aria-label={`Take ${l.label} off the list`} title="Take it off the list"
             className="flex w-11 shrink-0 items-center justify-center border-l border-line text-ink-faint transition-colors hover:bg-elevated hover:text-red-400">
             <X className="h-4 w-4" />
@@ -297,6 +303,9 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
               <span className="block px-3 py-2.5">
                 <span className="block text-[13px] leading-snug text-ink">{l.label}</span>
                 <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
+                {l.phase === "after" && tooSoon(clearedAt, l.on_at) !== null ? (
+                  <span className="mt-1 block text-[12px] leading-snug text-bone">Taken {tooSoon(clearedAt, l.on_at)} min after the truck was cleared. That&apos;s before the job.</span>
+                ) : null}
               </span>
             </button>
           </li>
@@ -304,6 +313,43 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
       })}
     </ul>
   );
+
+  // After the job: what the crew proves before anyone goes home.
+  const afterSection = showAfter ? (
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[15px] font-medium text-ink">After the job</h2>
+            {writable ? (
+              <button type="button" onClick={() => setAddingAfter((x) => !x)} className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
+                <Plus className="h-4 w-4" /> Add a check
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-faint" role="status">
+            {after.length === 0
+              ? "Nothing to prove after this job. Add a check here, or put it on the job list under The Brain so every job gets it."
+              : a.done
+                ? `${a.total === 1 ? "Proven" : a.total === 2 ? "Both proven" : `All ${a.total} proven`}. ${a.total === 1 ? "By" : "Last one by"} ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
+                : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
+          </p>
+
+          {addingAfter ? (
+            <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
+              <input type="hidden" name="phase" value="after" />
+              <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job"
+                className="h-11 min-w-0 shrink-0 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint sm:flex-1" />
+              <button type="submit" disabled={addBusy} className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">{addBusy ? "Adding…" : "Add"}</button>
+            </form>
+          ) : null}
+
+          {afterOpen.length ? <ul className="mt-3 overflow-hidden rounded-xl border border-line">{afterOpen.map(row)}</ul> : null}
+          {afterProven.length ? photoGrid(afterProven) : null}
+        </section>
+      ) : after.length && s.total > 0 ? (
+        <p className="text-[13px] leading-relaxed text-ink-faint">
+          After the job: {after.length} {after.length === 1 ? "thing" : "things"} to prove with a photo. {after.length === 1 ? "It opens" : "They open"} once the truck is ready.
+        </p>
+      ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -344,6 +390,9 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
 
       {err ? <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{err}</p> : null}
 
+      {/* Once the truck has gone out, what the crew proves after the job is what people open this screen for: it goes first. */}
+      {out ? afterSection : null}
+
       {/* The list */}
       <section>
         <div className="flex items-center justify-between gap-3">
@@ -361,7 +410,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
         {adding ? (
           <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
             <input name="label" required maxLength={120} autoFocus placeholder="What is it?" aria-label="What is it?"
-              className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
+              className="h-11 min-w-0 shrink-0 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint sm:flex-1" />
             <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many"
               className="h-11 w-20 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none focus:border-ink-faint" />
             <label className="flex h-11 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
@@ -377,7 +426,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
       </section>
 
       {/* The proof: one photo per critical piece, with who took it and when. */}
-      {proof.length ? (
+      {proof.length && out ? (
         <section>
           <h2 className="text-[15px] font-medium text-ink">Proof</h2>
           <p className="mt-1 text-[13px] text-ink-faint">
@@ -387,42 +436,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
         </section>
       ) : null}
 
-      {/* After the job: what the crew proves before anyone goes home */}
-      {showAfter ? (
-        <section>
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[15px] font-medium text-ink">After the job</h2>
-            {writable ? (
-              <button type="button" onClick={() => setAddingAfter((x) => !x)} className="flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[13px] text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
-                <Plus className="h-4 w-4" /> Add a check
-              </button>
-            ) : null}
-          </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink-faint" role="status">
-            {after.length === 0
-              ? "Nothing to prove after this job. Add a check here, or put it on the job list under The Brain so every job gets it."
-              : a.done
-                ? `${a.total === 1 ? "Proven" : a.total === 2 ? "Both proven" : `All ${a.total} proven`}. ${a.total === 1 ? "By" : "Last one by"} ${a.last_by ?? "someone"}, ${fmtWhen(a.last_at)}.`
-                : `${a.left} of ${a.total} still to prove. A photo of each before anyone goes home.`}
-          </p>
-
-          {addingAfter ? (
-            <form onSubmit={add} className="mt-3 flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
-              <input type="hidden" name="phase" value="after" />
-              <input name="label" required maxLength={120} autoFocus placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job"
-                className="h-11 min-w-0 flex-1 rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
-              <button type="submit" disabled={addBusy} className="h-11 rounded-lg bg-ink px-5 text-[14px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">{addBusy ? "Adding…" : "Add"}</button>
-            </form>
-          ) : null}
-
-          {after.length ? <ul className="mt-3 overflow-hidden rounded-xl border border-line">{after.map(row)}</ul> : null}
-          {afterProven.length ? photoGrid(afterProven) : null}
-        </section>
-      ) : after.length && s.total > 0 ? (
-        <p className="text-[13px] leading-relaxed text-ink-faint">
-          After the job: {after.length} {after.length === 1 ? "thing" : "things"} to prove with a photo. {after.length === 1 ? "It opens" : "They open"} once the truck is ready.
-        </p>
-      ) : null}
+      {out ? null : afterSection}
 
       {s.total > 0 ? (
         <ShareProof jobId={jobId} title={share.title} initialToken={share.token} manager={manager} writable={writable} demo={share.demo} />

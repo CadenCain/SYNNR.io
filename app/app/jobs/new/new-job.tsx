@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, X } from "lucide-react";
@@ -21,7 +22,11 @@ const label = "flex flex-col gap-1.5 text-[13px] text-ink-dim";
  * it in by hand. Either way the hand sees what the job is before the list is
  * built, and can fix anything SYNNR read wrong.
  */
-export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id: string; name: string; count: number; after: number }[]; trucks: string[] }) {
+export default function NewJob({ ai, lists, trucks, started }: {
+  ai: boolean; lists: { id: string; name: string; count: number; after: number }[]; trucks: string[];
+  /** Jobs already started today, so a second phone doesn't start the same one again. */
+  started: { id: string; truck: string; job: string }[];
+}) {
   const router = useRouter();
   const [jobType, setJobType] = useState("");
   const [truck, setTruck] = useState("");
@@ -37,6 +42,8 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
 
   // The same rule the server uses, on the same lists in the same order: the list named here is the one the job gets.
   const list = matchList(lists, jobType);
+  // This truck already has a job from today: most likely the one they mean.
+  const same = truck.trim() ? started.find((s) => s.truck.toLowerCase() === truck.trim().toLowerCase()) : undefined;
 
   async function read(body: FormData) {
     setReading(true); setErr(""); setReadNote("");
@@ -120,6 +127,14 @@ export default function NewJob({ ai, lists, trucks }: { ai: boolean; lists: { id
           <datalist id="synnr-trucks">{trucks.map((t) => <option key={t} value={t} />)}</datalist>
         </label>
       </div>
+
+      {same ? (
+        <p role="status" className="rounded-lg border border-bone/40 bg-bone/[0.06] px-4 py-3 text-[14px] leading-relaxed text-ink">
+          {same.truck} already has a job started today: {same.job}.{" "}
+          <Link href={`/app/jobs/${same.id}`} className="underline underline-offset-4 hover:text-white">Open that one</Link>
+          <span className="text-ink-dim">, or keep going if this is a second job.</span>
+        </p>
+      ) : null}
 
       <label className={label}>Remarks from the dispatch
         <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} maxLength={2000} rows={3} placeholder="Anything it says about the job or what to bring"

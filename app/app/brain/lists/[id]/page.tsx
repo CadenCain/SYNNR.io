@@ -68,7 +68,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
       {canEdit ? (
         <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
           <input type="hidden" name="id" value={l.id} />
-          <input name="label" required maxLength={120} placeholder="A piece of gear this job takes" aria-label="Piece" className={`${field} min-w-0 flex-1`} />
+          <input name="label" required maxLength={120} placeholder="A piece of gear this job takes" aria-label="Piece" className={`${field} min-w-0 shrink-0 sm:flex-1`} />
           <input name="qty" type="number" min={1} max={999} defaultValue={1} aria-label="How many" className={`${field} w-20`} />
           <label className="flex h-12 items-center gap-2 text-[14px] text-ink-dim"><input name="critical" type="checkbox" className="h-5 w-5 accent-bone" /> Critical</label>
           <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
@@ -100,7 +100,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
         {canEdit ? (
           <form action={addListLine} className="flex flex-col gap-3 rounded-xl border border-line-2 bg-surface p-4 sm:flex-row sm:items-center">
             <input type="hidden" name="id" value={l.id} /><input type="hidden" name="phase" value="after" />
-            <input name="label" required maxLength={120} placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job" className={`${field} min-w-0 flex-1`} />
+            <input name="label" required maxLength={120} placeholder="Something to prove, like Equipment washed" aria-label="Something to prove after the job" className={`${field} min-w-0 shrink-0 sm:flex-1`} />
             <button type="submit" className="h-12 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white">Add</button>
           </form>
         ) : null}
@@ -113,7 +113,7 @@ export default async function JobList({ params, searchParams }: { params: Promis
             <div className="flex flex-col gap-4 border-t border-line px-5 py-4">
               <form action={renameList} className="flex flex-col gap-3 sm:flex-row">
                 <input type="hidden" name="id" value={l.id} />
-                <input name="name" required maxLength={80} defaultValue={l.name} aria-label="Name" className={`${field} min-w-0 flex-1`} />
+                <input name="name" required maxLength={80} defaultValue={l.name} aria-label="Name" className={`${field} min-w-0 shrink-0 sm:flex-1`} />
                 <button type="submit" className="h-12 rounded-lg border border-line-2 px-5 text-[15px] text-ink transition-colors hover:bg-elevated">Rename</button>
               </form>
               <form action={deleteList} className="flex flex-col gap-3 border-t border-line pt-4">

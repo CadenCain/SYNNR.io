@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { afterEmail, sendAfterOwed, SETTLE_MS, WINDOW_MS, type OwedJob } from "../after-email";
+import { afterEmail, sendAfterOwed, SETTLE_MS, WINDOW_MS, type NeverCleared, type OwedJob } from "../after-email";
 
 const job = (over: Partial<OwedJob>): OwedJob => ({ job_id: "11111111-1111-1111-1111-111111111111", job: "Truck 81, Cased Hole Logging", ready_by: "Mike Hand", out_at: "2026-11-11T11:10:00.000Z", checks: ["BOP rams closed for travel", "Pressure control package washed"], ...over });
 
@@ -29,6 +29,22 @@ describe("the morning note about what's owed after a job", () => {
     const mail = afterEmail("Shop", [job({ ready_by: null })]);
     expect(mail?.html).toContain("Cleared, Nov 11, 5:10 AM CT");
     expect(mail?.html).not.toContain("Cleared by");
+  });
+
+  const skipped = (over: Partial<NeverCleared> = {}): NeverCleared => ({ job_id: "22222222-2222-2222-2222-222222222222", job: "Truck 92, Cased hole logging", started_by: "Trey Mendez", started_at: "2026-11-13T10:25:00.000Z", on: 9, total: 10, ...over });
+
+  it("names a truck that was loaded and never called ready, even when no photo is owed", () => {
+    const mail = afterEmail("Shop", [], [skipped()]);
+    expect(mail?.subject).toBe("Never called ready: Truck 92, Cased hole logging");
+    expect(mail?.html).toContain("Started by Trey Mendez, Nov 13, 4:25 AM CT");
+    expect(mail?.html).toContain("9 of 10 on the truck. Nobody called it ready.");
+    expect(mail?.html).not.toContain("no photo yet");
+  });
+
+  it("puts both in one email", () => {
+    const mail = afterEmail("Shop", [job({})], [skipped(), skipped({ job: "Truck 87" })]);
+    expect(mail?.subject).toBe("No photo after the job: Truck 81, Cased Hole Logging, 2 never called ready");
+    expect(mail!.html.indexOf("no photo yet")).toBeLessThan(mail!.html.indexOf("never called ready"));
   });
 
   it("never lets a typed name become markup", () => {
@@ -66,11 +82,11 @@ describe("sending the morning note", () => {
     { label: "BOP rams closed for travel", sort: 1, job_id: "job", company_id: "co", synnr_jobs: truck },
     { label: "Pressure control package washed", sort: 2, job_id: "job", company_id: "co", synnr_jobs: truck },
   ];
-  const shop = { saas_companies: [{ id: "co", name: "Shop" }], saas_memberships: [{ company_id: "co", user_id: "u1" }] };
+  const shop = { synnr_jobs: [], saas_companies: [{ id: "co", name: "Shop" }], saas_memberships: [{ company_id: "co", user_id: "u1" }] };
 
   it("asks only for checks with no photo, on trucks first cleared between a week ago and half a day ago", async () => {
     const asked: Asked[] = [];
-    await sendAfterOwed(fakeAdmin({ synnr_job_lines: [] }, {}, asked), now);
+    await sendAfterOwed(fakeAdmin({ synnr_job_lines: [], synnr_jobs: [] }, {}, asked), now);
     const calls = asked.find((a) => a.table === "synnr_job_lines")!.calls;
     expect(calls).toContainEqual(["eq", ["phase", "after"]]);
     expect(calls).toContainEqual(["is", ["on_at", null]]);
@@ -79,12 +95,33 @@ describe("sending the morning note", () => {
     expect(calls).toContainEqual(["lte", ["synnr_jobs.first_ready_at", new Date(now - SETTLE_MS).toISOString()]]);
   });
 
+  it("tells the manager about a loaded truck nobody called ready, and skips one nobody touched", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    const posted: { subject: string; html: string }[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => { posted.push(JSON.parse(init.body)); return { ok: true }; });
+    try {
+      const loaded = { id: "j1", company_id: "co", truck: "Truck 92", job_type: "Cased hole logging", created_by_name: "Trey Mendez", created_at: "2026-11-11T10:25:00.000Z",
+        synnr_job_lines: [{ phase: "load", on_at: "2026-11-11T10:40:00.000Z" }, { phase: "load", on_at: null }, { phase: "after", on_at: null }] };
+      const untouched = { ...loaded, id: "j2", truck: "Truck 87", synnr_job_lines: [{ phase: "load", on_at: null }] };
+      const asked: Asked[] = [];
+      const r = await sendAfterOwed(fakeAdmin({ ...shop, synnr_job_lines: [], synnr_jobs: [loaded, untouched] }, { u1: "boss@shop.test" }, asked), now);
+      expect(r).toEqual({ companies: 1, sent: 1, errors: [] });
+      expect(posted[0].subject).toBe("Never called ready: Truck 92, Cased hole logging");
+      expect(posted[0].html).toContain("1 of 2 on the truck");
+      expect(posted[0].html).not.toContain("Truck 87");
+      // Only trucks never cleared, loaded between a week and half a day ago.
+      const calls = asked.find((a) => a.table === "synnr_jobs")!.calls;
+      expect(calls).toContainEqual(["is", ["first_ready_at", null]]);
+      expect(calls).toContainEqual(["lte", ["created_at", new Date(now - SETTLE_MS).toISOString()]]);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
   it("does nothing, and says so, when every truck has its photos", async () => {
     expect(await sendAfterOwed(fakeAdmin({ synnr_job_lines: [], ...shop }, { u1: "boss@shop.test" }), now)).toEqual({ companies: 0, sent: 0, errors: [] });
   });
 
   it("reports a database error instead of throwing", async () => {
-    const r = await sendAfterOwed(fakeAdmin({ synnr_job_lines: { error: "boom" } }, {}), now);
+    const r = await sendAfterOwed(fakeAdmin({ synnr_job_lines: { error: "boom" }, synnr_jobs: [] }, {}), now);
     expect(r.sent).toBe(0);
     expect(r.errors[0]).toContain("boom");
   });

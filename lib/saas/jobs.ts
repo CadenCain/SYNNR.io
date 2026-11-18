@@ -217,3 +217,38 @@ export function sharedLines(lines: JobLine[], photoUrl: (line: JobLine) => strin
     photo: l.on_at && l.photo_path ? photoUrl(l) ?? null : null,
   }));
 }
+
+/** A truck that hasn't been cleared and was started longer ago than this isn't loading anymore: it went out without anyone calling it ready, or it was started by mistake. */
+export const LIVE_HOURS = 36;
+
+/**
+ * How the job board sorts a company's jobs, so a manager sees what needs him
+ * before a week of history:
+ *  - owed: trucks that went out and still owe a photo after the job
+ *  - stale: started more than a day and a half ago and never called ready
+ *  - live: loading out now
+ *  - went: every truck that was cleared, newest first
+ * "Went out" goes by the first time the truck was cleared, which a later
+ * stray tap doesn't move.
+ */
+export function boardGroups<T extends { first_ready_at: string | null; created_at: string; a: { left: number } }>(jobs: T[], now: number) {
+  const cutoff = now - LIVE_HOURS * 3600e3;
+  const went = jobs.filter((j) => j.first_ready_at).sort((x, y) => (y.first_ready_at as string).localeCompare(x.first_ready_at as string));
+  const waiting = jobs.filter((j) => !j.first_ready_at);
+  return {
+    owed: went.filter((j) => j.a.left > 0),
+    stale: waiting.filter((j) => new Date(j.created_at).getTime() < cutoff),
+    live: waiting.filter((j) => new Date(j.created_at).getTime() >= cutoff),
+    went,
+  };
+}
+
+/** A photo taken this soon after the truck was cleared was taken before the job, not after it. */
+export const TOO_SOON_MS = 3600e3;
+
+/** Minutes between the truck being cleared and an after-the-job photo, when that's too soon to be real. Null when it's fine. */
+export function tooSoon(clearedAt: string | null | undefined, photoAt: string | null | undefined): number | null {
+  if (!clearedAt || !photoAt) return null;
+  const gap = new Date(photoAt).getTime() - new Date(clearedAt).getTime();
+  return Number.isFinite(gap) && gap < TOO_SOON_MS ? Math.max(0, Math.round(gap / 60e3)) : null;
+}

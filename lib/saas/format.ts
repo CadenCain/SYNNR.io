@@ -99,3 +99,19 @@ export function fmtDay(iso: string | null | undefined, tz?: string | null): stri
   if (isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("en-US", { timeZone: tz === undefined ? YARD_TZ : yardZone(tz), month: "short", day: "numeric", year: "numeric" });
 }
+
+/** The calendar day a moment falls on in the yard's zone, as "2026-11-17". Jobs are grouped by this. */
+export function dayKey(iso: string | null | undefined, tz?: string | null): string {
+  const dt = iso ? new Date(iso) : null;
+  if (!dt || isNaN(dt.getTime())) return "";
+  return dt.toLocaleDateString("en-CA", { timeZone: yardZone(tz), year: "numeric", month: "2-digit", day: "2-digit" });
+}
+
+/** "Today", "Yesterday", or "Mon, Nov 16": how a day reads on the job board. */
+export function dayHeading(iso: string | null | undefined, now: number, tz?: string | null): string {
+  const key = dayKey(iso, tz);
+  if (!key) return "No date";
+  if (key === dayKey(new Date(now).toISOString(), tz)) return "Today";
+  if (key === dayKey(new Date(now - 86400e3).toISOString(), tz)) return "Yesterday";
+  return new Date(iso as string).toLocaleDateString("en-US", { timeZone: yardZone(tz), weekday: "short", month: "short", day: "numeric" });
+}

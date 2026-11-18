@@ -14,8 +14,13 @@ import { sendEmail } from "./notify";
  *
  * It goes by the first time the truck was cleared, which never moves: a
  * piece tapped off after the job doesn't take the truck out of this email.
+ *
+ * It also names any truck that was loaded and never called ready. A crew
+ * that skips that one tap would otherwise skip everything after it, and
+ * nobody would hear about it.
  */
 export type OwedJob = { job_id: string; job: string; ready_by: string | null; out_at: string | null; checks: string[] };
+export type NeverCleared = { job_id: string; job: string; started_by: string | null; started_at: string; on: number; total: number };
 
 const SITE = "https://www.synnr.io";
 /** A truck cleared in the last half day is still on its job. */
@@ -23,23 +28,33 @@ export const SETTLE_MS = 12 * 3600e3;
 /** A job stops coming up a week after its truck was cleared. */
 export const WINDOW_MS = 7 * 86400e3;
 
-/** The email for one company, oldest first. Null when nothing is owed. */
-export function afterEmail(company: string, all: OwedJob[]): { subject: string; html: string } | null {
+/** The email for one company, oldest first. Null when there's nothing to tell. */
+export function afterEmail(company: string, all: OwedJob[], never: NeverCleared[] = []): { subject: string; html: string } | null {
   const jobs = all.filter((j) => j.checks.length).sort((a, b) => (a.out_at ?? "").localeCompare(b.out_at ?? ""));
-  if (!jobs.length) return null;
-  const subject = jobs.length === 1
-    ? `No photo after the job: ${jobs[0].job || "one truck"}`
-    : `${jobs.length} trucks with no photo after the job`;
-  const rows = jobs.map((j) => `<tr><td style="padding:12px 0;border-top:1px solid #ddd">
-<a href="${SITE}/app/jobs/${escHtml(j.job_id)}" style="color:#111;font-weight:600">${escHtml(j.job || "A job")}</a><br>
+  const skipped = [...never].sort((a, b) => a.started_at.localeCompare(b.started_at));
+  if (!jobs.length && !skipped.length) return null;
+  const owedPart = jobs.length === 1 ? `No photo after the job: ${jobs[0].job || "one truck"}` : jobs.length ? `${jobs.length} trucks with no photo after the job` : "";
+  const skippedPart = skipped.length === 1 ? (jobs.length ? "1 never called ready" : `Never called ready: ${skipped[0].job || "one truck"}`) : skipped.length ? `${skipped.length} ${jobs.length ? "" : "trucks "}never called ready` : "";
+  const subject = [owedPart, skippedPart].filter(Boolean).join(", ");
+  const td = "padding:12px 0;border-top:1px solid #ddd";
+  const link = (id: string, text: string) => `<a href="${SITE}/app/jobs/${escHtml(id)}" style="color:#111;font-weight:600">${escHtml(text)}</a>`;
+  const rows = jobs.map((j) => `<tr><td style="${td}">
+${link(j.job_id, j.job || "A job")}<br>
 <span style="color:#555">${j.ready_by ? `Cleared by ${escHtml(j.ready_by)}` : "Cleared"}, ${escHtml(fmtWhen(j.out_at, null))}</span><br>
 No photo: ${j.checks.map(escHtml).join("; ")}
 </td></tr>`).join("");
+  const skippedRows = skipped.map((j) => `<tr><td style="${td}">
+${link(j.job_id, j.job || "A job")}<br>
+<span style="color:#555">Started by ${escHtml(j.started_by ?? "someone")}, ${escHtml(fmtWhen(j.started_at, null))}</span><br>
+${j.on} of ${j.total} on the truck. Nobody called it ready.
+</td></tr>`).join("");
   const html = `<div style="font:15px/1.55 -apple-system,'Segoe UI',Arial,sans-serif;color:#111;max-width:560px">
-<p>After the job, no photo yet at ${escHtml(company)}:</p>
+${jobs.length ? `<p>After the job, no photo yet at ${escHtml(company)}:</p>
 <table style="border-collapse:collapse;width:100%">${rows}</table>
-<p>A truck comes off this list when the crew takes the photo. One that's still out on its job shows here until it's back.</p>
-<p style="color:#666;font-size:13px">SYNNR sends this each morning, for a week after a truck was cleared.</p>
+<p>A truck comes off this list when the crew takes the photo. One that's still out on its job shows here until it's back.</p>` : ""}
+${skipped.length ? `<p>Loaded at ${escHtml(company)} and never called ready, so there's no record it went out right and nothing to prove after:</p>
+<table style="border-collapse:collapse;width:100%">${skippedRows}</table>` : ""}
+<p style="color:#666;font-size:13px">SYNNR sends this each morning, for a week after a truck was loaded.</p>
 </div>`;
   return { subject, html };
 }
@@ -73,7 +88,23 @@ export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise
     byJob.set(r.job_id, j);
   }
   const owed = [...byJob.values()];
-  const ids = [...new Set(owed.map((j) => j.company_id))];
+
+  // Trucks somebody loaded, between a week and half a day ago, that were never called ready.
+  const { data: open, error: openErr } = await admin.from("synnr_jobs")
+    .select("id, company_id, truck, job_type, created_by_name, created_at, synnr_job_lines(phase, on_at)")
+    .is("first_ready_at", null)
+    .gte("created_at", new Date(now - WINDOW_MS).toISOString())
+    .lte("created_at", new Date(now - SETTLE_MS).toISOString())
+    .order("created_at").limit(1000);
+  if (openErr) errors.push(`never-cleared trucks: ${openErr.message}`);
+  type Open = { id: string; company_id: string; truck: string | null; job_type: string; created_by_name: string | null; created_at: string; synnr_job_lines: { phase: string; on_at: string | null }[] | null };
+  const never = ((open ?? []) as unknown as Open[]).map((j) => {
+    const load = (j.synnr_job_lines ?? []).filter((l) => l.phase !== "after");
+    return { company_id: j.company_id, job_id: j.id, job: [j.truck, j.job_type].filter(Boolean).join(", "), started_by: j.created_by_name, started_at: j.created_at, on: load.filter((l) => l.on_at).length, total: load.length };
+    // A job nobody put anything on was started by mistake, not driven off unrecorded.
+  }).filter((j) => j.on > 0);
+
+  const ids = [...new Set([...owed, ...never].map((j) => j.company_id))];
   if (!ids.length) return { companies: 0, sent: 0, errors };
 
   // The demo is open to anyone: nothing is emailed out of it.
@@ -85,7 +116,7 @@ export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise
   const members = (mems ?? []) as { company_id: string; user_id: string }[];
   let sent = 0;
   for (const co of companies) {
-    const mail = afterEmail(co.name, owed.filter((j) => j.company_id === co.id));
+    const mail = afterEmail(co.name, owed.filter((j) => j.company_id === co.id), never.filter((j) => j.company_id === co.id));
     if (!mail) continue;
     const to: string[] = [];
     for (const m of members.filter((x) => x.company_id === co.id)) {
