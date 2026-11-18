@@ -72,7 +72,8 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   const jobs = every.map((j) => ({
     ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length,
     // A photo a manager sent back that nobody has taken again: the reason, said wherever the truck is listed.
-    back: sentBack(j.synnr_job_lines ?? []),
+    // What's owed after the job comes first, since that's what the truck is listed for once it has gone out.
+    back: sentBack((j.synnr_job_lines ?? []).filter((l) => l.phase === "after")) ?? sentBack(j.synnr_job_lines ?? []),
   }));
   const groups = boardGroups(jobs, now);
   const { owed, stale, live } = groups;
@@ -238,8 +239,10 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                     <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
                       {time(j.first_ready_at)}{j.ready_by ? ` · ${j.ready_by}` : ""}
                       {j.closed_at ? ` · Closed: ${j.closed_why ?? ""}`
-                        : j.status !== "ready" ? <span className="text-red-300">{` · Not ready now: ${j.s.missing.length} off`}</span>
-                          : j.back ? <span className="text-bone">{` · Sent back: ${j.back}`}</span> : null}
+                        : <>
+                          {j.status !== "ready" ? <span className="text-red-300">{` · Not ready now: ${j.s.missing.length} off`}</span> : null}
+                          {j.back ? <span className="text-bone">{` · Sent back: ${j.back}`}</span> : null}
+                        </>}
                     </span>
                   </span>
                   {(() => {
