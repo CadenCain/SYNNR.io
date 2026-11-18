@@ -18,6 +18,10 @@ import { sendEmail } from "./notify";
  * It also names any truck that was loaded and never called ready. A crew
  * that skips that one tap would otherwise skip everything after it, and
  * nobody would hear about it.
+ *
+ * A job a manager closed out (the customer cancelled, it was started by
+ * mistake) owes nothing and never comes up here. A photo a manager sent
+ * back is owed again, and the email says why it was sent back.
  */
 export type OwedJob = { job_id: string; job: string; ready_by: string | null; out_at: string | null; checks: string[] };
 export type NeverCleared = { job_id: string; job: string; started_by: string | null; started_at: string; on: number; total: number };
@@ -27,6 +31,10 @@ const SITE = "https://www.synnr.io";
 export const SETTLE_MS = 12 * 3600e3;
 /** A job stops coming up a week after its truck was cleared. */
 export const WINDOW_MS = 7 * 86400e3;
+
+/** One owed check as the email names it: with the manager's reason when its photo was sent back. */
+export const owedCheck = (label: string, sentBackWhy: string | null | undefined) =>
+  sentBackWhy && sentBackWhy.trim() ? `${label} (sent back: ${sentBackWhy.trim()})` : label;
 
 /** The email for one company, oldest first. Null when there's nothing to tell. */
 export function afterEmail(company: string, all: OwedJob[], never: NeverCleared[] = []): { subject: string; html: string } | null {
@@ -60,7 +68,7 @@ ${skipped.length ? `<p>Loaded at ${escHtml(company)} and never called ready, so 
 }
 
 type Row = {
-  label: string; sort: number; job_id: string; company_id: string;
+  label: string; sort: number; job_id: string; company_id: string; back_at: string | null; back_why: string | null;
   synnr_jobs: { truck: string | null; job_type: string; ready_by: string | null; first_ready_at: string | null } | null;
 };
 
@@ -69,8 +77,8 @@ export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise
   const errors: string[] = [];
   // Only what's owed: after-the-job checks with no photo, on trucks first cleared between a week and half a day ago.
   const { data, error } = await admin.from("synnr_job_lines")
-    .select("label, sort, job_id, company_id, synnr_jobs!inner(truck, job_type, ready_by, first_ready_at)")
-    .eq("phase", "after").is("on_at", null)
+    .select("label, sort, job_id, company_id, back_at, back_why, synnr_jobs!inner(truck, job_type, ready_by, first_ready_at, closed_at)")
+    .eq("phase", "after").is("on_at", null).is("synnr_jobs.closed_at", null)
     .gte("synnr_jobs.first_ready_at", new Date(now - WINDOW_MS).toISOString())
     .lte("synnr_jobs.first_ready_at", new Date(now - SETTLE_MS).toISOString())
     .order("sort").limit(5000);
@@ -84,7 +92,7 @@ export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise
       company_id: r.company_id, job_id: r.job_id, job: [r.synnr_jobs?.truck, r.synnr_jobs?.job_type].filter(Boolean).join(", "),
       ready_by: r.synnr_jobs?.ready_by ?? null, out_at: r.synnr_jobs?.first_ready_at ?? null, checks: [],
     };
-    j.checks.push(r.label);
+    j.checks.push(owedCheck(r.label, r.back_at ? r.back_why : null));
     byJob.set(r.job_id, j);
   }
   const owed = [...byJob.values()];
@@ -92,7 +100,7 @@ export async function sendAfterOwed(admin: SupabaseClient, now: number): Promise
   // Trucks somebody loaded, between a week and half a day ago, that were never called ready.
   const { data: open, error: openErr } = await admin.from("synnr_jobs")
     .select("id, company_id, truck, job_type, created_by_name, created_at, synnr_job_lines(phase, on_at)")
-    .is("first_ready_at", null)
+    .is("first_ready_at", null).is("closed_at", null)
     .gte("created_at", new Date(now - WINDOW_MS).toISOString())
     .lte("created_at", new Date(now - SETTLE_MS).toISOString())
     .order("created_at").limit(1000);

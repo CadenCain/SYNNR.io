@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Camera, Check, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { shrinkPhoto } from "@/lib/shrink-photo";
-import { afterLines, afterState, jobState, loadLines, orderLines, tooSoon, type JobLine } from "@/lib/saas/jobs";
+import { afterLines, afterState, BACK_REASONS, jobState, loadLines, orderLines, tooSoon, type JobLine } from "@/lib/saas/jobs";
 import { fmtTime, fmtWhen } from "@/lib/saas/format";
-import { setLine, addLine, removeLine, markReady, deleteJob } from "../actions";
+import { setLine, addLine, removeLine, markReady, reopenJob, sendBack } from "../actions";
+import ManageJob from "./manage-job";
+import { safe } from "./safe";
 import ShareProof from "./share-proof";
 
 // One clock for the server's first paint and the phone, so a time never changes under a thumb.
@@ -26,29 +28,30 @@ const when = (iso: string | null) => iso ? fmtTime(iso) : "";
  * once the truck has gone out, even if a stray tap later takes it back to
  * NOT READY.
  *
+ * A manager who opens a photo and doesn't like it sends it back with a
+ * reason. The piece reads as off again (the check as owed), the crew sees
+ * why on the row, and the photo that was sent back stays with it. A job a
+ * manager closed out reads Closed, and nothing on it can be tapped.
+ *
  * The server's copy of the job wins whenever a new one arrives (after every
  * save, and whenever the phone comes back to this screen), so two phones
  * loading the same truck never disagree for long.
  */
-const OFFLINE = "That didn't send. Check your signal and try again.";
-
-/** Run a save. A dropped signal comes back as a plain message here instead of taking the whole screen down. */
-async function safe<T extends { ok: true }>(run: () => Promise<T | { ok: false; error: string }>): Promise<T | { ok: false; error: string }> {
-  try {
-    return await run();
-  } catch (e) {
-    // The framework's own signals (a redirect to log in again) pass through.
-    if (typeof (e as { digest?: unknown })?.digest === "string" && (e as { digest: string }).digest.startsWith("NEXT_")) throw e;
-    return { ok: false, error: OFFLINE };
-  }
-}
-
-export default function JobCheck({ jobId, initial, photos, initialReady, wentOutAt, me, manager, writable, share }: {
-  jobId: string; initial: JobLine[]; photos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null;
+export default function JobCheck({ jobId, initial, photos, backPhotos, initialReady, wentOutAt, closed, me, manager, writable: paidUp, share, fix }: {
+  jobId: string; initial: JobLine[]; photos: Record<string, string>;
+  /** Links to the photos a manager sent back, by line. */
+  backPhotos: Record<string, string>; initialReady: { by: string | null; at: string | null } | null;
   /** When the truck was first cleared, if it ever was: from then on, what's proven after the job is open. */
-  wentOutAt: string | null; me: string; manager: boolean; writable: boolean;
+  wentOutAt: string | null;
+  /** Set when a manager closed the job out: who, when and why. */
+  closed: { at: string; by: string | null; why: string | null } | null;
+  me: string; manager: boolean; writable: boolean;
   share: { title: string; token: string | null; demo: boolean };
+  /** What a manager needs to correct the job: what it says now, and the shop's own lists and trucks to pick from. */
+  fix: { truck: string; jobType: string; kinds: string[]; trucks: string[] } | null;
 }) {
+  // A closed job is finished: nothing on it is tapped until a manager opens it back up.
+  const writable = paidUp && !closed;
   const router = useRouter();
   const [lines, setLines] = useState(initial);
   const [ready, setReady] = useState(initialReady);
@@ -69,6 +72,15 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
   const [fresh, setFresh] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  // The photo a manager sent back, opened from its row.
+  const [openBack, setOpenBack] = useState<string | null>(null);
+  // Sending a photo back: the reason being typed, in the photo's own view.
+  const [sending, setSending] = useState(false);
+  const [why, setWhy] = useState("");
+  const [busyBack, setBusyBack] = useState(false);
+  const [backErr, setBackErr] = useState("");
+  const [freshBack, setFreshBack] = useState<Record<string, string>>({});
+  const [busyOpen, setBusyOpen] = useState(false);
   const camera = useRef<HTMLInputElement>(null);
   const target = useRef<string | null>(null);
   const reloaded = useRef(false);
@@ -91,9 +103,13 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
   const s = jobState(lines);
   const a = afterState(lines);
   const photoOf = (l: JobLine) => l.photo_path ? fresh[l.id] ?? photos[l.id] ?? null : null;
+  const backPhotoOf = (l: JobLine) => l.back_photo_path ? freshBack[l.id] ?? backPhotos[l.id] ?? null : null;
   const critical = ordered.filter((l) => l.critical);
   const proof = ordered.filter((l) => l.critical && l.on_at && l.photo_path);
-  const viewing = open ? lines.find((l) => l.id === open && l.photo_path) ?? null : null;
+  const viewingBack = !open && Boolean(openBack);
+  const viewing = open ? lines.find((l) => l.id === open && l.photo_path) ?? null
+    : openBack ? lines.find((l) => l.id === openBack && l.back_photo_path) ?? null : null;
+  const shut = () => { setOpen(null); setOpenBack(null); setSending(false); setWhy(""); setBackErr(""); };
 
   // A real dialog sits over everything, the site's own header included, and
   // closes on Escape or the phone's back gesture by itself.
@@ -176,6 +192,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
     if (reloaded.current) return;
     reloaded.current = true;
     setFresh({});
+    setFreshBack({});
     router.refresh();
   }
 
@@ -222,17 +239,37 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
     setReady({ by: r.ready_by, at: r.ready_at });
   }
 
-  async function del() {
-    if (!window.confirm("Delete this job? Its list, its photos, and who loaded what go with it.")) return;
-    const r = await safe(() => deleteJob(jobId));
+  /** A manager's call: this photo isn't good enough, and here's why. */
+  async function sendItBack(l: JobLine) {
+    const reason = why.trim();
+    if (!reason || busyBack) return;
+    setBusyBack(true); setBackErr("");
+    const was = photoOf(l);
+    const r = await safe(() => sendBack(l.id, reason));
+    setBusyBack(false);
+    if (!r.ok) { setBackErr(r.error); return; }
+    setLines((ls) => ls.map((x) => x.id === l.id ? {
+      ...x, on_at: null, on_by: null, photo_path: null,
+      back_at: r.back_at, back_by: r.back_by, back_why: r.back_why, back_photo_path: r.back_photo_path, back_from: r.back_from, back_from_at: r.back_from_at,
+    } : x));
+    // The photo it had is the one that was sent back: keep showing it until the page has its own link.
+    if (was) setFreshBack((f) => ({ ...f, [l.id]: was }));
+    if (l.phase !== "after") setReady(null);
+    shut();
+    router.refresh();
+  }
+
+  async function reopen() {
+    setBusyOpen(true); setErr("");
+    const r = await safe(() => reopenJob(jobId));
+    setBusyOpen(false);
     if (!r.ok) { setErr(r.error); return; }
-    router.replace("/app");
     router.refresh();
   }
 
   const isReady = Boolean(ready) && s.ready;
   const proven = critical.length > 0 && proof.length === critical.length;
-  const viewingUrl = viewing ? photoOf(viewing) : null;
+  const viewingUrl = viewing ? (viewingBack ? backPhotoOf(viewing) : photoOf(viewing)) : null;
   const afterProven = after.filter((l) => l.on_at && l.photo_path);
   // After-the-job checks open once the truck has gone out, and stay open if a
   // stray tap later takes it back to NOT READY. A job with nothing to load
@@ -250,6 +287,9 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
     const isAfter = l.phase === "after";
     const photo = photoOf(l);
     const busy = saving === l.id;
+    // A manager sent its photo back and nobody has taken a new one yet.
+    const back = !on && l.back_at ? l : null;
+    const backPhoto = back ? backPhotoOf(back) : null;
     // Anyone who can see the job can open a photo; only a paid-up account can load.
     const canTap = l.critical && on && l.photo_path ? true : writable;
     return (
@@ -265,6 +305,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
               {l.label}{l.qty > 1 ? <span className="text-ink-faint"> × {l.qty}</span> : null}
             </span>
             {l.why ? <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Dispatch: {l.why}</span> : null}
+            {back && !busy ? <span className="mt-0.5 block text-[13px] leading-snug text-bone">Sent back by {back.back_by ?? "a manager"}: {back.back_why}</span> : null}
             {busy ? <span className="mt-0.5 block text-[12px] text-bone">Saving the photo…</span>
               : on ? <span className="mt-0.5 block text-[12px] text-ink-faint">{l.on_by ?? "Someone"}{l.on_at ? `, ${isAfter ? fmtWhen(l.on_at) : when(l.on_at)}` : ""}</span>
                 : l.critical ? <span className="sr-only">{isAfter ? "Take a photo to prove it." : "Take a photo of it to put it on."}</span> : null}
@@ -276,6 +317,15 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
           ) : null}
           {l.critical && !isAfter ? <span className={cn("shrink-0 text-[12px]", on ? "text-ink-faint" : "text-bone", photo && "hidden sm:inline")}>Critical</span> : null}
         </button>
+        {back && back.back_photo_path ? (
+          <button type="button" onClick={() => setOpenBack(l.id)} aria-label={`See the photo of ${l.label} that was sent back`} title="The photo that was sent back"
+            className="flex w-[68px] shrink-0 items-center justify-center border-l border-line transition-colors hover:bg-elevated">
+            {backPhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={backPhoto} alt="" onError={stale} className="h-11 w-11 rounded-md border border-bone/60 object-cover opacity-70" />
+            ) : <span className="text-[12px] text-ink-faint">Photo</span>}
+          </button>
+        ) : null}
         {manager && writable && (isAfter || !out) ? (
           <button type="button" onClick={() => remove(l)} aria-label={`Take ${l.label} off the list`} title="Take it off the list"
             className="flex w-11 shrink-0 items-center justify-center border-l border-line text-ink-faint transition-colors hover:bg-elevated hover:text-red-400">
@@ -303,6 +353,9 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
               <span className="block px-3 py-2.5">
                 <span className="block text-[13px] leading-snug text-ink">{l.label}</span>
                 <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">{l.on_by ?? "Someone"}, {fmtWhen(l.on_at)}</span>
+                {l.back_at ? (
+                  <span className="mt-1 block text-[12px] leading-snug text-ink-faint">Taken again. {l.back_by ?? "A manager"} sent the last one back: {l.back_why}</span>
+                ) : null}
                 {l.phase === "after" && tooSoon(clearedAt, l.on_at) !== null ? (
                   <span className="mt-1 block text-[12px] leading-snug text-bone">Taken {tooSoon(clearedAt, l.on_at)} min after the truck was cleared. That&apos;s before the job.</span>
                 ) : null}
@@ -357,7 +410,26 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
       <input ref={camera} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-label="Photo of the piece"
         onChange={(e) => { void onShot(e.target.files?.[0]); e.target.value = ""; }} />
 
-      {/* Where the truck stands */}
+      {/* A job a manager closed out: it owes nothing, and says who closed it and why. */}
+      {closed ? (
+        <div className="rounded-2xl border border-line-2 bg-[#0b0c0e] px-5 py-5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-ink-faint" />
+            <span className="text-[40px] font-light leading-none tracking-[-0.03em] text-ink-dim sm:text-[52px]">Closed</span>
+          </div>
+          <p className="mt-3 text-[14px] leading-relaxed text-ink-dim" role="status">
+            Closed out by {closed.by ?? "a manager"}, {fmtWhen(closed.at)}. Nothing more is owed on it.{" "}
+            {wentOutAt ? `The truck was cleared ${fmtWhen(wentOutAt)}.` : "The truck was never called ready."}
+          </p>
+          {closed.why ? <p className="mt-3 border-l-2 border-line-2 pl-3 text-[15px] leading-relaxed text-ink">{closed.why}</p> : null}
+          {manager && paidUp ? (
+            <button type="button" onClick={reopen} disabled={busyOpen}
+              className="mt-4 h-11 rounded-lg border border-line-2 px-4 text-[14px] text-ink transition-colors hover:bg-elevated disabled:opacity-60">
+              {busyOpen ? "Opening…" : "Open it back up"}
+            </button>
+          ) : null}
+        </div>
+      ) : (
       <div className={cn("rounded-2xl border px-5 py-5 sm:px-6", isReady ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-line-2 bg-[#0b0c0e]")}>
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
@@ -387,6 +459,7 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
           </button>
         ) : null}
       </div>
+      )}
 
       {err ? <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{err}</p> : null}
 
@@ -439,24 +512,34 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
       {out ? null : afterSection}
 
       {s.total > 0 ? (
-        <ShareProof jobId={jobId} title={share.title} initialToken={share.token} manager={manager} writable={writable} demo={share.demo} />
+        <ShareProof jobId={jobId} title={share.title} initialToken={share.token} manager={manager} writable={paidUp} demo={share.demo} />
       ) : null}
 
-      {manager && writable ? (
-        <button type="button" onClick={del} className="self-start text-[13px] text-ink-faint underline-offset-4 transition-colors hover:text-red-400 hover:underline">Delete this job</button>
+      {manager && paidUp && fix ? (
+        <ManageJob jobId={jobId} truck={fix.truck} jobType={fix.jobType} kinds={fix.kinds} trucks={fix.trucks} closed={Boolean(closed)} />
       ) : null}
 
       {/* One photo, full size */}
-      <dialog ref={dialog} onClose={() => setOpen(null)} aria-label={viewing ? `Photo of ${viewing.label}` : "Photo"}
+      <dialog ref={dialog} onClose={shut} aria-label={viewing ? `Photo of ${viewing.label}` : "Photo"}
         className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none flex-col border-0 bg-black/95 p-0 text-ink open:flex backdrop:bg-black">
         {viewing ? (
           <>
-            <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div className="flex items-start justify-between gap-4 px-4 py-3 sm:px-6">
               <div className="min-w-0">
                 <div className="truncate text-[16px] text-ink">{viewing.label}{viewing.qty > 1 ? <span className="text-ink-faint"> × {viewing.qty}</span> : null}</div>
-                <div className="mt-0.5 truncate text-[13px] text-ink-dim">{viewing.phase === "after" ? "After the job" : "On the truck"}: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
+                {viewingBack ? (
+                  <>
+                    <div className="mt-0.5 text-[13px] leading-snug text-bone">Sent back by {viewing.back_by ?? "a manager"}, {fmtWhen(viewing.back_at)}: {viewing.back_why}</div>
+                    <div className="mt-0.5 truncate text-[13px] text-ink-dim">Photo by {viewing.back_from ?? "someone"}, {fmtWhen(viewing.back_from_at)}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-0.5 truncate text-[13px] text-ink-dim">{viewing.phase === "after" ? "After the job" : "On the truck"}: {viewing.on_by ?? "someone"}, {fmtWhen(viewing.on_at)}</div>
+                    {viewing.back_at ? <div className="mt-0.5 text-[13px] leading-snug text-ink-faint">Taken again. {viewing.back_by ?? "A manager"} sent the last one back: {viewing.back_why}</div> : null}
+                  </>
+                )}
               </div>
-              <button type="button" onClick={() => setOpen(null)} aria-label="Close the photo"
+              <button type="button" onClick={shut} aria-label="Close the photo"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-dim transition-colors hover:bg-elevated hover:text-ink">
                 <X className="h-5 w-5" />
               </button>
@@ -469,18 +552,59 @@ export default function JobCheck({ jobId, initial, photos, initialReady, wentOut
                 <span className="text-[14px] text-ink-dim">The photo is on file but didn&apos;t load. Load the page again.</span>
               )}
             </div>
-            {writable ? (
+            {!writable ? null : viewingBack ? (
               <div className="flex gap-3 border-t border-line px-4 py-4 sm:px-6">
-                <button type="button" onClick={() => { const id = viewing.id; setOpen(null); shoot(id); }}
+                <button type="button" onClick={() => { const id = viewing.id; shut(); shoot(id); }}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white sm:flex-none">
+                  <Camera className="h-4 w-4" /> Take a new one
+                </button>
+              </div>
+            ) : sending ? (
+              // A manager's call: say what's wrong, in one tap or in his own words.
+              <form onSubmit={(e) => { e.preventDefault(); void sendItBack(viewing); }} className="border-t border-line px-4 py-4 sm:px-6">
+                <label htmlFor="synnr-back-why" className="block text-[15px] text-ink">What&apos;s wrong with it?</label>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {BACK_REASONS[viewing.phase].map((r) => (
+                    <button key={r} type="button" onClick={() => setWhy(r)} aria-pressed={why === r}
+                      className={cn("h-10 rounded-full border px-3.5 text-[14px] transition-colors", why === r ? "border-bone text-bone" : "border-line-2 text-ink-dim hover:text-ink")}>{r}</button>
+                  ))}
+                </div>
+                <input id="synnr-back-why" value={why} onChange={(e) => setWhy(e.target.value)} maxLength={200} placeholder="Or say it in your own words"
+                  className="mt-3 h-11 w-full rounded-lg border border-line-2 bg-coal px-3 text-[15px] text-ink outline-none placeholder:text-ink-faint focus:border-ink-faint" />
+                {backErr ? <p role="alert" className="mt-2.5 text-[13px] text-red-300">{backErr}</p> : null}
+                <div className="mt-3 flex gap-3">
+                  <button type="submit" disabled={busyBack || !why.trim()}
+                    className="h-12 flex-1 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-50 sm:flex-none">
+                    {busyBack ? "Sending…" : "Send it back"}
+                  </button>
+                  <button type="button" onClick={() => { setSending(false); setWhy(""); setBackErr(""); }}
+                    className="h-12 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:text-ink">Cancel</button>
+                </div>
+                <p className="mt-2.5 text-[12px] leading-snug text-ink-faint">
+                  {viewing.phase === "after" ? "It's owed again until a new photo is taken." : "The piece reads as off the truck until a new photo is taken."} The crew sees why on the job, and this photo stays with it.
+                </p>
+              </form>
+            ) : (
+              <div className="flex flex-wrap gap-3 border-t border-line px-4 py-4 sm:px-6">
+                <button type="button" onClick={() => { const id = viewing.id; shut(); shoot(id); }}
                   className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-ink px-5 text-[15px] font-medium text-coal transition-colors hover:bg-white sm:flex-none">
                   <Camera className="h-4 w-4" /> Take it again
                 </button>
-                <button type="button" onClick={() => { const l = viewing; setOpen(null); toggle(l, false); }}
-                  className="h-12 flex-1 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:border-red-500/50 hover:text-red-300 sm:flex-none">
-                  {viewing.phase === "after" ? "Throw this photo out" : "Take it off"}
-                </button>
+                {manager ? (
+                  <button type="button" onClick={() => { setWhy(""); setBackErr(""); setSending(true); }}
+                    className="h-12 flex-1 rounded-lg border border-bone/60 px-5 text-[15px] text-bone transition-colors hover:border-bone sm:flex-none">
+                    Send it back
+                  </button>
+                ) : null}
+                {/* A manager sends an after-the-job photo back with a reason; throwing it out with no word is the hand's own retake. */}
+                {manager && viewing.phase === "after" ? null : (
+                  <button type="button" onClick={() => { const l = viewing; shut(); toggle(l, false); }}
+                    className="h-12 flex-1 rounded-lg border border-line-2 px-5 text-[15px] text-ink-dim transition-colors hover:border-red-500/50 hover:text-red-300 sm:flex-none">
+                    {viewing.phase === "after" ? "Throw this photo out" : "Take it off"}
+                  </button>
+                )}
               </div>
-            ) : null}
+            )}
           </>
         ) : null}
       </dialog>

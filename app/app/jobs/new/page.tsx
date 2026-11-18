@@ -17,13 +17,14 @@ export default async function NewJobPage() {
   const [{ data: lists }, { data: recent }] = await Promise.all([
     db.from("saas_packages").select("id, name, saas_package_lines(phase)").eq("company_id", company.id).is("unit_id", null).order("name").limit(200),
     // Truck names to pick from: the ones this shop has already sent out, newest first.
-    db.from("synnr_jobs").select("id, truck, job_type, created_at").eq("company_id", company.id).not("truck", "is", null).order("created_at", { ascending: false }).limit(200),
+    db.from("synnr_jobs").select("id, truck, job_type, created_at, closed_at").eq("company_id", company.id).not("truck", "is", null).order("created_at", { ascending: false }).limit(200),
   ]);
-  const jobs = (recent ?? []) as { id: string; truck: string | null; job_type: string; created_at: string }[];
+  const jobs = (recent ?? []) as { id: string; truck: string | null; job_type: string; created_at: string; closed_at: string | null }[];
   const trucks = [...new Set(jobs.map((j) => (j.truck ?? "").trim()).filter(Boolean))].slice(0, 40);
   // Jobs started in the last 18 hours: two phones starting the same truck's job is how duplicates happen.
   const since = clock() - 18 * 3600e3;
-  const started = jobs.filter((j) => new Date(j.created_at).getTime() >= since).map((j) => ({ id: j.id, truck: (j.truck ?? "").trim(), job: j.job_type }));
+  // (A job a manager closed out isn't one anybody is loading: it doesn't count.)
+  const started = jobs.filter((j) => !j.closed_at && new Date(j.created_at).getTime() >= since).map((j) => ({ id: j.id, truck: (j.truck ?? "").trim(), job: j.job_type }));
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-8 md:py-10">
       <Link href="/app" className="inline-flex min-h-9 items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink">

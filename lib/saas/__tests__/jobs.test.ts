@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, boardGroups, outNow, tooSoon, LIVE_HOURS, type JobLine } from "../jobs";
+import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, boardGroups, outNow, sentBack, tooSoon, LIVE_HOURS, type JobLine } from "../jobs";
 import { dayHeading, dayKey } from "../format";
 import { SHARE_TOKEN, newShareToken } from "../job-share";
 
@@ -253,6 +253,35 @@ describe("the job board", () => {
     expect(boardGroups([back], now).owed).toHaveLength(1);
     // Four hours on with nothing sent, it owes.
     expect(boardGroups([j("morning", "2026-11-17T10:00:00.000Z", "2026-11-17T10:40:00.000Z", 3)], now).owed).toHaveLength(1);
+  });
+
+  it("owes nothing on a job a manager closed out, and keeps it on the record", () => {
+    const closed = (id: string, created: string, cleared: string | null, left = 0) => ({ ...j(id, created, cleared, left), closed_at: "2026-11-17T20:00:00.000Z" });
+    const g = boardGroups([
+      // The customer cancelled after the truck was cleared: it would have owed three photos for a week.
+      closed("cancelled-after-clearing", "2026-11-16T10:00:00.000Z", "2026-11-16T10:40:00.000Z", 3),
+      // The wrong unit was typed in and nothing ever went on it.
+      closed("started-by-mistake", "2026-11-13T10:25:00.000Z", null),
+      closed("cancelled-while-loading", "2026-11-18T01:40:00.000Z", null),
+      j("still-owes", "2026-11-16T10:00:00.000Z", "2026-11-16T10:45:00.000Z", 2),
+    ], now);
+    expect(g.owed.map((x) => x.id)).toEqual(["still-owes"]);
+    expect(g.stale).toHaveLength(0);
+    expect(g.live).toHaveLength(0);
+    // It was cleared, so it stays in its day's list.
+    expect(g.went.map((x) => x.id)).toContain("cancelled-after-clearing");
+    // Never went out: listed apart, so the record isn't lost.
+    expect(g.closed.map((x) => x.id).sort()).toEqual(["cancelled-while-loading", "started-by-mistake"]);
+  });
+
+  it("says why a photo was sent back, until someone takes a new one", () => {
+    const washed = { on_at: null, back_at: "2026-11-17T23:00:00.000Z", back_why: "Still dirty" };
+    expect(sentBack([{ on_at: "2026-11-17T22:00:00.000Z" }, washed])).toBe("Still dirty");
+    // Taken again: the line keeps its history, but nothing is waiting on the crew.
+    expect(sentBack([{ ...washed, on_at: "2026-11-17T23:30:00.000Z" }])).toBeNull();
+    // Never sent back: just not done yet.
+    expect(sentBack([{ on_at: null }])).toBeNull();
+    expect(sentBack([{ on_at: null, back_at: "2026-11-17T23:00:00.000Z", back_why: " " }])).toBe("Sent back");
   });
 
   it("groups days in the yard's time, not the server's", () => {

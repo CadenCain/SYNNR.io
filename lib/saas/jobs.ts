@@ -27,6 +27,17 @@ export type JobLine = {
   on_at: string | null;
   /** Where the proof photo is kept. A critical piece can't go on without one. */
   photo_path: string | null;
+  /**
+   * A manager sent this line's photo back: when, who, and why, with the
+   * photo that was sent back and who took it. The line reads as off until a
+   * new photo is taken; these stay on it either way.
+   */
+  back_at?: string | null;
+  back_by?: string | null;
+  back_why?: string | null;
+  back_photo_path?: string | null;
+  back_from?: string | null;
+  back_from_at?: string | null;
 };
 
 /** The job facts SYNNR keeps from a dispatch. Never people or phone numbers. */
@@ -61,6 +72,14 @@ export type Job = {
   created_at: string;
   /** The link sent to the customer, when there is one. */
   share_token?: string | null;
+  /** A manager closed the job out (the customer cancelled, it was started by mistake): it owes nothing more. */
+  closed_at?: string | null;
+  closed_by?: string | null;
+  closed_why?: string | null;
+  /** A manager corrected the unit or the kind of job: when, who, and what it said before. */
+  fixed_at?: string | null;
+  fixed_by?: string | null;
+  fixed_from?: string | null;
 };
 
 /** A line as it goes onto a new job: nothing on the truck yet. */
@@ -236,20 +255,40 @@ export function outNow(j: { first_ready_at: string | null; a: { left: number; pr
  *  - stale: started more than a day and a half ago and never called ready
  *  - live: loading out now
  *  - went: every truck that was cleared, newest first
+ *  - closed: closed out by a manager without ever going out
  * "Went out" goes by the first time the truck was cleared, which a later
- * stray tap doesn't move.
+ * stray tap doesn't move. A job a manager closed out owes nothing: it's
+ * never in owed, stale or live.
  */
-export function boardGroups<T extends { first_ready_at: string | null; created_at: string; a: { left: number; proven: number } }>(jobs: T[], now: number) {
+export function boardGroups<T extends { first_ready_at: string | null; created_at: string; closed_at?: string | null; a: { left: number; proven: number } }>(jobs: T[], now: number) {
   const cutoff = now - LIVE_HOURS * 3600e3;
   const went = jobs.filter((j) => j.first_ready_at).sort((x, y) => (y.first_ready_at as string).localeCompare(x.first_ready_at as string));
-  const waiting = jobs.filter((j) => !j.first_ready_at);
+  const waiting = jobs.filter((j) => !j.first_ready_at && !j.closed_at);
   return {
-    owed: went.filter((j) => j.a.left > 0 && !outNow(j, now)),
+    owed: went.filter((j) => !j.closed_at && j.a.left > 0 && !outNow(j, now)),
     stale: waiting.filter((j) => new Date(j.created_at).getTime() < cutoff),
     live: waiting.filter((j) => new Date(j.created_at).getTime() >= cutoff),
     went,
+    closed: jobs.filter((j) => j.closed_at && !j.first_ready_at).sort((x, y) => (y.closed_at as string).localeCompare(x.closed_at as string)),
   };
 }
+
+/**
+ * A photo a manager sent back that nobody has retaken yet: the reason, for
+ * the board and the morning email. Null when nothing is waiting on a retake.
+ */
+export function sentBack(lines: { on_at: string | null; back_at?: string | null; back_why?: string | null }[]): string | null {
+  const l = lines.find((x) => !x.on_at && x.back_at);
+  return l ? (l.back_why ?? "").trim() || "Sent back" : null;
+}
+
+/** What a manager most often says about a photo, so it's one tap on a phone. He can type his own. */
+export const BACK_REASONS: Record<Phase, string[]> = {
+  after: ["Still dirty", "Not done", "Can't tell from the photo", "Wrong thing in the photo"],
+  load: ["Wrong piece", "Can't tell from the photo", "Not on the truck"],
+};
+/** Why a job gets closed out. */
+export const CLOSE_REASONS = ["Customer cancelled", "Started by mistake", "Truck never went"];
 
 /** A photo taken this soon after the truck was cleared was taken before the job, not after it. */
 export const TOO_SOON_MS = 3600e3;

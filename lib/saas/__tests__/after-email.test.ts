@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { afterEmail, sendAfterOwed, SETTLE_MS, WINDOW_MS, type NeverCleared, type OwedJob } from "../after-email";
+import { afterEmail, owedCheck, sendAfterOwed, SETTLE_MS, WINDOW_MS, type NeverCleared, type OwedJob } from "../after-email";
 
 const job = (over: Partial<OwedJob>): OwedJob => ({ job_id: "11111111-1111-1111-1111-111111111111", job: "Truck 81, Cased Hole Logging", ready_by: "Mike Hand", out_at: "2026-11-11T11:10:00.000Z", checks: ["BOP rams closed for travel", "Pressure control package washed"], ...over });
 
@@ -113,6 +113,26 @@ describe("sending the morning note", () => {
       const calls = asked.find((a) => a.table === "synnr_jobs")!.calls;
       expect(calls).toContainEqual(["is", ["first_ready_at", null]]);
       expect(calls).toContainEqual(["lte", ["created_at", new Date(now - SETTLE_MS).toISOString()]]);
+    } finally { vi.unstubAllGlobals(); }
+  });
+
+  it("leaves out a job a manager closed out, whether it owed a photo or was never called ready", async () => {
+    const asked: Asked[] = [];
+    await sendAfterOwed(fakeAdmin({ synnr_job_lines: [], synnr_jobs: [] }, {}, asked), now);
+    expect(asked.find((a) => a.table === "synnr_job_lines")!.calls).toContainEqual(["is", ["synnr_jobs.closed_at", null]]);
+    expect(asked.find((a) => a.table === "synnr_jobs")!.calls).toContainEqual(["is", ["closed_at", null]]);
+  });
+
+  it("says why a photo was sent back", async () => {
+    expect(owedCheck("Package washed", "Still dirty")).toBe("Package washed (sent back: Still dirty)");
+    expect(owedCheck("Package washed", null)).toBe("Package washed");
+    vi.stubEnv("RESEND_API_KEY", "test-key");
+    const posted: { html: string }[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => { posted.push(JSON.parse(init.body)); return { ok: true }; });
+    try {
+      const sent = { ...owing[1], back_at: "2026-11-11T23:00:00.000Z", back_why: "Still dirty" };
+      await sendAfterOwed(fakeAdmin({ synnr_job_lines: [owing[0], sent], ...shop }, { u1: "boss@shop.test" }), now);
+      expect(posted[0].html).toContain("No photo: BOP rams closed for travel; Pressure control package washed (sent back: Still dirty)");
     } finally { vi.unstubAllGlobals(); }
   });
 

@@ -21,6 +21,8 @@ const fail = (error: string): Fail => ({ ok: false, error });
 const nameOf = (u: User) => (u.user_metadata?.full_name as string | undefined)?.trim() || u.email?.split("@")[0] || "Someone";
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 const isId = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
+const CLOSED = "This job was closed out. A manager can open it back up.";
+const isClosed = (e: { message?: string } | null | undefined) => /JOB_CLOSED/.test(e?.message ?? "");
 
 /** Job facts only, short, and only the ones SYNNR knows about. */
 function cleanDetails(d: JobDetails | null | undefined): JobDetails {
@@ -88,6 +90,7 @@ export async function setLine(lineId: string, on: boolean): Promise<{ ok: true; 
   if (on && was.critical) return fail("That one's critical. Take its photo to put it on.");
   const patch = on ? { on_at: new Date().toISOString(), on_by: nameOf(got.user) } : { on_at: null, on_by: null };
   const { data, error } = await db.from("synnr_job_lines").update(patch).eq("id", lineId).eq("company_id", got.company.id).select("job_id, on_at, on_by").maybeSingle();
+  if (isClosed(error)) return fail(CLOSED);
   if (error || !data) return fail(/NEEDS_PHOTO/.test(error?.message ?? "") ? "That one's critical. Take its photo to put it on." : "That didn't save. Try again.");
   if (!on) await removePhotos(saasAdmin(), [was.photo_path]);
   const row = data as { job_id: string; on_at: string | null; on_by: string | null };
@@ -114,6 +117,7 @@ export async function addLine(jobId: string, input: { label: string; qty: number
     // A check after the job is one thing, and always takes its photo.
     ...(input.phase === "after" ? { phase: "after", qty: 1, critical: true } : { phase: "load", qty: clampQty(input.qty), critical: Boolean(input.critical) }),
   }).select("id").single();
+  if (isClosed(error)) return fail(CLOSED);
   if (error || !data) return fail("Couldn't add it. Try again.");
   revalidatePath(`/app/jobs/${jobId}`);
   revalidatePath("/app");
@@ -127,9 +131,10 @@ export async function removeLine(lineId: string): Promise<{ ok: true } | Fail> {
   if (!got.ok) return fail(got.error);
   if (got.company.role === "member") return fail("Only a manager can take a line off the list.");
   const db = await saasDb();
-  const { data, error } = await db.from("synnr_job_lines").delete().eq("id", lineId).eq("company_id", got.company.id).select("job_id, photo_path").maybeSingle();
+  const { data, error } = await db.from("synnr_job_lines").delete().eq("id", lineId).eq("company_id", got.company.id).select("job_id, photo_path, back_photo_path").maybeSingle();
   if (error || !data) return fail("Couldn't take it off. Try again.");
-  await removePhotos(saasAdmin(), [(data as { photo_path: string | null }).photo_path]);
+  const gone = data as { photo_path: string | null; back_photo_path: string | null };
+  await removePhotos(saasAdmin(), [gone.photo_path, gone.back_photo_path]);
   revalidatePath(`/app/jobs/${(data as { job_id: string }).job_id}`);
   revalidatePath("/app");
   return { ok: true };
@@ -143,11 +148,112 @@ export async function markReady(jobId: string): Promise<{ ok: true; ready_at: st
   const db = await saasDb();
   const ready_by = nameOf(got.user);
   const { data, error } = await db.from("synnr_jobs").update({ status: "ready", ready_by }).eq("id", jobId).eq("company_id", got.company.id).select("ready_at").maybeSingle();
+  if (isClosed(error)) return fail(CLOSED);
   if (error) return fail(/NOT_READY/.test(error.message) ? "Not ready: something on the list is still off the truck." : "That didn't save. Try again.");
   if (!data) return fail("That job isn't there anymore.");
   revalidatePath(`/app/jobs/${jobId}`);
   revalidatePath("/app");
   return { ok: true, ready_at: (data as { ready_at: string }).ready_at, ready_by };
+}
+
+/**
+ * The manager's call. Three things only a manager decides about a job: a
+ * photo isn't good enough, the job is over, or it was typed in wrong. Each
+ * one is stamped by the database (its own clock, the manager's own name),
+ * and none of them erases what was there before.
+ */
+
+/** What comes back when a photo is sent back: what the line now says about it. */
+export type SentBack = { back_at: string; back_by: string | null; back_why: string; back_photo_path: string | null; back_from: string | null; back_from_at: string | null };
+
+/**
+ * Send a photo back: it isn't good enough, and here's why. The piece reads
+ * as off again (the check as owed), and the line keeps the reason, who sent
+ * it back, and the photo that was sent back with who took it.
+ */
+export async function sendBack(lineId: string, why: string): Promise<({ ok: true } & SentBack) | Fail> {
+  if (!isId(lineId)) return fail("That line isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  if (got.company.role === "member") return fail("Only a manager can send a photo back.");
+  const reason = clip(why, 200);
+  if (!reason) return fail("Say what's wrong with it.");
+  const db = await saasDb();
+  const { data: before } = await db.from("synnr_job_lines").select("job_id, on_at, photo_path, back_photo_path").eq("id", lineId).eq("company_id", got.company.id).maybeSingle();
+  const was = before as { job_id: string; on_at: string | null; photo_path: string | null; back_photo_path: string | null } | null;
+  if (!was) return fail("That line isn't there anymore.");
+  if (!was.on_at || !was.photo_path) return fail("There's no photo on that one to send back.");
+  // Only the photo he looked at: if the crew retook it a moment ago, he hasn't seen the new one.
+  const { data, error } = await db.from("synnr_job_lines").update({ back_at: new Date().toISOString(), back_why: reason })
+    .eq("id", lineId).eq("company_id", got.company.id).eq("photo_path", was.photo_path)
+    .select("back_at, back_by, back_why, back_photo_path, back_from, back_from_at").maybeSingle();
+  if (isClosed(error)) return fail(CLOSED);
+  if (error) { console.error("[jobs] send back:", error.message); return fail("That didn't save. Try again."); }
+  if (!data) return fail("That photo was just taken again. Look at the new one.");
+  const row = data as SentBack;
+  // One sent-back photo is kept per line: the one before it can go.
+  if (was.back_photo_path && was.back_photo_path !== row.back_photo_path) await removePhotos(saasAdmin(), [was.back_photo_path]);
+  revalidatePath(`/app/jobs/${was.job_id}`);
+  revalidatePath("/app");
+  return { ok: true, ...row };
+}
+
+/**
+ * Close a job out: the customer cancelled, it was started by mistake, the
+ * truck never went. It owes nothing after that, on the board or in the
+ * morning email, and nothing on it changes until a manager opens it back
+ * up. The list, the photos, and who did what all stay.
+ */
+export async function closeJob(jobId: string, why: string): Promise<{ ok: true; closed_at: string; closed_by: string | null; closed_why: string } | Fail> {
+  if (!isId(jobId)) return fail("That job isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  if (got.company.role === "member") return fail("Only a manager can close a job out.");
+  const reason = clip(why, 200);
+  if (!reason) return fail("Say why it's being closed out.");
+  const db = await saasDb();
+  const { data, error } = await db.from("synnr_jobs").update({ closed_at: new Date().toISOString(), closed_why: reason })
+    .eq("id", jobId).eq("company_id", got.company.id).is("closed_at", null).select("closed_at, closed_by, closed_why").maybeSingle();
+  if (error) { console.error("[jobs] close:", error.message); return fail("That didn't save. Try again."); }
+  if (!data) return fail("That job is already closed out, or it isn't there anymore.");
+  revalidatePath(`/app/jobs/${jobId}`);
+  revalidatePath("/app");
+  return { ok: true, ...(data as { closed_at: string; closed_by: string | null; closed_why: string }) };
+}
+
+/** Open a closed job back up. Whatever it owed, it owes again. */
+export async function reopenJob(jobId: string): Promise<{ ok: true } | Fail> {
+  if (!isId(jobId)) return fail("That job isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  if (got.company.role === "member") return fail("Only a manager can open a job back up.");
+  const db = await saasDb();
+  const { data, error } = await db.from("synnr_jobs").update({ closed_at: null }).eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
+  if (error || !data) return fail("That didn't save. Try again.");
+  revalidatePath(`/app/jobs/${jobId}`);
+  revalidatePath("/app");
+  return { ok: true };
+}
+
+/**
+ * Correct the unit or the kind of job: someone typed the wrong one. The
+ * list stays as it is. What the job said before stays on the record, with
+ * who changed it and when (the database keeps that).
+ */
+export async function fixJob(jobId: string, input: { truck: string; jobType: string }): Promise<{ ok: true } | Fail> {
+  if (!isId(jobId)) return fail("That job isn't there anymore.");
+  const got = await requireWritableCompany();
+  if (!got.ok) return fail(got.error);
+  if (got.company.role === "member") return fail("Only a manager can change what a job is.");
+  const jobType = clip(input.jobType, 80);
+  if (!jobType) return fail("Say what kind of job it is.");
+  const db = await saasDb();
+  const { data, error } = await db.from("synnr_jobs").update({ truck: clip(input.truck, 40) || null, job_type: jobType })
+    .eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
+  if (error || !data) return fail("That didn't save. Try again.");
+  revalidatePath(`/app/jobs/${jobId}`);
+  revalidatePath("/app");
+  return { ok: true };
 }
 
 /** Delete a job that was started by mistake. Managers only (the database enforces it too). */

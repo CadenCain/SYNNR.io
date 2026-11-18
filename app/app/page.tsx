@@ -3,7 +3,7 @@ import { ChevronRight, Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterState, boardGroups, jobState, outNow, tooSoon, type Phase } from "@/lib/saas/jobs";
+import { afterState, boardGroups, jobState, outNow, sentBack, tooSoon, type Phase } from "@/lib/saas/jobs";
 import { fmtTime as time, fmtWhen, dayHeading, dayKey } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 type Row = {
   id: string; job_type: string; truck: string | null; status: "loading" | "ready"; ready_by: string | null; ready_at: string | null; first_ready_at: string | null;
-  created_at: string; created_by_name: string | null;
-  synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null }[] | null;
+  created_at: string; created_by_name: string | null; closed_at: string | null; closed_by: string | null; closed_why: string | null;
+  synnr_job_lines: { label: string; qty: number; critical: boolean; phase: Phase; on_at: string | null; on_by: string | null; photo_path: string | null; back_at: string | null; back_why: string | null }[] | null;
 };
 
 const clock = () => Date.now();
@@ -28,7 +28,7 @@ const LOOK_DAYS = 45;
 /** How many days of history are open; the rest fold up under their date. */
 const OPEN_DAYS = 2;
 
-const JOB = "id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, created_by_name, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)";
+const JOB = "id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, created_by_name, closed_at, closed_by, closed_why, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path, back_at, back_why)";
 
 /**
  * Home: where every truck stands, in the order a manager needs it. First
@@ -36,7 +36,8 @@ const JOB = "id, job_type, truck, status, ready_by, ready_at, first_ready_at, cr
  * that was started and never called ready). Then what's loading out now, as
  * big cards, because that's where a hand taps in. Then every truck that went
  * out, one line each, by day. Every number on this screen is counted from
- * the jobs below it.
+ * the jobs below it. A job a manager closed out owes nothing: it stays in
+ * its day's list, marked Closed, and never under "Needs a look".
  */
 export default async function JobsHome({ searchParams }: { searchParams: Promise<{ welcome?: string; joined?: string; older?: string }> }) {
   const { company } = await requireCompany();
@@ -53,9 +54,10 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
     // Jobs from before this screen's window: there's a way to them below.
     db.from("synnr_jobs").select("id", { count: "exact", head: true }).eq("company_id", company.id).lt("created_at", since),
     // Every after-the-job check still without a photo, however old or however far down the list its job is.
-    db.from("synnr_job_lines").select("job_id").eq("company_id", company.id).eq("phase", "after").is("on_at", null).gte("created_at", lookSince).limit(3000),
+    // (Not on a job a manager closed out: that one owes nothing.)
+    db.from("synnr_job_lines").select("job_id, synnr_jobs!inner(closed_at)").eq("company_id", company.id).eq("phase", "after").is("on_at", null).is("synnr_jobs.closed_at", null).gte("created_at", lookSince).limit(3000),
     // Every job that was started and never called ready.
-    db.from("synnr_jobs").select(JOB).eq("company_id", company.id).is("first_ready_at", null).gte("created_at", lookSince).order("created_at", { ascending: false }).limit(200),
+    db.from("synnr_jobs").select(JOB).eq("company_id", company.id).is("first_ready_at", null).is("closed_at", null).gte("created_at", lookSince).order("created_at", { ascending: false }).limit(200),
   ]);
   const listed = (data ?? []) as Row[];
   const cut = listed.length >= max;
@@ -67,11 +69,17 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
     : { data: [] };
   const seen = new Set<string>();
   const every = [...listed, ...((waiting ?? []) as Row[]), ...((extra ?? []) as Row[])].filter((j) => (seen.has(j.id) ? false : (seen.add(j.id), true)));
-  const jobs = every.map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
+  const jobs = every.map((j) => ({
+    ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length,
+    // A photo a manager sent back that nobody has taken again: the reason, said wherever the truck is listed.
+    back: sentBack(j.synnr_job_lines ?? []),
+  }));
   const groups = boardGroups(jobs, now);
   const { owed, stale, live } = groups;
   // The day-by-day list is only the window; what needs a look reaches further back.
   const went = groups.went.filter((j) => j.created_at >= since);
+  // Closed out without ever going out (started by mistake, cancelled before it loaded): kept in reach at the bottom.
+  const closedOnly = groups.closed.filter((j) => j.created_at >= since);
   const criticalOff = live.reduce((n, j) => n + j.s.criticalMissing, 0);
   const today = dayKey(new Date(now).toISOString());
   const wentToday = went.filter((j) => dayKey(j.first_ready_at) === today).length;
@@ -152,6 +160,7 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                   <span className="min-w-0">
                     <span className="block truncate text-[16px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
                     <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">Cleared {when(j.first_ready_at)}{j.ready_by ? ` · ${j.ready_by}` : ""}</span>
+                    {j.back ? <span className="mt-0.5 block text-[13px] leading-snug text-bone">Sent back: {j.back}</span> : null}
                   </span>
                   <span className="shrink-0 text-right text-[13px] text-bone">{j.a.left} of {j.a.total} no photo</span>
                 </Link>
@@ -199,8 +208,9 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                     <div className="h-full rounded-full bg-ink-dim" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3 text-[13px]">
-                    <span className={j.s.criticalMissing ? "text-bone" : "text-ink-dim"}>
+                    <span className={`min-w-0 truncate ${j.back || j.s.criticalMissing ? "text-bone" : "text-ink-dim"}`}>
                       {j.s.total === 0 ? "No list yet"
+                        : j.back ? `Photo sent back: ${j.back}`
                         : j.s.criticalMissing ? `${j.s.criticalMissing} critical still off`
                           : j.s.ready ? "Everything's on. Not called ready yet." : `${j.s.missing.length} still off`}
                     </span>
@@ -215,24 +225,28 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
 
       {/* Every truck that went out, one line each, a day at a time. The last two days are open; older ones fold up under their date. */}
       {days.map((d, i) => {
-        const owes = d.jobs.filter((j) => j.a.left > 0 && !outNow(j, now)).length;
+        const owes = d.jobs.filter((j) => !j.closed_at && j.a.left > 0 && !outNow(j, now)).length;
         const count = `${d.jobs.length} ${d.jobs.length === 1 ? "truck" : "trucks"} went out`;
         const list = (
           <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
             {d.jobs.map((j) => (
               <li key={j.id} className="border-b border-line last:border-b-0">
                 <Link href={`/app/jobs/${j.id}`} className="flex items-center gap-3 bg-surface px-4 py-3 transition-colors hover:bg-elevated sm:px-5">
-                  <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${j.status === "ready" ? "bg-emerald-400" : "bg-red-400"}`} />
+                  <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${j.closed_at ? "bg-ink-faint" : j.status === "ready" ? "bg-emerald-400" : "bg-red-400"}`} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
                     <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
                       {time(j.first_ready_at)}{j.ready_by ? ` · ${j.ready_by}` : ""}
-                      {j.status !== "ready" ? <span className="text-red-300">{` · Not ready now: ${j.s.missing.length} off`}</span> : null}
+                      {j.closed_at ? ` · Closed: ${j.closed_why ?? ""}`
+                        : j.status !== "ready" ? <span className="text-red-300">{` · Not ready now: ${j.s.missing.length} off`}</span>
+                          : j.back ? <span className="text-bone">{` · Sent back: ${j.back}`}</span> : null}
                     </span>
                   </span>
                   {(() => {
                     // Put-away photos taken within the hour the truck was cleared were taken before the job.
                     const early = j.a.left ? null : tooSoon(j.first_ready_at, j.a.last_at);
+                    // Closed out by a manager: whatever it owed, it doesn't anymore.
+                    if (j.closed_at) return <span className="shrink-0 text-right text-[13px] text-ink-faint">Closed</span>;
                     return (
                       <span className={`shrink-0 text-right text-[13px] ${(j.a.left && !outNow(j, now)) || early !== null ? "text-bone" : "text-ink-faint"}`}>
                         {j.a.total === 0 ? "Nothing to prove after"
@@ -266,6 +280,29 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
           </details>
         );
       })}
+
+      {/* Jobs a manager closed out before they ever went out. Nothing is owed on them; they're here so the record is. */}
+      {closedOnly.length ? (
+        <details className="group mt-8">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 text-[15px] text-ink transition-colors hover:bg-elevated sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2.5"><ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open:rotate-90" />Closed without going out</span>
+            <span className="text-right text-[13px] text-ink-faint">{closedOnly.length} {closedOnly.length === 1 ? "job" : "jobs"}</span>
+          </summary>
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
+            {closedOnly.map((j) => (
+              <li key={j.id} className="border-b border-line last:border-b-0">
+                <Link href={`/app/jobs/${j.id}`} className="flex items-center gap-3 bg-surface px-4 py-3 transition-colors hover:bg-elevated sm:px-5">
+                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-ink-faint" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] text-ink">{name(j)}{j.truck ? <span className="text-ink-dim"> · {j.job_type}</span> : null}</span>
+                    <span className="mt-0.5 block truncate text-[13px] text-ink-faint">Closed {when(j.closed_at)}{j.closed_by ? ` · ${j.closed_by}` : ""}{j.closed_why ? `: ${j.closed_why}` : ""}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
 
       {cut || before || showOlder ? (
         <p className="mt-9 text-[13px] leading-relaxed text-ink-faint">
