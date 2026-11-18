@@ -23,19 +23,21 @@ export type SharedJob = {
   status: "loading" | "ready";
   ready_by: string | null;
   ready_at: string | null;
+  /** The first time the truck was cleared. It went out with everything on, whatever a later tap at the yard did. */
+  went_out_at: string | null;
   lines: SharedLine[];
 };
 
 type Row = {
   id: string; job_type: string; truck: string | null; details: JobDetails | null; status: "loading" | "ready";
-  ready_by: string | null; ready_at: string | null; company: { name: string; is_demo: boolean } | null;
+  ready_by: string | null; ready_at: string | null; first_ready_at: string | null; company: { name: string; is_demo: boolean } | null;
 };
 
 /** The job behind a link, or null when the link is wrong, off, or the job is gone. */
 export async function getSharedJob(admin: SupabaseClient, token: string): Promise<SharedJob | null> {
   if (!SHARE_TOKEN.test(token)) return null;
   const { data } = await admin.from("synnr_jobs")
-    .select("id, job_type, truck, details, status, ready_by, ready_at, company:saas_companies(name, is_demo)")
+    .select("id, job_type, truck, details, status, ready_by, ready_at, first_ready_at, company:saas_companies(name, is_demo)")
     .eq("share_token", token).maybeSingle();
   const job = data as Row | null;
   // The demo company is open to anyone, so it never gets a public page.
@@ -54,6 +56,7 @@ export async function getSharedJob(admin: SupabaseClient, token: string): Promis
     status: job.status,
     ready_by: job.status === "ready" ? firstName(job.ready_by) : null,
     ready_at: job.ready_at,
+    went_out_at: job.first_ready_at,
     // Each photo is served by this site under the link itself, so it stops
     // the moment the link does and never shows where it's kept.
     lines: sharedLines(lines, (l) => `/p/${token}/photo/${l.id}`),

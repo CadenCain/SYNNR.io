@@ -37,9 +37,22 @@ export async function POST(req: Request) {
 
   // Read as the signed-in person: the database decides whether this line is theirs to see.
   const db = await saasDb();
-  const { data: found } = await db.from("synnr_job_lines").select("id, job_id, photo_path").eq("id", lineId).eq("company_id", company.id).maybeSingle();
-  const line = found as { id: string; job_id: string; photo_path: string | null } | null;
+  const { data: found } = await db.from("synnr_job_lines").select("id, job_id, photo_path, phase").eq("id", lineId).eq("company_id", company.id).maybeSingle();
+  const line = found as { id: string; job_id: string; photo_path: string | null; phase: string } | null;
   if (!line) return no("That line isn't there anymore.", 404);
+
+  // What's proven after the job can't be proven before it. The screen holds
+  // those checks back until the truck has been cleared; so does the server.
+  // (A job with nothing to load has nothing to clear, so its checks are open.)
+  if (line.phase === "after") {
+    const [{ data: j }, { count: pieces }] = await Promise.all([
+      db.from("synnr_jobs").select("first_ready_at").eq("id", line.job_id).eq("company_id", company.id).maybeSingle(),
+      db.from("synnr_job_lines").select("id", { count: "exact", head: true }).eq("job_id", line.job_id).eq("company_id", company.id).eq("phase", "load"),
+    ]);
+    if (!(j as { first_ready_at: string | null } | null)?.first_ready_at && (pieces ?? 0) > 0) {
+      return no("That's for after the job. The truck hasn't been called ready yet.", 409);
+    }
+  }
 
   const bytes = Buffer.from(await photo.arrayBuffer());
   if (!isPhoto(bytes, photo.type)) return no("That isn't a photo. Use the camera and take it again.", 415);

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { requireCompany } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
 import { saasDb } from "@/lib/saas/db";
-import { afterState, boardGroups, jobState, tooSoon, type Phase } from "@/lib/saas/jobs";
+import { afterState, boardGroups, jobState, outNow, tooSoon, type Phase } from "@/lib/saas/jobs";
 import { fmtTime as time, fmtWhen, dayHeading, dayKey } from "@/lib/saas/format";
 
 // The layout's "%s · SYNNR" doesn't reach a page in its own folder.
@@ -18,11 +18,17 @@ type Row = {
 
 const clock = () => Date.now();
 
-/** The board shows the last two weeks. "Older jobs" opens the last six months, so a job (and its customer link) is never out of reach. */
-const RECENT_DAYS = 14;
+/** The board lists the last week of trucks. "Older jobs" opens the last six months, so a job (and its customer link) is never out of reach. */
+const RECENT_DAYS = 7;
 const OLDER_DAYS = 180;
-const RECENT_MAX = 80;
-const OLDER_MAX = 300;
+const RECENT_MAX = 300;
+const OLDER_MAX = 600;
+/** "Needs a look" reaches further back than the list does: a truck that owes a photo doesn't stop owing it because a week went by, or because the yard got busy. */
+const LOOK_DAYS = 45;
+/** How many days of history are open; the rest fold up under their date. */
+const OPEN_DAYS = 2;
+
+const JOB = "id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, created_by_name, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)";
 
 /**
  * Home: where every truck stands, in the order a manager needs it. First
@@ -40,20 +46,37 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
   const showOlder = older === "1";
   const max = showOlder ? OLDER_MAX : RECENT_MAX;
   const since = new Date(now - (showOlder ? OLDER_DAYS : RECENT_DAYS) * 86400e3).toISOString();
-  const [{ data }, { count: listCount }, { count: before }] = await Promise.all([
-    db.from("synnr_jobs").select("id, job_type, truck, status, ready_by, ready_at, first_ready_at, created_at, created_by_name, synnr_job_lines(label, qty, critical, phase, on_at, on_by, photo_path)")
-      .eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(max),
+  const lookSince = new Date(now - LOOK_DAYS * 86400e3).toISOString();
+  const [{ data }, { count: listCount }, { count: before }, { data: owing }, { data: waiting }] = await Promise.all([
+    db.from("synnr_jobs").select(JOB).eq("company_id", company.id).gte("created_at", since).order("created_at", { ascending: false }).limit(max),
     db.from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
     // Jobs from before this screen's window: there's a way to them below.
     db.from("synnr_jobs").select("id", { count: "exact", head: true }).eq("company_id", company.id).lt("created_at", since),
+    // Every after-the-job check still without a photo, however old or however far down the list its job is.
+    db.from("synnr_job_lines").select("job_id").eq("company_id", company.id).eq("phase", "after").is("on_at", null).gte("created_at", lookSince).limit(3000),
+    // Every job that was started and never called ready.
+    db.from("synnr_jobs").select(JOB).eq("company_id", company.id).is("first_ready_at", null).gte("created_at", lookSince).order("created_at", { ascending: false }).limit(200),
   ]);
-  const cut = (data ?? []).length >= max;
-  const jobs = ((data ?? []) as Row[]).map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
-  const { owed, stale, live, went } = boardGroups(jobs, now);
+  const listed = (data ?? []) as Row[];
+  const cut = listed.length >= max;
+  // Jobs that owe a photo but aren't in the list above: fetch those too, so nothing owed is ever hidden.
+  const have = new Set([...listed, ...((waiting ?? []) as Row[])].map((j) => j.id));
+  const missing = [...new Set(((owing ?? []) as { job_id: string }[]).map((l) => l.job_id))].filter((id) => !have.has(id)).slice(0, 200);
+  const { data: extra } = missing.length
+    ? await db.from("synnr_jobs").select(JOB).eq("company_id", company.id).in("id", missing).not("first_ready_at", "is", null)
+    : { data: [] };
+  const seen = new Set<string>();
+  const every = [...listed, ...((waiting ?? []) as Row[]), ...((extra ?? []) as Row[])].filter((j) => (seen.has(j.id) ? false : (seen.add(j.id), true)));
+  const jobs = every.map((j) => ({ ...j, s: jobState(j.synnr_job_lines ?? []), a: afterState(j.synnr_job_lines ?? []), photos: (j.synnr_job_lines ?? []).filter((l) => l.photo_path).length }));
+  const groups = boardGroups(jobs, now);
+  const { owed, stale, live } = groups;
+  // The day-by-day list is only the window; what needs a look reaches further back.
+  const went = groups.went.filter((j) => j.created_at >= since);
   const criticalOff = live.reduce((n, j) => n + j.s.criticalMissing, 0);
   const today = dayKey(new Date(now).toISOString());
   const wentToday = went.filter((j) => dayKey(j.first_ready_at) === today).length;
   const usesAfter = jobs.some((j) => j.a.total > 0);
+  const isEmpty = jobs.length === 0;
   const manager = company.role !== "member";
   const writable = isWritable(company.subscription_status, company.comped);
 
@@ -93,7 +116,7 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
         ) : null}
       </div>
 
-      {jobs.length ? (
+      {!isEmpty ? (
         <div className={`mt-6 grid gap-px overflow-hidden rounded-2xl border border-line-2 bg-line ${usesAfter ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3"}`}>
           {stat(live.length, "loading out now")}
           {stat(wentToday, "went out today", wentToday ? "text-emerald-400" : "text-ink")}
@@ -102,7 +125,7 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
         </div>
       ) : null}
 
-      {!jobs.length ? (
+      {isEmpty ? (
         <div className="mt-6 rounded-2xl border border-line-2 bg-[#0b0c0e] px-6 py-12 sm:px-10">
           <h2 className="text-[20px] font-medium tracking-[-0.01em] text-ink">No jobs yet.</h2>
           <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-ink-dim">
@@ -190,13 +213,11 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
         </section>
       ) : null}
 
-      {/* Every truck that went out, one line each, a day at a time. */}
-      {days.map((d) => (
-        <section key={d.key} className="mt-8">
-          <h2 className="flex items-baseline justify-between gap-3 text-[15px] font-medium text-ink">
-            <span>{d.heading}</span>
-            <span className="text-[13px] font-normal text-ink-faint">{d.jobs.length} {d.jobs.length === 1 ? "truck" : "trucks"} went out</span>
-          </h2>
+      {/* Every truck that went out, one line each, a day at a time. The last two days are open; older ones fold up under their date. */}
+      {days.map((d, i) => {
+        const owes = d.jobs.filter((j) => j.a.left > 0 && !outNow(j, now)).length;
+        const count = `${d.jobs.length} ${d.jobs.length === 1 ? "truck" : "trucks"} went out`;
+        const list = (
           <ul className="mt-3 overflow-hidden rounded-2xl border border-line">
             {d.jobs.map((j) => (
               <li key={j.id} className="border-b border-line last:border-b-0">
@@ -213,9 +234,10 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
                     // Put-away photos taken within the hour the truck was cleared were taken before the job.
                     const early = j.a.left ? null : tooSoon(j.first_ready_at, j.a.last_at);
                     return (
-                      <span className={`shrink-0 text-right text-[13px] ${j.a.left || early !== null ? "text-bone" : "text-ink-faint"}`}>
+                      <span className={`shrink-0 text-right text-[13px] ${(j.a.left && !outNow(j, now)) || early !== null ? "text-bone" : "text-ink-faint"}`}>
                         {j.a.total === 0 ? "Nothing to prove after"
-                          : j.a.left ? `${j.a.left} of ${j.a.total} no photo`
+                          : outNow(j, now) ? "Out now"
+                            : j.a.left ? `${j.a.left} of ${j.a.total} no photo`
                             : early !== null ? `Photos ${early} min after clearing`
                               : `Put away, ${dayKey(j.a.last_at) === dayKey(j.first_ready_at) ? time(j.a.last_at) : fmtWhen(j.a.last_at)}`}
                       </span>
@@ -225,14 +247,31 @@ export default async function JobsHome({ searchParams }: { searchParams: Promise
               </li>
             ))}
           </ul>
-        </section>
-      ))}
+        );
+        return i < OPEN_DAYS ? (
+          <section key={d.key} className="mt-8">
+            <h2 className="flex items-baseline justify-between gap-3 text-[15px] font-medium text-ink">
+              <span>{d.heading}</span>
+              <span className="text-[13px] font-normal text-ink-faint">{count}</span>
+            </h2>
+            {list}
+          </section>
+        ) : (
+          <details key={d.key} className={`group ${i === OPEN_DAYS ? "mt-8" : "mt-2"}`}>
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 text-[15px] text-ink transition-colors hover:bg-elevated sm:px-5 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2.5"><ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-transform group-open:rotate-90" />{d.heading}</span>
+              <span className="text-right text-[13px] text-ink-faint">{count}{owes ? <span className="text-bone">{`, ${owes} ${owes === 1 ? "owes" : "owe"} a photo`}</span> : null}</span>
+            </summary>
+            {list}
+          </details>
+        );
+      })}
 
       {cut || before || showOlder ? (
         <p className="mt-9 text-[13px] leading-relaxed text-ink-faint">
           {cut ? `Showing the newest ${max} jobs. ` : showOlder ? "Showing the last six months. " : ""}
           {showOlder
-            ? <Link href="/app" className="inline-flex min-h-9 items-center text-ink-dim underline underline-offset-4 hover:text-ink">Back to the last two weeks</Link>
+            ? <Link href="/app" className="inline-flex min-h-9 items-center text-ink-dim underline underline-offset-4 hover:text-ink">Back to the last week</Link>
             : before ? <Link href="/app?older=1" className="inline-flex min-h-9 items-center text-ink-dim underline underline-offset-4 hover:text-ink">{before === 1 ? "1 older job" : `${before} older jobs`}</Link> : null}
         </p>
       ) : null}

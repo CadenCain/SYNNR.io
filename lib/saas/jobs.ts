@@ -220,23 +220,31 @@ export function sharedLines(lines: JobLine[], photoUrl: (line: JobLine) => strin
 
 /** A truck that hasn't been cleared and was started longer ago than this isn't loading anymore: it went out without anyone calling it ready, or it was started by mistake. */
 export const LIVE_HOURS = 36;
+/** A truck cleared less than this long ago is still on its job: it doesn't owe a photo yet. */
+export const OUT_HOURS = 4;
+
+/** Cleared so recently that it's still out, with nothing proven after the job yet. */
+export function outNow(j: { first_ready_at: string | null; a: { left: number; proven: number } }, now: number): boolean {
+  return Boolean(j.first_ready_at) && j.a.left > 0 && j.a.proven === 0 && new Date(j.first_ready_at as string).getTime() > now - OUT_HOURS * 3600e3;
+}
 
 /**
  * How the job board sorts a company's jobs, so a manager sees what needs him
  * before a week of history:
- *  - owed: trucks that went out and still owe a photo after the job
+ *  - owed: trucks that went out and still owe a photo after the job (not
+ *    ones cleared in the last few hours: those are still out)
  *  - stale: started more than a day and a half ago and never called ready
  *  - live: loading out now
  *  - went: every truck that was cleared, newest first
  * "Went out" goes by the first time the truck was cleared, which a later
  * stray tap doesn't move.
  */
-export function boardGroups<T extends { first_ready_at: string | null; created_at: string; a: { left: number } }>(jobs: T[], now: number) {
+export function boardGroups<T extends { first_ready_at: string | null; created_at: string; a: { left: number; proven: number } }>(jobs: T[], now: number) {
   const cutoff = now - LIVE_HOURS * 3600e3;
   const went = jobs.filter((j) => j.first_ready_at).sort((x, y) => (y.first_ready_at as string).localeCompare(x.first_ready_at as string));
   const waiting = jobs.filter((j) => !j.first_ready_at);
   return {
-    owed: went.filter((j) => j.a.left > 0),
+    owed: went.filter((j) => j.a.left > 0 && !outNow(j, now)),
     stale: waiting.filter((j) => new Date(j.created_at).getTime() < cutoff),
     live: waiting.filter((j) => new Date(j.created_at).getTime() >= cutoff),
     went,

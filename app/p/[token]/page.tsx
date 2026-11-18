@@ -47,6 +47,8 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
   if (!job) notFound();
   const s = jobState(job.lines);
   const ready = job.status === "ready";
+  // Cleared earlier, then a piece was tapped back off (usually unloading at the yard). The customer's question is how it went out.
+  const wentOut = !ready && Boolean(job.went_out_at);
   const critical = job.lines.filter((l) => l.critical);
   const proof = critical.filter((l) => l.on_at && l.photo);
   const facts = ([["Well", job.well], ["Start", job.start]] as [string, string | null][]).filter((f): f is [string, string] => Boolean(f[1]));
@@ -73,16 +75,18 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
         ) : null}
 
         {/* Where the truck stands */}
-        <div className={cn("mt-6 rounded-2xl border px-5 py-5 sm:px-6", ready ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-line-2 bg-[#0b0c0e]")}>
+        <div className={cn("mt-6 rounded-2xl border px-5 py-5 sm:px-6", ready || wentOut ? "border-emerald-500/40 bg-emerald-500/[0.06]" : "border-line-2 bg-[#0b0c0e]")}>
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
             <div>
               <div className="flex items-center gap-3">
-                <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", ready ? "bg-emerald-400" : "bg-red-400")} />
-                <span className={cn("text-[40px] font-light leading-none tracking-[-0.03em] sm:text-[52px]", ready ? "text-emerald-400" : "text-red-400")}>{ready ? "Ready" : "Not ready"}</span>
+                <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", ready || wentOut ? "bg-emerald-400" : "bg-red-400")} />
+                <span className={cn("text-[40px] font-light leading-none tracking-[-0.03em] sm:text-[52px]", ready || wentOut ? "text-emerald-400" : "text-red-400")}>{ready ? "Ready" : wentOut ? "Went out ready" : "Not ready"}</span>
               </div>
               <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
                 {ready
                   ? `Cleared by ${job.ready_by ?? "the crew"}${job.ready_at ? `, ${when(job.ready_at)}` : ""}. Everything on the list is on the truck.`
+                  : wentOut
+                    ? `Cleared ${when(job.went_out_at)} with everything on the list on the truck. Since then ${s.missing.length === 1 ? "1 piece has" : `${s.missing.length} pieces have`} been taken back off.`
                   : s.total === 0
                     ? "This job has no list yet."
                     : s.ready
@@ -153,7 +157,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
         </section>
 
         <p className="mt-9 max-w-xl text-[13px] leading-relaxed text-ink-faint">
-          {`This page shows the truck as it stands right now. Times are Central. ${job.company} loads out with SYNNR: the crew taps each piece onto the truck, and the truck reads Not ready until every one is on.`}
+          {`This page shows the truck as it stands right now, and how it went out. Times are Central. ${job.company} loads out with SYNNR: the crew taps each piece onto the truck, and the truck reads Not ready until every one is on.`}
         </p>
       </main>
 

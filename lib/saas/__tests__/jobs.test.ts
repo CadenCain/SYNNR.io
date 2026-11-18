@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, boardGroups, tooSoon, LIVE_HOURS, type JobLine } from "../jobs";
+import { orderLines, jobState, afterState, buildLines, matchList, detailRows, firstName, sharedLines, boardGroups, outNow, tooSoon, LIVE_HOURS, type JobLine } from "../jobs";
 import { dayHeading, dayKey } from "../format";
 import { SHARE_TOKEN, newShareToken } from "../job-share";
 
@@ -214,7 +214,7 @@ describe("after the job", () => {
 
 describe("the job board", () => {
   const now = new Date("2026-11-18T02:45:00.000Z").getTime(); // Tuesday Nov 17, 8:45 PM Central
-  const j = (id: string, created: string, cleared: string | null, left = 0) => ({ id, created_at: created, first_ready_at: cleared, a: { left } });
+  const j = (id: string, created: string, cleared: string | null, left = 0, proven = 0) => ({ id, created_at: created, first_ready_at: cleared, a: { left, proven } });
   const jobs = [
     j("loading-tonight", "2026-11-18T01:40:00.000Z", null),
     j("out-today-owes", "2026-11-17T10:15:00.000Z", "2026-11-17T11:15:00.000Z", 3),
@@ -241,6 +241,18 @@ describe("the job board", () => {
   it("keeps a truck that went out in 'went out' even if a stray tap made it not ready again", () => {
     // The board goes by the first time it was cleared, not by what it reads now.
     expect(boardGroups([j("untapped", "2026-11-13T11:10:00.000Z", "2026-11-13T11:30:00.000Z")], now).went).toHaveLength(1);
+  });
+
+  it("doesn't chase a truck that was cleared in the last few hours: it's still out", () => {
+    const soon = j("just-left", "2026-11-18T01:20:00.000Z", "2026-11-18T02:10:00.000Z", 3);
+    expect(outNow(soon, now)).toBe(true);
+    expect(boardGroups([soon], now).owed).toHaveLength(0);
+    // Once it has sent one photo, it's back, and the rest is owed.
+    const back = j("back-early", "2026-11-18T01:20:00.000Z", "2026-11-18T02:10:00.000Z", 2, 1);
+    expect(outNow(back, now)).toBe(false);
+    expect(boardGroups([back], now).owed).toHaveLength(1);
+    // Four hours on with nothing sent, it owes.
+    expect(boardGroups([j("morning", "2026-11-17T10:00:00.000Z", "2026-11-17T10:40:00.000Z", 3)], now).owed).toHaveLength(1);
   });
 
   it("groups days in the yard's time, not the server's", () => {
