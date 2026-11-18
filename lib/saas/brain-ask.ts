@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { kindLabel, listAsText, listScore, type AnswerPart, type Source } from "./brain";
 
 /**
@@ -25,10 +27,17 @@ const PER_DOC = 6;
 type Hit = { chunk_id: string; doc_id: string; doc_title: string; kind: string; section: string | null; page: number | null; idx: number; body: string; hits: number; terms: number; score: number };
 type ListRow = { id: string; name: string; saas_package_lines: { label: string; qty: number; critical: boolean; phase: string; sort: number }[] | null };
 
-/** The passages for a question, best first, numbered from 1. Empty when the shop's documents have nothing on it. */
-export async function findSources(db: SupabaseClient, companyId: string, question: string, limit = TO_MODEL): Promise<Source[]> {
+/** What a search found: every passage worth reading, how many of them are close enough to show a person, and whether even the best one is a stretch. */
+export type Found = { sources: Source[]; show: number; weak: boolean };
+
+/**
+ * The passages for a question, best first, numbered from 1. Empty when the
+ * shop's documents have nothing on it. `also` is other words the documents
+ * might use for the same thing; they widen the search, never the question.
+ */
+export async function findSources(db: SupabaseClient, companyId: string, question: string, also = "", limit = TO_MODEL): Promise<Found> {
   const [{ data: found, error }, { data: lists }] = await Promise.all([
-    db.rpc("synnr_brain_search", { p_company: companyId, p_query: question, p_limit: 30 }),
+    db.rpc("synnr_brain_search", { p_company: companyId, p_query: `${question} ${also}`.trim(), p_limit: 30 }),
     db.from("saas_packages").select("id, name, saas_package_lines(label, qty, critical, phase, sort)").eq("company_id", companyId).is("unit_id", null).order("name").limit(200),
   ]);
   if (error) throw new Error(`search: ${error.message}`);
@@ -37,11 +46,13 @@ export async function findSources(db: SupabaseClient, companyId: string, questio
   const hits = (found ?? []) as Hit[];
   const top = hits[0]?.score ?? 0;
   const perDoc = new Map<string, number>();
-  const passages = hits.filter((h) => h.score >= top * 0.3).filter((h) => {
+  const passages = hits.filter((h) => h.score >= top * 0.25).filter((h) => {
     const n = (perDoc.get(h.doc_id) ?? 0) + 1;
     perDoc.set(h.doc_id, n);
     return n <= PER_DOC;
   });
+  // Close enough to put in front of a person as "what the documents say".
+  const close = passages.filter((h) => h.score >= top * 0.4).length;
 
   // The shop's job lists that the question is about.
   const fits = ((lists ?? []) as ListRow[])
@@ -53,24 +64,54 @@ export async function findSources(db: SupabaseClient, companyId: string, questio
     .sort((a, b) => b.score - a.score)
     .slice(0, 2);
 
-  type Found = Omit<Source, "n">;
-  const asList = (x: (typeof fits)[number]): Found => ({
+  type Bare = Omit<Source, "n">;
+  const asList = (x: (typeof fits)[number]): Bare => ({
     from: "list", id: x.l.id, title: x.l.name, type: "Job list", section: null, page: null, idx: null,
     body: listAsText({ name: x.l.name, lines: x.lines }),
   });
-  const fromDocs: Found[] = passages.map((h) => ({
+  const fromDocs: Bare[] = passages.map((h) => ({
     from: "doc", id: h.doc_id, title: h.doc_title, type: kindLabel(h.kind), section: h.section, page: h.page, idx: h.idx, body: h.body,
   }));
   // A job list the question names goes first; one that only shares a few words goes after the documents.
-  const ordered = [
-    ...fits.filter((x) => x.score >= 10).map(asList),
-    ...fromDocs,
-    ...fits.filter((x) => x.score < 10).map(asList),
-  ].slice(0, limit);
-  return ordered.map((s, i) => ({ ...s, n: i + 1 }));
+  const named = fits.filter((x) => x.score >= 10);
+  const ordered = [...named.map(asList), ...fromDocs, ...fits.filter((x) => x.score < 10).map(asList)].slice(0, limit);
+  const best = hits[0];
+  return {
+    sources: ordered.map((s, i) => ({ ...s, n: i + 1 })),
+    show: Math.min(Math.max(named.length + close, 1), TO_SHOW, ordered.length),
+    // No list the question names, and the best passage holds less than half of what was asked about.
+    weak: named.length === 0 && Boolean(best) && best.terms >= 3 && best.hits / best.terms < 0.5,
+  };
 }
 
 export const answersOn = () => Boolean(process.env.ANTHROPIC_API_KEY);
+
+const Words = z.object({
+  words: z.array(z.string()).describe("up to 12 single words or short terms a company's own contract, price sheet, or procedure would use for what the question is about"),
+});
+
+/**
+ * Other words the shop's documents might use for what's being asked: a hand
+ * asks about "waiting on the customer", the contract says "standby". They
+ * only widen the search for passages. Whatever goes wrong here, the search
+ * simply runs on the question as it was asked.
+ */
+export async function otherWords(question: string): Promise<string> {
+  try {
+    const client = new Anthropic();
+    const response = await client.messages.parse({
+      model: "claude-haiku-5-5",
+      max_tokens: 400,
+      system: "Someone at an oilfield service company is asking a question that will be looked up in the company's own documents (contracts, price sheets, procedures, job reports). List the other words those documents would most likely use for the same thing: the formal term for a casual one, the other tense of a verb, a common abbreviation spelled out. Words only. Do not answer the question, and do not add subjects it doesn't ask about.",
+      messages: [{ role: "user", content: question.slice(0, 2000) }],
+      output_config: { format: zodOutputFormat(Words) },
+    });
+    return (response.parsed_output?.words ?? []).slice(0, 12).map((w) => w.replace(/[^\p{L}\p{N}\s/.\-]/gu, " ").trim().slice(0, 40)).filter(Boolean).join(" ");
+  } catch (e) {
+    console.error("[ask] other words:", e instanceof Error ? e.message : e);
+    return "";
+  }
+}
 /** What the model starts with when the passages don't hold the answer. The screen reads it. */
 export const NOT_FOUND = "Not in your documents.";
 

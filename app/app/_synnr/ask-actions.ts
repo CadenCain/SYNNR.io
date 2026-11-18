@@ -3,8 +3,8 @@
 import type { User } from "@supabase/supabase-js";
 import { requireWritableCompany } from "@/lib/saas/auth";
 import { saasAdmin, saasDb } from "@/lib/saas/db";
-import type { Answer, Source } from "@/lib/saas/brain";
-import { answersOn, findSources, writeAnswer, NOT_FOUND, TO_MODEL, TO_SHOW } from "@/lib/saas/brain-ask";
+import type { Answer } from "@/lib/saas/brain";
+import { answersOn, findSources, otherWords, writeAnswer, NOT_FOUND, type Found } from "@/lib/saas/brain-ask";
 
 /**
  * Ask the brain. The passages are found as the person asking (so the
@@ -45,15 +45,21 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
     if ((count ?? 0) >= DEMO_ASKS) return { ok: false, error: `The demo answers ${DEMO_ASKS} questions. Request access and it's your own documents it answers from.` };
   }
 
+  // The written answer is on, and today's limit has room for one more.
+  const write = answersOn() && (await underTheCap(company.id, company.is_demo, dayAgo));
+
   // Read as the person asking: the database decides which passages are theirs to see.
   const db = await saasDb();
-  let sources: Source[];
+  let found: Found;
   try {
-    sources = await findSources(db, company.id, question, TO_MODEL);
+    found = await findSources(db, company.id, question, write && mode === "ask" ? await otherWords(question) : "");
   } catch (e) {
     console.error("[ask] search:", e instanceof Error ? e.message : e);
     return { ok: false, error: "That didn't go through. Try again." };
   }
+  const { sources } = found;
+  const shown = sources.slice(0, found.show);
+  const stretch = "No passage has everything you asked about. These are the closest.";
 
   let answer: Answer;
   if (!sources.length) {
@@ -65,20 +71,20 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
         : "Nothing in your documents about that. I won't guess." }],
     };
   } else {
-    answer = { how: "passages", parts: [], sources: sources.slice(0, TO_SHOW) };
-    if (answersOn() && (await underTheCap(company.id, company.is_demo, dayAgo))) {
+    answer = { how: "passages", parts: [], sources: shown, note: found.weak ? stretch : null };
+    if (write) {
       try {
         const parts = await writeAnswer({ company: company.name, mode, question, sources });
         const text = parts.map((p) => p.text).join("").trim();
         if (text.startsWith(NOT_FOUND)) {
           // It read the closest passages and they don't hold the answer.
-          answer = { how: "none", parts: [{ text, cites: [] }], sources: sources.slice(0, TO_SHOW), note: "The closest passages are below, in case one of them is what you meant." };
+          answer = { how: "none", parts: [{ text, cites: [] }], sources: shown, note: "The closest passages are below, in case one of them is what you meant." };
         } else {
           const used = new Set(parts.flatMap((p) => p.cites));
           answer = {
             how: "ai", parts,
-            // What it pointed to, then the rest of what it was given.
-            sources: [...sources.filter((s) => used.has(s.n)), ...sources.filter((s) => !used.has(s.n))],
+            // What it pointed to, then the other passages it was given that were close.
+            sources: [...sources.filter((s) => used.has(s.n)), ...shown.filter((s) => !used.has(s.n))],
             note: used.size ? null : "SYNNR didn't tie this to a passage. Check it against the passages below before you rely on it.",
           };
         }

@@ -7,42 +7,50 @@ const title = "Your data · SYNNR";
 export const metadata: Metadata = {
   title,
   openGraph: { title, description: "What SYNNR does with your company's data, in plain words.", images: SHARE_IMAGE },
-  description: "What SYNNR does with your company's data, in plain words: who can see it, where the photos are kept, what gets read from a dispatch, and how to get it back.",
+  description: "What SYNNR does with your company's documents, in plain words: who can see them, what goes to an AI and what doesn't, and how to get them back.",
   alternates: { canonical: "/security" },
 };
 
 const FACTS: { title: string; body: string }[] = [
   {
     title: "Your company is walled off",
-    body: "Every job, list, and name belongs to one company, and the database itself refuses to show it to anyone outside that company. It's a rule in the database, not a setting in the app.",
+    body: "Every document, question, job, and name belongs to one company, and the database itself refuses to show it to anyone outside that company. It's a rule in the database, not a setting in the app.",
   },
   {
-    title: "Your data is never used for another company",
-    body: "Your job lists and jobs are only ever used to build your checklists. Nothing you load shows up in another company's lists or answers.",
+    title: "Your documents are never used for another company",
+    body: "What you put in is only ever used to answer your own crew. Nothing you load shows up in another company's answers, and SYNNR doesn't train a model on it.",
+  },
+  {
+    title: "Managers only means managers only",
+    body: "Mark a document managers only and the database leaves it out of a hand's search. A hand's question can't be answered from it, and a hand can't open it.",
+  },
+  {
+    title: "What goes to an AI, and what doesn't",
+    body: "Today nothing you load goes to an AI: SYNNR finds the passages in your documents itself and shows them to you. When written answers are turned on for your account, the question and the few passages that match it go to our AI provider (Anthropic) to write the answer. Your whole library is never sent, and Anthropic's terms for business customers say it may not train its models on what we send.",
+  },
+  {
+    title: "The files stay private",
+    body: "The files you load are kept in private storage. Only someone logged in to your company, who is allowed to see that document, can open one.",
+  },
+  {
+    title: "Questions are kept, and seen by the right people",
+    body: "What was asked and what came back is saved. A hand sees their own questions. A manager sees what the crew is asking.",
   },
   {
     title: "Proof photos stay private",
-    body: "The photos your crew takes of critical pieces, and of gear put away after a job, are kept with that job in private storage. Only people logged in to your company can open them, unless your crew sends a customer the link below. They aren't used for anything else.",
-  },
-  {
-    title: "A customer link shows one job, and you can turn it off",
-    body: "If your crew makes a link to send a customer, anyone holding that link can see that one job's list and the photos of what went on the truck, with first names only. What your crew proves after the job isn't on it, and nothing else in your company is behind it. A manager can turn the link off, and it stops working right then.",
+    body: "If your crews run jobs in SYNNR, the photos they take are kept with that job in private storage. Only people logged in to your company can open them, unless your crew sends a customer that job's link, which shows one job's list and photos with first names only. A manager can turn a link off, and it stops working right then.",
   },
   {
     title: "A dispatch photo is read, then thrown away",
-    body: "Reading a photo of the dispatch is being turned on now; until it is, your crew types the job. When you send one, it goes to our AI provider (Anthropic) to be read, and SYNNR keeps only the job facts: the kind of job, the truck, the customer and the well, the start time, the sizes, the pressure control, and the remarks. The photo itself isn't stored.",
-  },
-  {
-    title: "Names and phone numbers stay out",
-    body: "A dispatch has people on it. SYNNR is told to leave names, phone numbers, and emails out of what it reads. Remarks are kept as written, so a name somebody put in the remarks stays in them.",
+    body: "Reading a photo of the dispatch is being turned on now; until it is, your crew types the job. When you send one, it goes to Anthropic to be read, and SYNNR keeps only the job facts. It's told to leave names, phone numbers, and emails out, and the photo itself isn't stored.",
   },
   {
     title: "Everybody has their own login",
-    body: "No shared passwords. Hands load trucks. Managers change the job lists and who's on the crew. Every piece that goes on a truck carries the name of who tapped it and when.",
+    body: "No shared passwords. Hands ask, and load trucks. Managers put documents in, take them out, and decide who's on the crew.",
   },
   {
     title: "It's yours, and you can have it back",
-    body: "Ask for a copy of what your company loaded, or for all of it to be deleted, and we do it. Email cadencain@synnr.io.",
+    body: "A manager can download everything SYNNR has read, in one file, and each file as it was loaded. Take a document out and nothing is answered from it again. Ask for all of it to be deleted, and we do it. Email cadencain@synnr.io.",
   },
 ];
 
@@ -61,7 +69,7 @@ export default function Security() {
               What your shop knows stays your shop&apos;s.
             </h1>
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
-              Your job lists and your way of doing things are worth something. Here is exactly what SYNNR does with them, in plain words.
+              Your procedures, your prices, and your way of doing things are worth something. Here is exactly what SYNNR does with them, in plain words.
             </p>
           </div>
         </section>
@@ -85,7 +93,7 @@ export default function Security() {
             <div className="max-w-2xl text-[16px] leading-[1.65] text-ink-dim">
               <p>
                 Data is stored in the United States with Supabase. The app runs on Vercel. Payments go through Stripe, so SYNNR never sees a card number.
-                Reading a dispatch uses Anthropic&apos;s AI. Email goes out through Resend.
+                Written answers and reading a dispatch use Anthropic&apos;s AI, once they&apos;re turned on for your account. Email goes out through Resend.
               </p>
               <p className="mt-4">
                 The full detail is in the <Link href="/legal/privacy" className="text-ink underline underline-offset-4">Privacy Policy</Link> and the{" "}

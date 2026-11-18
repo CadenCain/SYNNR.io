@@ -2,16 +2,19 @@ import { LegalShell } from "../LegalShell";
 import { SHARE_IMAGE } from "../../_site/share";
 
 // Plain-language terms for SYNNR. Brought in line with the product on
-// 2026-11-12: job lists, a checklist with photo proof, READY or NOT READY, a
-// link a crew can send a customer, and what's proven after the job. (The
-// 2026-11-09 version described answering questions from documents, which
-// isn't built.) NOT reviewed by a lawyer.
+// 2026-11-18: a company's own documents and answers drawn from them, and,
+// for a company that runs its jobs here, job lists, a checklist with photo
+// proof, READY or NOT READY, a link a crew can send a customer, and what's
+// proven after the job. NOT reviewed by a lawyer.
 //
 // LAWYER FLAGS (get real counsel before serious revenue):
 //  - Entity name: Darkstar Dynamics LLC, confirmed by Caden 2026-11-09.
-//  - §2: "READY means your crew marked it loaded; SYNNR doesn't inspect
-//    anything" is the load-bearing wall of this document. When an AI starts
-//    looking at the photos, §2 has to say so, and say it can be wrong.
+//  - §2: "an answer is what your documents say, and it can be wrong" and
+//    "READY means your crew marked it loaded; SYNNR doesn't inspect
+//    anything" are the load-bearing walls of this document. When an AI
+//    starts looking at the photos, §2 has to say so, and say it can be wrong.
+//  - §5: a customer's agreement may itself restrict who it's shared with.
+//    The customer loading it is responsible for having the right to.
 //  - §3: pricing isn't published while access is by invitation. Once a price
 //    is public, state it here.
 //  - Liability cap + disclaimer wording (§6-7).
@@ -26,23 +29,35 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalShell title="Terms of Service" updated="November 12, 2026">
+    <LegalShell title="Terms of Service" updated="November 18, 2026">
       <h2>1. Who we are, what this covers</h2>
       <p>
         SYNNR (synnr.io) is owned and run by Darkstar Dynamics LLC (&ldquo;SYNNR,&rdquo; &ldquo;we,&rdquo;
-        &ldquo;us&rdquo;). SYNNR is software a service company uses to load out for a job: the company&apos;s own
-        lists of what each kind of job takes, a checklist the crew loads by with photos of the critical pieces,
-        a READY or NOT READY for the truck, and what the crew proves with a photo after the job. These terms
+        &ldquo;us&rdquo;). SYNNR is software a service company uses to keep what it knows where its crew can
+        ask: the company&apos;s own documents (such as procedures, customer agreements, price sheets, job
+        reports and notes), and answers drawn from them. A company can also run its jobs in it: its own lists
+        of what each kind of job takes, a checklist the crew loads by with photos of the critical pieces, a
+        READY or NOT READY for the truck, and what the crew proves with a photo after the job. These terms
         govern your use of the website and application at synnr.io. By creating an account or using the service
         you agree to them.
       </p>
 
       <h2>2. What the service is, and what it isn&apos;t</h2>
       <p>
-        SYNNR builds a job&apos;s checklist from the job lists your company loads into it and from what your
-        crew adds, and it keeps the record: who put each piece on the truck, when, and the photos. It is a{" "}
+        SYNNR answers questions from the documents your company loads into it, builds a job&apos;s checklist
+        from your job lists and from what your crew adds, and keeps the record: what was asked and what came
+        back, who put each piece on the truck, when, and the photos. It is a{" "}
         <strong>record-keeping and informational tool</strong>. It is not legal, accounting, engineering, or
         safety advice, and it is not a regulatory authority or an inspection service.
+      </p>
+      <p>
+        <strong>An answer in SYNNR is what your own documents say, as SYNNR found it. It is not a judgment
+        that the document is right, current, or complete.</strong> SYNNR shows the passages an answer came
+        from so that you can check it, and you should. It can miss a passage that is there, and it can show
+        one that doesn&apos;t apply. When SYNNR says it found nothing, that means it found nothing, not that
+        your documents are silent. Where an answer is written out by AI, it can be wrong or incomplete even
+        when the passages are right. What a contract requires is decided by the contract and the people who
+        signed it, not by what SYNNR says about it.
       </p>
       <p>
         <strong>READY in SYNNR means your crew marked every piece on the list as loaded. It does not mean
@@ -74,8 +89,8 @@ export default function TermsPage() {
 
       <h2>4. Your data stays yours</h2>
       <p>
-        Everything you put into SYNNR (job lists, jobs, photos, and anything else your team enters) is
-        yours. We don&apos;t sell it, we don&apos;t show it to other customers, and we don&apos;t use it for any
+        Everything you put into SYNNR (documents, notes, questions, job lists, jobs, photos, and anything
+        else your team enters) is yours. We don&apos;t sell it, we don&apos;t show it to other customers, and we don&apos;t use it for any
         other company. You can ask for a copy of what you loaded at any time, including after you
         cancel. If you ask us to delete your account, we delete your company&apos;s data from the live system;
         residual copies in encrypted backups age out on the backup schedule.
@@ -85,6 +100,8 @@ export default function TermsPage() {
       <p>
         Don&apos;t attempt to access another company&apos;s data, probe or overload the service,
         resell access, load material you have no right to share, or use the service for anything unlawful.
+        Some agreements limit who they can be shown to: before you load a customer&apos;s agreement, make sure
+        you&apos;re allowed to.
         Accounts doing so can be suspended or terminated.
       </p>
 
@@ -92,8 +109,8 @@ export default function TermsPage() {
       <p>
         The service is provided <strong>&ldquo;as is&rdquo; and &ldquo;as available,&rdquo;</strong>{" "}
         without warranties of any kind, express or implied, including fitness for a particular
-        purpose. We do not warrant that a checklist, a READY, or anything else the service reads or shows will
-        be accurate or complete, that the service will be uninterrupted, that an email or a notice will arrive,
+        purpose. We do not warrant that an answer, a checklist, a READY, or anything else the service reads or
+        shows will be accurate or complete, that the service will be uninterrupted, that an email or a notice will arrive,
         or that any compliance, safety, or business outcome will result from its use.
       </p>
 
@@ -102,8 +119,8 @@ export default function TermsPage() {
         To the maximum extent the law allows, SYNNR&apos;s total liability for any claim arising
         from the service is limited to the amount you paid us in the twelve months before the
         claim. We are not liable for indirect, incidental, or consequential damages, including
-        lost profits, non-productive time, regulatory fines, or losses from relying on a checklist,
-        a READY, or anything else the service showed.
+        lost profits, non-productive time, regulatory fines, or losses from relying on an answer, a
+        checklist, a READY, or anything else the service showed.
       </p>
 
       <h2>8. Termination</h2>

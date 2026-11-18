@@ -31,7 +31,7 @@ export default async function AskHome({ searchParams }: { searchParams: Promise<
     id: r.id, mode: r.mode, question: r.question, answer: r.answer, at: r.created_at, by: r.user_id === user.id ? null : r.asked_by,
   }));
   return (
-    <Ask firstName={full.split(/\s+/)[0] ?? ""} companyName={company.name} manager={company.role !== "member"}
+    <Ask firstName={company.is_demo ? "" : full.split(/\s+/)[0] ?? ""} companyName={company.name} manager={company.role !== "member"}
       writable={isWritable(company.subscription_status, company.comped)} demo={company.is_demo} written={answersOn()}
       docs={docs ?? 0} lists={lists ?? 0} before={before}
       examples={company.is_demo ? SAMPLE_QUESTIONS : ["What do we charge for standby?", "What does the MSA say about cancelling a job?", "What goes out on this kind of job?", "How do we rig up and test?"]}

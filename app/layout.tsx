@@ -25,23 +25,23 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR | Tell it the job. It tells you what to take.",
+    default: "SYNNR | The brain of your shop.",
     template: "%s",
   },
   description:
-    "SYNNR is for oilfield service companies. Say what you're running. It gives your crew what the job takes, has them prove the critical pieces with a photo, and tells you READY or NOT READY before the truck rolls. After the job, they prove the gear was put away right. Early access.",
+    "SYNNR is for oilfield service companies. Put in your procedures, MSAs, price sheets, and what nobody wrote down. Anyone on the crew asks, and it answers from your own documents and shows the passage. If it isn't in there, it says so. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR | Tell it the job. It tells you what to take.",
+    title: "SYNNR | The brain of your shop.",
     description:
-      "For oilfield service companies. What the job takes, photo proof of the critical pieces, READY or NOT READY before the truck rolls, and proof the gear was put away right. Early access.",
+      "For oilfield service companies. Your procedures, MSAs, and price sheets, where the whole crew can ask. Answers come from your own documents, with the passage shown. Early access.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR | Tell it the job. It tells you what to take.",
+    title: "SYNNR | The brain of your shop.",
     description:
-      "For oilfield service companies. What the job takes, photo proof of the critical pieces, READY or NOT READY before the truck rolls, and proof the gear was put away right. Early access.",
+      "For oilfield service companies. Your procedures, MSAs, and price sheets, where the whole crew can ask. Answers come from your own documents, with the passage shown. Early access.",
   },
 };
 
@@ -63,7 +63,7 @@ export default function RootLayout({
               name: "SYNNR",
               url: "https://www.synnr.io",
               description:
-                "Software for oilfield service companies. Tell it the job and it gives the crew what to take, a checklist to load by with photo proof, and a ready check before the truck rolls.",
+                "Software for oilfield service companies. A shop puts in its own procedures, customer terms, and prices, and its crew asks questions that are answered from those documents, with the passage shown.",
               areaServed: "Permian Basin, West Texas",
             }),
           }}

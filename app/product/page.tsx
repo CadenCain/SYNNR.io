@@ -3,11 +3,12 @@ import Link from "next/link";
 import { SiteNav, SiteFooter } from "../_site/chrome";
 import { SHARE_IMAGE } from "../_site/share";
 import { AfterShot, BoardShot, DispatchShot, JobShot, ListShot, ReadShot } from "../_site/shots";
+import { AskShot, BrainShot, JobPasteShot } from "../_site/brain-shots";
 
 export const metadata: Metadata = {
   title: "How SYNNR works",
-  openGraph: { title: "How SYNNR works", description: "From the dispatch to a truck that reads READY, with photo proof, and what the crew proves after the job.", images: SHARE_IMAGE },
-  description: "From the dispatch to a truck that reads READY, with photo proof: your shop's job lists, a checklist the crew taps, a board the manager can see, and what the crew proves after the job.",
+  openGraph: { title: "How SYNNR works", description: "Your shop's documents in, and answers that come only from them, with the passage shown.", images: SHARE_IMAGE },
+  description: "How SYNNR works: put your shop's procedures, MSAs, price sheets and notes in, ask a question or paste a job, and get what your own documents say, with the passage it came from.",
   alternates: { canonical: "/product" },
 };
 
@@ -28,7 +29,7 @@ function Step({ n, title, children, visual, flip = false, wide = false }: { n: n
   );
 }
 
-/** The product, one step at a time, in the order a job actually moves. */
+/** The product, one step at a time: first the brain, then what it does on a job for a shop that wants that too. */
 export default function Product() {
   return (
     <div className="saas min-h-dvh bg-coal text-ink antialiased">
@@ -38,14 +39,44 @@ export default function Product() {
           <div className={`${wrap} pb-16 pt-14 md:pb-24 md:pt-24`}>
             <p className="text-[13px] text-ink-dim">How it works</p>
             <h1 className="mt-5 max-w-4xl text-[clamp(38px,6.4vw,72px)] font-semibold leading-[1] tracking-[-0.045em] text-ink">
-              From the dispatch to a truck that reads READY.
+              Your documents in. Your answers out.
             </h1>
             <p className="mt-7 max-w-2xl text-[17px] leading-[1.55] text-ink-dim md:text-[20px]">
-              SYNNR sits between the dispatch you already get and the gear being put away after the job. Six steps.
+              SYNNR holds what your shop knows and answers from it, for anyone on the crew, from a phone. Three steps.
             </p>
             <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-ink-faint">
-              The screens here are a sample from a wireline shop. Yours show your jobs and your gear.
+              The screens here are a sample shop, and every document in them is made up. Yours show your own.
             </p>
+          </div>
+        </section>
+
+        <Step n={1} title="Put in what your shop runs on." visual={<BrainShot />}>
+          <p>Procedures, customers&apos; MSAs, price sheets, job reports: load them as PDF, Word, or plain text. SYNNR reads each one and keeps it by section and page.</p>
+          <p>Then the things nobody ever wrote down. Type them in the way you&apos;d tell a new hand, and they count the same as a document.</p>
+          <p>Mark a price sheet or a customer&apos;s terms managers only, and a hand&apos;s question never touches it. We do the first load with you.</p>
+          <p className="text-[14px] text-ink-faint">A scan, which is pictures of pages with no words in them, can&apos;t be read yet. Neither can a spreadsheet: save it as a PDF first.</p>
+        </Step>
+
+        <Step n={2} title="Anyone on the crew asks." flip visual={<AskShot />}>
+          <p>A hand asks the way he&apos;d ask the office. SYNNR finds the passages in your documents that answer it and shows them word for word, with the document and section each one is from.</p>
+          <p>One tap opens the document at that passage. If your documents have nothing on it, it says so. It never fills a gap with what&apos;s typical somewhere else.</p>
+          <p className="text-[14px] text-ink-faint">Being turned on now: the answer written out in plain words from those passages, with each part tied to the passage it came from. Until then it finds passages by the words in your question, so ask in the words your documents use.</p>
+        </Step>
+
+        <Step n={3} title="Or paste the job." visual={<JobPasteShot />}>
+          <p>Paste a job the way dispatch sent it. SYNNR pulls what your shop&apos;s own documents say about that job: the job list for that kind of work, the procedure, what that customer&apos;s terms require, and the notes that mention it.</p>
+          <p>Everything that was asked, and what came back, is kept. A hand sees his own questions; a manager sees what the whole crew is asking.</p>
+        </Step>
+
+        <section id="jobs" className="scroll-mt-14 border-t border-line">
+          <div className={`${wrap} grid gap-8 py-16 md:grid-cols-[0.8fr_1.2fr] md:gap-16 md:py-24`}>
+            <h2 className="synnr-reveal text-[28px] font-semibold leading-[1.08] tracking-[-0.03em] text-ink md:text-[38px]">It can run the job too.</h2>
+            <div className="synnr-reveal max-w-2xl text-[16px] leading-[1.6] text-ink-dim md:text-[18px]">
+              <p>
+                For a shop that wants it, SYNNR goes from knowing what a job takes to making sure it went out: a list to load by, a photo of every piece that stops the job, and a photo of the gear put away after. Nobody has to use it. Here is how a job runs when you do.
+              </p>
+              <p className="mt-4 text-[14px] text-ink-faint">The job below is a sample from a wireline shop.</p>
+            </div>
           </div>
         </section>
 
@@ -87,9 +118,9 @@ export default function Product() {
             <div className="text-[14px] text-ink-faint md:pt-2">What&apos;s next</div>
             <div className="synnr-reveal max-w-2xl">
               <p className="text-[22px] leading-[1.35] tracking-[-0.015em] text-ink md:text-[28px]">
-                An AI that checks the work. It will learn what right looks like in your yard, from your own photos of right and wrong, then look at every proof photo and flag the ones that don&apos;t match, so your manager sees those first. And it will answer questions from what your shop has given it: what you charge, what a contract says, how your shop does a procedure.
+                The answer, written out. Today SYNNR shows you the passages. Next it writes the answer from them in plain words, with each part tied to the passage it came from, and it can read a scan. After that it looks at every proof photo and flags the ones that don&apos;t look right, so your manager sees those first.
               </p>
-              <p className="mt-6 text-[15px] text-ink-dim">Both are being built now.</p>
+              <p className="mt-6 text-[15px] text-ink-dim">The written answer is built and being turned on. The rest comes after it.</p>
               <Link href="/#access" className="mt-8 inline-flex h-12 items-center rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white">Request access</Link>
             </div>
           </div>
