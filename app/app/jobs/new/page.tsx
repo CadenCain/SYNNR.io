@@ -27,7 +27,7 @@ export default async function NewJobPage() {
   const started = jobs.filter((j) => !j.closed_at && new Date(j.created_at).getTime() >= since).map((j) => ({ id: j.id, truck: (j.truck ?? "").trim(), job: j.job_type }));
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-8 md:py-10">
-      <Link href="/app" className="inline-flex min-h-9 items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink">
+      <Link href="/app/jobs" className="inline-flex min-h-9 items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink">
         <ChevronLeft className="h-4 w-4" /> Jobs
       </Link>
       <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink md:text-[34px]">New job</h1>

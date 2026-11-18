@@ -9,9 +9,9 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Wordmark } from "@/components/wordmark";
 
 /**
- * The frame around everything: who you are and which company, the one thing
- * to start (a new job), then Jobs, Ask, the Brain, and Settings. On a phone
- * it folds into a top bar and a drawer.
+ * The frame around everything: who you are and which company, then Ask,
+ * the Brain, Jobs, and Settings. A shop that runs its jobs here also gets
+ * the button to start one. On a phone it folds into a top bar and a drawer.
  */
 export default function SynnrNav({ companyName, userName, companies = [], activeCompanyId, switchAction, canStart = true }: {
   companyName: string;
@@ -48,9 +48,9 @@ export default function SynnrNav({ companyName, userName, companies = [], active
 
   const close = () => setOpen(false);
   const items = [
-    { href: "/app", label: "Jobs", icon: ClipboardCheck, active: path === "/app" || path.startsWith("/app/jobs") },
-    { href: "/app/ask", label: "Ask", icon: MessageSquare, active: path.startsWith("/app/ask") },
+    { href: "/app", label: "Ask", icon: MessageSquare, active: path === "/app" || path.startsWith("/app/ask") },
     { href: "/app/brain", label: "The Brain", icon: Brain, active: path.startsWith("/app/brain") },
+    { href: "/app/jobs", label: "Jobs", icon: ClipboardCheck, active: path.startsWith("/app/jobs") },
     { href: "/app/settings", label: "Settings", icon: Settings, active: path.startsWith("/app/settings") },
   ];
 

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import SynnrNav from "./_synnr/nav";
 import { requireCompany, getUserCompanies } from "@/lib/saas/auth";
 import { isWritable } from "@/lib/saas/entitlements";
+import { saasDb } from "@/lib/saas/db";
 import { mustSubscribe } from "@/lib/saas/plan";
 
 // The signed-in app: SYNNR. A company that never finished paying is sent to
@@ -40,14 +41,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user.email?.split("@")[0] ||
     "Operator";
 
-  const companies = await getUserCompanies(user.id);
+  // "New job" sits at the top for a shop that runs its jobs here: one with a job list. A shop that only asks never sees it.
+  const [companies, { count: jobLists }] = await Promise.all([
+    getUserCompanies(user.id),
+    (await saasDb()).from("saas_packages").select("id", { count: "exact", head: true }).eq("company_id", company.id).is("unit_id", null),
+  ]);
   const bar = "border-b border-line bg-surface px-4 py-2.5 text-[13px] text-ink-dim md:px-8";
 
   return (
     <div className="saas relative min-h-dvh bg-coal text-ink antialiased md:flex">
       <SynnrNav companyName={company.name} userName={userName}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))} activeCompanyId={company.id}
-        switchAction={switchCompany} canStart={writable} />
+        switchAction={switchCompany} canStart={writable && (jobLists ?? 0) > 0} />
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
         {/* Never-subscribed, lapsed, and payment-failed are three different
             situations — telling a brand-new signup their subscription "paused"

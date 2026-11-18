@@ -77,7 +77,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-10">
-      <Link href="/app" className="inline-flex min-h-9 items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink">
+      <Link href="/app/jobs" className="inline-flex min-h-9 items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink">
         <ChevronLeft className="h-4 w-4" /> Jobs
       </Link>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">

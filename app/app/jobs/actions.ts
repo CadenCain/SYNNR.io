@@ -70,7 +70,7 @@ export async function createJob(input: {
     // The job still opens; the hand sees an empty list and can add to it.
     if (lineErr) console.error("[jobs] lines:", lineErr.message);
   }
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, id };
 }
 
@@ -95,7 +95,7 @@ export async function setLine(lineId: string, on: boolean): Promise<{ ok: true; 
   if (!on) await removePhotos(saasAdmin(), [was.photo_path]);
   const row = data as { job_id: string; on_at: string | null; on_by: string | null };
   revalidatePath(`/app/jobs/${row.job_id}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, on_at: row.on_at, on_by: row.on_by };
 }
 
@@ -120,7 +120,7 @@ export async function addLine(jobId: string, input: { label: string; qty: number
   if (isClosed(error)) return fail(CLOSED);
   if (error || !data) return fail("Couldn't add it. Try again.");
   revalidatePath(`/app/jobs/${jobId}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, id: (data as { id: string }).id, sort };
 }
 
@@ -136,7 +136,7 @@ export async function removeLine(lineId: string): Promise<{ ok: true } | Fail> {
   const gone = data as { photo_path: string | null; back_photo_path: string | null };
   await removePhotos(saasAdmin(), [gone.photo_path, gone.back_photo_path]);
   revalidatePath(`/app/jobs/${(data as { job_id: string }).job_id}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true };
 }
 
@@ -152,7 +152,7 @@ export async function markReady(jobId: string): Promise<{ ok: true; ready_at: st
   if (error) return fail(/NOT_READY/.test(error.message) ? "Not ready: something on the list is still off the truck." : "That didn't save. Try again.");
   if (!data) return fail("That job isn't there anymore.");
   revalidatePath(`/app/jobs/${jobId}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, ready_at: (data as { ready_at: string }).ready_at, ready_by };
 }
 
@@ -194,7 +194,7 @@ export async function sendBack(lineId: string, why: string): Promise<({ ok: true
   // One sent-back photo is kept per line: the one before it can go.
   if (was.back_photo_path && was.back_photo_path !== row.back_photo_path) await removePhotos(saasAdmin(), [was.back_photo_path]);
   revalidatePath(`/app/jobs/${was.job_id}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, ...row };
 }
 
@@ -217,7 +217,7 @@ export async function closeJob(jobId: string, why: string): Promise<{ ok: true; 
   if (error) { console.error("[jobs] close:", error.message); return fail("That didn't save. Try again."); }
   if (!data) return fail("That job is already closed out, or it isn't there anymore.");
   revalidatePath(`/app/jobs/${jobId}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true, ...(data as { closed_at: string; closed_by: string | null; closed_why: string }) };
 }
 
@@ -231,7 +231,7 @@ export async function reopenJob(jobId: string): Promise<{ ok: true } | Fail> {
   const { data, error } = await db.from("synnr_jobs").update({ closed_at: null }).eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
   if (error || !data) return fail("That didn't save. Try again.");
   revalidatePath(`/app/jobs/${jobId}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true };
 }
 
@@ -252,7 +252,7 @@ export async function fixJob(jobId: string, input: { truck: string; jobType: str
     .eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
   if (error || !data) return fail("That didn't save. Try again.");
   revalidatePath(`/app/jobs/${jobId}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true };
 }
 
@@ -266,7 +266,7 @@ export async function deleteJob(jobId: string): Promise<{ ok: true } | Fail> {
   const { data, error } = await db.from("synnr_jobs").delete().eq("id", jobId).eq("company_id", got.company.id).select("id").maybeSingle();
   if (error || !data) return fail("Couldn't delete it. Try again.");
   await removeJobPhotos(saasAdmin(), got.company.id, jobId);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   return { ok: true };
 }
 

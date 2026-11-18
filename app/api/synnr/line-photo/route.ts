@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   if (line.photo_path && line.photo_path !== path) await removePhotos(admin, [line.photo_path]);
 
   revalidatePath(`/app/jobs/${line.job_id}`);
-  revalidatePath("/app");
+  revalidatePath("/app/jobs");
   const url = (await signPhotos(admin, [path])).get(path) ?? null;
   return NextResponse.json({ ok: true, on_at, on_by, photo_path: path, photo_url: url });
 }

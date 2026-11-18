@@ -5,6 +5,7 @@ import {
   DEMO_COMPANY_NAME, DEMO_YARD_NAME, DEMO_UNITS, DEMO_YARD_IRON, DEMO_MOVES, DEMO_EVENTS,
   DEMO_MISSES, DEMO_CHECKS, DEMO_ALERTS_SENT, DEMO_WAITING_UPLOAD, DEMO_LOADOUTS, DEMO_PACKAGES, DEMO_RETURNS, DEMO_PLAN, DEMO_TOOL_STOCKS, type DemoAsset,
 } from "./demo-data";
+import { seedBrainSamples } from "./brain-samples";
 import { demoLoadoutRecord, demoKitLines, demoKitChecks } from "./demo-loadouts";
 import { quickLines, quickVerdict } from "./quick-check";
 import { verifyUpload } from "./cert-verify";
@@ -52,7 +53,7 @@ export async function seedDemoCompany(admin: SupabaseClient, ownerUserId: string
   if (memErr) throw new Error(`demo membership: ${memErr.message}`);
   const yardId = (yard as { id: string }).id;
 
-  await seedDemoYard(admin, companyId, yardId);
+  await Promise.all([seedDemoYard(admin, companyId, yardId), seedBrainSamples(admin, companyId)]);
   return companyId;
 }
 

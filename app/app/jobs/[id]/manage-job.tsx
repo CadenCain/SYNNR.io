@@ -58,7 +58,7 @@ export default function ManageJob({ jobId, truck, jobType, kinds, trucks, closed
     setErr("");
     const r = await safe(() => deleteJob(jobId));
     if (!r.ok) { setErr(r.error); return; }
-    router.replace("/app");
+    router.replace("/app/jobs");
     router.refresh();
   }
 
