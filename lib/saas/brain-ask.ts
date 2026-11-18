@@ -19,10 +19,17 @@ import { kindLabel, listAsText, listScore, type AnswerPart, type Source } from "
  * nothing outside the shop's own words is ever on the table.
  */
 
-/** How many passages go to the model, and how many a person is shown when there's no written answer. */
-export const TO_MODEL = 10;
-export const TO_SHOW = 5;
-const PER_DOC = 6;
+/**
+ * How many passages go to the model, how many a person is shown when
+ * there's no written answer, and how many one document may take up. A job
+ * touches more of the shop's documents than a question does (the job list,
+ * the procedure, the customer's terms, the notes), so it gets more room and
+ * no one document gets much of it.
+ */
+const ROOM = {
+  ask: { model: 10, show: 5, perDoc: 3, close: 0.4 },
+  job: { model: 14, show: 8, perDoc: 2, close: 0.3 },
+} as const;
 
 type Hit = { chunk_id: string; doc_id: string; doc_title: string; kind: string; section: string | null; page: number | null; idx: number; body: string; hits: number; terms: number; score: number };
 type ListRow = { id: string; name: string; saas_package_lines: { label: string; qty: number; critical: boolean; phase: string; sort: number }[] | null };
@@ -35,7 +42,8 @@ export type Found = { sources: Source[]; show: number; weak: boolean };
  * shop's documents have nothing on it. `also` is other words the documents
  * might use for the same thing; they widen the search, never the question.
  */
-export async function findSources(db: SupabaseClient, companyId: string, question: string, also = "", limit = TO_MODEL): Promise<Found> {
+export async function findSources(db: SupabaseClient, companyId: string, question: string, also = "", mode: "ask" | "job" = "ask"): Promise<Found> {
+  const room = ROOM[mode];
   const [{ data: found, error }, { data: lists }] = await Promise.all([
     db.rpc("synnr_brain_search", { p_company: companyId, p_query: `${question} ${also}`.trim(), p_limit: 30 }),
     db.from("saas_packages").select("id, name, saas_package_lines(label, qty, critical, phase, sort)").eq("company_id", companyId).is("unit_id", null).order("name").limit(200),
@@ -49,10 +57,10 @@ export async function findSources(db: SupabaseClient, companyId: string, questio
   const passages = hits.filter((h) => h.score >= top * 0.25).filter((h) => {
     const n = (perDoc.get(h.doc_id) ?? 0) + 1;
     perDoc.set(h.doc_id, n);
-    return n <= PER_DOC;
+    return n <= room.perDoc;
   });
   // Close enough to put in front of a person as "what the documents say".
-  const close = passages.filter((h) => h.score >= top * 0.4).length;
+  const close = passages.filter((h) => h.score >= top * room.close).length;
 
   // The shop's job lists that the question is about.
   const fits = ((lists ?? []) as ListRow[])
@@ -74,11 +82,11 @@ export async function findSources(db: SupabaseClient, companyId: string, questio
   }));
   // A job list the question names goes first; one that only shares a few words goes after the documents.
   const named = fits.filter((x) => x.score >= 10);
-  const ordered = [...named.map(asList), ...fromDocs, ...fits.filter((x) => x.score < 10).map(asList)].slice(0, limit);
+  const ordered = [...named.map(asList), ...fromDocs, ...fits.filter((x) => x.score < 10).map(asList)].slice(0, room.model);
   const best = hits[0];
   return {
     sources: ordered.map((s, i) => ({ ...s, n: i + 1 })),
-    show: Math.min(Math.max(named.length + close, 1), TO_SHOW, ordered.length),
+    show: Math.min(Math.max(named.length + close, 1), room.show, ordered.length),
     // No list the question names, and the best passage holds less than half of what was asked about.
     weak: named.length === 0 && Boolean(best) && best.terms >= 3 && best.hits / best.terms < 0.5,
   };

@@ -58,7 +58,8 @@ export default function Ask({ firstName, companyName, manager, writable, demo, w
     const id = ++seq.current;
     const mode = job ? "job" as const : "ask" as const;
     setTurns((t) => [...t, { id, mode, question, answer: null, error: null }]);
-    setQ(""); setBusy(true);
+    // A pasted job is a one-off: the bar goes back to a question.
+    setQ(""); setJob(false); setBusy(true);
     let r: Awaited<ReturnType<typeof ask>>;
     try {
       r = await ask({ question, mode });
@@ -69,7 +70,7 @@ export default function Ask({ firstName, companyName, manager, writable, demo, w
     }
     setBusy(false);
     setTurns((t) => t.map((x) => x.id === id ? { ...x, answer: r.ok ? r.answer : null, error: r.ok ? null : r.error } : x));
-    if (!r.ok) setQ(question);
+    if (!r.ok) { setQ(question); setJob(mode === "job"); }
   }
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
     // A pasted job has lines in it: Enter is a new line there.

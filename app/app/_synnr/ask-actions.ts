@@ -52,7 +52,7 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
   const db = await saasDb();
   let found: Found;
   try {
-    found = await findSources(db, company.id, question, write && mode === "ask" ? await otherWords(question) : "");
+    found = await findSources(db, company.id, question, write && mode === "ask" ? await otherWords(question) : "", mode);
   } catch (e) {
     console.error("[ask] search:", e instanceof Error ? e.message : e);
     return { ok: false, error: "That didn't go through. Try again." };
