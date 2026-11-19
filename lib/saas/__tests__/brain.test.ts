@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { chunkPages, isHeading, tidy, listScore, listAsText, fileKind, titleFromFile, sourceWhere, keyWords, CHUNK_MAX, MAX_CHUNKS } from "../brain";
+import { chunkPages, isHeading, tidy, listScore, listAsText, fileKind, titleFromFile, sourceWhere, keyWords, askedWords, quoted, unknownSays, CHUNK_MAX, MAX_CHUNKS } from "../brain";
 import { partsFrom } from "../brain-ask";
 
 describe("what counts as a heading", () => {
@@ -146,5 +146,43 @@ describe("reading the model's reply", () => {
   it("won't pass an empty reply off as an answer", () => {
     expect(() => partsFrom([], 3)).toThrow();
     expect(() => partsFrom([text("  ")], 3)).toThrow();
+  });
+});
+
+describe("saying when the documents don't have it", () => {
+  it("keeps the words that say what a question is about", () => {
+    expect(askedWords("What does our MSA say about standby time?")).toEqual(["msa", "standby", "time"]);
+    expect(askedWords("Who pays the hotel on an overnight job?")).toEqual(["pays", "hotel", "overnight"]);
+    // Split the way the database splits it, so the two agree on what a word is.
+    expect(askedWords("What do we take on a 5-1/2 plug?")).toEqual(["plug"]);
+  });
+  it("lists words the way a person would", () => {
+    expect(quoted(["hotel"])).toBe("“hotel”");
+    expect(quoted(["hotel", "lodging"])).toBe("“hotel” or “lodging”");
+    expect(quoted(["torque", "injector", "chain"])).toBe("“torque”, “injector” or “chain”");
+  });
+  it("says nothing when every word that matters is in the documents", () => {
+    expect(unknownSays("What does our MSA say about standby time?", [])).toBeNull();
+    // A padding word no document uses isn't worth mentioning.
+    expect(unknownSays("What does our MSA say about standby time?", ["say"])).toBeNull();
+  });
+  it("names the word the passages don't have, and calls them the closest", () => {
+    const says = unknownSays("Who pays the hotel on an overnight job?", ["hotel"]);
+    expect(says).toEqual({ none: false, text: "Your documents never mention “hotel”. These are the closest passages, word for word." });
+  });
+  it("won't guess when most of what was asked about is in no document", () => {
+    const says = unknownSays("Who covers lodging overnight?", ["covers", "lodging"]);
+    expect(says?.none).toBe(true);
+    expect(says?.text).toBe("Your documents never mention “covers” or “lodging”. I won't guess.");
+    // Half isn't most: the passages still get shown as the closest.
+    expect(unknownSays("What do we charge if we lose a tool downhole?", ["lose", "downhole"])?.none).toBe(false);
+  });
+  it("counts a word on a job list as known", () => {
+    expect(unknownSays("Do we take the bailer?", ["bailer"], ["Plug and cement", "3-1/2 bailers"])).toBeNull();
+    expect(unknownSays("Do we take the bailer?", ["bailer"], ["Plug and cement", "CCL"])?.none).toBe(true);
+  });
+  it("names four words at most", () => {
+    const says = unknownSays("torque injector chain gooseneck stripper", ["torque", "injector", "chain", "gooseneck", "stripper"]);
+    expect(says?.text).toBe("Your documents never mention “torque”, “injector”, “chain” or “gooseneck”. I won't guess.");
   });
 });

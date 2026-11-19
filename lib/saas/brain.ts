@@ -190,6 +190,41 @@ export function keyWords(text: string): string[] {
   return [...new Set(text.toLowerCase().replace(/[^a-z0-9/.\-\s]/g, " ").split(/\s+/).map((w) => w.replace(/^[-.]+|[-.]+$/g, "")).filter((w) => w.length > 1 && !STOP.has(w)))];
 }
 
+/** Words that pad a question and say nothing about what it's after. */
+const FILLER = new Set("say says said tell tells told know knows much many long get gets got use uses used want wants please thing things anything something someone anyone would could should shall may might must also like have has had about there their them they his her its was were will been being can any all make makes made let lets give gives happen happens kind".split(" "));
+
+/** The words of a question that say what it's about, as the database splits them. */
+export function askedWords(question: string): string[] {
+  return [...new Set(question.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w) && !FILLER.has(w)))];
+}
+
+/** A few words the way a person would list them: “hotel”, “lodging” or “per diem”. */
+export function quoted(words: string[]): string {
+  const q = words.map((w) => `“${w}”`);
+  return q.length <= 1 ? q.join("") : `${q.slice(0, -1).join(", ")} or ${q[q.length - 1]}`;
+}
+
+/**
+ * What an answer should open with when the question uses words that none
+ * of the shop's documents or job lists do. `missing` is what the database
+ * says no document mentions; `lists` is every word on the shop's job
+ * lists. Null when every word that matters is in there somewhere.
+ *
+ * Most of what was asked about missing: there is nothing to answer from,
+ * and it says so. Some of it missing: the passages it found are only the
+ * closest, and it says which word they don't have.
+ */
+export function unknownSays(question: string, missing: string[], lists: string[] = []): { none: boolean; text: string } | null {
+  const stem = (w: string) => w.replace(/(ing|ed|es|s)$/, "");
+  const onLists = new Set(lists.flatMap((l) => l.toLowerCase().split(/[^a-z0-9]+/)).map(stem));
+  const asked = askedWords(question);
+  const unknown = asked.filter((w) => missing.includes(w) && !onLists.has(stem(w)));
+  if (!unknown.length) return null;
+  const names = quoted(unknown.slice(0, 4));
+  const none = unknown.length * 2 > asked.length;
+  return { none, text: none ? `Your documents never mention ${names}. I won't guess.` : `Your documents never mention ${names}. These are the closest passages, word for word.` };
+}
+
 /**
  * How well a job list fits a question: every word of the list's name that
  * the question has counts for a lot, a word found in its lines counts a

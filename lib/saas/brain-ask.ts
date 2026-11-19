@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { kindLabel, listAsText, listScore, type AnswerPart, type Source } from "./brain";
+import { kindLabel, listAsText, listScore, unknownSays, type AnswerPart, type Source } from "./brain";
 
 /**
  * Answering a question from a shop's own documents.
@@ -34,8 +34,14 @@ const ROOM = {
 type Hit = { chunk_id: string; doc_id: string; doc_title: string; kind: string; section: string | null; page: number | null; idx: number; body: string; hits: number; terms: number; score: number };
 type ListRow = { id: string; name: string; saas_package_lines: { label: string; qty: number; critical: boolean; phase: string; sort: number }[] | null };
 
-/** What a search found: every passage worth reading, how many of them are close enough to show a person, and whether even the best one is a stretch. */
-export type Found = { sources: Source[]; show: number; weak: boolean };
+/**
+ * What a search found: every passage worth reading, how many of them are
+ * close enough to show a person, whether even the best one is a stretch,
+ * and what to say when the question uses words the shop's documents never
+ * do (null when it doesn't, and for a pasted job, which is full of names
+ * and times no document has).
+ */
+export type Found = { sources: Source[]; show: number; weak: boolean; unknown: { none: boolean; text: string } | null };
 
 /**
  * The passages for a question, best first, numbered from 1. Empty when the
@@ -44,11 +50,15 @@ export type Found = { sources: Source[]; show: number; weak: boolean };
  */
 export async function findSources(db: SupabaseClient, companyId: string, question: string, also = "", mode: "ask" | "job" = "ask"): Promise<Found> {
   const room = ROOM[mode];
-  const [{ data: found, error }, { data: lists }] = await Promise.all([
+  const [{ data: found, error }, { data: lists }, { data: missing, error: missingErr }] = await Promise.all([
     db.rpc("synnr_brain_search", { p_company: companyId, p_query: `${question} ${also}`.trim(), p_limit: 30 }),
     db.from("saas_packages").select("id, name, saas_package_lines(label, qty, critical, phase, sort)").eq("company_id", companyId).is("unit_id", null).order("name").limit(200),
+    // Which of the question's words none of this person's documents use.
+    mode === "ask" ? db.rpc("synnr_brain_unknown", { p_company: companyId, p_query: question }) : Promise.resolve({ data: [] as string[], error: null }),
   ]);
   if (error) throw new Error(`search: ${error.message}`);
+  // Without it the answer just doesn't name the words it couldn't find.
+  if (missingErr) console.error("[ask] unknown words:", missingErr.message);
 
   // The passages, without a long tail of ones that only share a common word, and without one document crowding the rest out.
   const hits = (found ?? []) as Hit[];
@@ -89,6 +99,9 @@ export async function findSources(db: SupabaseClient, companyId: string, questio
     show: Math.min(Math.max(named.length + close, 1), room.show, ordered.length),
     // No list the question names, and the best passage holds less than half of what was asked about.
     weak: named.length === 0 && Boolean(best) && best.terms >= 3 && best.hits / best.terms < 0.5,
+    unknown: mode === "ask"
+      ? unknownSays(question, (missing ?? []) as string[], ((lists ?? []) as ListRow[]).flatMap((l) => [l.name, ...(l.saas_package_lines ?? []).map((x) => x.label)]))
+      : null,
   };
 }
 

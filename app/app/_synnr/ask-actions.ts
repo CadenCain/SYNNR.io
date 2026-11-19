@@ -60,6 +60,7 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
   const { sources } = found;
   const shown = sources.slice(0, found.show);
   const stretch = "No passage has everything you asked about. These are the closest.";
+  const closest = "The closest passages are below, in case one of them is what you meant.";
 
   let answer: Answer;
   if (!sources.length) {
@@ -71,14 +72,17 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
         : "Nothing in your documents about that. I won't guess." }],
     };
   } else {
-    answer = { how: "passages", parts: [], sources: shown, note: found.weak ? stretch : null };
+    // The question uses words these documents never do: most of it, and there's nothing to answer from; some of it, and the passages are only the closest.
+    answer = found.unknown?.none
+      ? { how: "none", parts: [{ cites: [], text: found.unknown.text }], sources: shown, note: closest }
+      : { how: "passages", parts: [], sources: shown, note: found.unknown?.text ?? (found.weak ? stretch : null) };
     if (write) {
       try {
         const parts = await writeAnswer({ company: company.name, mode, question, sources });
         const text = parts.map((p) => p.text).join("").trim();
         if (text.startsWith(NOT_FOUND)) {
           // It read the closest passages and they don't hold the answer.
-          answer = { how: "none", parts: [{ text, cites: [] }], sources: shown, note: "The closest passages are below, in case one of them is what you meant." };
+          answer = { how: "none", parts: [{ text, cites: [] }], sources: shown, note: closest };
         } else {
           const used = new Set(parts.flatMap((p) => p.cites));
           answer = {
@@ -90,7 +94,7 @@ export async function ask(input: { question: string; mode?: "ask" | "job" }): Pr
         }
       } catch (e) {
         console.error("[ask] answer:", e instanceof Error ? e.message : e);
-        answer.note = "The written answer didn't come back, so here are the passages themselves.";
+        if (answer.how === "passages" && !answer.note) answer.note = "The written answer didn't come back, so here are the passages themselves.";
       }
     }
   }

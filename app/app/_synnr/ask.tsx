@@ -210,7 +210,7 @@ function AnswerView({ answer, manager, demo }: { answer: Answer; manager: boolea
   return (
     <div className="text-[15px] leading-7 text-ink">
       {answer.how === "passages" ? (
-        <p className="text-ink-dim">Here&apos;s what the documents say, word for word.</p>
+        <p className="text-ink-dim">{answer.note ?? "Here's what the documents say, word for word."}</p>
       ) : (
         <p className="whitespace-pre-wrap break-words">
           {answer.parts.map((p, i) => (
@@ -224,7 +224,7 @@ function AnswerView({ answer, manager, demo }: { answer: Answer; manager: boolea
           ))}
         </p>
       )}
-      {answer.note ? <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">{answer.note}</p> : null}
+      {answer.note && answer.how !== "passages" ? <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">{answer.note}</p> : null}
       {emptyBrain && manager && !demo ? (
         <Link href="/app/brain" className="mt-2 inline-flex min-h-9 items-center gap-1 text-[13px] font-medium text-ink-dim underline-offset-4 hover:text-ink hover:underline">
           Put your documents in <ArrowRight className="h-3.5 w-3.5" />
