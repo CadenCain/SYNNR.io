@@ -162,7 +162,7 @@ export default async function SharedJobPage({ params }: { params: Promise<{ toke
       </main>
 
       <footer className="mx-auto w-full max-w-3xl border-t border-line px-4 py-6 text-[13px] text-ink-faint md:px-8">
-        <Link href="/" className="underline-offset-4 transition-colors hover:text-ink hover:underline">SYNNR</Link>: the brain of your shop.
+        <Link href="/" className="underline-offset-4 transition-colors hover:text-ink hover:underline">SYNNR</Link>: the operating brain of your shop.
       </footer>
     </div>
   );

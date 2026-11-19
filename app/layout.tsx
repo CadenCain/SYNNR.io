@@ -25,23 +25,23 @@ export const metadata: Metadata = {
   // point at the serving host so search engines get one consistent signal.
   metadataBase: new URL("https://www.synnr.io"),
   title: {
-    default: "SYNNR | The brain of your shop.",
+    default: "SYNNR | The operating brain of your shop.",
     template: "%s",
   },
   description:
-    "SYNNR is for oilfield service companies. Put in your procedures, MSAs, price sheets, and what nobody wrote down. Anyone on the crew asks, and it answers from your own documents and shows the passage. If it isn't in there, it says so. Early access.",
+    "SYNNR is the operating brain for oilfield service companies. Your SOPs, MSAs, job knowledge, and pricing, where anyone on the crew can ask. It answers from your own documents and shows where it got it. If it isn't in there, it says so. Early access.",
   openGraph: {
     type: "website",
     siteName: "SYNNR",
-    title: "SYNNR | The brain of your shop.",
+    title: "SYNNR | The operating brain of your shop.",
     description:
-      "For oilfield service companies. Your procedures, MSAs, and price sheets, where the whole crew can ask. Answers come from your own documents, with the passage shown. Early access.",
+      "For oilfield service companies. Your SOPs, MSAs, job knowledge, and pricing, where anyone on the crew can ask. Grounded in your documents. Nothing invented. Early access.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNNR | The brain of your shop.",
+    title: "SYNNR | The operating brain of your shop.",
     description:
-      "For oilfield service companies. Your procedures, MSAs, and price sheets, where the whole crew can ask. Answers come from your own documents, with the passage shown. Early access.",
+      "For oilfield service companies. Your SOPs, MSAs, job knowledge, and pricing, where anyone on the crew can ask. Grounded in your documents. Nothing invented. Early access.",
   },
 };
 

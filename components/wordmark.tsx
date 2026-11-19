@@ -14,11 +14,11 @@ export function Mark({ className }: { className?: string }) {
   );
 }
 
-/** The mark, then the name. */
-export function Wordmark({ className }: { className?: string }) {
+/** The mark, then the name. `plain` draws the mark in the type's own color: the public site has no orange. */
+export function Wordmark({ className, plain = false }: { className?: string; plain?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <Mark className="h-[18px] w-[18px]" />
+      <Mark className={cn("h-[18px] w-[18px]", plain && "fill-ink")} />
       <span className="text-[15px] font-semibold tracking-[0.16em] text-ink">SYNNR</span>
     </span>
   );

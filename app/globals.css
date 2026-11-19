@@ -29,6 +29,12 @@
   /* Black text on the orange: it reads in the sun and looks like a tag. */
   --color-on-bone:   #0a0a0a;
 
+  /* The public site's one accent: a cool red, spent on the main button and
+     a mark or two. The app doesn't use it, because red in the app means
+     "not ready". */
+  --color-signal:      #e11d48;
+  --color-signal-deep: #c8153f;
+
   /* shadcn semantic tokens, mapped onto the palette above. */
   --color-background: #08090a;
   --color-foreground: #ededef;
@@ -140,14 +146,35 @@
   }
 }
 
-/* ── The public site's motion: small, and off for anyone who asked for less. ── */
-
-/* Faint engineering columns behind the homepage's first screen. */
-.synnr-grid {
-  background-image: linear-gradient(to right, rgb(255 255 255 / 0.028) 1px, transparent 1px);
-  background-size: max(84px, calc(100% / 14)) 100%;
-  background-position: center top;
+/* ── The public site ──
+   Its own palette, set on the wrapper every public page sits in, so the app
+   keeps its orange. True near-black, off-white type, neutral greys with no
+   tint, and the one red above. Nothing else has a color. */
+.site {
+  --color-coal:      #0a0a0a;
+  --color-surface:   #0f0f0f;
+  --color-elevated:  #181818;
+  --color-ink:       #ededed;
+  --color-ink-dim:   #a3a3a3;
+  /* 5.0:1 on the ground. */
+  --color-ink-faint: #808080;
+  --color-line:      #1f1f1f;
+  --color-line-2:    #2e2e2e;
+  background: var(--color-coal);
+  color: var(--color-ink);
 }
+
+.site ::selection {
+  background: rgb(225 29 72 / 0.42);
+  color: #ffffff;
+}
+
+.site :focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+/* ── The public site's motion: small, and off for anyone who asked for less. ── */
 
 /* The product view fills in row by row, once, when the page loads. */
 @keyframes synnr-rise { from { opacity: 0; transform: translateY(6px); } }

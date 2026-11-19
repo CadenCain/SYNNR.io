@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { OWNER_PHONE, OWNER_PHONE_TEL } from "@/lib/contact";
 
-const field = "h-12 w-full rounded-lg border border-line-2 bg-coal px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-faint";
+const field = "h-12 w-full rounded-sm border border-line-2 bg-coal px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink-dim";
 
 /** Ask for access: a name, a company, and a number to call. Nothing else is needed. */
 export default function AccessForm() {
@@ -18,18 +18,18 @@ export default function AccessForm() {
       const r = await fetch("/api/access", { method: "POST", body: new FormData(e.currentTarget) });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.ok) { setState("done"); return; }
-      setErr(d.error || "That didn't send. Try again.");
+      setErr(d.error || "That didn’t send. Try again.");
     } catch {
-      setErr("That didn't send. Check your signal and try again.");
+      setErr("That didn’t send. Check your signal and try again.");
     }
     setState("idle");
   }
 
   if (state === "done") {
     return (
-      <div role="status" className="rounded-xl border border-line-2 bg-surface px-6 py-8">
+      <div role="status" className="rounded-md border border-line-2 bg-surface px-6 py-8">
         <p className="text-[17px] font-medium text-ink">Got it.</p>
-        <p className="mt-1.5 text-[15px] leading-relaxed text-ink-dim">Caden will call you. If you&apos;d rather not wait, call or text <a href={OWNER_PHONE_TEL} className="text-ink underline underline-offset-4">{OWNER_PHONE}</a>.</p>
+        <p className="mt-1.5 text-[15px] leading-relaxed text-ink-dim">Caden will call you. If you&rsquo;d rather not wait, call or text <a href={OWNER_PHONE_TEL} className="text-ink underline underline-offset-4">{OWNER_PHONE}</a>.</p>
       </div>
     );
   }
@@ -58,10 +58,10 @@ export default function AccessForm() {
       {err ? <p role="alert" className="text-[14px] text-red-400">{err}</p> : null}
       <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center">
         <button type="submit" disabled={state === "busy"}
-          className="h-12 rounded-lg bg-ink px-6 text-[15px] font-medium text-coal transition-colors hover:bg-white disabled:opacity-60">
+          className="h-12 cursor-pointer rounded-sm bg-signal px-6 text-[15px] font-medium text-white transition-colors hover:bg-signal-deep disabled:opacity-60">
           {state === "busy" ? "Sending…" : "Request access"}
         </button>
-        <span className="text-[13px] text-ink-faint">No card. Caden calls you back himself.</span>
+        <span className="text-[13px] text-ink-faint">No card. He calls you back himself.</span>
       </div>
     </form>
   );
